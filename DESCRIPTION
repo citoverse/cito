@@ -19,5 +19,6 @@ RoxygenNote: 7.1.2
 Depends:
     R (>= 3.0)
 Imports: 
+    checkmate,
     torch
 License: GPL (>= 3)
