@@ -10,6 +10,8 @@
 #' @param dropout probability of dropout rate
 #' @param optimizer which optimizer used for training the network,
 #' @param lr learning rate given to optimizer
+#' @param batchsize how many samples data loader loads per batch
+#' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
 #' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
@@ -23,7 +25,9 @@ dnn = function(formula,
                alpha = 0.5,
                dropout = 0.0,
                optimizer = "adam",
-               lr=0.01,
+               lr = 0.01,
+               batchsize = 32L,
+               shuffle = FALSE,
                ...) {
   assert(checkMatrix(data), checkDataFrame(data))
   qassert(activation, "S+[1,)")
@@ -61,6 +65,34 @@ dnn = function(formula,
     if(!inherits(Y, "matrix")) Y = as.matrix(Y)
   }
 
+  ### dataset  ###
+  torch.dataset <- torch::dataset(
+
+    name = "dataset",
+
+    initialize = function(X,Y) {
+      self$data <- self$prepare_data(X,Y)
+    },
+
+    .getitem = function(index) {
+
+      x <- self$data[index, 2:self$data$size()[[2]]]
+      y <- self$data[index, 1]
+
+      list(x, y)
+    },
+
+    .length = function() {
+      self$data$size()[[1]]
+    },
+    prepare_data = function(X,Y) {
+      X <- as.matrix(X)
+      torch::torch_tensor(cbind(Y,X))
+    }
+  )
+
+  train_ds<- torch.dataset(X,Y)
+  train_dl<- torch::dataloader(train_ds, batch_size= batchsize, shuffle= shuffle)
 
   ### build model ###
   # bias in first layer is set by formula intercept
