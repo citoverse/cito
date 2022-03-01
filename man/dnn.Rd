@@ -4,10 +4,57 @@
 \alias{dnn}
 \title{DNN}
 \usage{
-dnn(...)
+dnn(
+  formula,
+  data = NULL,
+  family = stats::gaussian(),
+  hidden = c(10L, 10L, 10L),
+  activation = "relu",
+  validation = 0,
+  bias = TRUE,
+  lambda = 0,
+  alpha = 0.5,
+  dropout = 0,
+  optimizer = "adam",
+  lr = 0.01,
+  batchsize = 32L,
+  shuffle = FALSE,
+  epochs = 64,
+  ...
+)
 }
 \arguments{
-\item{...}{not supported}
+\item{formula}{formula object}
+
+\item{data}{matrix or data.frame}
+
+\item{family}{error distribution with link function, see details for supported family functions}
+
+\item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
+
+\item{activation}{activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid}
+
+\item{validation}{percantage of data set that should be taken as validation set (chosen randomly)}
+
+\item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
+
+\item{lambda}{lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}}
+
+\item{alpha}{weighting between lasso and ridge: \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2}}
+
+\item{dropout}{probability of dropout rate}
+
+\item{optimizer}{which optimizer used for training the network,}
+
+\item{lr}{learning rate given to optimizer}
+
+\item{batchsize}{how many samples data loader loads per batch}
+
+\item{shuffle}{TRUE if data should be reshuffled every epoch (default: FALSE)}
+
+\item{epochs}{epochs for training loop}
+
+\item{...}{additional arguments to be passed to optimizer}
 }
 \description{
 DNN

@@ -1,4 +1,6 @@
 Package: cito
+Type: Package
+Date: 2022-03-01
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
@@ -19,6 +21,9 @@ RoxygenNote: 7.1.2
 Depends:
     R (>= 3.0)
 Imports: 
+    coro,
     checkmate,
     torch
 License: GPL (>= 3)
+Suggests: 
+    testthat
