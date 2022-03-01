@@ -12,6 +12,7 @@
 #' @param lr learning rate given to optimizer
 #' @param batchsize how many samples data loader loads per batch
 #' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
+#' @param epochs epochs for training loop
 #' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
@@ -28,6 +29,7 @@ dnn = function(formula,
                lr = 0.01,
                batchsize = 32L,
                shuffle = FALSE,
+               epochs = 64,
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -130,6 +132,23 @@ dnn = function(formula,
                  "lbfgs" = torch::optim_lbfgs(net$parameters, lr=lr,...)
 
   )
+
+  ### training loop ###
+  #training loop without validation dl
+  for (epoch in 1:epochs) {
+    l <- c()
+
+    coro::loop(for (b in train_dl) {
+      optim$zero_grad()
+      output <- net(b[[1]])
+      loss <- torch::nnf_mse_loss(output, b[[2]])
+      loss$backward()
+      optim$step()
+      l <- c(l, loss$item())
+    })
+
+    cat(sprintf("Loss at epoch %d: %3f\n", epoch, mean(l)))
+  }
 
 
 
