@@ -4,6 +4,7 @@
 #' @param data matrix or data.frame
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid
+#' @param validation percantage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
 #' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
 #' @param alpha weighting between lasso and ridge: \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2}
@@ -21,6 +22,7 @@ dnn = function(formula,
                data = NULL,
                hidden = c(10L, 10L, 10L),
                activation = "relu",
+               validation = 0,
                bias = TRUE,
                lambda = 0.0,
                alpha = 0.5,
@@ -35,6 +37,7 @@ dnn = function(formula,
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(alpha, "R1[0,)")
   checkmate::qassert(dropout, "R1[0,)")
 
@@ -91,8 +94,20 @@ dnn = function(formula,
     }
   )
 
-  train_ds<- torch.dataset(X,Y)
-  train_dl<- torch::dataloader(train_ds, batch_size= batchsize, shuffle= shuffle)
+  if(validation!= 0){
+
+    train <- sort(sample(c(1:nrow(X)),replace=F,size = round(validation*nrow(X))))
+    valid <- c(1:nrow(X))[-train]
+    train_ds <- torch.dataset(X[train,],Y[train,])
+    train_dl <- torch::dataloader(train_ds, batch_size = batchsize, shuffle = shuffle)
+    valid_ds <- torch.dataset(X[valid,],Y[valid,])
+    valid_dl <- torch::dataloader(valid_ds, batch_size = batchsize, shuffle = shuffle)
+
+  }else{
+    train_ds <- torch.dataset(X,Y)
+    train_dl <- torch::dataloader(train_ds, batch_size= batchsize, shuffle= shuffle)
+  }
+
 
   ### build model ###
   # bias in first layer is set by formula intercept
@@ -134,21 +149,45 @@ dnn = function(formula,
   )
 
   ### training loop ###
-  #training loop without validation dl
+
+  loss.fkt<- torch::nnf_mse_loss
   for (epoch in 1:epochs) {
-    l <- c()
+    train_l <- c()
 
     coro::loop(for (b in train_dl) {
       optim$zero_grad()
       output <- net(b[[1]])
-      loss <- torch::nnf_mse_loss(output, b[[2]])
+      loss <- loss.fkt(output, b[[2]])
       loss$backward()
       optim$step()
-      l <- c(l, loss$item())
+      train_l <- c(train_l, loss$item())
     })
 
-    cat(sprintf("Loss at epoch %d: %3f\n", epoch, mean(l)))
-  }
+    if(validation!= 0){
+
+      valid_l <- c()
+
+      coro::loop(for (b in valid_dl) {
+
+        output <- net(b[[1]])
+        loss <- loss.fkt(output, b[[2]])
+        valid_l <- c(valid_l, loss$item())
+
+      })
+      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f\n",
+                  epoch, mean(train_l), mean(valid_l)))
+    }else{
+      cat(sprintf("Loss at epoch %d: %3f\n", epoch, mean(train_l)))
+    }
+   }
+
+  z<- list()
+  class(z)<- "citodnn"
+  z$net<- net
+  z$call <- match.call()
+
+  return(z)
+}
 
 
 
