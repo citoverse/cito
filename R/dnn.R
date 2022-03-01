@@ -44,6 +44,8 @@ dnn = function(formula,
       if(class(mf[3]$formula) == "name") mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
       formula = stats::as.formula(mf[m]$formula)
       X = stats::model.matrix(formula, data)
+      Y = stats::model.response(stats::model.frame(formula, data))
+      if(!inherits(Y, "matrix")) Y = as.matrix(Y)
     } else {
       formula = stats::as.formula("~.")
       X = stats::model.matrix(formula, data)
@@ -97,7 +99,7 @@ dnn = function(formula,
     layers[[1]] = torch::nn_linear(ncol(X), out_features = ncol(Y),bias = FALSE)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
-    if(length(hidden) != length(bias)) bias = rep(bias, length(bias))
+    if(length(hidden) != length(bias)) bias = rep(bias, (length(hidden)+1))
 
     counter = 1
     for(i in 1:length(hidden)) {
