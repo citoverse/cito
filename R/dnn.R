@@ -71,23 +71,19 @@ dnn = function(formula,
     name = "dataset",
 
     initialize = function(X,Y) {
-      self$data <- self$prepare_data(X,Y)
+      self$X <- torch::torch_tensor(as.matrix(X))
+      self$Y <- torch::torch_tensor(as.matrix(Y))
     },
 
     .getitem = function(index) {
 
-      x <- self$data[index, 2:self$data$size()[[2]]]
-      y <- self$data[index, 1]
-
+      x <- self$X[index,]
+      y <- self$Y[index,]
       list(x, y)
     },
 
     .length = function() {
-      self$data$size()[[1]]
-    },
-    prepare_data = function(X,Y) {
-      X <- as.matrix(X)
-      torch::torch_tensor(cbind(Y,X))
+      self$Y$size()[[1]]
     }
   )
 
