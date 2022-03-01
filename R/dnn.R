@@ -29,12 +29,12 @@ dnn = function(formula,
                batchsize = 32L,
                shuffle = FALSE,
                ...) {
-  assert(checkMatrix(data), checkDataFrame(data))
-  qassert(activation, "S+[1,)")
-  qassert(bias, "B+")
-  qassert(lambda, "R1[0,)")
-  qassert(alpha, "R1[0,)")
-  qassert(dropout, "R1[0,)")
+  checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
+  checkmate::qassert(activation, "S+[1,)")
+  checkmate::qassert(bias, "B+")
+  checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(alpha, "R1[0,)")
+  checkmate::qassert(dropout, "R1[0,)")
 
   if(is.data.frame(data)) {
 
