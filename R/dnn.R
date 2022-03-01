@@ -8,6 +8,9 @@
 #' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
 #' @param alpha weighting between lasso and ridge: \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2}
 #' @param dropout probability of dropout rate
+#' @param optimizer which optimizer used for training the network,
+#' @param lr learning rate given to optimizer
+#' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
 #' @export
@@ -18,7 +21,10 @@ dnn = function(formula,
                bias = TRUE,
                lambda = 0.0,
                alpha = 0.5,
-               dropout = 0.0) {
+               dropout = 0.0,
+               optimizer = "adam",
+               lr=0.01,
+               ...) {
   assert(checkMatrix(data), checkDataFrame(data))
   qassert(activation, "S+[1,)")
   qassert(bias, "B+")
@@ -81,6 +87,23 @@ dnn = function(formula,
     layers[[length(layers)+1]] = nn_linear(hidden[i], out_features = ncol(Y), bias = bias[i])
   }
   net = do.call(nn_sequential, layers)
+
+
+  ### set optimizer ###
+  optim<- switch(tolower(optimizer),
+                 "adam"= torch::optim_adam(net$parameters, lr=lr,...),
+                 "adadelta" = torch::optim_adadelta(net$parameters, lr=lr,...),
+                 "adagrad" =  torch::optim_adagrad(net$parameters, lr=lr,...),
+                 "rmsprop"  = torch::optim_rmsprop(net$parameters, lr=lr,...),
+                 "rprop" = torch::optim_rprop(net$parameters, lr=lr,...),
+                 "sgd" = torch::optim_sgd(net$parameters, lr=lr,...),
+                 "lbfgs" = torch::optim_lbfgs(net$parameters, lr=lr,...)
+
+  )
+
+
+
+
   return(net)
 }
 
