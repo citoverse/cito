@@ -66,7 +66,7 @@ dnn = function(formula,
   # bias in first layer is set by formula intercept
   layers = list()
   if(is.null(hidden)) {
-    layers[[1]] = nn_linear(ncol(X), out_features = ncol(Y),bias = FALSE)
+    layers[[1]] = torch::nn_linear(ncol(X), out_features = ncol(Y),bias = FALSE)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
     if(length(hidden) != length(bias)) bias = rep(bias, length(bias))
@@ -74,19 +74,19 @@ dnn = function(formula,
     counter = 1
     for(i in 1:length(hidden)) {
       if(counter == 1) {
-        layers[[1]] = nn_linear(ncol(X), out_features = hidden[1], bias = FALSE)
+        layers[[1]] = torch::nn_linear(ncol(X), out_features = hidden[1], bias = FALSE)
       } else {
-        layers[[counter]] = nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
+        layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
       }
       counter = counter+1
-      if(activation[i] == "relu") layers[[counter]] = nn_relu()
-      if(activation[i] == "leaky_relu") layers[[counter]] = nn_leaky_relu()
-      if(activation[i] == "tanh") layers[[counter]] = nn_tanh()
+      if(activation[i] == "relu") layers[[counter]] = torch::nn_relu()
+      if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
+      if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
       counter = counter+1
     }
-    layers[[length(layers)+1]] = nn_linear(hidden[i], out_features = ncol(Y), bias = bias[i])
+    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = ncol(Y), bias = bias[i])
   }
-  net = do.call(nn_sequential, layers)
+  net = do.call(torch::nn_sequential, layers)
 
 
   ### set optimizer ###
