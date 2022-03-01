@@ -89,7 +89,7 @@ jobs:
           CI: true
         run: |
           options(crayon.enabled = TRUE)
-          rcmdcheck::rcmdcheck("cito", args = c("--no-multiarch", "--no-manual"), error_on = "error", check_dir = "check")
+          rcmdcheck::rcmdcheck(args = c("--no-multiarch", "--no-manual"), error_on = "error", check_dir = "check")
         shell: Rscript {0}
 
       - name: testthat output
@@ -103,7 +103,7 @@ jobs:
           CI: true
         run: |
           options(crayon.enabled = TRUE)
-          rcmdcheck::rcmdcheck("cito", args = c("--no-manual", "--as-cran"), error_on = "note", check_dir = "check")
+          rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "note", check_dir = "check")
         shell: Rscript {0}
 
       - name: Upload check results
