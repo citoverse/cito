@@ -206,11 +206,24 @@ dnn = function(formula,
   return(z)
 }
 
+#' Print class citodnn
+#'
+#' @param x a model created by \code{\link{dnn}}
+#' @param ... additional arguments
+#' @return prediction matrix
+#'
+#' @import checkmate
+#' @export
+print.citodnn<- function(x,...){
+  print(x$call)
+  print(x$net)
+}
+
 #' Predict from a fitted dnn model
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param newdata newdata for predictions
-#'
+#' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @export
@@ -221,13 +234,13 @@ predict.citodnn = function(object, newdata = NULL,...) {
                      checkmate::checkDataFrame(newdata))
 
   if(is.data.frame(newdata)) {
-    newdata <- stats::model.matrix(as.formula(object$call$formula), newdata)
+    newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
   } else {
-    newdata <- stats::model.matrix(as.formula(object$call$formula), data.frame(newdata))
+    newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
   }
   newdata<- torch::torch_tensor(newdata)
 
-  pred = object$net(newdata,...)
+  pred = torch::as_array(object$net(newdata,...))
   return(pred)
 }
 
@@ -239,6 +252,7 @@ visualize.training <- function(losses,epoch){
          main= "Training of DNN",
          xlab= "epoch",
          ylab= "loss")
+    graphics::legend("top",legend= c("training","validation"),
            col= c("#000080","#FF8000"),lty=1:2, cex=0.8,
            title="Line types", text.font=4, bg='grey91')
 
@@ -302,6 +316,9 @@ get_family = function(family) {
 
 
 
-#res = dnn(Species~scale(Sepal.Width)+scale(Petal.Length), data = iris, family = "softmax")
+# res = dnn(Species~Sepal.Width+Petal.Length, hidden=rep(10,5), data = iris, family = "softmax",validation= 0.3,epochs =24)
+# predict(res,iris[1:5,])
+# res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
+#predict(res,iris[1:5,])
 #summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
 
