@@ -162,6 +162,7 @@ dnn = function(formula,
   ### training loop ###
 
   loss.fkt<- fam$loss
+  losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
   for (epoch in 1:epochs) {
     train_l <- c()
 
@@ -172,6 +173,7 @@ dnn = function(formula,
       loss$backward()
       optim$step()
       train_l <- c(train_l, loss$item())
+      losses$train_l[epoch]<- mean(train_l)
     })
 
     if(validation!= 0){
@@ -179,17 +181,20 @@ dnn = function(formula,
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-
         output <- net(b[[1]])
         loss <- loss.fkt(output, b[[2]])$mean()
         valid_l <- c(valid_l, loss$item())
-
+        losses$valid_l[epoch]<- mean(valid_l)
       })
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f\n",
-                  epoch, mean(train_l), mean(valid_l)))
+                  epoch, losses$train_l[epoch], losses$valid_l[epoch]))
     }else{
-      cat(sprintf("Loss at epoch %d: %3f\n", epoch, mean(train_l)))
+      cat(sprintf("Loss at epoch %d: %3f\n", epoch, losses$train_l[epoch]))
     }
+
+    ### create plot ###
+    visualize.training(losses,epoch)
+
    }
 
   z<- list()
@@ -201,6 +206,26 @@ dnn = function(formula,
   return(z)
 }
 
+visualize.training<- function(losses,epoch){
+  if (epoch==1){
+
+    plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l[1],losses$valid_l[1],na.rm=T)),
+         main= "Training of DNN",
+         xlab= "epoch",
+         ylab= "loss")
+    legend("top",legend= c("training","validation"),
+           col= c("#000080","#FF8000"),lty=1:2, cex=0.8,
+           title="Line types", text.font=4, bg='grey91')
+
+    points(x=c(1),y=c(losses$train_l[1]),pch=19, col="#000080", lty=1)
+    points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FF8000", lty=2)
+
+  } else{
+
+  lines(c(epoch-1,epoch), c(losses$train_l[epoch-1],losses$train_l[epoch]), pch=19, col="#000080", type="b", lty=1)
+  lines(c(epoch-1,epoch), c(losses$valid_l[epoch-1],losses$valid_l[epoch]), pch=18, col="#FF8000", type="b", lty=2)
+  }
+}
 
 get_family = function(family) {
   out = list()
