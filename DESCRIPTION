@@ -1,17 +1,17 @@
 Package: cito
 Type: Package
 Date: 2022-03-01
-Title: Cito - Fast Neural Network training with torch 
+Title: Fast Neural Network training with torch 
 Version: 0.0.0.1
 Authors@R: 
-    c(person(given = "Maximilian",
-           family = "Pichler",
-           role = c("aut", "cre"),
-           email = "maximilian.pichler@ur.de"),
-      person(given = "Christian",
+    c(person(given = "Christian",
            family = "Amesöder",
+           role = c("aut", "cre"),
+           email = "Christian.Amesoeder@stud.uni-regensburg.de"),
+      person(given = "Maximilian",
+           family = "Pichler",
            role = c("aut"),
-           email = "Christian.Amesoeder@stud.uni-regensburg.de")
+           email = "maximilian.pichler@ur.de")
            )
 Description: Creation of Neural Networks with one line of code and typical R syntax. This package simplifys the process of creating and validating Neural Network based on the R nativ torch impementation. So far only deep neural networks (DNNs) can be trained, however it is planned to include RNNs, CNNs and VAE.  
 Encoding: UTF-8

@@ -4,12 +4,14 @@
 \alias{predict.citodnn}
 \title{Predict from a fitted dnn model}
 \usage{
-\method{predict}{citodnn}(object, newdata = NULL, ...)
+\method{predict}{citodnn}(object, newdata = NULL, type = c("link", "response"), ...)
 }
 \arguments{
 \item{object}{a model created by \code{\link{dnn}}}
 
 \item{newdata}{newdata for predictions}
+
+\item{type}{link or response}
 
 \item{...}{additional arguments}
 }

@@ -15,6 +15,7 @@
 #' @param batchsize how many samples data loader loads per batch
 #' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
 #' @param epochs epochs for training loop
+#' @param plot plot training loss
 #' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
@@ -34,6 +35,7 @@ dnn = function(formula,
                batchsize = 32L,
                shuffle = FALSE,
                epochs = 64,
+               plot = TRUE,
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -84,66 +86,28 @@ dnn = function(formula,
   if(is.character(Y)) {
     y_dim = length(unique(as.integer(as.factor(Y[,1]))))
     Y = matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(fam$family$family == "softmax") y_dtype = torch::torch_long()
     if(fam$family$family == "binomial") {
       Y = torch::as_array(torch::nnf_one_hot( torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze() )
     }
   }
+  if(fam$family$family == "softmax") y_dtype = torch::torch_long()
+
 
   ### dataset  ###
-  torch.dataset <- torch::dataset(
-    name = "dataset",
-    initialize = function(X,Y) {
-      self$X <- torch::torch_tensor(as.matrix(X), dtype = x_dtype)
-      self$Y <- torch::torch_tensor(as.matrix(Y), dtype = y_dtype)
-    },
-    .getitem = function(index) {
-      x <- self$X[index,]
-      y <- self$Y[index,]
-      list(x, y)
-    },
-    .length = function() {
-      self$Y$size()[[1]]
-    }
-  )
   if(validation!= 0){
     train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
     valid <- c(1:nrow(X))[-train]
-    train_ds <- torch.dataset(X[train,],Y[train,])
-    train_dl <- torch::dataloader(train_ds, batch_size = batchsize, shuffle = shuffle)
-    valid_ds <- torch.dataset(X[valid,],Y[valid,])
-    valid_dl <- torch::dataloader(valid_ds, batch_size = batchsize, shuffle = shuffle)
+    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+
   }else{
-    train_ds <- torch.dataset(X,Y)
-    train_dl <- torch::dataloader(train_ds, batch_size= batchsize, shuffle= shuffle)
+    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
   }
 
 
   ### build model ###
   # bias in first layer is set by formula intercept
-  layers = list()
-  if(is.null(hidden)) {
-    layers[[1]] = torch::nn_linear(ncol(X), out_features = y_dim,bias = FALSE)
-  } else {
-    if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
-    if(length(hidden) != length(bias)) bias = rep(bias, (length(hidden)+1))
-
-    counter = 1
-    for(i in 1:length(hidden)) {
-      if(counter == 1) {
-        layers[[1]] = torch::nn_linear(ncol(X), out_features = hidden[1], bias = FALSE)
-      } else {
-        layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
-      }
-      counter = counter+1
-      if(activation[i] == "relu") layers[[counter]] = torch::nn_relu()
-      if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
-      if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
-      counter = counter+1
-    }
-    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = y_dim, bias = bias[i])
-  }
-  net = do.call(torch::nn_sequential, layers)
+  net = build_model(input = ncol(X), output = y_dim, hidden = hidden, activation = activation, bias = bias)
 
   parameters = c(net$parameters, fam$parameter)
 
@@ -193,7 +157,7 @@ dnn = function(formula,
     }
 
     ### create plot ###
-    visualize.training(losses,epoch)
+    if(plot) visualize.training(losses,epoch)
 
    }
 
@@ -202,6 +166,7 @@ dnn = function(formula,
   z$net<- net
   z$call <- match.call()
   z$family = fam
+  z$data = list(X = X, Y = Y, data = data)
 
   return(z)
 }
@@ -223,96 +188,39 @@ print.citodnn<- function(x,...){
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param newdata newdata for predictions
+#' @param type link or response
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @export
-predict.citodnn = function(object, newdata = NULL,...) {
+predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
                      checkmate::checkDataFrame(newdata))
 
-  if(is.data.frame(newdata)) {
-    newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
-  } else {
-    newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
-  }
-  newdata<- torch::torch_tensor(newdata)
+  type = match.arg(type)
 
-  pred = torch::as_array(object$net(newdata,...))
+  if(type == "link") link = function(a) object$family$invlink(a)
+  else link = function(a) a
+
+  ### TO DO: use dataloaders via get_data_loader function
+  if(is.null(newdata)) newdata = torch::torch_tensor(object$data$X)
+  else {
+    if(is.data.frame(newdata)) {
+        newdata <- stats::model.matrix(stats::as.formula(object$call$formula[-2]), newdata)
+      } else {
+        newdata <- stats::model.matrix(stats::as.formula(object$call$formula[-2]), data.frame(newdata))
+      }
+    newdata<- torch::torch_tensor(newdata)
+  }
+
+
+  pred = torch::as_array(link(object$net(newdata,...)))
   return(pred)
 }
 
 
-visualize.training <- function(losses,epoch){
-  if (epoch==1){
-
-    graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l[1],losses$valid_l[1],na.rm=T)),
-         main= "Training of DNN",
-         xlab= "epoch",
-         ylab= "loss")
-    graphics::legend("top",legend= c("training","validation"),
-           col= c("#000080","#FF8000"),lty=1:2, cex=0.8,
-           title="Line types", text.font=4, bg='grey91')
-
-    graphics::points(x=c(1),y=c(losses$train_l[1]),pch=19, col="#000080", lty=1)
-    graphics::points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FF8000", lty=2)
-
-  } else{
-
-  graphics::lines(c(epoch-1,epoch), c(losses$train_l[epoch-1],losses$train_l[epoch]), pch=19, col="#000080", type="b", lty=1)
-  graphics::lines(c(epoch-1,epoch), c(losses$valid_l[epoch-1],losses$valid_l[epoch]), pch=18, col="#FF8000", type="b", lty=2)
-  }
-}
-
-get_family = function(family) {
-  out = list()
-  out$parameter = NULL
-
-  if(!inherits(family, "family")){
-    if(family == "softmax") {
-      family = list(family="softmax")
-    } else {
-      stop("Family is not supported")
-    }
-  }
-  if(family$family == "gaussian") {
-    out$parameter = torch::torch_tensor(0.1, requires_grad = TRUE)
-    out$invlink = function(a) a
-    out$loss = function(pred, true) {
-      return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
-    }
-  } else if(family$family == "binomial") {
-    if(family$link == "logit") {
-      out$invlink = function(a) torch::torch_sigmoid(a)
-    } else if(family$link == "probit")  {
-      out$invlink = function(a) torch::torch_sigmoid(a*1.7012)
-    } else {
-      out$invlink = function(a) a
-    }
-    out$loss = function(pred, true) {
-      return(torch::distr_bernoulli( out$invlink(pred) )$log_prob(true)$negative())
-    }
-  } else if(family$family == "poisson") {
-    if(family$link == "log") {
-      out$invlink = function(a) torch::torch_exp(a)
-    } else {
-      out$invlink = function(a) a
-    }
-    out$loss = function(pred, true) {
-      return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
-    }
-  } else if(family$family == "softmax") {
-    out$invlink = function(a) torch::nnf_softmax(a, dim = 2)
-    out$loss = function(pred, true) {
-        return( torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
-      }
-  }
-
-  out$family = family
-  return(out)
-}
 
 
 

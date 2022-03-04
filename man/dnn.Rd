@@ -20,6 +20,7 @@ dnn(
   batchsize = 32L,
   shuffle = FALSE,
   epochs = 64,
+  plot = TRUE,
   ...
 )
 }
@@ -53,6 +54,8 @@ dnn(
 \item{shuffle}{TRUE if data should be reshuffled every epoch (default: FALSE)}
 
 \item{epochs}{epochs for training loop}
+
+\item{plot}{plot training loss}
 
 \item{...}{additional arguments to be passed to optimizer}
 }
