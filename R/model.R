@@ -24,13 +24,14 @@ get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE, x_dtype, y_dtype)
 
 
 
-build_model = function(input, output, hidden, activation, bias) {
+build_model = function(input, output, hidden, activation, bias, dropout) {
   layers = list()
   if(is.null(hidden)) {
     layers[[1]] = torch::nn_linear(input, out_features = output,bias = FALSE)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
     if(length(hidden) != length(bias)) bias = rep(bias, (length(hidden)+1))
+    if(length(hidden) != length(dropout)) dropout = rep(dropout,length(hidden))
 
     counter = 1
     for(i in 1:length(hidden)) {
@@ -44,6 +45,10 @@ build_model = function(input, output, hidden, activation, bias) {
       if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
       if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
       counter = counter+1
+      if(dropout[i]>0) {
+        layers[[counter]] = torch::nn_dropout(dropout[i])
+        counter = counter+1
+      }
     }
     layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i])
   }

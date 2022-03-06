@@ -43,7 +43,7 @@ dnn = function(formula,
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(alpha, "R1[0,)")
-  checkmate::qassert(dropout, "R1[0,)")
+  checkmate::qassert(dropout, "R+[0,)")
 
   self = NULL
 
@@ -107,7 +107,9 @@ dnn = function(formula,
 
   ### build model ###
   # bias in first layer is set by formula intercept
-  net = build_model(input = ncol(X), output = y_dim, hidden = hidden, activation = activation, bias = bias)
+  net = build_model(input = ncol(X), output = y_dim,
+                    hidden = hidden, activation = activation,
+                    bias = bias, dropout = dropout)
 
   parameters = c(net$parameters, fam$parameter)
 
