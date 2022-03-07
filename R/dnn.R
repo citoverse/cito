@@ -42,7 +42,7 @@ dnn = function(formula,
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(alpha, "R1[0,)")
+  checkmate::qassert(alpha, c("R+[0,]","B1"))
   checkmate::qassert(dropout, "R+[0,)")
 
   self = NULL
@@ -129,6 +129,8 @@ dnn = function(formula,
 
   loss.fkt<- fam$loss
   losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
+  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+  weight_layers<-  grepl("weight",names(net$parameters),fixed=T)
   for (epoch in 1:epochs) {
     train_l <- c()
 
@@ -136,6 +138,26 @@ dnn = function(formula,
       optim$zero_grad()
       output <- net(b[[1]])
       loss <- loss.fkt(output, b[[2]])$mean()
+
+      if(!all(alpha==F)){
+        counter<- 1
+        if(colnames(X)[1]=="(Intercept)"){
+          l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]])))
+          l2 <- torch::torch_norm(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
+          regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
+          loss<-  torch::torch_add(loss,regularization)
+          counter<- counter + 1
+          }
+        for (i in c(counter:length(net$parameters))){
+          if (weight_layers[i]){
+            l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters[i])))
+            l2 <- torch::torch_norm(torch::torch_cat(net$parameters[i]),p=2L)
+            regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
+            loss<-  torch::torch_add(loss,regularization)
+            counter <- counter+1
+          }
+        }
+      }
       loss$backward()
       optim$step()
       train_l <- c(train_l, loss$item())
