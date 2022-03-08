@@ -18,3 +18,33 @@ visualize.training <- function(losses,epoch){
     graphics::lines(c(epoch-1,epoch), c(losses$valid_l[epoch-1],losses$valid_l[epoch]), pch=18, col="#FF8000", type="b", lty=2)
   }
 }
+
+#' Visualize training of Neural Network afterwards to decide on best performing model.
+#' Creates a plotly figure which allows to zoom in and out on training graph
+#'
+#' @param object a model created by \code{\link{dnn}}
+#' @return a plotly figure
+#'
+#' @export
+
+analyze_training<- function(object){
+
+  fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
+                         width = 900)
+
+  fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss")
+  fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss")
+
+  fig<- plotly::layout(fig, showlegend = F, title='DNN Training',
+                       xaxis = list(rangeslider = list(visible = T)),
+                       yaxis = list(fixedrange = F))
+  fig<- plotly::layout(fig,xaxis = list(zerolinecolor = '#ffff',
+                                        zerolinewidth = 2,
+                                        gridcolor = 'ffff'),
+                       yaxis = list(zerolinecolor = '#ffff',
+                                    zerolinewidth = 2,
+                                    gridcolor = 'ffff'),
+                       plot_bgcolor='#e5ecf6')
+
+  return(fig)
+}

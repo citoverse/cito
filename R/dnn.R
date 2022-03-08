@@ -190,6 +190,7 @@ dnn = function(formula,
   z$net<- net
   z$call <- match.call()
   z$family = fam
+  z$losses<- losses
   z$data = list(X = X, Y = Y, data = data)
 
   return(z)
