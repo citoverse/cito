@@ -2,5 +2,6 @@
 
 S3method(predict,citodnn)
 S3method(print,citodnn)
+export(analyze_training)
 export(dnn)
 import(checkmate)

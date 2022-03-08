@@ -44,6 +44,30 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
       if(activation[i] == "relu") layers[[counter]] = torch::nn_relu()
       if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
       if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
+      layers[[counter]]<- switch(tolower(activation[i]),
+             "relu" = torch::nn_relu(),
+             "leaky_relu" = torch::nn_leaky_relu(),
+             "tanh" = torch::nn_tanh(),
+             "elu" = torch::nn_elu(),
+             "rrelu" = torch::nn_rrelu(),
+             "prelu" = torch::nn_prelu(),
+             "softplus" = torch::nn_softplus(),
+             "celu" = torch::nn_celu(),
+             "selu" = torch::nn_selu(),
+             "gelu" = torch::nn_gelu(),
+             "relu6" = torch:: nn_relu6(),
+             "sigmoid" = torch::nn_sigmoid(),
+             "softsign" = torch::nn_softsign(),
+             "hardtanh" = torch::nn_hardtanh(),
+             "tanhshrink" = torch::nn_tanhshrink(),
+             "softshrink" = torch::nn_softshrink(),
+             "hardshrink" = torch::nn_hardshrink(),
+             "log_sigmoid" = torch::nn_log_sigmoid(),
+             stop(paste0(activation[i], " as an activation function is not supported"))
+             )
+
+      torch::nn_elu
+
       counter = counter+1
       if(dropout[i]>0) {
         layers[[counter]] = torch::nn_dropout(dropout[i])
