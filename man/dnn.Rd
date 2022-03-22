@@ -21,6 +21,7 @@ dnn(
   shuffle = FALSE,
   epochs = 64,
   plot = TRUE,
+  lr_scheduler = FALSE,
   ...
 )
 }
@@ -56,6 +57,8 @@ dnn(
 \item{epochs}{epochs for training loop}
 
 \item{plot}{plot training loss}
+
+\item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"}
 
 \item{...}{additional arguments to be passed to optimizer}
 }

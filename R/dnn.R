@@ -15,6 +15,7 @@
 #' @param batchsize how many samples data loader loads per batch
 #' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
 #' @param epochs epochs for training loop
+#' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"
 #' @param plot plot training loss
 #' @param ... additional arguments to be passed to optimizer
 #'
@@ -36,6 +37,7 @@ dnn = function(formula,
                shuffle = FALSE,
                epochs = 64,
                plot = TRUE,
+               lr_scheduler= FALSE,
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -44,6 +46,8 @@ dnn = function(formula,
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(alpha, c("R+[0,]","B1"))
   checkmate::qassert(dropout, "R+[0,)")
+  checkmate::qassert(lr, "R+[0,)")
+  checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
 
   self = NULL
 
@@ -121,9 +125,28 @@ dnn = function(formula,
                  "rmsprop"  = torch::optim_rmsprop(parameters, lr=lr,...),
                  "rprop" = torch::optim_rprop(parameters, lr=lr,...),
                  "sgd" = torch::optim_sgd(parameters, lr=lr,...),
-                 "lbfgs" = torch::optim_lbfgs(parameters, lr=lr,...)
+                 "lbfgs" = torch::optim_lbfgs(parameters, lr=lr,...),
+                 stop(paste0("optimizer = ",optimizer," is not supported, choose between adam, adadelta, adagrad, rmsprop, rprop, sgd or lbfgs"))
 
   )
+
+  ### LR Scheduler ###
+  if(!isFALSE(lr_scheduler)){
+    use_lr_scheduler <- TRUE
+    scheduler <- switch(tolower(lr_scheduler),
+                        "step" = torch::lr_step(optim, step_size=40),
+                        "one_cycle" = torch::lr_one_cycle(optim,max_lr= lr,
+                                                          steps_per_epoch = length(train_dl),
+                                                          epochs = epochs),
+                        "multiplicative" = torch::lr_multiplicative(optim,
+                                                                    lr_lambda = function(epoch) 0.95),
+                        "lambda" = torch::lr_lambda(optim,
+                                                    lr_lambda = list(lambda2= function(epoch) 0.95^epoch )),
+                        stop(paste0("lr_scheduler = ",lr_scheduler," is not supported, choose between step, one_cycle, multiplicative or lambda")))
+
+  }else{
+    use_lr_scheduler <- FALSE
+    }
 
   ### training loop ###
 
@@ -160,6 +183,7 @@ dnn = function(formula,
       }
       loss$backward()
       optim$step()
+      if(use_lr_scheduler) scheduler$step()
       train_l <- c(train_l, loss$item())
       losses$train_l[epoch]<- mean(train_l)
     })
@@ -174,8 +198,8 @@ dnn = function(formula,
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch]<- mean(valid_l)
       })
-      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f\n",
-                  epoch, losses$train_l[epoch], losses$valid_l[epoch]))
+      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+                  epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
     }else{
       cat(sprintf("Loss at epoch %d: %3f\n", epoch, losses$train_l[epoch]))
     }
