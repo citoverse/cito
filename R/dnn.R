@@ -183,7 +183,17 @@ dnn = function(formula,
     ### create plot ###
     if(plot) visualize.training(losses,epoch)
 
-   }
+  }
+
+  ### Pass to global workspace ###
+  allglobal <- function() {
+    lss <- ls(envir = parent.frame())
+    for (i in lss) {
+      assign(i, get(i, envir = parent.frame()), envir = .GlobalEnv)
+    }
+  }
+  allglobal()
+
 
   z<- list()
   class(z)<- "citodnn"
