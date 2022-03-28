@@ -150,6 +150,8 @@ dnn = function(formula,
 
   ### training loop ###
 
+  weights<- list()
+  net$to(device = device)
   loss.fkt<- fam$loss
   losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
   if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
@@ -201,8 +203,11 @@ dnn = function(formula,
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                   epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
     }else{
-      cat(sprintf("Loss at epoch %d: %3f\n", epoch, losses$train_l[epoch]))
+      cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
     }
+
+    weights[[epoch]]<- lapply(net$parameters,torch::as_array)
+
 
     ### create plot ###
     if(plot) visualize.training(losses,epoch)
@@ -218,6 +223,12 @@ dnn = function(formula,
   }
   allglobal()
 
+  model_properties<- list(input = ncol(X),
+                          output = y_dim,
+                          hidden = hidden,
+                          activation = activation,
+                          bias = bias,
+                          dropout = dropout)
 
   z<- list()
   class(z)<- "citodnn"
@@ -226,6 +237,10 @@ dnn = function(formula,
   z$family = fam
   z$losses<- losses
   z$data = list(X = X, Y = Y, data = data)
+  z$weights <- weights
+  z$use_model_epoch<- epoch
+  z$loaded_model_epoch <- epoch
+  z$model_properties<- model_properties
 
   return(z)
 }
@@ -239,6 +254,7 @@ dnn = function(formula,
 #' @import checkmate
 #' @export
 print.citodnn<- function(x,...){
+  x<- check_model(x)
   print(x$call)
   print(x$net)
 }
@@ -257,6 +273,7 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
                      checkmate::checkDataFrame(newdata))
+  object<- check_model(object)
 
   type = match.arg(type)
 
