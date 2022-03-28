@@ -17,6 +17,7 @@
 #' @param epochs epochs for training loop
 #' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"
 #' @param plot plot training loss
+#' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
@@ -38,6 +39,7 @@ dnn = function(formula,
                epochs = 64,
                plot = TRUE,
                lr_scheduler= FALSE,
+               device= "cuda",
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -48,8 +50,22 @@ dnn = function(formula,
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
+  checkmate::qassert(device, "S+[3,)")
 
   self = NULL
+
+  if(device== "cuda"){
+    if (torch::cuda_is_available()) {
+      device<- torch::torch_device("cuda")}
+    else{
+      warning("No Cuda device detected, device is set to cpu")
+      device<- torch::torch_device("cpu")
+    }
+
+  }else {
+    if(device!= "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    device<- torch::torch_device("cpu")
+  }
 
   if(is.data.frame(data)) {
 
@@ -146,7 +162,7 @@ dnn = function(formula,
 
   }else{
     use_lr_scheduler <- FALSE
-    }
+  }
 
   ### training loop ###
 
@@ -161,8 +177,8 @@ dnn = function(formula,
 
     coro::loop(for (b in train_dl) {
       optim$zero_grad()
-      output <- net(b[[1]])
-      loss <- loss.fkt(output, b[[2]])$mean()
+      output <- net(b[[1]]$to(device = device))
+      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
 
       if(!all(alpha==F)){
         counter<- 1
@@ -172,7 +188,7 @@ dnn = function(formula,
           regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
           loss<-  torch::torch_add(loss,regularization)
           counter<- counter + 1
-          }
+        }
         for (i in c(counter:length(net$parameters))){
           if (weight_layers[i]){
             l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters[i])))
@@ -195,8 +211,8 @@ dnn = function(formula,
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-        output <- net(b[[1]])
-        loss <- loss.fkt(output, b[[2]])$mean()
+        output <- net(b[[1]]$to(device = device))
+        loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch]<- mean(valid_l)
       })
@@ -206,7 +222,7 @@ dnn = function(formula,
       cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
     }
 
-    weights[[epoch]]<- lapply(net$parameters,torch::as_array)
+    weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
 
 
     ### create plot ###
@@ -222,6 +238,7 @@ dnn = function(formula,
     }
   }
   allglobal()
+  net$to(device = "cpu")
 
   model_properties<- list(input = ncol(X),
                           output = y_dim,
