@@ -18,6 +18,7 @@
 #' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"
 #' @param plot plot training loss
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
+#' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
 #' @param ... additional arguments to be passed to optimizer
 #'
 #' @import checkmate
@@ -40,6 +41,7 @@ dnn = function(formula,
                plot = TRUE,
                lr_scheduler= FALSE,
                device= "cuda",
+               early_stopping = FALSE,
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -50,6 +52,7 @@ dnn = function(formula,
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
+  checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
 
   self = NULL
@@ -218,6 +221,9 @@ dnn = function(formula,
       })
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                   epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
+      if(epoch>early_stopping && is.numeric(early_stopping) &&
+         losses$valid_l[epoch-early_stopping]<losses$valid_l[epoch]) break
+
     }else{
       cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
     }
