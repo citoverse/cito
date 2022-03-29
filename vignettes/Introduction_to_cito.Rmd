@@ -1,0 +1,65 @@
+---
+title: "cito"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{cito}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, include=FALSE}
+library(cito)
+set.seed(123)
+```
+
+## Abstract
+cito aims at helping you build and traing Neural Networks with the standard R syntax. It allows the whole model creation process and training to be done with one line of code as well as use all generic methods on the created object. It is based on the torch machine learning framework which is natively available for R. Therefore no Python installation or API is needed for this package. 
+
+## Data
+As a first example we will work with the irirs dataset. Which consists of three species and four corresponding variables.  
+
+```{r data}
+
+data<- datasets::iris
+
+summary(data)
+```
+
+## Simple models and model structures 
+With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 5 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case should last for 5 epochs and is should be done on the cpu.
+```{r simp_models, fig.show='hide'}
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10,10), epochs = 5, device= "cpu")
+
+
+```
+## Interpreting model output
+Things you can do with the output if dnn() include: 
+
+```{r interpret}
+print(nn.fit) # same as summary(nn.fit)
+#coef(nn.fit)
+predict(nn.fit,data[1,])
+analyze_training(nn.fit)
+
+
+
+```
+
+## Options for Neural Networks 
+
+
+## Optimizers and adjustable learning rate
+Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer.  
+The learning rate 
+
+
+## Early Stopping 
+
+

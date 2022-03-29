@@ -21,6 +21,7 @@
 #' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
 #' @param ... additional arguments to be passed to optimizer
 #'
+#'
 #' @import checkmate
 #' @export
 dnn = function(formula,
@@ -219,6 +220,7 @@ dnn = function(formula,
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch]<- mean(valid_l)
       })
+
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                   epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
       if(epoch>early_stopping && is.numeric(early_stopping) &&
@@ -311,9 +313,9 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
   if(is.null(newdata)) newdata = torch::torch_tensor(object$data$X)
   else {
     if(is.data.frame(newdata)) {
-        newdata <- stats::model.matrix(stats::as.formula(object$call$formula[-2]), newdata)
+        newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
       } else {
-        newdata <- stats::model.matrix(stats::as.formula(object$call$formula[-2]), data.frame(newdata))
+        newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
       }
     newdata<- torch::torch_tensor(newdata)
   }
@@ -326,10 +328,27 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
 
 
 
-
-# res = dnn(Species~Sepal.Width+Petal.Length, hidden=rep(10,5), data = iris, family = "softmax",validation= 0.3,epochs =24)
+# source("R/model.R")
+# source("R/plot.R")
+# source("R/utils.R")
+# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = 3,
+#            data = iris, family = "softmax", activation= "selu", device ="cpu",
+#            validation= 0.3,epochs =200, dropout= 0,alpha = F, lr_scheduler = F)
 # predict(res,iris[1:5,])
-# res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
-#predict(res,iris[1:5,])
-#summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
-
+# #res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
+# # predict(res,iris[1:5,])
+# # summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
+# # analyze_training(res)
+#
+# # predict(res)
+# #
+# saveRDS(res, "test.RDS")
+# res2 <-  readRDS("test.RDS")
+# predict(res2,iris[1:5,])
+#
+# #error
+# res2$net$parameters
+#
+# #no error
+# res2<- check_model(res2)
+# res2$net$parameters

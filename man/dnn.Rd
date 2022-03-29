@@ -22,6 +22,8 @@ dnn(
   epochs = 64,
   plot = TRUE,
   lr_scheduler = FALSE,
+  device = "cuda",
+  early_stopping = FALSE,
   ...
 )
 }
@@ -59,6 +61,10 @@ dnn(
 \item{plot}{plot training loss}
 
 \item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"}
+
+\item{device}{device on which network should be trained on, either "cpu" or "cuda"}
+
+\item{early_stopping}{training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done}
 
 \item{...}{additional arguments to be passed to optimizer}
 }
