@@ -19,8 +19,8 @@ check_model <- function(object) {
   if(object$loaded_model_epoch!= object$use_model_epoch){
 
     module_params<- names(object$weights[[object$use_model_epoch]])
-    module_number<- sapply(module_params, function(x) substr(x,1,1))
-    module_type<-sapply(module_params, function(x) substring(x,3))
+    module_number<- sapply(module_params, function(x) substr(x,1,which(strsplit(x,"")[[1]]==".")-1))
+    module_type<-sapply(module_params, function(x) substring(x,which(strsplit(x,"")[[1]]==".")+1))
 
     for ( i in names(object$net$modules)){
       if(i %in% module_number){
