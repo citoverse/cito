@@ -222,7 +222,11 @@ dnn = function(formula,
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                   epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
       if(epoch>early_stopping && is.numeric(early_stopping) &&
-         losses$valid_l[epoch-early_stopping]<losses$valid_l[epoch]) break
+         losses$valid_l[epoch-early_stopping]<losses$valid_l[epoch]) {
+        weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        if(plot) visualize.training(losses,epoch)
+        break
+      }
 
     }else{
       cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
