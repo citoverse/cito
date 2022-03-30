@@ -288,6 +288,17 @@ print.citodnn<- function(x,...){
   print(x$net)
 }
 
+#' Returns list of parameters the neural network model currently has in use
+#'
+#' @param object a model created by \code{\link{dnn}}
+#' @return list of weigths of neural network
+#'
+#' @export
+coef.citodnn<- function(object,...){
+  return(object$weights[object$use_model_epoch])
+}
+
+
 #' Predict from a fitted dnn model
 #'
 #' @param object a model created by \code{\link{dnn}}
