@@ -15,11 +15,11 @@
 #' @param batchsize how many samples data loader loads per batch
 #' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
 #' @param epochs epochs for training loop
-#' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"
+#' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix
 #' @param plot plot training loss
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
-#' @param ... additional arguments to be passed to optimizer
+#' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
 #' @import checkmate
 #' @export
@@ -42,6 +42,7 @@ dnn <- function(formula,
                lr_scheduler= FALSE,
                device= "cuda",
                early_stopping = FALSE,
+               config=list(),
                ...) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -55,6 +56,19 @@ dnn <- function(formula,
   checkmate::qassert(device, "S+[3,)")
 
   self = NULL
+
+  ### decipher config list ###
+  config_optimizer<-c()
+  config_lr_scheduler<- c()
+  if(length(config)>0){
+    config_optimizer<- config[which(startsWith(tolower(names(config)),"optimizer"))]
+    names(config_optimizer)<- sapply(names(config_optimizer),function(x) substring(x,11))
+
+    config_lr_scheduler<- config[which(startsWith(tolower(names(config)),"lr_scheduler"))]
+    names(config_lr_scheduler)<- sapply(names(config_lr_scheduler),function(x) substring(x,14))
+  }
+
+
 
   if(device== "cuda"){
     if (torch::cuda_is_available()) {
@@ -136,30 +150,35 @@ dnn <- function(formula,
   parameters = c(net$parameters, fam$parameter)
 
   ### set optimizer ###
+  param_optimizer<- list(params=parameters,lr=lr)
+  if(length(config_optimizer)>0) {
+    param_optimizer<- c(param_optimizer,config_optimizer)
+  }
   optim<- switch(tolower(optimizer),
-                 "adam"= torch::optim_adam(parameters, lr=lr,...),
-                 "adadelta" = torch::optim_adadelta(parameters, lr=lr,...),
-                 "adagrad" =  torch::optim_adagrad(parameters, lr=lr,...),
-                 "rmsprop"  = torch::optim_rmsprop(parameters, lr=lr,...),
-                 "rprop" = torch::optim_rprop(parameters, lr=lr,...),
-                 "sgd" = torch::optim_sgd(parameters, lr=lr,...),
-                 "lbfgs" = torch::optim_lbfgs(parameters, lr=lr,...),
+                 "adam"= do.call(torch::optim_adam,param_optimizer),
+                 "adadelta" = do.call(torch::optim_adadelta,param_optimizer),
+                 "adagrad" =  do.call(torch::optim_adagrad,param_optimizer),
+                 "rmsprop"  = do.call(torch::optim_rmsprop,param_optimizer),
+                 "rprop" = do.call(torch::optim_rprop,param_optimizer),
+                 "sgd" = do.call(torch::optim_sgd,param_optimizer),
+                 "lbfgs" = do.call(torch::optim_lbfgs,param_optimizer),
                  stop(paste0("optimizer = ",optimizer," is not supported, choose between adam, adadelta, adagrad, rmsprop, rprop, sgd or lbfgs"))
 
   )
 
-  ### LR Scheduler ###
+    ### LR Scheduler ###
   if(!isFALSE(lr_scheduler)){
     use_lr_scheduler <- TRUE
+
+    param_lr_scheduler<- list(optimizer=optim)
+    if(length(config_lr_scheduler)>0) {
+      param_lr_scheduler<- c(param_lr_scheduler,config_lr_scheduler)
+    }
     scheduler <- switch(tolower(lr_scheduler),
-                        "step" = torch::lr_step(optim, step_size=40),
-                        "one_cycle" = torch::lr_one_cycle(optim,max_lr= lr,
-                                                          steps_per_epoch = length(train_dl),
-                                                          epochs = epochs),
-                        "multiplicative" = torch::lr_multiplicative(optim,
-                                                                    lr_lambda = function(epoch) 0.95),
-                        "lambda" = torch::lr_lambda(optim,
-                                                    lr_lambda = list(lambda2= function(epoch) 0.95^epoch )),
+                        "step" = do.call(torch::lr_step,param_lr_scheduler),
+                        "one_cycle" = do.call(torch::lr_one_cycle,param_lr_scheduler),
+                        "multiplicative" = do.call(torch::lr_multiplicative,param_lr_scheduler),
+                        "lambda" = do.call(torch::lr_lambda,param_lr_scheduler),
                         stop(paste0("lr_scheduler = ",lr_scheduler," is not supported, choose between step, one_cycle, multiplicative or lambda")))
 
   }else{
@@ -181,7 +200,8 @@ dnn <- function(formula,
       output <- net(b[[1]]$to(device = device))
 
       loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-      loss <- generalize_alpha(net$parameters,alpha,loss)
+      loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
+                               loss = loss,intercept= colnames(X)[1]=="(Intercept)")
       loss$backward()
       optim$step()
 
@@ -197,7 +217,8 @@ dnn <- function(formula,
       coro::loop(for (b in valid_dl) {
         output <- net(b[[1]]$to(device = device))
         loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-        loss <- generalize_alpha(net$parameters,alpha,loss)
+        loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
+                                 loss = loss,intercept= colnames(X)[1]=="(Intercept)")
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch]<- mean(valid_l)
       })

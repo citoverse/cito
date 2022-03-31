@@ -18,6 +18,8 @@ continue_training(
 
 \item{early_stopping}{training stops if validation error n epochs before was lower than in current epoch}
 
+\item{lr_scheduler}{lr scheduler}
+
 \item{...}{additional arguments}
 }
 \value{

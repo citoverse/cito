@@ -24,6 +24,7 @@ dnn(
   lr_scheduler = FALSE,
   device = "cuda",
   early_stopping = FALSE,
+  config = list(),
   ...
 )
 }
@@ -44,7 +45,7 @@ dnn(
 
 \item{lambda}{lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}}
 
-\item{alpha}{weighting between lasso and ridge: \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2}}
+\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.}
 
 \item{dropout}{probability of dropout rate}
 
@@ -60,13 +61,13 @@ dnn(
 
 \item{plot}{plot training loss}
 
-\item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step"}
+\item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix}
 
 \item{device}{device on which network should be trained on, either "cpu" or "cuda"}
 
 \item{early_stopping}{training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done}
 
-\item{...}{additional arguments to be passed to optimizer}
+\item{config}{list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.}
 }
 \description{
 DNN
