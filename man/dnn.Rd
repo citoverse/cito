@@ -38,7 +38,7 @@ dnn(
 
 \item{activation}{activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid}
 
-\item{validation}{percantage of data set that should be taken as validation set (chosen randomly)}
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
 
 \item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
 
