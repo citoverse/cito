@@ -173,7 +173,6 @@ dnn <- function(formula,
   loss.fkt<- fam$loss
   losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
   if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha[1],length(hidden)+1)
-  weight_layers<-  grepl("weight",names(net$parameters),fixed=T)
   for (epoch in 1:epochs) {
     train_l <- c()
 

@@ -66,8 +66,6 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
              stop(paste0(activation[i], " as an activation function is not supported"))
              )
 
-      torch::nn_elu
-
       counter = counter+1
       if(dropout[i]>0) {
         layers[[counter]] = torch::nn_dropout(dropout[i])
@@ -133,6 +131,7 @@ get_family = function(family) {
 
 generalize_alpha<- function (parameters, alpha, loss){
 
+  weight_layers<-  grepl("weight",names(parameters),fixed=T)
   if(!all(alpha==F)|anyNA(alpha)){
     counter<- 1
     if(is.na(alpha[counter])){
