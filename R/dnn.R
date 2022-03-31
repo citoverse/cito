@@ -180,37 +180,12 @@ dnn <- function(formula,
     coro::loop(for (b in train_dl) {
       optim$zero_grad()
       output <- net(b[[1]]$to(device = device))
-      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
 
-      if(!all(alpha==F)|!all(is.na(alpha))){
-        counter<- 1
-        if(is.na(alpha[counter])){
-          counter<- counter+1
-        }else{
-          if(colnames(X)[1]=="(Intercept)"){
-            l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]])))
-            l2 <- torch::torch_norm(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
-            regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-            loss<-  torch::torch_add(loss,regularization)
-            counter<- counter + 1
-          }
-        }
-        for (i in c(counter:length(net$parameters))){
-          if(is.na(alpha[counter])){
-            counter<- counter+1
-          }else{
-            if (weight_layers[i]){
-              l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters[i])))
-              l2 <- torch::torch_norm(torch::torch_cat(net$parameters[i]),p=2L)
-              regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-              loss<-  torch::torch_add(loss,regularization)
-              counter <- counter+1
-            }
-          }
-        }
-      }
+      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+      loss <- generalize_alpha(net$parameters,alpha,loss)
       loss$backward()
       optim$step()
+
       if(use_lr_scheduler) scheduler$step()
       train_l <- c(train_l, loss$item())
       losses$train_l[epoch]<- mean(train_l)
@@ -223,6 +198,7 @@ dnn <- function(formula,
       coro::loop(for (b in valid_dl) {
         output <- net(b[[1]]$to(device = device))
         loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+        loss <- generalize_alpha(net$parameters,alpha,loss)
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch]<- mean(valid_l)
       })
@@ -348,23 +324,23 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
 source("R/model.R")
 source("R/plot.R")
 source("R/utils.R")
-res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = 10,
+res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
            data = iris, family = "softmax", activation= "selu", device ="cpu",
-           validation= 0.3,epochs =200, dropout= 0,alpha = F, lr_scheduler = F)
-predict(res,iris[1:5,])
-# res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
+           validation= 0.3,epochs = 32, dropout = 0,alpha = 1, lr_scheduler = F)
 # predict(res,iris[1:5,])
-# summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
-# analyze_training(res)
-# predict(res)
+# # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
+# # predict(res,iris[1:5,])
+# # summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
+# # analyze_training(res)
+# # predict(res)
+# #
+# saveRDS(res, "test.RDS")
+# res2 <-  readRDS("test.RDS")
+# predict(res2,iris[1:5,])
 #
-saveRDS(res, "test.RDS")
-res2 <-  readRDS("test.RDS")
-predict(res2,iris[1:5,])
-
-#error
-res2$net$parameters
-
-#no error
-res2<- check_model(res2)
-res2$net$parameters
+# #error
+# res2$net$parameters
+#
+# #no error
+# res2<- check_model(res2)
+# res2$net$parameters
