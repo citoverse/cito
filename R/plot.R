@@ -33,8 +33,9 @@ analyze_training<- function(object){
                          width = 900)
 
   fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss")
-  fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss")
-
+  if(object$call$validation>0 && !is.null(object$call$activation))  {
+    fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss")
+  }
   fig<- plotly::layout(fig, showlegend = F, title='DNN Training',
                        xaxis = list(rangeslider = list(visible = T)),
                        yaxis = list(fixedrange = F))

@@ -5,10 +5,10 @@
 #' @param family error distribution with link function, see details for supported family functions
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid
-#' @param validation percantage of data set that should be taken as validation set (chosen randomly)
+#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
 #' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
-#' @param alpha weighting between lasso and ridge: \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2}
+#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
 #' @param dropout probability of dropout rate
 #' @param optimizer which optimizer used for training the network,
 #' @param lr learning rate given to optimizer
@@ -21,10 +21,9 @@
 #' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
 #' @param ... additional arguments to be passed to optimizer
 #'
-#'
 #' @import checkmate
 #' @export
-dnn = function(formula,
+dnn <- function(formula,
                data = NULL,
                family = stats::gaussian(),
                hidden = c(10L, 10L, 10L),
@@ -49,7 +48,6 @@ dnn = function(formula,
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(alpha, c("R+[0,]","B1"))
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
@@ -174,7 +172,7 @@ dnn = function(formula,
   net$to(device = device)
   loss.fkt<- fam$loss
   losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
-  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha[1],length(hidden)+1)
   weight_layers<-  grepl("weight",names(net$parameters),fixed=T)
   for (epoch in 1:epochs) {
     train_l <- c()
@@ -184,22 +182,30 @@ dnn = function(formula,
       output <- net(b[[1]]$to(device = device))
       loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
 
-      if(!all(alpha==F)){
+      if(!all(alpha==F)|!all(is.na(alpha))){
         counter<- 1
-        if(colnames(X)[1]=="(Intercept)"){
-          l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]])))
-          l2 <- torch::torch_norm(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
-          regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-          loss<-  torch::torch_add(loss,regularization)
-          counter<- counter + 1
-        }
-        for (i in c(counter:length(net$parameters))){
-          if (weight_layers[i]){
-            l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters[i])))
-            l2 <- torch::torch_norm(torch::torch_cat(net$parameters[i]),p=2L)
+        if(is.na(alpha[counter])){
+          counter<- counter+1
+        }else{
+          if(colnames(X)[1]=="(Intercept)"){
+            l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]])))
+            l2 <- torch::torch_norm(torch::torch_cat(net$parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
             regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
             loss<-  torch::torch_add(loss,regularization)
-            counter <- counter+1
+            counter<- counter + 1
+          }
+        }
+        for (i in c(counter:length(net$parameters))){
+          if(is.na(alpha[counter])){
+            counter<- counter+1
+          }else{
+            if (weight_layers[i]){
+              l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(net$parameters[i])))
+              l2 <- torch::torch_norm(torch::torch_cat(net$parameters[i]),p=2L)
+              regularization <- ((1-alpha[counter])* l1) + (alpha[counter]* l2)
+              loss<-  torch::torch_add(loss,regularization)
+              counter <- counter+1
+            }
           }
         }
       }
@@ -339,27 +345,26 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
 
 
 
-# source("R/model.R")
-# source("R/plot.R")
-# source("R/utils.R")
-# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = 3,
-#            data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs =200, dropout= 0,alpha = F, lr_scheduler = F)
+source("R/model.R")
+source("R/plot.R")
+source("R/utils.R")
+res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = 10,
+           data = iris, family = "softmax", activation= "selu", device ="cpu",
+           validation= 0.3,epochs =200, dropout= 0,alpha = F, lr_scheduler = F)
+predict(res,iris[1:5,])
+# res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # predict(res,iris[1:5,])
-# #res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
-# # predict(res,iris[1:5,])
-# # summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
-# # analyze_training(res)
+# summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
+# analyze_training(res)
+# predict(res)
 #
-# # predict(res)
-# #
-# saveRDS(res, "test.RDS")
-# res2 <-  readRDS("test.RDS")
-# predict(res2,iris[1:5,])
-#
-# #error
-# res2$net$parameters
-#
-# #no error
-# res2<- check_model(res2)
-# res2$net$parameters
+saveRDS(res, "test.RDS")
+res2 <-  readRDS("test.RDS")
+predict(res2,iris[1:5,])
+
+#error
+res2$net$parameters
+
+#no error
+res2<- check_model(res2)
+res2$net$parameters
