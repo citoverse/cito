@@ -22,6 +22,26 @@
 #' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
 #' @import checkmate
+#' @examples
+#' library(cito)
+#'
+#' set.seed(222)
+#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
+#'
+#' # Build and train  Network
+#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+#'
+#' # Sturcture of Neural Network
+#' print(nn.fit)
+#'
+#' # Use model on validation set
+#' predictions <- predict(nn.fit, iris[validation_set,])
+#'
+#' # Scatterplot
+#' plot(iris[validation_set,]$Sepal.Length,predictions)
+#' # MAE
+#' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
+#'
 #' @export
 dnn <- function(formula,
                data = NULL,
@@ -281,7 +301,17 @@ dnn <- function(formula,
 #' @param x a model created by \code{\link{dnn}}
 #' @param ... additional arguments
 #' @return prediction matrix
+#' @examples
+#' library(cito)
 #'
+#' set.seed(222)
+#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
+#'
+#' # Build and train  Network
+#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+#'
+#' # Sturcture of Neural Network
+#' print(nn.fit)
 #' @import checkmate
 #' @export
 print.citodnn<- function(x,...){
@@ -295,6 +325,20 @@ print.citodnn<- function(x,...){
 #' @param object a model created by \code{\link{dnn}}
 #' @return list of weigths of neural network
 #'
+#' @examples
+#' library(cito)
+#'
+#' set.seed(222)
+#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
+#'
+#' # Build and train  Network
+#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+#'
+#' # Sturcture of Neural Network
+#' print(nn.fit)
+#'
+#' #analyze weights of Neural Network
+#' coef(nn.fit)
 #' @export
 coef.citodnn<- function(object,...){
   return(object$weights[object$use_model_epoch])
@@ -309,6 +353,21 @@ coef.citodnn<- function(object,...){
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
+#' @examples
+#' library(cito)
+#'
+#' set.seed(222)
+#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
+#'
+#' # Build and train  Network
+#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+#'
+#' # Use model on validation set
+#' predictions <- predict(nn.fit, iris[validation_set,])
+#' # Scatterplot
+#' plot(iris[validation_set,]$Sepal.Length,predictions)
+#' # MAE
+#' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 #' @export
 predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...) {
 
