@@ -15,8 +15,28 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 library(cito)
 set.seed(123)
+
+# save the built-in output hook
+hook_output <- knitr::knit_hooks$get("output")
+
+# set a new output hook to truncate text output
+knitr::knit_hooks$set(output = function(x, options) {
+  if (!is.null(n <- options$out.lines)) {
+    x <- xfun::split_lines(x)
+    if (length(x) > (n+n+1)) {
+      # truncate the output
+      x <- c(head(x, n), "....\n",tail(x,n))
+    }
+    x <- paste(x, collapse = "\n")
+  }
+  hook_output(x, options)
+})
+
+
+
 ```
 
 ## Abstract
@@ -28,38 +48,98 @@ As a first example we will work with the irirs dataset. Which consists of three 
 ```{r data}
 
 data<- datasets::iris
-
 summary(data)
 ```
 
 ## Simple models and model structures 
-With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 5 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case should last for 5 epochs and is should be done on the cpu.
-```{r simp_models, fig.show='hide'}
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10,10), epochs = 5, device= "cpu")
+With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 4 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case lasts for 32 epochs and is done on the cpu. If there is no option set for device, cito will try to use a cuda device. If there is none available a warning will be printed and the trainign will be done one the cpu 
+```{r simp_models, fig.show='hide',out.lines = 3}
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 32, device= "cpu")
 
 
 ```
+
+
+## Adding a validation set to the training process
+In order to validate the network during the training process, you can put activation = 0.x. Before training the defined percentage of the data set will be split of and used as a validation set. This can be seen in the plot that gets shown during the training as well as in analyze_training(). 
+
+```{r validation, results = "hide", out.lines=3}
+nn.fit <- dnn(Species~. , data = data, validation = 0.3)
+
+
+```
+
+```{r setup2}
+knitr::knit_hooks$set(output = hook_output)
+```
+
+
 ## Interpreting model output
 Things you can do with the output if dnn() include: 
 
 ```{r interpret}
-print(nn.fit) # same as summary(nn.fit)
-#coef(nn.fit)
+print(nn.fit) 
 predict(nn.fit,data[1,])
-analyze_training(nn.fit)
+# coef(nn.fit)
+
+
+```
+## Additional options for Neural Networks 
+### Using different activation functions
+As activation functions a wide array can be choosen. You can either define one activation for all layers or define it for each layer individually. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer is choosen automatically and therefore does not has to be provided. Cito supports the following activation functions: relu, leaky_relu, tanh, elu, rrelu, prelu, softplus, celu, selu, gelu, relu6, sigmoig, softsign, hardtanh, tanhshrink, softshrink, hardshrink, log_sigmoid. 
+```{r activation, results ="hide",fig.show='hide' ,eval = FALSE}
+#the same activation function for all layers: 
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), activation= "relu")
+#layer specific activation functions: 
+nn.fit <- dnn(Species~. , data = data, 
+              hidden = c(10,10,10,10), activation= c("relu","selu","tanh","sigmoid"))
+
+
+``` 
+
+### L1/L2 Regularisation 
+By setting alpha to a value in [0,1] you can activate an elastic net generalization for each layer. Where $$(1 - \alpha) * |weights| + \alpha ||weights||^2$$ is added to the loss. If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since you have to account the input layer. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no generalisation should take place on a specific layer.
+
+```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
+#elastic net generalisation in all layers: 
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), alpha = 0.5)
+#L1 generalization in the first layer no generalisation on the other layers: 
+nn.fit <- dnn(Species~. , data = data, 
+              hidden = c(10,10,10,10), alpha = c(0,NA,NA,NA,NA))
+
+
+``` 
+
+### Adding dropout Layers 
+
+Dropout layers are a neat way to generalize your model. During training in every epoch a percentage of perceptrons of each layer get left out. This percentage can be defined either over the whole model by providing a single numeric value in [0,1] or layer specific with a vector of the same length as there are hidden layers. 
+
+```{r dropout, results ="hide",fig.show='hide' ,eval = FALSE}
+#dropout of 35% on all layers: 
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), dropout = 0.35)
+#dropout of 35% only on last 2 layers: 
+nn.fit <- dnn(Species~. , data = data, 
+              hidden = c(10,10,10,10), dropout = c(0, 0, 0.35, 0.35))
+
+
+``` 
+
+### Optimizers 
+Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimiyers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
+
+
+```{r optim}
+# adam optimizer with learning rate 0.002 with a slighlty changed betas to 0.9, 0.999 and eps to 1.5e-08
+nn.fit <- dnn(Species~. , data = data, optimizer = "adam", lr=0.002, config = list(betas = c(0.9, 0.999),eps = 1.5e-08))
+
 
 
 
 ```
+### Adjustable learning rate
 
-## Options for Neural Networks 
+### Early Stopping 
 
-
-## Optimizers and adjustable learning rate
-Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer.  
-The learning rate 
-
-
-## Early Stopping 
+## Building a sofisticated Neural Network
 
 
