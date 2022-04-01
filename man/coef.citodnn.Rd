@@ -15,3 +15,18 @@ list of weigths of neural network
 \description{
 Returns list of parameters the neural network model currently has in use
 }
+\examples{
+library(cito)
+
+set.seed(222)
+validation_set<- sample(c(1:nrow(datasets::iris)),25)
+
+# Build and train  Network
+nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+
+# Sturcture of Neural Network
+print(nn.fit)
+
+#analyze weights of Neural Network
+coef(nn.fit)
+}
