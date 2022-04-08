@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-library(cito)
+
 set.seed(123)
 
 # save the built-in output hook
@@ -54,6 +54,7 @@ summary(data)
 ## Simple models and model structures 
 With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 4 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case lasts for 32 epochs and is done on the cpu. If there is no option set for device, cito will try to use a cuda device. If there is none available a warning will be printed and the trainign will be done one the cpu 
 ```{r simp_models, fig.show='hide',out.lines = 3}
+library(cito)
 nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 32, device= "cpu")
 
 

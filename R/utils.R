@@ -1,6 +1,4 @@
-#' check if model is loaded and if current parameters are the desired ones
-#'
-#'
+# check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
   if(!inherits(object, c("citodnn"))) stop("model not of class citodnn")
