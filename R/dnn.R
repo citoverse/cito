@@ -171,6 +171,10 @@ dnn <- function(formula,
 
   ### set optimizer ###
   optim <- get_optimizer(optimizer = optimizer,
+                         parameters = c(net$parameters, fam$parameter),
+                         lr = lr,
+                         config_optimizer = config_optimizer)
+
 
     ### LR Scheduler ###
   if(!isFALSE(lr_scheduler)){
@@ -386,12 +390,12 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
 
 
 
-source("R/model.R")
-source("R/plot.R")
-source("R/utils.R")
-res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
-           data = iris, family = "softmax", activation= "selu", device ="cpu",
-           validation= 0.3,epochs = 32, dropout = 0,alpha = 1, lr_scheduler = F)
+# source("R/model.R")
+# source("R/plot.R")
+# source("R/utils.R")
+# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
+#            data = iris, family = "softmax", activation= "selu", device ="cpu",
+#            validation= 0.3,epochs = 32, dropout = 0,alpha = 1, lr_scheduler = F)
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # # predict(res,iris[1:5,])
