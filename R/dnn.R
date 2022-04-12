@@ -62,8 +62,7 @@ dnn <- function(formula,
                lr_scheduler= FALSE,
                device= "cuda",
                early_stopping = FALSE,
-               config=list(),
-               ...) {
+               config=list()) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -150,7 +149,7 @@ dnn <- function(formula,
 
 
   ### dataset  ###
-  if(validation!= 0){
+  if(validation != 0){
     train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
     valid <- c(1:nrow(X))[-train]
     train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
@@ -196,11 +195,10 @@ dnn <- function(formula,
   }
 
   ### training loop ###
-
-  weights<- list()
+  weights <- list()
   net$to(device = device)
-  loss.fkt<- fam$loss
-  losses<- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
+  loss.fkt <- fam$loss
+  losses <- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
   if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha[1],length(hidden)+1)
   for (epoch in 1:epochs) {
     train_l <- c()
@@ -217,10 +215,10 @@ dnn <- function(formula,
 
       if(use_lr_scheduler) scheduler$step()
       train_l <- c(train_l, loss$item())
-      losses$train_l[epoch]<- mean(train_l)
+      losses$train_l[epoch] <- mean(train_l)
     })
 
-    if(validation!= 0){
+    if(validation != 0){
 
       valid_l <- c()
 
@@ -230,7 +228,7 @@ dnn <- function(formula,
         loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
                                  loss = loss,intercept= colnames(X)[1]=="(Intercept)")
         valid_l <- c(valid_l, loss$item())
-        losses$valid_l[epoch]<- mean(valid_l)
+        losses$valid_l[epoch] <- mean(valid_l)
       })
 
       cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
@@ -246,7 +244,7 @@ dnn <- function(formula,
       cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
     }
 
-    weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+    weights[[epoch]] <- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
 
 
     ### create plot ###
@@ -264,24 +262,24 @@ dnn <- function(formula,
   allglobal()
   net$to(device = "cpu")
 
-  model_properties<- list(input = ncol(X),
+  model_properties <- list(input = ncol(X),
                           output = y_dim,
                           hidden = hidden,
                           activation = activation,
                           bias = bias,
                           dropout = dropout)
 
-  z<- list()
-  class(z)<- "citodnn"
-  z$net<- net
+  z <- list()
+  class(z) <- "citodnn"
+  z$net <- net
   z$call <- match.call()
-  z$family = fam
+  z$family <- fam
   z$losses<- losses
-  z$data = list(X = X, Y = Y, data = data)
+  z$data <- list(X = X, Y = Y, data = data)
   z$weights <- weights
-  z$use_model_epoch<- epoch
+  z$use_model_epoch <- epoch
   z$loaded_model_epoch <- epoch
-  z$model_properties<- model_properties
+  z$model_properties <- model_properties
 
   return(z)
 }
@@ -304,8 +302,8 @@ dnn <- function(formula,
 #' print(nn.fit)
 #' @import checkmate
 #' @export
-print.citodnn<- function(x,...){
-  x<- check_model(x)
+print.citodnn <- function(x,...){
+  x <- check_model(x)
   print(x$call)
   print(x$net)
 }
@@ -313,6 +311,7 @@ print.citodnn<- function(x,...){
 #' Returns list of parameters the neural network model currently has in use
 #'
 #' @param object a model created by \code{\link{dnn}}
+#' @param ... nothing implemented yet
 #' @return list of weigths of neural network
 #'
 #' @examples
@@ -330,7 +329,7 @@ print.citodnn<- function(x,...){
 #' #analyze weights of Neural Network
 #' coef(nn.fit)
 #' @export
-coef.citodnn<- function(object,...){
+coef.citodnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
 }
 
@@ -359,12 +358,12 @@ coef.citodnn<- function(object,...){
 #' # MAE
 #' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 #' @export
-predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...) {
+predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
                      checkmate::checkDataFrame(newdata))
-  object<- check_model(object)
+  object <- check_model(object)
 
   type = match.arg(type)
 
@@ -379,11 +378,11 @@ predict.citodnn = function(object, newdata = NULL,type=c("link", "response"),...
       } else {
         newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
       }
-    newdata<- torch::torch_tensor(newdata)
+    newdata <- torch::torch_tensor(newdata)
   }
 
 
-  pred = torch::as_array(link(object$net(newdata,...)))
+  pred <- torch::as_array(link(object$net(newdata,...)))
   return(pred)
 }
 

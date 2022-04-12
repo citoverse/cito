@@ -28,5 +28,6 @@ License: GPL (>= 3)
 Suggests:
     rmarkdown,
     knitr,
-    testthat
+    testthat,
+    plotly
 VignetteBuilder: knitr

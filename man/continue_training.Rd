@@ -6,24 +6,52 @@
 \usage{
 continue_training(
   model,
+  data = NULL,
   epochs = 32,
+  continue_from = 0,
+  validation = 0,
+  optimizer = "adam",
+  lr = 0.01,
+  batchsize = 32L,
+  shuffle = FALSE,
+  plot = TRUE,
+  device = "cuda",
   early_stopping = FALSE,
-  lr_scheduler = FALSE
+  lr_scheduler = FALSE,
+  config = list()
 )
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
+\item{data}{matrix or data.frame}
+
 \item{epochs}{additional epochs the training should continue for}
+
+\item{continue_from}{define which epoch should be used as starting point for training, 0 if last epoch should be used}
+
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
+
+\item{optimizer}{which optimizer used for training the network,}
+
+\item{lr}{learning rate given to optimizer}
+
+\item{batchsize}{how many samples data loader loads per batch}
+
+\item{shuffle}{TRUE if data should be reshuffled every epoch (default: FALSE)}
+
+\item{plot}{plot training loss}
+
+\item{device}{device on which network should be trained on, either "cpu" or "cuda"}
 
 \item{early_stopping}{training stops if validation error n epochs before was lower than in current epoch}
 
-\item{lr_scheduler}{lr scheduler}
+\item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix}
 
-\item{...}{additional arguments}
+\item{config}{list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.}
 }
 \value{
-prediction matrix
+a model of class cito.dnn same as created by  \code{\link{dnn}}
 }
 \description{
 Contiinues training of a model for additional periods

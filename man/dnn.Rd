@@ -24,8 +24,7 @@ dnn(
   lr_scheduler = FALSE,
   device = "cuda",
   early_stopping = FALSE,
-  config = list(),
-  ...
+  config = list()
 )
 }
 \arguments{

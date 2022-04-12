@@ -8,6 +8,8 @@
 }
 \arguments{
 \item{object}{a model created by \code{\link{dnn}}}
+
+\item{...}{nothing implemented yet}
 }
 \value{
 list of weigths of neural network
