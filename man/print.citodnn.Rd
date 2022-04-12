@@ -18,6 +18,7 @@ prediction matrix
 Print class citodnn
 }
 \examples{
+\dontrun{
 library(cito)
 
 set.seed(222)
@@ -28,4 +29,5 @@ nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
 
 # Sturcture of Neural Network
 print(nn.fit)
+}
 }

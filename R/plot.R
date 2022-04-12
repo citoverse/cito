@@ -25,6 +25,7 @@ visualize.training <- function(losses,epoch){
 #' @param object a model created by \code{\link{dnn}}
 #' @return a plotly figure
 #' @examples
+#' \dontrun{
 #' library(cito)
 #' set.seed(222)
 #' validation_set<- sample(c(1:nrow(datasets::iris)),25)
@@ -43,6 +44,7 @@ visualize.training <- function(losses,epoch){
 #'
 #' # Scatterplot
 #' plot(iris[validation_set,]$Sepal.Length,predictions)
+#' }
 #' @export
 
 analyze_training<- function(object){

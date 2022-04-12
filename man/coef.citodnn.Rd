@@ -18,6 +18,7 @@ list of weigths of neural network
 Returns list of parameters the neural network model currently has in use
 }
 \examples{
+\dontrun{
 library(cito)
 
 set.seed(222)
@@ -31,4 +32,5 @@ print(nn.fit)
 
 #analyze weights of Neural Network
 coef(nn.fit)
+}
 }

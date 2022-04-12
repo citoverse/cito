@@ -21,8 +21,18 @@
 #' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
 #' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
+#'
+#' @return an object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+#' The list consists of the following attributes:
+#' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
+#' \item{call}{The original function call}
+#' \item{family}{A list which contains relevant information for the target variable}
+#' \item{losses}{A data.frame containing training and validation losses of each epoch}
+#' \item{data}{Contains data used for training the model}
+#' \item{weigths}{List of weights for each training epoch}
 #' @import checkmate
 #' @examples
+#' \dontrun{
 #' library(cito)
 #'
 #' set.seed(222)
@@ -41,7 +51,7 @@
 #' plot(iris[validation_set,]$Sepal.Length,predictions)
 #' # MAE
 #' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
-#'
+#' }
 #' @export
 dnn <- function(formula,
                data = NULL,
@@ -71,7 +81,6 @@ dnn <- function(formula,
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
-  checkmate::qassert(epochs, "R1[0,)")
   checkmate::qassert(plot,"B1")
   checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
@@ -292,6 +301,7 @@ dnn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #' @examples
+#' \dontrun{
 #' library(cito)
 #'
 #' set.seed(222)
@@ -302,6 +312,7 @@ dnn <- function(formula,
 #'
 #' # Sturcture of Neural Network
 #' print(nn.fit)
+#' }
 #' @import checkmate
 #' @export
 print.citodnn <- function(x,...){
@@ -317,6 +328,7 @@ print.citodnn <- function(x,...){
 #' @return list of weigths of neural network
 #'
 #' @examples
+#' \dontrun{
 #' library(cito)
 #'
 #' set.seed(222)
@@ -330,6 +342,7 @@ print.citodnn <- function(x,...){
 #'
 #' #analyze weights of Neural Network
 #' coef(nn.fit)
+#' }
 #' @export
 coef.citodnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
@@ -345,6 +358,7 @@ coef.citodnn <- function(object,...){
 #' @return prediction matrix
 #'
 #' @examples
+#' \dontrun{
 #' library(cito)
 #'
 #' set.seed(222)
@@ -359,12 +373,14 @@ coef.citodnn <- function(object,...){
 #' plot(iris[validation_set,]$Sepal.Length,predictions)
 #' # MAE
 #' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
+#' }
 #' @export
 predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
-                     checkmate::checkDataFrame(newdata))
+                     checkmate::checkDataFrame(newdata),
+                     checkmate::checkScalarNA(newdata))
   object <- check_model(object)
 
   type = match.arg(type)
@@ -391,12 +407,12 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 
 
 
-source("R/model.R")
-source("R/plot.R")
-source("R/utils.R")
-res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
-            data = iris, family = "softmax", activation= "selu", device ="cpu",
-           validation= 0.3,epochs = 32, alpha = 1, lr_scheduler = F)
+# source("R/model.R")
+# source("R/plot.R")
+# source("R/utils.R")
+# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
+#             data = iris, family = "softmax", activation= "selu", device ="cpu",
+#            validation= 0.3,epochs = 32, alpha = 1, lr_scheduler = F)
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # # predict(res,iris[1:5,])

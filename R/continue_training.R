@@ -17,6 +17,7 @@
 #' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
 #'
 #' @examples
+#' \dontrun{
 #' library(cito)
 #'
 #' set.seed(222)
@@ -26,11 +27,11 @@
 #' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 32)
 #'
 #' # continue training for another 32 epochs
-#' nn.fit<- continue_training(nn.fit,data = datasets::iris[-validation_set,])
+#' # nn.fit<- continue_training(nn.fit,data = datasets::iris[-validation_set,])
 #'
 #' # Use model on validation set
 #' predictions <- predict(nn.fit, iris[validation_set,])
-#'
+#' }
 #'
 #' @import checkmate
 #'
@@ -62,9 +63,7 @@ continue_training <- function(model,
   if(continue_from != 0){
     model$use_model_epoch <- continue_from
   }else{
-
-    model$use_model_epoch <- nrow(model$losses)
-
+    model$use_model_epoch <- max(which(!is.na(model$losses$train_l)))
   }
     model<- check_model(model)
 
@@ -82,7 +81,7 @@ continue_training <- function(model,
 
   ### set training parameters ###
 
-  model$model_properties
+  # model$model_properties
 
   ### optimizer ###
   optim<- get_optimizer(opti)

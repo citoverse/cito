@@ -25,9 +25,10 @@ set.seed(123)
 hook_output <- knitr::knit_hooks$get("output")
 
 # set a new output hook to truncate text output
+library(xfun)
 knitr::knit_hooks$set(output = function(x, options) {
   if (!is.null(n <- options$out.lines)) {
-    x <- xfun::split_lines(x)
+    x <- split_lines(x)
     if (length(x) > (n+n+1)) {
       # truncate the output
       x <- c(head(x, n), "....\n",tail(x,n))
@@ -92,9 +93,9 @@ predict(nn.fit,data[1,])
 As activation functions a wide array can be choosen. You can either define one activation for all layers or define it for each layer individually. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer is choosen automatically and therefore does not has to be provided. Cito supports the following activation functions: relu, leaky_relu, tanh, elu, rrelu, prelu, softplus, celu, selu, gelu, relu6, sigmoig, softsign, hardtanh, tanhshrink, softshrink, hardshrink, log_sigmoid. 
 ```{r activation, results ="hide",fig.show='hide' ,eval = FALSE}
 #the same activation function for all layers: 
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), activation= "relu")
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), activation= "relu")
 #layer specific activation functions: 
-nn.fit <- dnn(Species~. , data = data, 
+nn.fit <- dnn(Species~., data = data, 
               hidden = c(10,10,10,10), activation= c("relu","selu","tanh","sigmoid"))
 
 
@@ -105,9 +106,9 @@ By setting alpha to a value in [0,1] you can activate an elastic net generalizat
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
 #elastic net generalisation in all layers: 
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), alpha = 0.5)
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5)
 #L1 generalization in the first layer no generalisation on the other layers: 
-nn.fit <- dnn(Species~. , data = data, 
+nn.fit <- dnn(Species~., data = data, 
               hidden = c(10,10,10,10), alpha = c(0,NA,NA,NA,NA))
 
 
@@ -119,9 +120,9 @@ Dropout layers are a neat way to generalize your model. During training in every
 
 ```{r dropout, results ="hide",fig.show='hide' ,eval = FALSE}
 #dropout of 35% on all layers: 
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), dropout = 0.35)
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), dropout = 0.35)
 #dropout of 35% only on last 2 layers: 
-nn.fit <- dnn(Species~. , data = data, 
+nn.fit <- dnn(Species~., data = data, 
               hidden = c(10,10,10,10), dropout = c(0, 0, 0.35, 0.35))
 
 
@@ -131,18 +132,33 @@ nn.fit <- dnn(Species~. , data = data,
 Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimiyers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
 
 
-```{r optim}
-# adam optimizer with learning rate 0.002 with a slighlty changed betas to 0.9, 0.999 and eps to 1.5e-08
-nn.fit <- dnn(Species~. , data = data, optimizer = "adam", lr=0.002, config = list(betas = c(0.9, 0.999),eps = 1.5e-08))
-
-
+```{r optim,eval = FALSE}
+# adam optimizer with learning rate 0.002 with a slightly changed betas to 0.9, 0.999 and eps to 1.5e-08
+nn.fit <- dnn(Species~., data = data, optimizer = "adam", lr=0.002, config = list(betas = c(0.9, 0.999),eps = 1.5e-08))
 
 
 ```
 ### Adjustable learning rate
+Learning rate scheduler are also available. You can choose between lambda, multiplicative, one_cycle and step. Every scheduler requires different arguments. See the documentation of the torch package e.g. for step ?torch::lr_step. Those arguments have to be defined in the config list with their lr_scheduler + their original name. See below for an example:
+
+```{r lr_scheduler,eval = FALSE}
+# Step Learning rate scheduler that reduces learning rate every 10 steps with a gamma of 0.5
+nn.fit <- dnn(Species~., data = data,lr = 0.01, lr_scheduler= "step", config = list(lr_scheduler.step_size = 10, lr_scheduler.gamma = 0.5))
+
+
+```
 
 ### Early Stopping 
+Adding early stopping criteria helps saving time by stopping the training process at the current epoch if the validation loss of the current epoch is biggger than the validation loss n epochs early. The n can be defined by the ealry_stopping argument. It is required to set validation > 0. 
+```{r early_stopping,eval = FALSE}
+# Stops training if validation loss of current epoch is bigger than that 10 epochs earlier  
+nn.fit <- dnn(Species~., data = data, epochs = 1000, validation = 0.2, early_stopping = 10)
 
-## Building a sofisticated Neural Network
 
+```
+
+
+## Building a sophisticated Neural Network
+A sophisticated Neural Network will require the usage of many different arguments. There are various ways to generalize the model and train it correctly. What is best for your use case has to be explored individually.  
+ 
 
