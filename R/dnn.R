@@ -71,6 +71,8 @@ dnn <- function(formula,
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
+  checkmate::qassert(epochs, "R1[0,)")
+  checkmate::qassert(plot,"B1")
   checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
 
@@ -389,12 +391,12 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 
 
 
-# source("R/model.R")
-# source("R/plot.R")
-# source("R/utils.R")
-# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
-#            data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs = 32, dropout = 0,alpha = 1, lr_scheduler = F)
+source("R/model.R")
+source("R/plot.R")
+source("R/utils.R")
+res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
+            data = iris, family = "softmax", activation= "selu", device ="cpu",
+           validation= 0.3,epochs = 32, alpha = 1, lr_scheduler = F)
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # # predict(res,iris[1:5,])

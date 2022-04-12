@@ -47,6 +47,12 @@ visualize.training <- function(losses,epoch){
 
 analyze_training<- function(object){
 
+  if (!requireNamespace("plotly", quietly = TRUE)) {
+    stop(
+      "Package \"plotly\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
   fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                          width = 900)
 

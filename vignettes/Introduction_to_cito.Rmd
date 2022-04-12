@@ -8,6 +8,8 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
+library(cito)
+torch::install_torch()
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
