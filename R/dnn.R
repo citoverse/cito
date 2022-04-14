@@ -118,7 +118,7 @@ dnn <- function(formula,
     if(!is.null(formula)){
       mf = match.call()
       m = match("formula", names(mf))
-      if(class(mf[3]$formula) == "name") mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
+      if(inherits(mf[3]$formula, "name")) mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
       formula = stats::as.formula(mf[m]$formula)
       X = stats::model.matrix(formula, data)
       Y = stats::model.response(stats::model.frame(formula, data))
