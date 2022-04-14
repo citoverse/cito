@@ -133,7 +133,7 @@ dnn <- function(formula,
     if(!is.null(formula)) {
       mf = match.call()
       m = match("formula", names(mf))
-      if(class(mf[3]$formula) == "name") mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
+      if(inherits(mf[3]$formula, "name")) mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
       formula = stats::as.formula(mf[m]$formula)
     } else {
       formula = stats::as.formula("~.")
@@ -263,6 +263,14 @@ dnn <- function(formula,
 
   }
 
+  ### Pass to global workspace ###
+  allglobal <- function() {
+    lss <- ls(envir = parent.frame())
+    for (i in lss) {
+      assign(i, get(i, envir = parent.frame()), envir = .GlobalEnv)
+    }
+  }
+  allglobal()
   net$to(device = "cpu")
 
   model_properties <- list(input = ncol(X),
