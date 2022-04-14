@@ -263,14 +263,6 @@ dnn <- function(formula,
 
   }
 
-  ### Pass to global workspace ###
-  allglobal <- function() {
-    lss <- ls(envir = parent.frame())
-    for (i in lss) {
-      assign(i, get(i, envir = parent.frame()), envir = .GlobalEnv)
-    }
-  }
-  allglobal()
   net$to(device = "cpu")
 
   model_properties <- list(input = ncol(X),
