@@ -84,7 +84,7 @@ continue_training <- function(model,
   # model$model_properties
 
   ### optimizer ###
-  optim<- get_optimizer(opti)
+  #optim<- get_optimizer()
 
   ###  ###
 
