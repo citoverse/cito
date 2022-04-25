@@ -259,6 +259,19 @@ dnn <- function(formula,
                           bias = bias,
                           dropout = dropout)
 
+  training_properties<- list(lr = lr,
+                    lr_scheduler = lr_scheduler,
+                    optimizer = optimizer,
+                    config_optimizer = config_optimizer,
+                    config_lr_scheduler = config_lr_scheduler,
+                    epochs = epoch,
+                    early_stopping = early_stopping,
+                    plot = plot,
+                    validation = validation,
+                    device = device
+                    )
+
+
   z <- list()
   class(z) <- "citodnn"
   z$net <- net
@@ -270,6 +283,7 @@ dnn <- function(formula,
   z$use_model_epoch <- epoch
   z$loaded_model_epoch <- epoch
   z$model_properties <- model_properties
+  z$training_properties <- training_properties
 
   return(z)
 }
