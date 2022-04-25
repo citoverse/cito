@@ -180,3 +180,19 @@ get_optimizer<- function(optimizer, parameters, lr, config_optimizer){
 
   return(optim)
 }
+
+get_lr_scheduler<- function(lr_scheduler, config_lr_scheduler, optimizer){
+
+  param_lr_scheduler<- list(optimizer=optimizer)
+  if(length(config_lr_scheduler)>0) {
+    param_lr_scheduler<- c(param_lr_scheduler,config_lr_scheduler)
+  }
+  scheduler <- switch(tolower(lr_scheduler),
+                      "step" = do.call(torch::lr_step,param_lr_scheduler),
+                      "one_cycle" = do.call(torch::lr_one_cycle,param_lr_scheduler),
+                      "multiplicative" = do.call(torch::lr_multiplicative,param_lr_scheduler),
+                      "lambda" = do.call(torch::lr_lambda,param_lr_scheduler),
+                      stop(paste0("lr_scheduler = ",lr_scheduler," is not supported, choose between step, one_cycle, multiplicative or lambda")))
+
+  return(scheduler)
+}

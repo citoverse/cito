@@ -185,22 +185,10 @@ dnn <- function(formula,
                          lr = lr,
                          config_optimizer = config_optimizer)
 
-
-    ### LR Scheduler ###
+  ### LR Scheduler ###
   if(!isFALSE(lr_scheduler)){
     use_lr_scheduler <- TRUE
-
-    param_lr_scheduler<- list(optimizer=optim)
-    if(length(config_lr_scheduler)>0) {
-      param_lr_scheduler<- c(param_lr_scheduler,config_lr_scheduler)
-    }
-    scheduler <- switch(tolower(lr_scheduler),
-                        "step" = do.call(torch::lr_step,param_lr_scheduler),
-                        "one_cycle" = do.call(torch::lr_one_cycle,param_lr_scheduler),
-                        "multiplicative" = do.call(torch::lr_multiplicative,param_lr_scheduler),
-                        "lambda" = do.call(torch::lr_lambda,param_lr_scheduler),
-                        stop(paste0("lr_scheduler = ",lr_scheduler," is not supported, choose between step, one_cycle, multiplicative or lambda")))
-
+    scheduler<- get_lr_scheduler(lr_scheduler = lr_scheduler, config_lr_scheduler = config_lr_scheduler, optimizer= optim)
   }else{
     use_lr_scheduler <- FALSE
   }
