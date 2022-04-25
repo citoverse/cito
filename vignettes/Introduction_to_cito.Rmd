@@ -8,8 +8,6 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-library(cito)
-torch::install_torch()
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
@@ -50,6 +48,14 @@ knitr::knit_hooks$set(output = function(x, options) {
 ## Abstract
 cito aims at helping you build and training Neural Networks with the standard R syntax. It allows the whole model creation process and training to be done with one line of code as well as use all generic methods on the created object. It is based on the torch machine learning framework which is natively available for R. Therefore no Python installation or API is needed for this package. 
 
+## Setup 
+Before using cito you have to make sure that torch is installed and is running so first you need to run the following chunk of code
+```{r setuptorch}
+
+if(!require(torch)) install.packages("torch")
+install_torch()
+
+``` 
 ## Data
 As a first example we will work with the irirs dataset. Which consists of three species and four corresponding variables.  
 
