@@ -37,57 +37,158 @@
 #'
 #' @export
 continue_training <- function(model,
-                              data = NULL,
                               epochs = 32,
-                              continue_from = 0,
-                              validation = 0,
-                              optimizer = "adam",
-                              lr = 0.01,
-                              batchsize = 32L,
-                              shuffle = FALSE,
-                              plot = TRUE,
+                              continue_from= NULL,
+                              data=NULL,
                               device= "cuda",
-                              early_stopping=FALSE,
-                              lr_scheduler= FALSE,
-                              config=list()){
+                              changed_params=NULL){
 
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
-  checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(epochs, "R1[0,)")
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
-  checkmate::qassert(early_stopping,c("R1[1,)","B1"))
-  checkmate::qassert(plot,"B1")
   checkmate::qassert(device, "S+[3,)")
 
-  if(continue_from != 0){
+  ### Training device ###
+  if(device== "cuda"){
+    if (torch::cuda_is_available()) {
+      device<- torch::torch_device("cuda")}
+    else{
+      warning("No Cuda device detected, device is set to cpu")
+      device<- torch::torch_device("cpu")
+    }
+
+  }else {
+    if(device!= "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    device<- torch::torch_device("cpu")
+  }
+
+
+  ### initiate model ###
+  if(!is.null(continue_from)){
     model$use_model_epoch <- continue_from
   }else{
     model$use_model_epoch <- max(which(!is.na(model$losses$train_l)))
   }
-    model<- check_model(model)
+  model<- check_model(model)
 
 
-  ### decipher config list ###
-  config_optimizer<-c()
-  config_lr_scheduler<- c()
-  if(length(config)>0){
-    config_optimizer<- config[which(startsWith(tolower(names(config)),"optimizer"))]
-    names(config_optimizer)<- sapply(names(config_optimizer),function(x) substring(x,11))
 
-    config_lr_scheduler<- config[which(startsWith(tolower(names(config)),"lr_scheduler"))]
-    names(config_lr_scheduler)<- sapply(names(config_lr_scheduler),function(x) substring(x,14))
+  ### set training environment ###
+  for (i  in 1:length(model$training_properties)){
+    if(is.character(unlist(model$training_properties[i]))) parantheses<- "\"" else parantheses<- ""
+    eval(parse(text=paste0(names(model$training_properties)[i], " <- ", parantheses,model$training_properties[i],parantheses)))
   }
 
-  ### set training parameters ###
+  lr <- model$training_properties$lr
+  lr_scheduler <- model$training_properties$lr_scheduler
+  optimizer <- model$training_properties$optimizer
+  config_optimizer <- model$training_properties$config_optimizer
+  config_lr_scheduler <- model$training_properties$config_lr_scheduler
+  epoch <- model$training_properties$epoch
+  early_stopping <- model$training_properties$early_stopping
+  plot <-  model$training_properties$plot
+  validation <- model$training_properties$validation
+  device <- model$training_properties$device
+  alpha <- model$training_properties$alpha
+  if(!is.null(changed_params)){
+    for (i in 1:length(changed_params)){
+      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
+      eval(parse(text=paste0(names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+    }
+  }
 
-  # model$model_properties
 
-  ### optimizer ###
-  #optim<- get_optimizer()
+  ### set dataloader  ###
 
-  ###  ###
+  if(is.null(data)) data <- model$data
+  X = stats::model.matrix(model$formula, data)
+  Y = stats::model.response(stats::model.frame(model$formula, data))
 
+  if(validation != 0){
+
+    train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
+    valid <- c(1:nrow(X))[-train]
+    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+
+  }else{
+    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+  }
+
+
+  ### set optimizer ###
+  optim <- get_optimizer(optimizer = optimizer,
+                         parameters = c(net$parameters, fam$parameter),
+                         lr = lr,
+                         config_optimizer = config_optimizer)
+
+
+  ### set LR Scheduler ###
+  if(!isFALSE(lr_scheduler)){
+    use_lr_scheduler <- TRUE
+    scheduler<- get_lr_scheduler(lr_scheduler = lr_scheduler, config_lr_scheduler = config_lr_scheduler, optimizer= optim)
+  }else{
+    use_lr_scheduler <- FALSE
+  }
+
+  ### training loop ###
+  weights <- model$weights
+  net<- model$net
+  net$to(device = device)
+  loss.fkt <- model$family$loss
+  losses <- rbind(model$losses[1:model$use_model_epoch,],
+                  data.frame(epoch=c(model$use_model_epoch:(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
+  if((length(model$model_properties$hidden)+1) != length(alpha)) alpha <- rep(alpha[1],length(hidden)+1)
+
+  for (epoch in model$use_model_epoch:(model$use_model_epoch+epochs)) {
+    train_l <- c()
+
+    coro::loop(for (b in train_dl) {
+      optim$zero_grad()
+      output <- net(b[[1]]$to(device = device))
+
+      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+      loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
+                               loss = loss,intercept= colnames(X)[1]=="(Intercept)")
+      loss$backward()
+      optim$step()
+
+      if(use_lr_scheduler) scheduler$step()
+      train_l <- c(train_l, loss$item())
+      losses$train_l[epoch] <- mean(train_l)
+    })
+
+    if(validation != 0){
+
+      valid_l <- c()
+
+      coro::loop(for (b in valid_dl) {
+        output <- net(b[[1]]$to(device = device))
+        loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+        loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
+                                 loss = loss,intercept= colnames(X)[1]=="(Intercept)")
+        valid_l <- c(valid_l, loss$item())
+        losses$valid_l[epoch] <- mean(valid_l)
+      })
+
+      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+                  epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
+      if(epoch>early_stopping && is.numeric(early_stopping) &&
+         losses$valid_l[epoch-early_stopping]<losses$valid_l[epoch]) {
+        weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        if(plot) visualize.training(losses,epoch)
+        break
+      }
+
+    }else{
+      cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
+    }
+
+    weights[[epoch]] <- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+
+
+    ### create plot ###
+    if(plot) visualize.training(losses,epoch)
+
+  }
 
 
 

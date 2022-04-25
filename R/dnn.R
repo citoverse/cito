@@ -268,8 +268,7 @@ dnn <- function(formula,
                     early_stopping = early_stopping,
                     plot = plot,
                     validation = validation,
-                    device = device
-                    )
+                    alpha = alpha)
 
 
   z <- list()
