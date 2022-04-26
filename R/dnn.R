@@ -268,7 +268,9 @@ dnn <- function(formula,
                     early_stopping = early_stopping,
                     plot = plot,
                     validation = validation,
-                    alpha = alpha)
+                    alpha = alpha,
+                    batchsize = batchsize,
+                    shuffle = shuffle)
 
 
   z <- list()
