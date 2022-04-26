@@ -105,7 +105,7 @@ continue_training <- function(model,
     valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
 
   }else{
-    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    train_dl <- get_data_loader(X,Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
   }
 
 
