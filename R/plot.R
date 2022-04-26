@@ -1,5 +1,5 @@
-visualize.training <- function(losses,epoch){
-  if (epoch==1){
+visualize.training <- function(losses,epoch,new = FALSE){
+  if (epoch==1|new){
 
     graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l[1],losses$valid_l[1],na.rm=T)),
                    main= "Training of DNN",
@@ -11,7 +11,12 @@ visualize.training <- function(losses,epoch){
 
     graphics::points(x=c(1),y=c(losses$train_l[1]),pch=19, col="#000080", lty=1)
     graphics::points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FF8000", lty=2)
-
+    if(epoch > 1){
+      for ( i in c(2:epoch)){
+        graphics::lines(c(i-1,i), c(losses$train_l[i-1],losses$train_l[i]), pch=19, col="#000080", type="b", lty=1)
+        graphics::lines(c(i-1,i), c(losses$valid_l[i-1],losses$valid_l[i]), pch=18, col="#FF8000", type="b", lty=2)
+      }
+    }
   } else{
 
     graphics::lines(c(epoch-1,epoch), c(losses$train_l[epoch-1],losses$train_l[epoch]), pch=19, col="#000080", type="b", lty=1)

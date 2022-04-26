@@ -132,7 +132,7 @@ continue_training <- function(model,
   net$to(device = device)
   loss.fkt <- model$family$loss
   model$losses <- rbind(model$losses[1:model$use_model_epoch,],
-                  data.frame(epoch=c(model$use_model_epoch:(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
+                  data.frame(epoch=c((model$use_model_epoch+1):(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
 
   for (epoch in (model$use_model_epoch+1):(model$use_model_epoch+epochs)) {
     train_l <- c()
@@ -174,7 +174,7 @@ continue_training <- function(model,
       if(epoch>model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
          model$losses$valid_l[epoch-model$training_properties$early_stopping]<model$losses$valid_l[epoch]) {
         model$weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        if(plot) visualize.training(model$losses,epoch)
+        if(plot) visualize.training(model$losses,epoch, new = (epoch==model$use_model_epoch +1))
         break
       }
 
@@ -186,7 +186,7 @@ continue_training <- function(model,
 
 
     ### create plot ###
-    if(model$training_properties$plot) visualize.training(model$losses,epoch)
+    if(model$training_properties$plot) visualize.training(model$losses,epoch,new = (epoch==model$use_model_epoch +1))
 
   }
 
