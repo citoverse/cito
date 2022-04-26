@@ -169,6 +169,54 @@ nn.fit <- dnn(Species~., data = data, epochs = 1000, validation = 0.2, early_sto
 ```
 
 
+
+## Continuing Training 
+For the case that the specified number of epochs were not enough, cito provides the continue_training() function. It allows to continue the training process were dnn() quitted. 
+```{r setup3, include=FALSE}
+
+# save the built-in output hook
+hook_output <- knitr::knit_hooks$get("output")
+
+# set a new output hook to truncate text output
+
+knitr::knit_hooks$set(output = function(x, options) {
+  if (!is.null(n <- options$out.lines)) {
+    
+    x = gsub("\n$", "\n\n", x)
+    x[x == ""] = "\n"
+    unlist(strsplit(x, "\n"))
+    
+    x <- unlist(strsplit(x, '\n'))
+    if (length(x) > (n+n+1)) {
+      # truncate the output
+      x <- c(head(x, n), " \n .... \n ",tail(x,n))
+    }
+    x <- paste(x, sep = " \n ")
+  }
+  hook_output(x, options)
+})
+```
+
+```{r continue_training,eval = T,fig.show='hide',out.lines = 3}
+# simple example, simply adding another 32 epochs to the training process   
+nn.fit <- continue_training(nn.fit)
+
+```
+It also allows to change any training parameter, for example the learning rate. Additional, you can define which epoch the training should continue from. So you can analyze the training process with analyze_training() and afterwards pick an epoch from which on the training should be continued from with other training parameters. 
+
+```{r continue_training2,eval = T,fig.show='hide', out.lines = 3}
+
+# picking a specific net and training from there on with a smaller learning rate and a smaller batchsize
+nn.fit <- continue_training(nn.fit, continue_from = 10, epochs = 32, changed_params = list(lr = 0.001, batchsize = 16))
+
+```
+
+```{r setup4}
+knitr::knit_hooks$set(output = hook_output)
+```
+
+
+
 ## Building a sophisticated Neural Network
 A sophisticated Neural Network will require the usage of many different arguments. There are various ways to generalize the model and train it correctly. What is best for your use case has to be explored individually.  
  
