@@ -18,8 +18,8 @@
 #' # Build and train  Network
 #' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 32)
 #'
-#' # continue training for another 32 epochs
-#' # nn.fit<- continue_training(nn.fit,epochs = 32)
+#' continue training for another 32 epochs
+#' nn.fit<- continue_training(nn.fit,epochs = 32)
 #'
 #' # Use model on validation set
 #' predictions <- predict(nn.fit, iris[validation_set,])
