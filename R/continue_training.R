@@ -1,19 +1,11 @@
 #' Contiinues training of a model for additional periods
 #'
 #' @param model a model created by \code{\link{dnn}}
-#' @param data matrix or data.frame
+#' @param data matrix or data.frame if not provided data from original training will be used
 #' @param epochs additional epochs the training should continue for
-#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param continue_from define which epoch should be used as starting point for training, 0 if last epoch should be used
-#' @param optimizer which optimizer used for training the network,
-#' @param lr learning rate given to optimizer
-#' @param batchsize how many samples data loader loads per batch
-#' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
-#' @param plot plot training loss
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
-#' @param early_stopping training stops if validation error n epochs before was lower than in current epoch
-#' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix
-#' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
+#' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
 #'
 #' @examples
@@ -27,7 +19,7 @@
 #' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 32)
 #'
 #' # continue training for another 32 epochs
-#' # nn.fit<- continue_training(nn.fit,data = datasets::iris[-validation_set,])
+#' # nn.fit<- continue_training(nn.fit,epochs = 32)
 #'
 #' # Use model on validation set
 #' predictions <- predict(nn.fit, iris[validation_set,])
