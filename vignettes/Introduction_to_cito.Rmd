@@ -145,7 +145,8 @@ Optimizers are responsible for tuning every parameter ind the neural network. As
 
 ```{r optim,eval = FALSE}
 # adam optimizer with learning rate 0.002 with a slightly changed betas to 0.9, 0.999 and eps to 1.5e-08
-nn.fit <- dnn(Species~., data = data, optimizer = "adam", lr=0.002, config = list(betas = c(0.9, 0.999),eps = 1.5e-08))
+nn.fit <- dnn(Species~., data = data, optimizer = "adam", lr=0.002, 
+              config = list(betas = c(0.9, 0.999), eps = 1.5e-08))
 
 
 ```
@@ -154,7 +155,8 @@ Learning rate scheduler are also available. You can choose between lambda, multi
 
 ```{r lr_scheduler,eval = FALSE}
 # Step Learning rate scheduler that reduces learning rate every 10 steps with a gamma of 0.5
-nn.fit <- dnn(Species~., data = data,lr = 0.01, lr_scheduler= "step", config = list(lr_scheduler.step_size = 10, lr_scheduler.gamma = 0.5))
+nn.fit <- dnn(Species~., data = data,lr = 0.01, lr_scheduler= "step", 
+              config = list(lr_scheduler.step_size = 10, lr_scheduler.gamma = 0.5))
 
 
 ```
@@ -197,21 +199,23 @@ knitr::knit_hooks$set(output = function(x, options) {
 })
 ```
 
-```{r continue_training,eval = T,fig.show='hide',out.lines = 3}
-# simple example, simply adding another 32 epochs to the training process   
-nn.fit <- continue_training(nn.fit)
+```{r continue_training,eval = FALSE, fig.show='hide',out.lines = 3}
+# simple example, simply adding another 10 epochs to the training process   
+nn.fit <- continue_training(nn.fit, epochs = 10)
 
 ```
 It also allows to change any training parameter, for example the learning rate. Additional, you can define which epoch the training should continue from. So you can analyze the training process with analyze_training() and afterwards pick an epoch from which on the training should be continued from with other training parameters. 
 
-```{r continue_training2,eval = T,fig.show='hide', out.lines = 3}
+```{r continue_training2,eval = FALSE, fig.show='hide', out.lines = 3}
 
-# picking a specific net and training from there on with a smaller learning rate and a smaller batchsize
-nn.fit <- continue_training(nn.fit, continue_from = 10, epochs = 32, changed_params = list(lr = 0.001, batchsize = 16))
+# picking a specific epoch, from which on the net should be trained 
+# with changed parameters, in this case a smaller learning rate and a smaller batchsize
+nn.fit <- continue_training(nn.fit, continue_from = 10, epochs = 10, 
+                            changed_params = list(lr = 0.001, batchsize = 16))
 
 ```
 
-```{r setup4}
+```{r setup4,include= FALSE}
 knitr::knit_hooks$set(output = hook_output)
 ```
 
