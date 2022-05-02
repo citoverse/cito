@@ -29,5 +29,7 @@ Suggests:
     rmarkdown,
     knitr,
     testthat,
-    plotly
+    plotly,
+    ggraph,
+    igraph
 VignetteBuilder: knitr

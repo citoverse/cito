@@ -398,15 +398,82 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
   return(pred)
 }
 
+#' Creates graph plot which gives an overview of the network architecture.
+#'
+#' @param x a model created by \code{\link{dnn}}
+#' @param y no function implemented here
+#'
+#' @examples
+#' \dontrun{
+#' library(cito)
+#'
+#' set.seed(222)
+#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
+#'
+#' # Build and train  Network
+#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+#'
+#' plot(nn.fit)
+#' }
+#' @export
+plot.citodnn<- function(x,y = NULL,...){
+
+  sapply(c("igraph","ggraph"),function(x)
+  if (!requireNamespace(x, quietly = TRUE)) {
+    stop(
+      "Package \"plotly\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
+  )
+
+  weights <- coef.citodnn(x)
+  input <- ncol(weights[[1]][1][[1]])-1
+  structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
+                                      to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
+                          value =c(t(weights[[1]][1][[1]][1:input])))
+  x_pos<- c(rep(1,input))
+  y_pos<- c(1:input)
+  num_layer <-  2
+  for (i in 2:length(weights[[1]])){
+    if (grepl("weight",names(weights[[1]][i]))){
+      structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
+                                                   to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
+                                       value= c(t(weights[[1]][i][[1]]))))
+      x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
+      y_pos <- c(y_pos, 1:x$model_properties$hidden[num_layer-1])
+      num_layer <- num_layer + 1
+
+    }
+  }
+  x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
+  y_pos <- c(y_pos, c(1:x$model_properties$output))
+
+
+
+  graph<- igraph::graph_from_data_frame(structure)
+
+
+
+  layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
+
+  p<- ggraph::ggraph(layout)+
+    ggraph::geom_edge_link() +
+    ggraph::geom_node_point()
+  print(p)
+}
 
 
 
 # source("R/model.R")
 # source("R/plot.R")
 # source("R/utils.R")
-# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,10), early_stopping = F,
+# source("R/continue_training.R")
+# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs = 32, alpha = 1, lr_scheduler = F)
+#            validation= 0.3,epochs = 14, alpha = 1,bias= T)
+# plot(res)
+# res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # # predict(res,iris[1:5,])
