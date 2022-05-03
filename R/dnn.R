@@ -433,7 +433,7 @@ plot.citodnn<- function(x,...){
                                       to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
                           value =c(t(weights[[1]][1][[1]][1:input])))
   x_pos<- c(rep(1,input))
-  y_pos<- c(1:input)
+  y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
   num_layer <-  2
   for (i in 2:length(weights[[1]])){
     if (grepl("weight",names(weights[[1]][i]))){
@@ -441,20 +441,16 @@ plot.citodnn<- function(x,...){
                                                    to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
                                        value= c(t(weights[[1]][i][[1]]))))
       x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
-      y_pos <- c(y_pos, 1:x$model_properties$hidden[num_layer-1])
+      y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
       num_layer <- num_layer + 1
 
     }
   }
   x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
-  y_pos <- c(y_pos, c(1:x$model_properties$output))
-
+  y_pos <- c(y_pos, c(0,rep(1:input,each=2) *c(1,-1))[1:x$model_properties$output])
 
 
   graph<- igraph::graph_from_data_frame(structure)
-
-
-
   layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
 
   p<- ggraph::ggraph(layout)+
@@ -469,7 +465,7 @@ plot.citodnn<- function(x,...){
 # source("R/plot.R")
 # source("R/utils.R")
 # source("R/continue_training.R")
-# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=rep(10,5), early_stopping = F,
+# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
 #            validation= 0.3,epochs = 14, alpha = 1,bias= T)
 # plot(res)
