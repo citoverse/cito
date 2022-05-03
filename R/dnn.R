@@ -401,6 +401,8 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' Creates graph plot which gives an overview of the network architecture.
 #'
 #' @param x a model created by \code{\link{dnn}}
+#' @param node_size size of node in plot
+#' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
 #'
 #' @examples
@@ -416,7 +418,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' plot(nn.fit)
 #' }
 #' @export
-plot.citodnn<- function(x,...){
+plot.citodnn<- function(x, node_size = 1, scale_edges = F...){
 
   sapply(c("igraph","ggraph"),function(x)
   if (!requireNamespace(x, quietly = TRUE)) {
@@ -424,14 +426,15 @@ plot.citodnn<- function(x,...){
       paste0("Package \"",x,"\" must be installed to use this function."),
       call. = FALSE
     )
-  }
-  )
+  })
+  checkmate::qassert(node_size, "R+[0,)")
+  checkmate::qassert(scale_edges, "B1")
 
   weights <- coef.citodnn(x)
   input <- ncol(weights[[1]][1][[1]])-1
   structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
                                       to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
-                          value =c(t(weights[[1]][1][[1]][1:input])))
+                          value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))
   x_pos<- c(rep(1,input))
   y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
   num_layer <-  2
@@ -439,7 +442,7 @@ plot.citodnn<- function(x,...){
     if (grepl("weight",names(weights[[1]][i]))){
       structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
                                                    to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
-                                       value= c(t(weights[[1]][i][[1]]))))
+                                       value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
       x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
       y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
       num_layer <- num_layer + 1
@@ -454,8 +457,8 @@ plot.citodnn<- function(x,...){
   layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
 
   p<- ggraph::ggraph(layout)+
-    ggraph::geom_edge_link() +
-    ggraph::geom_node_point()
+    ggraph::geom_edge_link( ggplot2::aes(width = abs(value))) +
+    ggraph::geom_node_point(size = node_size)
   print(p)
 }
 
@@ -467,8 +470,8 @@ plot.citodnn<- function(x,...){
 # source("R/continue_training.R")
 # res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs = 14, alpha = 1,bias= T)
-# plot(res)
+#            validation= 0.3,epochs = 140, alpha = 1,bias= T)
+# plot(res,node_size = 3, scale_edges = T)
 # res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
