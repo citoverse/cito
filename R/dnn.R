@@ -418,7 +418,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' plot(nn.fit)
 #' }
 #' @export
-plot.citodnn<- function(x, node_size = 1, scale_edges = F...){
+plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
   sapply(c("igraph","ggraph"),function(x)
   if (!requireNamespace(x, quietly = TRUE)) {
@@ -457,7 +457,7 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = F...){
   layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
 
   p<- ggraph::ggraph(layout)+
-    ggraph::geom_edge_link( ggplot2::aes(width = abs(value))) +
+    ggraph::geom_edge_link( ggplot2::aes(width = abs(structure$value))) +
     ggraph::geom_node_point(size = node_size)
   print(p)
 }
