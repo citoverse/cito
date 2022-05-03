@@ -401,7 +401,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' Creates graph plot which gives an overview of the network architecture.
 #'
 #' @param x a model created by \code{\link{dnn}}
-#' @param y no function implemented here
+#' @param ... no further functionality implemented yet
 #'
 #' @examples
 #' \dontrun{
@@ -416,12 +416,12 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' plot(nn.fit)
 #' }
 #' @export
-plot.citodnn<- function(x,y = NULL,...){
+plot.citodnn<- function(x,...){
 
   sapply(c("igraph","ggraph"),function(x)
   if (!requireNamespace(x, quietly = TRUE)) {
     stop(
-      "Package \"plotly\" must be installed to use this function.",
+      paste0("Package \"",x,"\" must be installed to use this function."),
       call. = FALSE
     )
   }

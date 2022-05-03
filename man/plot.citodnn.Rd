@@ -4,12 +4,12 @@
 \alias{plot.citodnn}
 \title{Creates graph plot which gives an overview of the network architecture.}
 \usage{
-\method{plot}{citodnn}(x, y = NULL, ...)
+\method{plot}{citodnn}(x, ...)
 }
 \arguments{
 \item{x}{a model created by \code{\link{dnn}}}
 
-\item{y}{no function implemented here}
+\item{...}{no further functionality implemented yet}
 }
 \description{
 Creates graph plot which gives an overview of the network architecture.
