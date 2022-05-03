@@ -420,7 +420,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
-  sapply(c("igraph","ggraph"),function(x)
+  sapply(c("igraph","ggraph","ggplot2"),function(x)
   if (!requireNamespace(x, quietly = TRUE)) {
     stop(
       paste0("Package \"",x,"\" must be installed to use this function."),

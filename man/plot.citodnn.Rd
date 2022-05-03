@@ -4,10 +4,14 @@
 \alias{plot.citodnn}
 \title{Creates graph plot which gives an overview of the network architecture.}
 \usage{
-\method{plot}{citodnn}(x, ...)
+\method{plot}{citodnn}(x, node_size = 1, scale_edges = FALSE, ...)
 }
 \arguments{
 \item{x}{a model created by \code{\link{dnn}}}
+
+\item{node_size}{size of node in plot}
+
+\item{scale_edges}{edge weight gets scaled according to other weights (layer specific)}
 
 \item{...}{no further functionality implemented yet}
 }

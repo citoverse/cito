@@ -31,5 +31,6 @@ Suggests:
     testthat,
     plotly,
     ggraph,
-    igraph
+    igraph,
+    ggplot2
 VignetteBuilder: knitr
