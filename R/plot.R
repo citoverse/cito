@@ -60,6 +60,8 @@ analyze_training<- function(object){
       call. = FALSE
     )
   }
+  if(!inherits(object,"citodnn")) stop("Function requires an object of class citodnn")
+
   fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                          width = 900)
 
