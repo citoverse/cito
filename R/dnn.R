@@ -113,53 +113,38 @@ dnn <- function(formula,
     device<- torch::torch_device("cpu")
   }
 
-  if(is.data.frame(data)) {
+  ### Generate X & Y data ###
+  if(!is.data.frame(data)) data <- data.frame(data)
 
-    if(!is.null(formula)){
-      mf = match.call()
-      m = match("formula", names(mf))
-      if(inherits(mf[3]$formula, "name")) mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
-      formula = stats::as.formula(mf[m]$formula)
-      X = stats::model.matrix(formula, data)
-      Y = stats::model.response(stats::model.frame(formula, data))
-      if(!inherits(Y, "matrix")) Y = as.matrix(Y)
-    } else {
-      formula = stats::as.formula("~.")
-      X = stats::model.matrix(formula, data)
-    }
-
+  if(!is.null(formula)){
+    fct_call <- match.call()
+    m <- match("formula", names(fct_call))
+    if(inherits(fct_call[3]$formula, "name")) fct_call[3]$formula <- eval(fct_call[3]$formula, envir = parent.env(environment()))
+    formula <- stats::as.formula(fct_call[m]$formula)
   } else {
-
-    if(!is.null(formula)) {
-      mf = match.call()
-      m = match("formula", names(mf))
-      if(inherits(mf[3]$formula, "name")) mf[3]$formula = eval(mf[3]$formula, envir = parent.env(environment()))
-      formula = stats::as.formula(mf[m]$formula)
-    } else {
-      formula = stats::as.formula("~.")
-    }
-    data = data.frame(data)
-    X = stats::model.matrix(formula, data)
-    Y = stats::model.response(stats::model.frame(formula, data))
-    Y = as.matrix(Y)
+    formula <- stats::as.formula("~.")
   }
+  X <- stats::model.matrix(formula, data)
+  Y <- stats::model.response(stats::model.frame(formula, data))
+  if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
-  fam = get_family(family)
 
-  y_dim = ncol(Y)
-  x_dtype = torch::torch_float32()
-  y_dtype = torch::torch_float32()
+  fam <- get_family(family)
+
+  y_dim <- ncol(Y)
+  x_dtype <- torch::torch_float32()
+  y_dtype <- torch::torch_float32()
   if(is.character(Y)) {
-    y_dim = length(unique(as.integer(as.factor(Y[,1]))))
-    Y = matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
+    y_dim <- length(unique(as.integer(as.factor(Y[,1]))))
+    Y <- matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
     if(fam$family$family == "binomial") {
-      Y = torch::as_array(torch::nnf_one_hot( torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze() )
+      Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
     }
   }
   if(fam$family$family == "softmax") y_dtype = torch::torch_long()
 
 
-  ### dataset  ###
+  ### dataloader  ###
   if(validation != 0){
     train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
     valid <- c(1:nrow(X))[-train]
