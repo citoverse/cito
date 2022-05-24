@@ -79,7 +79,7 @@ The list consists of the following attributes:
 \item{weigths}{List of weights for each training epoch}
 }
 \description{
-DNN
+dnn is used to fit a deep neural network. The function supports the formula syntax as well as different response families (see details).
 }
 \examples{
 \dontrun{
@@ -101,5 +101,9 @@ predictions <- predict(nn.fit, iris[validation_set,])
 plot(iris[validation_set,]$Sepal.Length,predictions)
 # MAE
 mean(abs(predictions-iris[validation_set,]$Sepal.Length))
+
 }
+}
+\seealso{
+\code{\link{predict.citodnn}}, \code{\link{plot.citodnn}}, \code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }

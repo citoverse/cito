@@ -1,5 +1,9 @@
 #' DNN
 #'
+#' @description
+#'
+#' dnn is used to fit a deep neural network. The function supports the formula syntax as well as different response families (see details).
+#'
 #' @param formula formula object
 #' @param data matrix or data.frame
 #' @param family error distribution with link function, see details for supported family functions
@@ -31,27 +35,8 @@
 #' \item{data}{Contains data used for training the model}
 #' \item{weigths}{List of weights for each training epoch}
 #' @import checkmate
-#' @examples
-#' \dontrun{
-#' library(cito)
-#'
-#' set.seed(222)
-#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
-#'
-#' # Build and train  Network
-#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
-#'
-#' # Sturcture of Neural Network
-#' print(nn.fit)
-#'
-#' # Use model on validation set
-#' predictions <- predict(nn.fit, iris[validation_set,])
-#'
-#' # Scatterplot
-#' plot(iris[validation_set,]$Sepal.Length,predictions)
-#' # MAE
-#' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
-#' }
+#' @example /inst/examples/dnn-example.R
+#' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}}, \code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #' @export
 dnn <- function(formula,
                data = NULL,
@@ -279,19 +264,7 @@ dnn <- function(formula,
 #' @param x a model created by \code{\link{dnn}}
 #' @param ... additional arguments
 #' @return prediction matrix
-#' @examples
-#' \dontrun{
-#' library(cito)
-#'
-#' set.seed(222)
-#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
-#'
-#' # Build and train  Network
-#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
-#'
-#' # Sturcture of Neural Network
-#' print(nn.fit)
-#' }
+#' @examples /inst/examples/print.citodnn-example.R
 #' @import checkmate
 #' @export
 print.citodnn <- function(x,...){
@@ -306,22 +279,7 @@ print.citodnn <- function(x,...){
 #' @param ... nothing implemented yet
 #' @return list of weigths of neural network
 #'
-#' @examples
-#' \dontrun{
-#' library(cito)
-#'
-#' set.seed(222)
-#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
-#'
-#' # Build and train  Network
-#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
-#'
-#' # Sturcture of Neural Network
-#' print(nn.fit)
-#'
-#' #analyze weights of Neural Network
-#' coef(nn.fit)
-#' }
+#' @examples /inst/examples/coef.citodnn-example.R
 #' @export
 coef.citodnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
@@ -336,23 +294,7 @@ coef.citodnn <- function(object,...){
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
-#' @examples
-#' \dontrun{
-#' library(cito)
-#'
-#' set.seed(222)
-#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
-#'
-#' # Build and train  Network
-#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
-#'
-#' # Use model on validation set
-#' predictions <- predict(nn.fit, iris[validation_set,])
-#' # Scatterplot
-#' plot(iris[validation_set,]$Sepal.Length,predictions)
-#' # MAE
-#' mean(abs(predictions-iris[validation_set,]$Sepal.Length))
-#' }
+#' @examples /inst/examples/predict.citodnn-example.R
 #' @export
 predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),...) {
 
@@ -390,18 +332,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
 #'
-#' @examples
-#' \dontrun{
-#' library(cito)
-#'
-#' set.seed(222)
-#' validation_set<- sample(c(1:nrow(datasets::iris)),25)
-#'
-#' # Build and train  Network
-#' nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
-#'
-#' plot(nn.fit)
-#' }
+#' @examples /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
