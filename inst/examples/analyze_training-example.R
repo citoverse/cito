@@ -9,8 +9,8 @@ nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,],validation 
 # show zoomable plot of training and validation losses
 analyze_training(nn.fit)
 
-# set model which is used for predictions to model from epoch 46
-nn.fit$use_model_epoch <- 46
+# set model which is used for predictions to model from epoch 24
+nn.fit$use_model_epoch <- 24
 
 # Use model on validation set
 predictions <- predict(nn.fit, iris[validation_set,])
