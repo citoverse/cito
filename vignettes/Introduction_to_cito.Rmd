@@ -1,10 +1,17 @@
 ---
 title: "cito"
-output: rmarkdown::html_vignette
+author: "Christian Amesoeder"
+date: "`r Sys.Date()`"
+output:
+  
+ rmarkdown::html_vignette:
+    toc: true
 vignette: >
   %\VignetteIndexEntry{cito}
-  %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include = FALSE}
@@ -57,7 +64,7 @@ install_torch()
 
 ``` 
 ## Data
-As a first example we will work with the irirs dataset. Which consists of three species and four corresponding variables.  
+As an example we will work with the irirs dataset. Which consists of three species and four corresponding variables.  
 
 ```{r data}
 
@@ -73,6 +80,14 @@ nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 32, dev
 
 
 ```
+
+Cito can plot the networks structure to give you an overview of the created object. For this step you need to have ggrpah installed. 
+```{r plotnn, eval= FALSE}
+plot(nn.fit)
+
+```
+![Structure plot of the generate network](structure_nn.png)
+
 
 
 ## Adding a validation set to the training process
@@ -99,6 +114,8 @@ predict(nn.fit,data[1,])
 
 
 ```
+
+
 ## Additional options for Neural Networks 
 ### Using different activation functions
 As activation functions a wide array can be choosen. You can either define one activation for all layers or define it for each layer individually. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer is choosen automatically and therefore does not has to be provided. Cito supports the following activation functions: relu, leaky_relu, tanh, elu, rrelu, prelu, softplus, celu, selu, gelu, relu6, sigmoig, softsign, hardtanh, tanhshrink, softshrink, hardshrink, log_sigmoid. 
