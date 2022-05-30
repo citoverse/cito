@@ -17,7 +17,7 @@ continue_training <- function(model,
                               epochs = 32,
                               continue_from= NULL,
                               data=NULL,
-                              device= "cuda",
+                              device= "cpu",
                               changed_params=NULL){
 
   checkmate::qassert(device, "S+[3,)")
