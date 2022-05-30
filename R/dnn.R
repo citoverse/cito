@@ -364,15 +364,18 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
   x_pos<- c(rep(1,input))
   y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
   num_layer <-  2
-  for (i in 2:length(weights[[1]])){
-    if (grepl("weight",names(weights[[1]][i]))){
-      structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
-                                                           to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
-                                               value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
-      x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
-      y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
-      num_layer <- num_layer + 1
 
+  if(length(weights[[1]])>1){
+    for (i in 2:length(weights[[1]])){
+      if (grepl("weight",names(weights[[1]][i]))){
+        structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
+                                                             to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
+                                                 value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
+        x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
+        y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
+        num_layer <- num_layer + 1
+
+      }
     }
   }
   x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
@@ -394,7 +397,12 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 # res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
 #            validation= 0.3,epochs = 12, alpha = 1,bias= T)
+#
 # plot(res,node_size = 3, scale_edges = T)
+#
+# res<- dnn(Species~Sepal.Length+Petal.Length, data = iris, hidden=c())
+# plot(res)
+
 # res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
