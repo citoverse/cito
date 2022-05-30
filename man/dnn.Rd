@@ -9,19 +9,21 @@ dnn(
   data = NULL,
   family = stats::gaussian(),
   hidden = c(10L, 10L, 10L),
-  activation = "relu",
+  activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+    "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
+    "softshrink", "hardshrink", "log_sigmoid"),
   validation = 0,
   bias = TRUE,
   lambda = 0,
   alpha = 0.5,
   dropout = 0,
-  optimizer = "adam",
+  optimizer = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"),
   lr = 0.01,
   batchsize = 32L,
   shuffle = FALSE,
-  epochs = 64,
+  epochs = 32,
   plot = TRUE,
-  lr_scheduler = FALSE,
+  lr_scheduler = c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
   device = "cpu",
   early_stopping = FALSE,
   config = list()
@@ -60,7 +62,7 @@ dnn(
 
 \item{plot}{plot training loss}
 
-\item{lr_scheduler}{learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix}
+\item{lr_scheduler}{learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix}
 
 \item{device}{device on which network should be trained on, either "cpu" or "cuda"}
 
@@ -105,5 +107,5 @@ mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 }
 }
 \seealso{
-\code{\link{predict.citodnn}}, \code{\link{plot.citodnn}}, \code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+\code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }

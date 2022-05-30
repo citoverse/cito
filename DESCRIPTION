@@ -17,7 +17,7 @@ Description: Creation of Neural Networks with one line of code and typical R syn
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.0
 Depends:
     R (>= 3.5.0)
 Imports:

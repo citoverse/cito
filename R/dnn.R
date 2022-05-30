@@ -19,7 +19,7 @@
 #' @param batchsize how many samples data loader loads per batch
 #' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
 #' @param epochs epochs for training loop
-#' @param lr_scheduler learning rate scheduler, can be "lambda", "multiplicative", "one_cycle" or "step" additional arguments bust be defined in config with "lr_scheduler." as prefix
+#' @param lr_scheduler learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix
 #' @param plot plot training loss
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
@@ -39,25 +39,27 @@
 #' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #' @export
 dnn <- function(formula,
-               data = NULL,
-               family = stats::gaussian(),
-               hidden = c(10L, 10L, 10L),
-               activation = "relu",
-               validation = 0,
-               bias = TRUE,
-               lambda = 0.0,
-               alpha = 0.5,
-               dropout = 0.0,
-               optimizer = "adam",
-               lr = 0.01,
-               batchsize = 32L,
-               shuffle = FALSE,
-               epochs = 64,
-               plot = TRUE,
-               lr_scheduler= FALSE,
-               device= "cpu",
-               early_stopping = FALSE,
-               config=list()) {
+                data = NULL,
+                family = stats::gaussian(),
+                hidden = c(10L, 10L, 10L),
+                activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
+                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
+                validation = 0,
+                bias = TRUE,
+                lambda = 0.0,
+                alpha = 0.5,
+                dropout = 0.0,
+                optimizer = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"),
+                lr = 0.01,
+                batchsize = 32L,
+                shuffle = FALSE,
+                epochs = 32,
+                plot = TRUE,
+                lr_scheduler= c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
+                device= "cpu",
+                early_stopping = FALSE,
+                config=list()) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -65,10 +67,18 @@ dnn <- function(formula,
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(lr_scheduler,c("S+[1,)","B1"))
   checkmate::qassert(plot,"B1")
   checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
+
+  lr_scheduler <- match.arg(lr_scheduler)
+  if(lr_scheduler == "FALSE") lr_scheduler <- FALSE
+  optimizer <- match.arg(optimizer)
+  if(identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                              "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
+                              "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
+
+
 
   self = NULL
 
@@ -223,24 +233,24 @@ dnn <- function(formula,
 
 
   model_properties <- list(input = ncol(X),
-                          output = y_dim,
-                          hidden = hidden,
-                          activation = activation,
-                          bias = bias,
-                          dropout = dropout)
+                           output = y_dim,
+                           hidden = hidden,
+                           activation = activation,
+                           bias = bias,
+                           dropout = dropout)
 
   training_properties<- list(lr = lr,
-                    lr_scheduler = lr_scheduler,
-                    optimizer = optimizer,
-                    config_optimizer = config_optimizer,
-                    config_lr_scheduler = config_lr_scheduler,
-                    epochs = epoch,
-                    early_stopping = early_stopping,
-                    plot = plot,
-                    validation = validation,
-                    alpha = alpha,
-                    batchsize = batchsize,
-                    shuffle = shuffle)
+                             lr_scheduler = lr_scheduler,
+                             optimizer = optimizer,
+                             config_optimizer = config_optimizer,
+                             config_lr_scheduler = config_lr_scheduler,
+                             epochs = epoch,
+                             early_stopping = early_stopping,
+                             plot = plot,
+                             validation = validation,
+                             alpha = alpha,
+                             batchsize = batchsize,
+                             shuffle = shuffle)
 
 
   z <- list()
@@ -313,10 +323,10 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
   if(is.null(newdata)) newdata = torch::torch_tensor(object$data$X)
   else {
     if(is.data.frame(newdata)) {
-        newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
-      } else {
-        newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
-      }
+      newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
+    } else {
+      newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
+    }
     newdata <- torch::torch_tensor(newdata)
   }
 
@@ -337,12 +347,12 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
   sapply(c("igraph","ggraph","ggplot2"),function(x)
-  if (!requireNamespace(x, quietly = TRUE)) {
-    stop(
-      paste0("Package \"",x,"\" must be installed to use this function."),
-      call. = FALSE
-    )
-  })
+    if (!requireNamespace(x, quietly = TRUE)) {
+      stop(
+        paste0("Package \"",x,"\" must be installed to use this function."),
+        call. = FALSE
+      )
+    })
   checkmate::qassert(node_size, "R+[0,)")
   checkmate::qassert(scale_edges, "B1")
 
@@ -357,8 +367,8 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
   for (i in 2:length(weights[[1]])){
     if (grepl("weight",names(weights[[1]][i]))){
       structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
-                                                   to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
-                                       value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
+                                                           to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
+                                               value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
       x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
       y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
       num_layer <- num_layer + 1
@@ -380,13 +390,10 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
 
 
-# source("R/model.R")
-# source("R/plot.R")
-# source("R/utils.R")
-# source("R/continue_training.R")
+
 # res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs = 140, alpha = 1,bias= T)
+#            validation= 0.3,epochs = 12, alpha = 1,bias= T)
 # plot(res,node_size = 3, scale_edges = T)
 # res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
 # predict(res,iris[1:5,])
