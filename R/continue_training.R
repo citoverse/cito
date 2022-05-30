@@ -8,7 +8,7 @@
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
 #'
-#' @examples /inst/examples/continue_training-example.R
+#' @example /inst/examples/continue_training-example.R
 #'
 #' @import checkmate
 #'

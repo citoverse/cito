@@ -29,7 +29,7 @@ visualize.training <- function(losses,epoch,new = FALSE){
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @return a plotly figure
-#' @examples /inst/examples/analyze_training-example.R
+#' @example /inst/examples/analyze_training-example.R
 #' @export
 
 analyze_training<- function(object){

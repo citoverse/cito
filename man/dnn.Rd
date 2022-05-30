@@ -22,7 +22,7 @@ dnn(
   epochs = 64,
   plot = TRUE,
   lr_scheduler = FALSE,
-  device = "cuda",
+  device = "cpu",
   early_stopping = FALSE,
   config = list()
 )

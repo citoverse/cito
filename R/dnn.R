@@ -55,7 +55,7 @@ dnn <- function(formula,
                epochs = 64,
                plot = TRUE,
                lr_scheduler= FALSE,
-               device= "cuda",
+               device= "cpu",
                early_stopping = FALSE,
                config=list()) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
@@ -264,7 +264,7 @@ dnn <- function(formula,
 #' @param x a model created by \code{\link{dnn}}
 #' @param ... additional arguments
 #' @return prediction matrix
-#' @examples /inst/examples/print.citodnn-example.R
+#' @example /inst/examples/print.citodnn-example.R
 #' @import checkmate
 #' @export
 print.citodnn <- function(x,...){
@@ -279,7 +279,7 @@ print.citodnn <- function(x,...){
 #' @param ... nothing implemented yet
 #' @return list of weigths of neural network
 #'
-#' @examples /inst/examples/coef.citodnn-example.R
+#' @example /inst/examples/coef.citodnn-example.R
 #' @export
 coef.citodnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
@@ -294,7 +294,7 @@ coef.citodnn <- function(object,...){
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
-#' @examples /inst/examples/predict.citodnn-example.R
+#' @example /inst/examples/predict.citodnn-example.R
 #' @export
 predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),...) {
 
@@ -332,7 +332,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
 #'
-#' @examples /inst/examples/plot.citodnn-example.R
+#' @example /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
