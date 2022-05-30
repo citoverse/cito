@@ -4,6 +4,9 @@ wrap_dnn = function(pars) {
   testthat::expect_error({predict(model, newdata=pars$X)}, NA)
   testthat::expect_error({predict(model)}, NA)
   testthat::expect_error({predict(model, type = "response")}, NA)
+  testthat::expect_error({print(model)}, NA)
+  testthat::expect_error({coef(model)}, NA)
+  testthat::expect_error({plot(model)}, NA)
 }
 
 
@@ -74,5 +77,6 @@ testthat::test_that("DNN save and reload", {
   nn.fit = readRDS("test_model.RDS")
   testthat::expect_error(predict(nn.fit), NA)
   testthat::expect_error(predict(nn.fit, newdata = datasets::iris[validation_set,]), NA)
+  testthat::expect_error(continue_training(nn.fit), NA)
   file.remove("test_model.RDS")
 })

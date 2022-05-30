@@ -36,7 +36,7 @@
 #' \item{weigths}{List of weights for each training epoch}
 #' @import checkmate
 #' @example /inst/examples/dnn-example.R
-#' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}}, \code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+#' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #' @export
 dnn <- function(formula,
                data = NULL,
