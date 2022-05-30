@@ -61,3 +61,18 @@ testthat::test_that("DNN rnorm/poisson", {
     wrap_dnn(scenarios[[i]])
   }
 })
+
+
+testthat::test_that("DNN save and reload", {
+  testthat::skip_on_cran()
+  set.seed(222)
+  validation_set<- sample(c(1:nrow(datasets::iris)),25)
+
+  # Build and train  Network
+  nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 5L)
+  saveRDS(nn.fit, "test_model.RDS")
+  nn.fit = readRDS("test_model.RDS")
+  testthat::expect_error(predict(nn.fit), NA)
+  testthat::expect_error(predict(nn.fit, newdata = datasets::iris[validation_set,]), NA)
+  file.remove("test_model.RDS")
+})
