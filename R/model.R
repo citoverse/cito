@@ -85,12 +85,15 @@ get_family = function(family) {
   out$parameter = NULL
 
   if(!inherits(family, "family")){
-    if(family == "softmax") {
-      family = list(family="softmax")
-    } else {
-      stop("Family is not supported")
-    }
+    family <- switch(tolower(family),
+             "gaussian"= stats::gaussian(),
+             "binomial" = stats::binomial(),
+             "poisson" = stats::poisson(),
+             "softmax"  = list(family = "softmax"),
+             stop(paste0("Family \"",family,"\"is not supported"))
+      )
   }
+
   if(family$family == "gaussian") {
     out$parameter = torch::torch_tensor(0.1, requires_grad = TRUE)
     out$invlink = function(a) a

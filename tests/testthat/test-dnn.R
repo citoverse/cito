@@ -77,6 +77,6 @@ testthat::test_that("DNN save and reload", {
   nn.fit = readRDS("test_model.RDS")
   testthat::expect_error(predict(nn.fit), NA)
   testthat::expect_error(predict(nn.fit, newdata = datasets::iris[validation_set,]), NA)
-  testthat::expect_error(continue_training(nn.fit), NA)
+  testthat::expect_error(continue_training(nn.fit,epochs = 5), NA)
   file.remove("test_model.RDS")
 })
