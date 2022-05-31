@@ -253,20 +253,21 @@ dnn <- function(formula,
                              shuffle = shuffle)
 
 
-  z <- list()
-  class(z) <- "citodnn"
-  z$net <- net
-  z$call <- match.call()
-  z$family <- fam
-  z$losses<- losses
-  z$data <- list(X = X, Y = Y, data = data)
-  z$weights <- weights
-  z$use_model_epoch <- epoch
-  z$loaded_model_epoch <- epoch
-  z$model_properties <- model_properties
-  z$training_properties <- training_properties
+  out <- list()
+  class(out) <- "citodnn"
+  out$net <- net
+  out$call <- match.call()
+  out$family <- fam
+  out$called_with_family <- family
+  out$losses<- losses
+  out$data <- list(X = X, Y = Y, data = data)
+  out$weights <- weights
+  out$use_model_epoch <- epoch
+  out$loaded_model_epoch <- epoch
+  out$model_properties <- model_properties
+  out$training_properties <- training_properties
 
-  return(z)
+  return(out)
 }
 
 #' Print class citodnn

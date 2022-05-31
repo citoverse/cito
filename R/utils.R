@@ -12,6 +12,7 @@ check_model <- function(object) {
                     bias = object$model_properties$bias,
                     dropout = object$model_properties$dropout)
     object$loaded_model_epoch<- 0
+    object$family<- get_family(object$called_with_family)
     }
 
   if(object$loaded_model_epoch!= object$use_model_epoch){

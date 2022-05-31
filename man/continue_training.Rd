@@ -9,7 +9,7 @@ continue_training(
   epochs = 32,
   continue_from = NULL,
   data = NULL,
-  device = "cuda",
+  device = "cpu",
   changed_params = NULL
 )
 }
