@@ -11,7 +11,6 @@
 #' @param activation activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
-#' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
 #' @param dropout probability of dropout rate
 #' @param optimizer which optimizer used for training the network,
@@ -47,7 +46,6 @@ dnn <- function(formula,
                                "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
                 validation = 0,
                 bias = TRUE,
-                lambda = 0.0,
                 alpha = 0.5,
                 dropout = 0.0,
                 optimizer = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"),
@@ -63,7 +61,6 @@ dnn <- function(formula,
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
-  checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
