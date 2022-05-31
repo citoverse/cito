@@ -1,8 +1,8 @@
 Package: cito
 Type: Package
-Date: 2022-05-16
+Date: 2022-05-31
 Title: Fast Neural Network Training with Torch
-Version: 0.0.0.1
+Version: 1.0.0
 Authors@R:
     c(person(given = "Christian",
            family = "Amesöder",

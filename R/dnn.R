@@ -83,15 +83,8 @@ dnn <- function(formula,
   self = NULL
 
   ### decipher config list ###
-  config_optimizer<-c()
-  config_lr_scheduler<- c()
-  if(length(config)>0){
-    config_optimizer<- config[which(startsWith(tolower(names(config)),"optimizer"))]
-    names(config_optimizer)<- sapply(names(config_optimizer),function(x) substring(x,11))
-
-    config_lr_scheduler<- config[which(startsWith(tolower(names(config)),"lr_scheduler"))]
-    names(config_lr_scheduler)<- sapply(names(config_lr_scheduler),function(x) substring(x,14))
-  }
+  config_optimizer<-get_config_optimizer(config)
+  config_lr_scheduler<- get_config_lr_scheduler(config)
 
 
 

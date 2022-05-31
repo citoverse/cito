@@ -1,5 +1,5 @@
 
-.onLoad = function(libname, pkgname){
+.onAttach <- function(libname, pkgname){
 if(!torch::torch_is_installed()){
   packageStartupMessage("Torch is not yet installed")
   packageStartupMessage("Please run the following before using cito")

@@ -95,6 +95,7 @@ continue_training <- function(model,
 
 
   ### set optimizer ###
+  model$training_properties$config_optimizer<- get_config_optimizer(changed_params$config)
   optim <- get_optimizer(optimizer = model$training_properties$optimizer,
                          parameters = c(model$net$parameters, model$family$parameter),
                          lr = model$training_properties$lr,
@@ -102,6 +103,7 @@ continue_training <- function(model,
 
 
   ### set LR Scheduler ###
+  model$training_properties$config_lr_scheduler<- get_config_lr_scheduler(changed_params$config)
   if(!isFALSE(model$training_properties$lr_scheduler)){
     use_lr_scheduler <- TRUE
     scheduler<- get_lr_scheduler(lr_scheduler = model$training_properties$lr_scheduler,

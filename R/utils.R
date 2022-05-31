@@ -32,3 +32,33 @@ check_model <- function(object) {
   }
   return(object)
 }
+
+### decipher config list ###
+get_config_optimizer<- function(config_list){
+
+  config_optimizer<-c()
+
+  if(length(config_list)>0){
+    config_optimizer<- config_list[which(startsWith(tolower(names(config_list)),"optimizer"))]
+    names(config_optimizer)<- sapply(names(config_optimizer),function(x) substring(x,11))
+
+  }
+  return(config_optimizer)
+}
+
+get_config_lr_scheduler <- function(config_list){
+
+  config_lr_scheduler<- c()
+  if(length(config_list)>0){
+    config_lr_scheduler<- config_list[which(startsWith(tolower(names(config_list)),"lr_scheduler"))]
+    names(config_lr_scheduler)<- sapply(names(config_lr_scheduler),function(x) substring(x,14))
+  }
+  return(config_lr_scheduler)
+}
+
+
+
+
+
+
+
