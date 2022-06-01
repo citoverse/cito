@@ -1,4 +1,4 @@
-#' Contiinues training of a model for additional periods
+#' Continues training of a model for additional periods
 #'
 #' @param model a model created by \code{\link{dnn}}
 #' @param data matrix or data.frame if not provided data from original training will be used

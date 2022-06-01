@@ -118,7 +118,7 @@ predict(nn.fit,data[1,])
 
 ## Additional options for Neural Networks 
 ### Using different activation functions
-As activation functions a wide array can be choosen. You can either define one activation for all layers or define it for each layer individually. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer is choosen automatically and therefore does not has to be provided. Cito supports the following activation functions: relu, leaky_relu, tanh, elu, rrelu, prelu, softplus, celu, selu, gelu, relu6, sigmoig, softsign, hardtanh, tanhshrink, softshrink, hardshrink, log_sigmoid. 
+As activation functions a wide array can be chosen. You can either define one activation for all layers or define it for each layer individually. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer is chosen automatically and therefore does not has to be provided. Cito supports the following activation functions: relu, leaky_relu, tanh, elu, rrelu, prelu, softplus, celu, selu, gelu, relu6, sigmoig, softsign, hardtanh, tanhshrink, softshrink, hardshrink, log_sigmoid. 
 ```{r activation, results ="hide",fig.show='hide' ,eval = FALSE}
 #the same activation function for all layers: 
 nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), activation= "relu")
@@ -129,7 +129,7 @@ nn.fit <- dnn(Species~., data = data,
 
 ``` 
 
-### L1/L2 Regularisation 
+### L1/L2 Regularization 
 By setting alpha to a value in [0,1] you can activate an elastic net generalization for each layer. Where $$(1 - \alpha) * |weights| + \alpha ||weights||^2$$ is added to the loss. If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since you have to account the input layer. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no generalisation should take place on a specific layer.
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
@@ -157,7 +157,7 @@ nn.fit <- dnn(Species~., data = data,
 ``` 
 
 ### Optimizers 
-Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimiyers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
+Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimizers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
 
 
 ```{r optim,eval = FALSE}
@@ -179,7 +179,7 @@ nn.fit <- dnn(Species~., data = data,lr = 0.01, lr_scheduler= "step",
 ```
 
 ### Early Stopping 
-Adding early stopping criteria helps saving time by stopping the training process at the current epoch if the validation loss of the current epoch is biggger than the validation loss n epochs early. The n can be defined by the ealry_stopping argument. It is required to set validation > 0. 
+Adding early stopping criteria helps saving time by stopping the training process at the current epoch if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the ealry_stopping argument. It is required to set validation > 0. 
 ```{r early_stopping,eval = FALSE}
 # Stops training if validation loss of current epoch is bigger than that 10 epochs earlier  
 nn.fit <- dnn(Species~., data = data, epochs = 1000, validation = 0.2, early_stopping = 10)
@@ -190,7 +190,7 @@ nn.fit <- dnn(Species~., data = data, epochs = 1000, validation = 0.2, early_sto
 
 
 ## Continuing Training 
-For the case that the specified number of epochs were not enough, cito provides the continue_training() function. It allows to continue the training process were dnn() quitted. 
+For the case that the specified number of epochs were not enough, cito provides the continue_training() function. It allows to continue the training process where dnn() stopped. 
 ```{r setup3, include=FALSE}
 
 # save the built-in output hook
