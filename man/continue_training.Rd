@@ -2,7 +2,7 @@
 % Please edit documentation in R/continue_training.R
 \name{continue_training}
 \alias{continue_training}
-\title{Contiinues training of a model for additional periods}
+\title{Continues training of a model for additional periods}
 \usage{
 continue_training(
   model,
@@ -30,7 +30,7 @@ continue_training(
 a model of class cito.dnn same as created by  \code{\link{dnn}}
 }
 \description{
-Contiinues training of a model for additional periods
+Continues training of a model for additional periods
 }
 \examples{
 \dontrun{

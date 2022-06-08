@@ -11,6 +11,7 @@
 #' @param activation activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
+#' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
 #' @param dropout probability of dropout rate
 #' @param optimizer which optimizer used for training the network,
@@ -46,6 +47,7 @@ dnn <- function(formula,
                                "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
                 validation = 0,
                 bias = TRUE,
+                lambda = 0.0,
                 alpha = 0.5,
                 dropout = 0.0,
                 optimizer = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"),
@@ -61,6 +63,7 @@ dnn <- function(formula,
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
+  checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
@@ -178,7 +181,8 @@ dnn <- function(formula,
 
       loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
       loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
-                               loss = loss,intercept= colnames(X)[1]=="(Intercept)")
+                               loss = loss, lambda = lambda,
+                               intercept= colnames(X)[1]=="(Intercept)")
       loss$backward()
       optim$step()
 
@@ -195,7 +199,8 @@ dnn <- function(formula,
         output <- net(b[[1]]$to(device = device))
         loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
         loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
-                                 loss = loss,intercept= colnames(X)[1]=="(Intercept)")
+                                 loss = loss, lambda = lambda,
+                                 intercept= colnames(X)[1]=="(Intercept)")
         valid_l <- c(valid_l, loss$item())
         losses$valid_l[epoch] <- mean(valid_l)
       })
@@ -238,6 +243,7 @@ dnn <- function(formula,
                              early_stopping = early_stopping,
                              plot = plot,
                              validation = validation,
+                             lambda = lambda,
                              alpha = alpha,
                              batchsize = batchsize,
                              shuffle = shuffle)
@@ -384,17 +390,15 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
 
 
-
+# library(cito)
 # res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
 #             data = iris, family = "softmax", activation= "selu", device ="cpu",
 #            validation= 0.3,epochs = 12, alpha = 1,bias= T)
 #
 # plot(res,node_size = 3, scale_edges = T)
 #
-# res<- dnn(Species~Sepal.Length+Petal.Length, data = iris, hidden=c())
-# plot(res)
-
 # res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
+# res$use_model_epoch<- 11
 # predict(res,iris[1:5,])
 # # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
 # # predict(res,iris[1:5,])

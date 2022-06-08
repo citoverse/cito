@@ -134,6 +134,7 @@ continue_training <- function(model,
       loss <- generalize_alpha(parameters = net$parameters,
                                alpha = model$training_properties$alpha,
                                loss = loss,
+                               lambda = model$training_properties$lambda,
                                intercept = colnames(X)[1]=="(Intercept)")
       loss$backward()
       optim$step()
@@ -153,6 +154,7 @@ continue_training <- function(model,
         loss <- generalize_alpha(parameters = net$parameters,
                                  alpha = model$training_properties$alpha,
                                  loss = loss,
+                                 lambda= model$training_properties$lambda,
                                  intercept = colnames(X)[1]=="(Intercept)")
         valid_l <- c(valid_l, loss$item())
         model$losses$valid_l[epoch] <- mean(valid_l)

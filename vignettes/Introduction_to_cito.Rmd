@@ -76,7 +76,7 @@ summary(data)
 With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 4 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case lasts for 32 epochs and is done on the cpu. If there is no option set for device, cito will try to use a cuda device. If there is none available a warning will be printed and the trainign will be done one the cpu 
 ```{r simp_models, fig.show='hide',out.lines = 3}
 library(cito)
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 32, device= "cpu")
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 12, device= "cpu")
 
 
 ```
@@ -94,7 +94,7 @@ plot(nn.fit)
 In order to validate the network during the training process, you can put activation = 0.x. Before training the defined percentage of the data set will be split of and used as a validation set. This can be seen in the plot that gets shown during the training as well as in analyze_training(). 
 
 ```{r validation, results = "hide", out.lines=3}
-nn.fit <- dnn(Species~. , data = data, validation = 0.3)
+nn.fit <- dnn(Species~. , data = data, epochs = 24, validation = 0.3)
 
 
 ```
