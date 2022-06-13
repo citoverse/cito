@@ -26,7 +26,7 @@
 #' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
 #'
-#' @return an object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+#' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}
@@ -134,8 +134,8 @@ dnn <- function(formula,
 
   ### dataloader  ###
   if(validation != 0){
-    train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
-    valid <- c(1:nrow(X))[-train]
+    valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
+    train <- c(1:nrow(X))[-valid]
     train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
     valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
 
@@ -246,7 +246,8 @@ dnn <- function(formula,
                              lambda = lambda,
                              alpha = alpha,
                              batchsize = batchsize,
-                             shuffle = shuffle)
+                             shuffle = shuffle,
+                             formula = formula)
 
 
   out <- list()
@@ -257,6 +258,7 @@ dnn <- function(formula,
   out$called_with_family <- family
   out$losses<- losses
   out$data <- list(X = X, Y = Y, data = data)
+  if(validation != 0) out$data<- append(out$data, list(validation = valid))
   out$weights <- weights
   out$use_model_epoch <- epoch
   out$loaded_model_epoch <- epoch
@@ -272,13 +274,28 @@ dnn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
-#' @import checkmate
 #' @export
 print.citodnn <- function(x,...){
   x <- check_model(x)
   print(x$call)
   print(x$net)
 }
+
+#' Summarize Neural Network of class citodnn
+#'
+#' @param object a model of class citodnn created by \code{\link{dnn}}
+#' @param ... additional arguments
+#' @return summary.glm returns an object of class "summary.citodnn", a list with components
+#' @export
+summary.citodnn <- function(object, n_permute = 256, ...){
+  object <- check_model(object)
+  out <- list()
+  class(out) <- "summary.citodnn"
+  out$importance <- get_importance(object, n_permute)
+
+  return(out)
+}
+
 
 #' Returns list of parameters the neural network model currently has in use
 #'
@@ -387,32 +404,3 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
     ggraph::geom_node_point(size = node_size)
   print(p)
 }
-
-
-
-# library(cito)
-# res <- dnn(Species~Sepal.Length+Petal.Length, hidden=c(20,30,10,5), early_stopping = F,
-#             data = iris, family = "softmax", activation= "selu", device ="cpu",
-#            validation= 0.3,epochs = 12, alpha = 1,bias= T)
-#
-# plot(res,node_size = 3, scale_edges = T)
-#
-# res<- continue_training(res,continue_from = 3, epochs=5,device= "cpu")
-# res$use_model_epoch<- 11
-# predict(res,iris[1:5,])
-# # res = dnn(Sepal.Width~Species +Petal.Length+ I(Petal.Length^2), hidden=rep(10,5), data = iris ,validation= 0.3,epochs =100)
-# # predict(res,iris[1:5,])
-# # summary(lm(scale(Sepal.Length)~scale(Sepal.Width)+scale(Petal.Length), data = iris))
-# # analyze_training(res)
-# # predict(res)
-# #
-# saveRDS(res, "test.RDS")
-# res2 <-  readRDS("test.RDS")
-# predict(res2,iris[1:5,])
-#
-# #error
-# res2$net$parameters
-#
-# #no error
-# res2<- check_model(res2)
-# res2$net$parameters

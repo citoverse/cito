@@ -56,8 +56,73 @@ get_config_lr_scheduler <- function(config_list){
   return(config_lr_scheduler)
 }
 
+get_var_names <- function(formula, data){
+  X_helper <- model.matrix(formula,data[1,])
+  var_names <- c()
+  for(i in seq_len(ncol(data))){
+    if(colnames(data)[i]%in%colnames(X_helper)){
+      var_names<- append(var_names, colnames(data)[i])
 
+    }else if (is.factor(data[,i])){
+      count <- startsWith(colnames(X_helper),colnames(data)[i])
+      count <- sum(count, na.rm = TRUE) + 1
+      if(count >= nlevels(data[,i])){
+        var_names<- append(var_names, colnames(data)[i])
 
+      }
+    }
+  }
+  return(var_names)
+}
+
+get_importance<- function(model, n_permute){
+
+  model<- check_model(model)
+
+  loss<- function(pred, true){
+    return(mean(abs(pred-true)**2))
+  }
+
+  org_err <- loss(pred = predict(model,model$data$data),
+                  true = model$data$Y)
+
+  importance<- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
+                          importance= c(0))
+
+  for(i in seq_len(nrow(importance))){
+
+    perm_preds <- c()
+    true <- c()
+
+    if(n_permute < ((nrow(model$data$data)**2)-1)){
+      for(k in seq_len(n_permute)){
+
+        perm_data <- model$data$data
+        perm_data[,importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = F),importance$variable[i]]
+
+        perm_preds <- append(perm_preds,predict(model,perm_data)[,1])
+        true <- append(true, model$data$Y)
+      }
+    }else{
+      for(j in seq_len(nrow(model$data$data))){
+        perm_data <- model$data$data[j,]
+        for(k in seq_len(nrow(model$data$data))[-j]){
+          perm_data[i] <- model$data$data[k,i]
+          perm_preds <- append(perm_preds, predict(model, perm_data))
+          true <- append(true, model$data$Y[j])
+
+        }
+      }
+    }
+
+    new_err <- loss(pred = perm_preds,
+                    true = true)
+    importance$importance[i] <- new_err/org_err
+
+  }
+
+  return(importance)
+}
 
 
 
