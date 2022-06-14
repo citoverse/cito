@@ -24,7 +24,9 @@ visualize.training <- function(losses,epoch,new = FALSE){
   }
 }
 
-#' Visualize training of Neural Network afterwards to decide on best performing model.
+#' Visualize training of Neural Network
+#'
+#' After training a model with cito, this function helps to analyze the training process and decide on best performing model.
 #' Creates a plotly figure which allows to zoom in and out on training graph
 #'
 #' @param object a model created by \code{\link{dnn}}
@@ -61,4 +63,73 @@ analyze_training<- function(object){
                        plot_bgcolor='#e5ecf6')
 
   return(fig)
+}
+
+
+#' Partial Dependence Plot (PDP) for one feature
+#'
+#' $$
+#' \hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})
+#' $$
+#' @param model a model created by \code{\link{dnn}}
+#' @param variable variable as string for which the PDP should be done
+#' @example /inst/examples/analyze_training-example.R
+#'
+#' @export
+
+pdp <- function(model, variable){
+
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop(
+      "Package \"ggplot2\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
+
+  if(!(variable %in% get_var_names(model$training_properties$formula, model$data$data[1,]))){
+    stop("Variable unknown")
+  }
+
+  perm_data <- model$data$data
+
+  if(is.numeric(model$data$data[,variable])){
+    df <- data.frame(
+      x = model$data$data[,variable],
+      y = sapply(seq_len(nrow(model$data$data)),function(i){
+        perm_data[,variable]<- perm_data[i,variable]
+        return(mean(predict(model,perm_data)))
+        })
+    )
+    df <- df[order(df$x),]
+
+    p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x=x,y=y ))
+    p <- p + ggplot2::geom_line()
+    p <- p + ggplot2::geom_rug(sides="b")
+
+  }else if (is.factor(model$data$data[,variable])){
+    df <- data.frame(
+      x = c(sapply(levels(model$data$data[,variable]), function(i){
+        return(rep(i,nrow(perm_data)))
+        })) ,
+      y = c(sapply(levels(model$data$data[,variable]), function(i){
+        for(j in seq_len(nrow(perm_data))){
+          perm_data[j,variable] <- i
+        }
+        return(predict(model,perm_data))
+      }))
+    )
+    df$x<- as.factor(df$x)
+    df<- data.frame(x = levels(df$x),
+                    y = sapply(levels(df$x), function(i){
+                      return(mean(df$y[which(df$x==i)]))
+                      }))
+    p <- ggplot2::ggplot(data = df,mapping = ggplot2::aes(x = x,y = y),)
+    p <- p + ggplot2::geom_bar(stat= "identity")
+    p <- p + ggplot2::theme_minimal()
+    p <- p + ggplot2::geom_text(ggplot2::aes(label=y), vjust=1.6)
+    p <- p + ggplot2::ggtitle("Partial Dependency Plot")
+    p <- p + ggplot2::xlab(variable) + ggplot2::ylab(model$call$formula[2])
+  }
+
+  return(p)
 }
