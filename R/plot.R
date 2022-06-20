@@ -68,16 +68,29 @@ analyze_training<- function(object){
 
 #' Partial Dependence Plot (PDP) for one feature
 #'
-#' $$
-#' \hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})
-#' $$
+#' Calculates the Partial Dependency Plot for one feature, either numeric or categorical.
+#'
+#' @details
+#'
+#' Does the estimation of the partial function \mjdeqn{\hat{f}_S}{} with an Monte Carlo Estimation.
+#'
+#' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
+#'
+#' Monte Carlo Estimation:
+#'
+#' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
+#'
+#' If a categorical feature is analyzed, all data instances are used and set to each level.
+#' Then an average is calculated per category and put out in a bar plot.
+#'
+#'
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done
 #' @example /inst/examples/analyze_training-example.R
 #'
 #' @export
 
-pdp <- function(model, variable){
+PDP <- function(model, variable){
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
@@ -120,7 +133,7 @@ pdp <- function(model, variable){
     )
     df$x<- as.factor(df$x)
     df<- data.frame(x = levels(df$x),
-                    y = sapply(levels(df$x), function(i){
+                     y = sapply(levels(df$x), function(i){
                       return(mean(df$y[which(df$x==i)]))
                       }))
     p <- ggplot2::ggplot(data = df,mapping = ggplot2::aes(x = x,y = y),)
@@ -133,3 +146,93 @@ pdp <- function(model, variable){
 
   return(p)
 }
+
+#' Accumulated Local Effect Plot (ALE) for one feature
+#'
+#'
+#' Does the ALE for one feature
+#' @param model a model created by \code{\link{dnn}}
+#' @param variable variable as string for which the PDP should be done
+#' @example /inst/examples/analyze_training-example.R
+#' @export
+
+ALE <- function(model, variable, neighborhoods = 10){
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop(
+      "Package \"ggplot2\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
+
+  if(!(variable %in% get_var_names(model$training_properties$formula, model$data$data[1,]))){
+    warning("unknown variable")
+    return(NULL)
+  }
+
+  if(is.numeric(model$data$data[,variable])){
+
+
+    repeat{
+      borders <- seq(from = min(model$data$data[,variable]),
+                    to = max(model$data$data[,variable]),
+                    length.out = neighborhoods+1)
+
+      df <- data.frame(
+        x = borders[1:neighborhoods] + ((borders[2]-borders[1])/2),
+
+        y = sapply(seq_len(length(borders))[-1], function(i){
+
+        region_indizes <- which(model$data$data[,variable]<= borders[i] &
+                                  model$data$data[,variable]>= borders[i-1])
+
+        if(length(region_indizes)>0){
+          perm_data <- model$data$data[region_indizes,]
+
+          perm_data[,variable] <- borders[i-1]
+          lower_preds <- predict(model, perm_data)
+
+          perm_data[,variable] <- borders[i]
+          upper_preds <- predict(model, perm_data)
+
+          return(mean(upper_preds - lower_preds))
+        }else{
+
+          return(NA)
+
+        }
+        })
+      )
+
+      if(any(is.na(df$y))){
+          warning("There are neighborhoods with no observation, amount of neighborhoods gets reduced by one")
+        neighborhoods <- neighborhoods - 1
+      }else{
+        break
+      }
+    }
+
+    for ( i in seq_len(nrow(df))[-1]){
+      df$y[i]<- df$y[i-1]+df$y[i]
+    }
+
+    df$y <- df$y - mean(df$y)
+
+    p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
+    p <- p + ggplot2::geom_line()
+
+    geom_df<- data.frame(x = model$data$data[,variable])
+    p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
+                               mapping = ggplot2::aes(x = x),
+                               inherit.aes = FALSE)
+
+
+    return(p)
+  }else{
+    warning("Categorical features are not yet supported.")
+    return(NULL)
+
+  }
+
+
+}
+
