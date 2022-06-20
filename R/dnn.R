@@ -305,6 +305,20 @@ summary.citodnn <- function(object, n_permute = 256, ...){
 }
 
 
+
+#' Print method for class summary.citodnn
+#'
+#' @param x a summary object created by \code{\link{summary.citodnn}}
+#' @param ... additional arguments
+#' @export
+print.summary.citodnn <- function(x, ... ){
+print("Deep Neural Network Model summary")
+print("Feature Importance:")
+print(x$importance)
+
+}
+
+
 #' Returns list of parameters the neural network model currently has in use
 #'
 #' @param object a model created by \code{\link{dnn}}
