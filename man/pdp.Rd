@@ -26,6 +26,16 @@ with a Monte Carlo Estimation:
 If a categorical feature is analyzed, all data instances are used and set to each level.
 Then an average is calculated per category and put out in a bar plot.
 }
+\examples{
+\dontrun{
+library(cito)
+
+# Build and train  Network
+nn.fit<- dnn(Sepal.Length~., data = datasets::iris)
+
+PDP(nn.fit, variable = "Petal.Length")
+}
+}
 \seealso{
 \code{\link{ALE}}
 }
