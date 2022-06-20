@@ -66,17 +66,17 @@ analyze_training<- function(object){
 }
 
 
-#' Partial Dependence Plot (PDP) for one feature
+#' Partial Dependence Plot (PDP)
 #'
-#' Calculates the Partial Dependency Plot for one feature, either numeric or categorical.
+#' Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 #'
 #' @details
 #'
-#' Does the estimation of the partial function \mjdeqn{\hat{f}_S}{} with an Monte Carlo Estimation.
+#' Performs the estimation of the partial function \eqn{\hat{f}_S}{}
 #'
 #' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 #'
-#' Monte Carlo Estimation:
+#' with a Monte Carlo Estimation:
 #'
 #' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 #'
@@ -86,7 +86,8 @@ analyze_training<- function(object){
 #'
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done
-#' @example /inst/examples/analyze_training-example.R
+#' @seealso \code{\link{ALE}}
+#' @example /inst/examples/PDP-example.R
 #'
 #' @export
 
@@ -147,13 +148,27 @@ PDP <- function(model, variable){
   return(p)
 }
 
-#' Accumulated Local Effect Plot (ALE) for one feature
+#' Accumulated Local Effect Plot (ALE)
 #'
 #'
-#' Does the ALE for one feature
+#' Performs an ALE for one feature and returns a centered plot.
+#'
+#' @details
+#'
+#' If the defined variable is a numeric feature, the ALE is performed.
+#' Here, the non centered effect for feature j with k equally distant neighborhoods is defined as:
+#'
+#' \eqn{ \hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
+#'
+#' Where \eqn{N_j(k)} is the k-th neighborhood and \eqn{n_j(k)} is the number of observations in the k-th neighborhood.
+#'
+#' The last part of the equation,
+#' \eqn{\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
+#' represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done
-#' @example /inst/examples/analyze_training-example.R
+#' @seealso \code{\link{PDP}}
+#' @example /inst/examples/ALE-example.R
 #' @export
 
 ALE <- function(model, variable, neighborhoods = 10){

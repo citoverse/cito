@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{PDP}
 \alias{PDP}
-\title{Partial Dependence Plot (PDP) for one feature}
+\title{Partial Dependence Plot (PDP)}
 \usage{
 PDP(model, variable)
 }
@@ -12,39 +12,20 @@ PDP(model, variable)
 \item{variable}{variable as string for which the PDP should be done}
 }
 \description{
-Calculates the Partial Dependency Plot for one feature, either numeric or categorical.
+Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 }
 \details{
-Does the estimation of the partial function \mjdeqn{\hat{f}_S}{} with an Monte Carlo Estimation.
+Performs the estimation of the partial function \eqn{\hat{f}_S}{}
 
 \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 
-Monte Carlo Estimation:
+with a Monte Carlo Estimation:
 
 \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 
 If a categorical feature is analyzed, all data instances are used and set to each level.
 Then an average is calculated per category and put out in a bar plot.
 }
-\examples{
-\dontrun{
-library(cito)
-set.seed(222)
-validation_set<- sample(c(1:nrow(datasets::iris)),25)
-
-# Build and train  Network
-nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,],validation = 0.1)
-
-# show zoomable plot of training and validation losses
-analyze_training(nn.fit)
-
-# set model which is used for predictions to model from epoch 22
-nn.fit$use_model_epoch <- 22
-
-# Use model on validation set
-predictions <- predict(nn.fit, iris[validation_set,])
-
-# Scatterplot
-plot(iris[validation_set,]$Sepal.Length,predictions)
-}
+\seealso{
+\code{\link{ALE}}
 }

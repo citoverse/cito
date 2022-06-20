@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot.R
 \name{ALE}
 \alias{ALE}
-\title{Accumulated Local Effect Plot (ALE) for one feature}
+\title{Accumulated Local Effect Plot (ALE)}
 \usage{
 ALE(model, variable, neighborhoods = 10)
 }
@@ -12,27 +12,30 @@ ALE(model, variable, neighborhoods = 10)
 \item{variable}{variable as string for which the PDP should be done}
 }
 \description{
-Does the ALE for one feature
+Performs an ALE for one feature and returns a centered plot.
+}
+\details{
+If the defined variable is a numeric feature, the ALE is performed.
+Here, the non centered effect for feature j with k equally distant neighborhoods is defined as:
+
+\eqn{ \hat{\tilde{f}}_{j,ALE}(x)=\sum_{k=1}^{k_j(x)}\frac{1}{n_j(k)}\sum_{i:x_{j}^{(i)}\in{}N_j(k)}\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
+
+Where \eqn{N_j(k)} is the k-th neighborhood and \eqn{n_j(k)} is the number of observations in the k-th neighborhood.
+
+The last part of the equation,
+\eqn{\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
+represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 }
 \examples{
 \dontrun{
 library(cito)
-set.seed(222)
-validation_set<- sample(c(1:nrow(datasets::iris)),25)
 
 # Build and train  Network
-nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,],validation = 0.1)
+nn.fit<- dnn(Sepal.Length~., data = datasets::iris)
 
-# show zoomable plot of training and validation losses
-analyze_training(nn.fit)
-
-# set model which is used for predictions to model from epoch 22
-nn.fit$use_model_epoch <- 22
-
-# Use model on validation set
-predictions <- predict(nn.fit, iris[validation_set,])
-
-# Scatterplot
-plot(iris[validation_set,]$Sepal.Length,predictions)
+ALE(nn.fit, variable = "Petal.Length")
 }
+}
+\seealso{
+\code{\link{PDP}}
 }
