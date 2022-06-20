@@ -83,7 +83,7 @@ get_importance<- function(model, n_permute){
     return(mean(abs(pred-true)**2))
   }
 
-  org_err <- loss(pred = predict(model,model$data$data),
+  org_err <- loss(pred = stats::predict(model,model$data$data),
                   true = model$data$Y)
 
   importance<- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
@@ -100,7 +100,7 @@ get_importance<- function(model, n_permute){
         perm_data <- model$data$data
         perm_data[,importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = F),importance$variable[i]]
 
-        perm_preds <- append(perm_preds,predict(model,perm_data)[,1])
+        perm_preds <- append(perm_preds,stats::predict(model,perm_data)[,1])
         true <- append(true, model$data$Y)
       }
     }else{
@@ -108,7 +108,7 @@ get_importance<- function(model, n_permute){
         perm_data <- model$data$data[j,]
         for(k in seq_len(nrow(model$data$data))[-j]){
           perm_data[i] <- model$data$data[k,i]
-          perm_preds <- append(perm_preds, predict(model, perm_data))
+          perm_preds <- append(perm_preds, stats::predict(model, perm_data))
           true <- append(true, model$data$Y[j])
 
         }
