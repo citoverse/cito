@@ -10,6 +10,8 @@ ALE(model, variable, neighborhoods = 10)
 \item{model}{a model created by \code{\link{dnn}}}
 
 \item{variable}{variable as string for which the PDP should be done}
+
+\item{neighborhoods}{number of neighborhoods originial feautre space gets divided into}
 }
 \description{
 Performs an ALE for one feature and returns a centered plot.
