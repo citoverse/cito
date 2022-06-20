@@ -57,7 +57,7 @@ get_config_lr_scheduler <- function(config_list){
 }
 
 get_var_names <- function(formula, data){
-  X_helper <- model.matrix(formula,data[1,])
+  X_helper <- stats::model.matrix(formula,data[1,])
   var_names <- c()
   for(i in seq_len(ncol(data))){
     if(colnames(data)[i]%in%colnames(X_helper)){

@@ -103,6 +103,8 @@ PDP <- function(model, variable){
   if(!(variable %in% get_var_names(model$training_properties$formula, model$data$data[1,]))){
     stop("Variable unknown")
   }
+  x<- NULL
+  y<- NULL
 
   perm_data <- model$data$data
 
@@ -111,7 +113,7 @@ PDP <- function(model, variable){
       x = model$data$data[,variable],
       y = sapply(seq_len(nrow(model$data$data)),function(i){
         perm_data[,variable]<- perm_data[i,variable]
-        return(mean(predict(model,perm_data)))
+        return(mean(stats::predict(model,perm_data)))
         })
     )
     df <- df[order(df$x),]
@@ -129,7 +131,7 @@ PDP <- function(model, variable){
         for(j in seq_len(nrow(perm_data))){
           perm_data[j,variable] <- i
         }
-        return(predict(model,perm_data))
+        return(stats::predict(model,perm_data))
       }))
     )
     df$x<- as.factor(df$x)
@@ -183,6 +185,8 @@ ALE <- function(model, variable, neighborhoods = 10){
     warning("unknown variable")
     return(NULL)
   }
+  x<- NULL
+  y<- NULL
 
   if(is.numeric(model$data$data[,variable])){
 
@@ -204,10 +208,10 @@ ALE <- function(model, variable, neighborhoods = 10){
           perm_data <- model$data$data[region_indizes,]
 
           perm_data[,variable] <- borders[i-1]
-          lower_preds <- predict(model, perm_data)
+          lower_preds <- stats::predict(model, perm_data)
 
           perm_data[,variable] <- borders[i]
-          upper_preds <- predict(model, perm_data)
+          upper_preds <- stats::predict(model, perm_data)
 
           return(mean(upper_preds - lower_preds))
         }else{
