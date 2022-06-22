@@ -103,8 +103,8 @@ PDP <- function(model, variable){
   if(!(variable %in% get_var_names(model$training_properties$formula, model$data$data[1,]))){
     stop("Variable unknown")
   }
-  x<- NULL
-  y<- NULL
+  x <- NULL
+  y <- NULL
 
   perm_data <- model$data$data
 
@@ -186,8 +186,8 @@ ALE <- function(model, variable, neighborhoods = 10){
     warning("unknown variable")
     return(NULL)
   }
-  x<- NULL
-  y<- NULL
+  x <- NULL
+  y <- NULL
 
   if(is.numeric(model$data$data[,variable])){
 

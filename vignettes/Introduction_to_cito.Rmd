@@ -56,11 +56,12 @@ knitr::knit_hooks$set(output = function(x, options) {
 cito aims at helping you build and training Neural Networks with the standard R syntax. It allows the whole model creation process and training to be done with one line of code as well as use all generic methods on the created object. It is based on the torch machine learning framework which is natively available for R. Therefore no Python installation or API is needed for this package. 
 
 ## Setup 
-Before using cito you have to make sure that torch is installed and is running so first you need to run the following chunk of code
-```{r setuptorch}
+Before using cito you have to make sure that the current version of torch is installed running. 
+```{r setuptorch, eval = FALSE}
 
 if(!require(torch)) install.packages("torch")
-install_torch()
+library(torch)
+install_torch(reinstall = TRUE)
 
 ``` 
 ## Data
@@ -68,21 +69,21 @@ As an example we will work with the irirs dataset. Which consists of three speci
 
 ```{r data}
 
-data<- datasets::iris
+data <- datasets::iris
 summary(data)
 ```
 
 ## Simple models and model structures 
-With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 4 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case lasts for 32 epochs and is done on the cpu. If there is no option set for device, cito will try to use a cuda device. If there is none available a warning will be printed and the trainign will be done one the cpu 
+With cito it allows to use the formula syntax to now train a simple multi layer perceptron network. Here we build a network with 4 Hidden layers, each with 10 perceptrons. The ever updating plot allows us to observe the training process, which in this case lasts for 32 epochs and is done on the cpu. 
 ```{r simp_models, fig.show='hide',out.lines = 3}
 library(cito)
-nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 12, device= "cpu")
+nn.fit <- dnn(Species~. , data = data, hidden = c(10,10,10,10), epochs = 12, device = "cpu")
 
 
 ```
 
 Cito can plot the networks structure to give you an overview of the created object. For this step you need to have ggrpah installed. 
-```{r plotnn, eval= FALSE}
+```{r plotnn, eval = FALSE}
 plot(nn.fit)
 
 ```
@@ -93,27 +94,46 @@ plot(nn.fit)
 ## Adding a validation set to the training process
 In order to validate the network during the training process, you can put activation = 0.x. Before training the defined percentage of the data set will be split of and used as a validation set. This can be seen in the plot that gets shown during the training as well as in analyze_training(). 
 
-```{r validation, results = "hide", out.lines=3}
-nn.fit <- dnn(Species~. , data = data, epochs = 24, validation = 0.3)
+```{r validation, results = "hide", eval = TRUE, out.lines=3, fig.show='hide'}
+nn.fit <- dnn(Species~., data = data, epochs = 32, hidden = c(10,10,10,10), validation = 0.3)
 
 
 ```
+![Trainings loss](trainingsloss.png)
 
-```{r setup2}
-knitr::knit_hooks$set(output = hook_output)
-```
 
 
 ## Interpreting model output
-Things you can do with the output if dnn() include: 
+The standard S3 functions can be used to interpret the model: 
+
 
 ```{r interpret}
+#prints the model structure as text
 print(nn.fit) 
-predict(nn.fit,data[1,])
-# coef(nn.fit)
 
+#utilize model on new data 
+predict(nn.fit,data[1:3,])
 
 ```
+
+
+```{r coef}
+#weights of neural network
+str(coef(nn.fit))
+
+```
+
+```{r summary}
+# Calculate and return feature importance
+#summary(nn.fit)
+
+```
+
+
+```{r setup2, include = FALSE}
+knitr::knit_hooks$set(output = hook_output)
+```
+
 
 
 ## Additional options for Neural Networks 
@@ -130,21 +150,21 @@ nn.fit <- dnn(Species~., data = data,
 ``` 
 
 ### L1/L2 Regularization 
-By setting alpha to a value in [0,1] you can activate an elastic net generalization for each layer. Where $$(1 - \alpha) * |weights| + \alpha ||weights||^2$$ is added to the loss. If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since you have to account the input layer. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no generalisation should take place on a specific layer.
+By setting alpha to a value in [0,1] you can use an elastic net generalization for each layer. The strength of this regularisation is defined with lambda. Where $$[\lambda * \left[ (1 - \alpha) * |weights| + \alpha ||weights||^2\right]$$ is added to the loss. If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since you have to account the input layer. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no penalty should take place on a specific layer.
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
-#elastic net generalisation in all layers: 
-nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5)
-#L1 generalization in the first layer no generalisation on the other layers: 
-nn.fit <- dnn(Species~., data = data, 
-              hidden = c(10,10,10,10), alpha = c(0,NA,NA,NA,NA))
+#elastic net penalty in all layers: 
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5, lambda = 0.1)
+#L1 generalization in the first layer no penalty on the other layers: 
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), 
+              alpha = c(0,NA,NA,NA,NA), lambda = 0.1)
 
 
 ``` 
 
-### Adding dropout Layers 
+### Dropout Regularisation 
 
-Dropout layers are a neat way to generalize your model. During training in every epoch a percentage of perceptrons of each layer get left out. This percentage can be defined either over the whole model by providing a single numeric value in [0,1] or layer specific with a vector of the same length as there are hidden layers. 
+Dropouts are a neat way to regularize your model. During training in every epoch a perceptrons has a chance to get left out. How high this chance is can be defined either over the whole model by providing a single numeric value in [0,1) or layer specific, with a vector of the same length as there are hidden layers. 
 
 ```{r dropout, results ="hide",fig.show='hide' ,eval = FALSE}
 #dropout of 35% on all layers: 
@@ -156,8 +176,8 @@ nn.fit <- dnn(Species~., data = data,
 
 ``` 
 
-### Optimizers 
-Optimizers are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimizers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
+### Optimizer 
+Optimizer are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimizers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
 
 
 ```{r optim,eval = FALSE}

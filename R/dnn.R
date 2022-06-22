@@ -4,25 +4,25 @@
 #'
 #' dnn is used to fit a deep neural network. The function supports the formula syntax as well as different response families (see details).
 #'
-#' @param formula formula object
+#' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
-#' @param family error distribution with link function, see details for supported family functions
+#' @param family error distribution with link function or standard loss function
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
-#' @param activation activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid
+#' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
-#' @param lambda lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
-#' @param dropout probability of dropout rate
-#' @param optimizer which optimizer used for training the network,
+#' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
+#' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
+#' @param optimizer which optimizer used for training the network
 #' @param lr learning rate given to optimizer
-#' @param batchsize how many samples data loader loads per batch
-#' @param shuffle TRUE if data should be reshuffled every epoch (default: FALSE)
-#' @param epochs epochs for training loop
+#' @param batchsize number of samples that are used to calculate one learning rate step
+#' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
+#' @param epochs epochs the training goes on for
 #' @param lr_scheduler learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix
 #' @param plot plot training loss
-#' @param device device on which network should be trained on, either "cpu" or "cuda"
-#' @param early_stopping training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done
+#' @param device device on which network should be trained on.
+#' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
 #' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
 #'
@@ -57,9 +57,9 @@ dnn <- function(formula,
                 epochs = 32,
                 plot = TRUE,
                 lr_scheduler= c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
-                device= "cpu",
+                device = c("cpu","cuda"),
                 early_stopping = FALSE,
-                config=list()) {
+                config = list()) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -71,6 +71,7 @@ dnn <- function(formula,
   checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
 
+  device <- match.arg(device)
   lr_scheduler <- match.arg(lr_scheduler)
   if(lr_scheduler == "FALSE") lr_scheduler <- FALSE
   optimizer <- match.arg(optimizer)
@@ -79,8 +80,6 @@ dnn <- function(formula,
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
 
 
-
-  self = NULL
 
   ### decipher config list ###
   config_optimizer<-get_config_optimizer(config)

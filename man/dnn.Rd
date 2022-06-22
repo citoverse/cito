@@ -24,49 +24,49 @@ dnn(
   epochs = 32,
   plot = TRUE,
   lr_scheduler = c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
-  device = "cpu",
+  device = c("cpu", "cuda"),
   early_stopping = FALSE,
   config = list()
 )
 }
 \arguments{
-\item{formula}{formula object}
+\item{formula}{an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted}
 
 \item{data}{matrix or data.frame}
 
-\item{family}{error distribution with link function, see details for supported family functions}
+\item{family}{error distribution with link function or standard loss function}
 
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 
-\item{activation}{activation functions, can be of length one, or a vector of activation functions for each layer. Currently supported: tanh, relu, leakyrelu, selu, or sigmoid}
+\item{activation}{activation functions, can be of length one, or a vector of different activation functions for each layer}
 
 \item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
 
 \item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
 
-\item{lambda}{lambda penalty, strength of regularization: \eqn{\lambda * (lasso + ridge)}}
+\item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
 
 \item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.}
 
-\item{dropout}{probability of dropout rate}
+\item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
 
-\item{optimizer}{which optimizer used for training the network,}
+\item{optimizer}{which optimizer used for training the network}
 
 \item{lr}{learning rate given to optimizer}
 
-\item{batchsize}{how many samples data loader loads per batch}
+\item{batchsize}{number of samples that are used to calculate one learning rate step}
 
-\item{shuffle}{TRUE if data should be reshuffled every epoch (default: FALSE)}
+\item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
-\item{epochs}{epochs for training loop}
+\item{epochs}{epochs the training goes on for}
 
 \item{plot}{plot training loss}
 
 \item{lr_scheduler}{learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix}
 
-\item{device}{device on which network should be trained on, either "cpu" or "cuda"}
+\item{device}{device on which network should be trained on.}
 
-\item{early_stopping}{training will stop if validation loss worsened between current and past epoch, function expects the range how far back the comparison should be done}
+\item{early_stopping}{if set to integer, training will stop if validation loss worsened between current defined past epoch.}
 
 \item{config}{list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.}
 }
