@@ -48,7 +48,8 @@ knitr::knit_hooks$set(output = function(x, options) {
   hook_output(x, options)
 })
 
-
+if(!require(torch)) install.packages("torch")
+torch::install_torch()
 
 ```
 
