@@ -94,13 +94,14 @@ continue_training <- function(model,
   }
 
 
-  ### set optimizer ###
-  new_config <- get_config_optimizer(changed_params$config)
-  if(!is.null(new_config))  model$training_properties$config_optimizer<- new_config
+  ### optimizer ###
+  if(!is.null(changed_params$optimizer))  model$training_properties$optimizer <- changed_params$optimizer
+  if(!is.null(changed_params$lr))  model$training_properties$optimizer <- changed_params$lr
   optim <- get_optimizer(optimizer = model$training_properties$optimizer,
                          parameters = c(model$net$parameters, model$family$parameter),
-                         lr = model$training_properties$lr,
-                         config_optimizer = model$training_properties$config_optimizer)
+                         lr = model$training_properties$lr)
+
+
 
 
   ### set LR Scheduler ###

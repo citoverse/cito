@@ -164,25 +164,7 @@ generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept=T){
   return(loss)
 }
 
-get_optimizer<- function(optimizer, parameters, lr, config_optimizer){
-  param_optimizer<- list(params=parameters,lr=lr)
-  if(length(config_optimizer)>0) {
-    param_optimizer<- c(param_optimizer,config_optimizer)
-  }
-  optim<- switch(tolower(optimizer),
-                 "adam"= do.call(torch::optim_adam,param_optimizer),
-                 "adadelta" = do.call(torch::optim_adadelta,param_optimizer),
-                 "adagrad" =  do.call(torch::optim_adagrad,param_optimizer),
-                 "rmsprop"  = do.call(torch::optim_rmsprop,param_optimizer),
-                 "rprop" = do.call(torch::optim_rprop,param_optimizer),
-                 "sgd" = do.call(torch::optim_sgd,param_optimizer),
-                 "lbfgs" = do.call(torch::optim_lbfgs,param_optimizer),
-                 stop(paste0("optimizer = ",optimizer," is not supported, choose between adam, adadelta, adagrad, rmsprop, rprop, sgd or lbfgs"))
 
-  )
-
-  return(optim)
-}
 
 get_lr_scheduler<- function(lr_scheduler, config_lr_scheduler, optimizer){
 

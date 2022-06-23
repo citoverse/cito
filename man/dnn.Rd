@@ -50,7 +50,7 @@ dnn(
 
 \item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
 
-\item{optimizer}{which optimizer used for training the network}
+\item{optimizer}{which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}}
 
 \item{lr}{learning rate given to optimizer}
 

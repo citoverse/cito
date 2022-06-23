@@ -33,18 +33,7 @@ check_model <- function(object) {
   return(object)
 }
 
-### decipher config list ###
-get_config_optimizer<- function(config_list){
 
-  config_optimizer<-c()
-
-  if(length(config_list)>0){
-    config_optimizer<- config_list[which(startsWith(tolower(names(config_list)),"optimizer"))]
-    names(config_optimizer)<- sapply(names(config_optimizer),function(x) substring(x,11))
-
-  }
-  return(config_optimizer)
-}
 
 get_config_lr_scheduler <- function(config_list){
 
@@ -123,7 +112,4 @@ get_importance<- function(model, n_permute){
 
   return(importance)
 }
-
-
-
 

@@ -177,14 +177,19 @@ nn.fit <- dnn(Species~., data = data,
 
 ``` 
 
-### Optimizer 
-Optimizer are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since all optimizers expect this argument. However, if you want to customize your optimizer you have to list your arguments in the config list. The following optimizers are available in cito: adam, adadelta, adagrad, rmsprop, rprop, sgd and lbfgs.
+### Custom Optimizer 
+Optimizer are responsible for tuning every parameter ind the neural network. As standard dnn() uses the Adam optimizer. The learning rate is implemented as a standard argument since it is very comon to adjust that hyperparameter. However, if you want to customize your optimizer config_optimizer() is needed in order adjust any possible hypeparameters. 
 
 
 ```{r optim,eval = FALSE}
-# adam optimizer with learning rate 0.002 with a slightly changed betas to 0.9, 0.999 and eps to 1.5e-08
-nn.fit <- dnn(Species~., data = data, optimizer = "adam", lr=0.002, 
-              config = list(betas = c(0.9, 0.999), eps = 1.5e-08))
+#standard use case without changing yperparameters of the adam optimizer
+nn.fit <- dnn(Species~., data = data, optimizer = "adam", lr=0.002)
+
+
+# adam optimizer with learning rate 0.002 with slightly changed betas to 0.9, 0.999 and eps to 1.5e-08
+opt<- config_optimizer(type = "adam", betas = c(0.9, 0.999), eps = 1.5e-08)
+
+nn.fit <- dnn(Species~., data = data, optimizer = opt, lr=0.002)
 
 
 ```

@@ -14,7 +14,7 @@
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
-#' @param optimizer which optimizer used for training the network
+#' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
 #' @param lr learning rate given to optimizer
 #' @param batchsize number of samples that are used to calculate one learning rate step
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
@@ -74,7 +74,6 @@ dnn <- function(formula,
   device <- match.arg(device)
   lr_scheduler <- match.arg(lr_scheduler)
   if(lr_scheduler == "FALSE") lr_scheduler <- FALSE
-  optimizer <- match.arg(optimizer)
   if(identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
@@ -82,7 +81,6 @@ dnn <- function(formula,
 
 
   ### decipher config list ###
-  config_optimizer<-get_config_optimizer(config)
   config_lr_scheduler<- get_config_lr_scheduler(config)
 
 
@@ -151,11 +149,10 @@ dnn <- function(formula,
 
 
 
-  ### set optimizer ###
+  ### optimizer ###
   optim <- get_optimizer(optimizer = optimizer,
                          parameters = c(net$parameters, fam$parameter),
-                         lr = lr,
-                         config_optimizer = config_optimizer)
+                         lr = lr)
 
   ### LR Scheduler ###
   if(!isFALSE(lr_scheduler)){
