@@ -19,11 +19,10 @@
 #' @param batchsize number of samples that are used to calculate one learning rate step
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
-#' @param lr_scheduler learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix
+#' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param plot plot training loss
 #' @param device device on which network should be trained on.
 #' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
-#' @param config list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.
 #'
 #'
 #' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
@@ -56,10 +55,9 @@ dnn <- function(formula,
                 shuffle = FALSE,
                 epochs = 32,
                 plot = TRUE,
-                lr_scheduler= c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
+                lr_scheduler = FALSE,
                 device = c("cpu","cuda"),
-                early_stopping = FALSE,
-                config = list()) {
+                early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -72,16 +70,9 @@ dnn <- function(formula,
   checkmate::qassert(device, "S+[3,)")
 
   device <- match.arg(device)
-  lr_scheduler <- match.arg(lr_scheduler)
-  if(lr_scheduler == "FALSE") lr_scheduler <- FALSE
   if(identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
-
-
-
-  ### decipher config list ###
-  config_lr_scheduler<- get_config_lr_scheduler(config)
 
 
 
@@ -157,7 +148,7 @@ dnn <- function(formula,
   ### LR Scheduler ###
   if(!isFALSE(lr_scheduler)){
     use_lr_scheduler <- TRUE
-    scheduler<- get_lr_scheduler(lr_scheduler = lr_scheduler, config_lr_scheduler = config_lr_scheduler, optimizer= optim)
+    scheduler <- get_lr_scheduler(lr_scheduler = lr_scheduler, optimizer = optim)
   }else{
     use_lr_scheduler <- FALSE
   }
@@ -233,8 +224,6 @@ dnn <- function(formula,
   training_properties<- list(lr = lr,
                              lr_scheduler = lr_scheduler,
                              optimizer = optimizer,
-                             config_optimizer = config_optimizer,
-                             config_lr_scheduler = config_lr_scheduler,
                              epochs = epoch,
                              early_stopping = early_stopping,
                              plot = plot,

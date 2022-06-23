@@ -15,7 +15,7 @@ config_optimizer(
 \item{...}{additional arguments to be passed to optimizer. See Details.}
 }
 \value{
-object of class cito.optim to give to \code{\link{dnn}}
+object of class cito_optim to give to \code{\link{dnn}}
 }
 \description{
 Helps you create custom optimizer for \code{\link{dnn}}. It is recommended to set learning rate in \code{\link{dnn}}.

@@ -35,15 +35,27 @@ check_model <- function(object) {
 
 
 
-get_config_lr_scheduler <- function(config_list){
 
-  config_lr_scheduler<- c()
-  if(length(config_list)>0){
-    config_lr_scheduler<- config_list[which(startsWith(tolower(names(config_list)),"lr_scheduler"))]
-    names(config_lr_scheduler)<- sapply(names(config_lr_scheduler),function(x) substring(x,14))
+check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check_var = F){
+  value <- NULL
+  if(variable %in% names(mc)){
+    if(dim ==1){
+      eval(parse(text = paste0("value  <- mc$",variable)))
+    }else{
+      eval(parse(text= paste0("value <- tryCatch(as.numeric(eval(mc$",variable,")), error = function(err)
+              print(\"betas must be numeric\")) ")))
+    }
+
+    if(!isFALSE(check_var)) checkmate::qassert(value,check_var)
+
+  } else{
+    value <- unlist(standards[which(names(standards) == variable)])
   }
-  return(config_lr_scheduler)
+
+  if(print) print( paste0(variable,": [", paste(value, collapse = ", "),"]"))
+  return(value)
 }
+
 
 get_var_names <- function(formula, data){
   X_helper <- stats::model.matrix(formula,data[1,])

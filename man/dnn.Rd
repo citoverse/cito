@@ -23,10 +23,9 @@ dnn(
   shuffle = FALSE,
   epochs = 32,
   plot = TRUE,
-  lr_scheduler = c(FALSE, "lambda", "multiplicative", "one_cycle", "step"),
+  lr_scheduler = FALSE,
   device = c("cpu", "cuda"),
-  early_stopping = FALSE,
-  config = list()
+  early_stopping = FALSE
 )
 }
 \arguments{
@@ -62,13 +61,11 @@ dnn(
 
 \item{plot}{plot training loss}
 
-\item{lr_scheduler}{learning rate scheduler, additional arguments must be defined in config with "lr_scheduler." as prefix}
+\item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
 
 \item{device}{device on which network should be trained on.}
 
 \item{early_stopping}{if set to integer, training will stop if validation loss worsened between current defined past epoch.}
-
-\item{config}{list of additional arguments to be passed to optimizer or lr_scheduler should start with optimizer. and lr_scheduler.}
 }
 \value{
 an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.

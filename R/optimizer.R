@@ -4,7 +4,7 @@
 #'
 #' @param type character string defining which optimizer should be used. See Details.
 #' @param ... additional arguments to be passed to optimizer. See Details.
-#' @return object of class cito.optim to give to \code{\link{dnn}}
+#' @return object of class cito_optim to give to \code{\link{dnn}}
 #'
 #' @details
 #'
@@ -24,10 +24,10 @@
 
 config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"), ... ){
 
-  type <- match.arg(tolower(type), choices =  c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"))
+  type <- match.arg(tolower(type), choices =  c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"))
   out <- list()
   out$optim <- type
-  class(out) <- "cito_config_optim"
+  class(out) <- "cito_optim"
   mc <- match.call(expand.dots = TRUE)
   if("lr" %in% names(mc)){
     print("learning rate set here will overwrite lr you give to dnn()")
@@ -123,31 +123,9 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
 
 
-check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check_var = F){
-  value <- NULL
-  if(variable %in% names(mc)){
-    if(dim ==1){
-      eval(parse(text = paste0("value  <- mc$",variable)))
-    }else{
-      eval(parse(text= paste0("value <- tryCatch(as.numeric(eval(mc$",variable,")), error = function(err)
-              print(\"betas must be numeric\")) ")))
-    }
-
-    if(!isFALSE(check_var)) checkmate::qassert(value,check_var)
-
-  } else{
-    value <- unlist(standards[which(names(standards) == variable)])
-  }
-
-  if(print) print( paste0(variable,": [", paste(value, collapse = ", "),"]"))
-  return(value)
-}
-
-
-
 get_optimizer <- function(optimizer, lr, parameters){
 
-  if(!inherits(optimizer, "cito_config_optim")){
+  if(!inherits(optimizer, "cito_optim")){
     optimizer <- match.arg(tolower(optimizer), choices = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"))
 
     optim <- switch(optimizer,

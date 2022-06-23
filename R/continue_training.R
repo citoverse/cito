@@ -104,13 +104,11 @@ continue_training <- function(model,
 
 
 
-  ### set LR Scheduler ###
-  new_config<-get_config_lr_scheduler(changed_params$config)
-  if(!is.null(new_config))  model$training_properties$config_lr_scheduler<- new_config
+  ###LR Scheduler ###
+  if(!is.null(changed_params$lr_scheduler))  model$training_properties$lr_scheduler <- changed_params$lr_scheduler
   if(!isFALSE(model$training_properties$lr_scheduler)){
     use_lr_scheduler <- TRUE
     scheduler<- get_lr_scheduler(lr_scheduler = model$training_properties$lr_scheduler,
-                                 config_lr_scheduler = model$training_properties$config_lr_scheduler,
                                  optimizer = optim)
   }else{
     use_lr_scheduler <- FALSE
@@ -122,7 +120,7 @@ continue_training <- function(model,
   net$to(device = device)
   loss.fkt <- model$family$loss
   model$losses <- rbind(model$losses[1:model$use_model_epoch,],
-                  data.frame(epoch=c((model$use_model_epoch+1):(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
+                        data.frame(epoch=c((model$use_model_epoch+1):(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
 
   for (epoch in (model$use_model_epoch+1):(model$use_model_epoch+epochs)) {
     train_l <- c()
@@ -186,4 +184,4 @@ continue_training <- function(model,
 
   model$net <- net
   return(model)
-  }
+}
