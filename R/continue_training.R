@@ -181,7 +181,7 @@ continue_training <- function(model,
   }
 
 
-
+  model$use_model_epoch <- epoch
   model$net <- net
   return(model)
 }
