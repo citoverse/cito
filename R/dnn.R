@@ -55,7 +55,7 @@ dnn <- function(formula,
                 shuffle = FALSE,
                 epochs = 32,
                 plot = TRUE,
-                lr_scheduler = FALSE,
+                lr_scheduler = NULL,
                 device = c("cpu","cuda"),
                 early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
@@ -129,6 +129,7 @@ dnn <- function(formula,
 
   }else{
     train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    valid_dl <- NULL
   }
 
 
@@ -140,80 +141,7 @@ dnn <- function(formula,
 
 
 
-  ### optimizer ###
-  optim <- get_optimizer(optimizer = optimizer,
-                         parameters = c(net$parameters, fam$parameter),
-                         lr = lr)
-
-  ### LR Scheduler ###
-  if(!isFALSE(lr_scheduler)){
-    use_lr_scheduler <- TRUE
-    scheduler <- get_lr_scheduler(lr_scheduler = lr_scheduler, optimizer = optim)
-  }else{
-    use_lr_scheduler <- FALSE
-  }
-
-  ### training loop ###
-  weights <- list()
-  net$to(device = device)
-  loss.fkt <- fam$loss
-  losses <- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
-  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha[1],length(hidden)+1)
-  for (epoch in 1:epochs) {
-    train_l <- c()
-
-    coro::loop(for (b in train_dl) {
-      optim$zero_grad()
-      output <- net(b[[1]]$to(device = device))
-
-      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-      loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
-                               loss = loss, lambda = lambda,
-                               intercept= colnames(X)[1]=="(Intercept)")
-      loss$backward()
-      optim$step()
-
-      if(use_lr_scheduler) scheduler$step()
-      train_l <- c(train_l, loss$item())
-      losses$train_l[epoch] <- mean(train_l)
-    })
-
-    if(validation != 0){
-
-      valid_l <- c()
-
-      coro::loop(for (b in valid_dl) {
-        output <- net(b[[1]]$to(device = device))
-        loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-        loss <- generalize_alpha(parameters = net$parameters, alpha = alpha,
-                                 loss = loss, lambda = lambda,
-                                 intercept= colnames(X)[1]=="(Intercept)")
-        valid_l <- c(valid_l, loss$item())
-        losses$valid_l[epoch] <- mean(valid_l)
-      })
-
-      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
-                  epoch, losses$train_l[epoch], losses$valid_l[epoch],optim$param_groups[[1]]$lr))
-      if(epoch>early_stopping && is.numeric(early_stopping) &&
-         losses$valid_l[epoch-early_stopping]<losses$valid_l[epoch]) {
-        weights[[epoch]]<- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        if(plot) visualize.training(losses,epoch)
-        break
-      }
-
-    }else{
-      cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, losses$train_l[epoch],optim$param_groups[[1]]$lr))
-    }
-
-    weights[[epoch]] <- lapply(net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-
-
-    ### create plot ###
-    if(plot) visualize.training(losses,epoch)
-
-  }
-
-
+  ### generating citodnn object ###
   model_properties <- list(input = ncol(X),
                            output = y_dim,
                            hidden = hidden,
@@ -224,7 +152,7 @@ dnn <- function(formula,
   training_properties<- list(lr = lr,
                              lr_scheduler = lr_scheduler,
                              optimizer = optimizer,
-                             epochs = epoch,
+                             epochs = epochs,
                              early_stopping = early_stopping,
                              plot = plot,
                              validation = validation,
@@ -241,14 +169,20 @@ dnn <- function(formula,
   out$call <- match.call()
   out$family <- fam
   out$called_with_family <- family
-  out$losses<- losses
   out$data <- list(X = X, Y = Y, data = data)
-  if(validation != 0) out$data<- append(out$data, list(validation = valid))
-  out$weights <- weights
-  out$use_model_epoch <- epoch
-  out$loaded_model_epoch <- epoch
+  if(validation != 0) out$data <- append(out$data, list(validation = valid))
+  out$weights <- list()
+  out$use_model_epoch <- 0
+  out$loaded_model_epoch <- 0
   out$model_properties <- model_properties
   out$training_properties <- training_properties
+
+
+  ### training loop ###
+  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
+
+
+
 
   return(out)
 }
@@ -297,8 +231,8 @@ summary.citodnn <- function(object, n_permute = 256, ...){
 #' @param ... additional arguments
 #' @export
 print.summary.citodnn <- function(x, ... ){
-print("Deep Neural Network Model summary")
-print("Feature Importance:")
+cat("Deep Neural Network Model summary\n")
+cat("Feature Importance:\n")
 print(x$importance)
 
 }

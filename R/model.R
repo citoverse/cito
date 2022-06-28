@@ -132,37 +132,3 @@ get_family = function(family) {
 }
 
 
-generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept=T){
-
-  weight_layers<-  grepl("weight",names(parameters),fixed=T)
-  if(!all(alpha==F)|anyNA(alpha)){
-    counter<- 1
-    if(intercept){
-      l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]])))
-      l2 <- torch::torch_norm(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
-      regularization <- lambda * ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-      loss<-  torch::torch_add(loss,regularization)
-      counter<- counter + 1
-    }
-
-    for (i in c(counter:length(parameters))){
-      if(is.na(alpha[counter])){
-        counter<- counter+1
-      }else{
-        if (weight_layers[i]){
-          l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters[i])))
-          l2 <- torch::torch_norm(torch::torch_cat(parameters[i]),p=2L)
-          regularization <- lambda * ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-          loss<-  torch::torch_add(loss,regularization)
-          counter <- counter+1
-        }
-      }
-    }
-  }
-
-
-  return(loss)
-}
-
-
-
