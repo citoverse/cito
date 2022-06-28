@@ -72,7 +72,7 @@ ALE <- function(model, variable, neighborhoods = 10){
       )
 
       if(any(is.na(df$y))){
-        warning("There are neighborhoods with no observation, amount of neighborhoods gets reduced by one")
+        warning("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one")
         neighborhoods <- neighborhoods - 1
       }else{
         break
@@ -87,7 +87,9 @@ ALE <- function(model, variable, neighborhoods = 10){
 
     p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
     p <- p + ggplot2::geom_line()
-
+    p <- p + ggplot2::ggtitle(label = "Accumulated Local Effect Plot")
+    p <- p + ggplot2::xlab(label = variable)
+    p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
     geom_df<- data.frame(x = model$data$data[,variable])
     p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
                                mapping = ggplot2::aes(x = x),

@@ -4,14 +4,18 @@
 \alias{PDP}
 \title{Partial Dependence Plot (PDP)}
 \usage{
-PDP(model, variable, data = NULL)
+PDP(model, variable, data = NULL, ice = FALSE, resolution.ice = 20)
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
 \item{variable}{variable as string for which the PDP should be done}
 
-\item{data}{specify new data PDP should beperformed on, otherwise PDP is performed on the training data}
+\item{data}{specify new data PDP should be performed on, otherwise PDP is performed on the training data}
+
+\item{ice}{Individual Conditional Dependence will be shown if TRUE}
+
+\item{resolution.ice}{resolution in which ice will be computed}
 }
 \description{
 Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
@@ -27,6 +31,9 @@ with a Monte Carlo Estimation:
 
 If a categorical feature is analyzed, all data instances are used and set to each level.
 Then an average is calculated per category and put out in a bar plot.
+
+If ice is set to true additional the individual conditional dependence will be shown and the original PDP will be colored yellow.
+These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
 }
 \examples{
 \dontrun{
