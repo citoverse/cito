@@ -43,7 +43,7 @@ check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check
       eval(parse(text = paste0("value  <- mc$",variable)))
     }else{
       eval(parse(text= paste0("value <- tryCatch(as.numeric(eval(mc$",variable,")), error = function(err)
-              print(\"betas must be numeric\")) ")))
+              print(\"must be numeric input\")) ")))
     }
 
     if(!isFALSE(check_var)) checkmate::qassert(value,check_var)
@@ -52,7 +52,7 @@ check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check
     value <- unlist(standards[which(names(standards) == variable)])
   }
 
-  if(print) print( paste0(variable,": [", paste(value, collapse = ", "),"]"))
+  if(print) cat( paste0(variable,": [", paste(value, collapse = ", "),"] \n"))
   return(value)
 }
 
@@ -87,7 +87,8 @@ get_importance<- function(model, n_permute){
   org_err <- loss(pred = stats::predict(model,model$data$data),
                   true = model$data$Y)
 
-  importance<- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
+
+  importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
                           importance= c(0))
 
   for(i in seq_len(nrow(importance))){
@@ -103,6 +104,7 @@ get_importance<- function(model, n_permute){
 
         perm_preds <- append(perm_preds,stats::predict(model,perm_data)[,1])
         true <- append(true, model$data$Y)
+
       }
     }else{
       for(j in seq_len(nrow(model$data$data))){
@@ -113,6 +115,7 @@ get_importance<- function(model, n_permute){
           true <- append(true, model$data$Y[j])
 
         }
+
       }
     }
 
@@ -124,4 +127,3 @@ get_importance<- function(model, n_permute){
 
   return(importance)
 }
-

@@ -25,11 +25,11 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "one_cycle"
   out$lr_scheduler <- type
   class(out) <- "cito_lr_scheduler"
   mc <- match.call(expand.dots = TRUE)
-  print(paste0("Learning rate Scheduler ",out$lr_scheduler))
+  cat(paste0("Learning rate Scheduler ",out$lr_scheduler, "\n"))
   if (out$lr_scheduler == "lambda"){
     if("lr_lambda" %in% names(mc)){
       out$lr_lambda <- mc$lr_lambda
-      print(paste0("lr_lambda: ", out$lr_lambda))
+      cat(paste0("lr_lambda: ", out$lr_lambda, "\n"))
     } else{
       warning("You need to supply lr_lambda to this function")
     }
@@ -47,7 +47,7 @@ ut$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(to
   }else if (out$lr_scheduler == "one_cycle"){
     if("max_lr" %in% names(mc)){
       out$max_lr <- mc$max_lr
-      print(paste0("max_lr: ", out$max_lr))
+      cat(paste0("max_lr: ", out$max_lr, "\n"))
     } else{
       warning("You need to supply max_lr to this function")
     }
@@ -82,7 +82,7 @@ ut$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(to
   }else if (out$lr_scheduler == "step"){
     if("step_size" %in% names(mc)){
       out$step_size <- mc$step_size
-      print(paste0("step_size: ", out$step_size))
+      cat(paste0("step_size: ", out$step_size, "\n"))
     } else{
       warning("You need to supply step_size to this function")
     }
@@ -97,7 +97,7 @@ ut$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(to
 
   for(var in names(mc)[2:length(names(mc))]){
     if(!(var%in% names(out)) & var != "type"){
-      print(paste0(var, " could not be assigned to ", out$lr_scheduler," scheduler"))
+      cat(paste0(var, " could not be assigned to ", out$lr_scheduler," scheduler \n"))
     }
   }
 

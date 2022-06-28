@@ -30,13 +30,13 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
   class(out) <- "cito_optim"
   mc <- match.call(expand.dots = TRUE)
   if("lr" %in% names(mc)){
-    print("learning rate set here will overwrite lr you give to dnn()")
+    cat("learning rate set here will overwrite lr you give to dnn() \n")
     checkmate::qassert(mc$lr,"R1[0,)")
     out$lr <- mc$lr
   }
   if (out$optim == "adam"){
 
-    print("adam optimizer with following values")
+    cat("adam optimizer with following values \n")
 
     out$betas <- check_call_config(mc = mc, "betas", standards =formals(torch::optim_adam),
                                    check_var = "R2", dim = 2)
@@ -49,7 +49,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   }else if(out$optim == "adadelta"){
 
-    print("set adadelta optimizer with following values")
+    print("set adadelta optimizer with following values \n")
     out$rho <- check_call_config(mc = mc, "rho", standards =formals(torch::optim_adadelta),
                                  check_var = "R1")
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_adadelta),
@@ -62,7 +62,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   }else if(out$optim == "adagrad"){
 
-    print("set adagrad optimizer with following values")
+    cat("set adagrad optimizer with following values \n")
     out$lr_decay <- check_call_config(mc = mc, "lr_decay", standards =formals(torch::optim_adagrad),
                                       check_var = "R1")
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_adagrad),
@@ -76,7 +76,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   }else if(out$optim == "rmsprop"){
 
-    print("set rmsprop optimizer with following values")
+    cat("set rmsprop optimizer with following values \n")
     out$alpha <- check_call_config(mc = mc, "alpha", standards =formals(torch::optim_rmsprop),
                                    check_var = "R1")
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_rmsprop),
@@ -91,7 +91,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   }else if(out$optim == "rprop"){
 
-    print("set rprop optimizer with following values")
+    cat("set rprop optimizer with following values \n")
     out$etas <- check_call_config(mc = mc, "etas", standards =formals(torch::optim_rprop),
                                   check_var = "R2", dim = 2)
     out$step_sizes <- check_call_config(mc = mc, "step_sizes", standards =formals(torch::optim_rprop),
@@ -100,7 +100,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   }else if(out$optim == "sgd"){
 
-    print("set sgd optimizer with following values")
+    cat("set sgd optimizer with following values \n")
     out$momentum <- check_call_config(mc = mc, "momentum", standards =formals(torch::optim_sgd),
                                       check_var = "R1")
     out$dampening <- check_call_config(mc = mc, "dampening", standards =formals(torch::optim_sgd),
@@ -113,7 +113,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 
   for(var in names(mc)[2:length(names(mc))]){
     if(!(var%in% names(out)) & var != "type"){
-      print(paste0(var, " could not be assigned for ", out$optim," optimizer"))
+      cat(paste0(var, " could not be assigned for ", out$optim," optimizer \n"))
     }
   }
 
