@@ -18,4 +18,15 @@ plot(iris[validation_set,]$Sepal.Length,predictions)
 # MAE
 mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 
+# Get variable importances
+summary(nn.fit)
+
+# Partial dependencies
+p <- PDP(nn.fit, variable = "Petal.Length")
+plot(p)
+
+# Accumulated local effect plots
+a <- ALE(nn.fit, variable = "Petal.Length")
+plot(a)
+
 }

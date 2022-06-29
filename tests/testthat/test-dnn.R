@@ -7,6 +7,9 @@ wrap_dnn = function(pars) {
   testthat::expect_error({print(model)}, NA)
   testthat::expect_error({coef(model)}, NA)
   testthat::expect_error({plot(model)}, NA)
+  testthat::expect_error({summary(model)}, NA)
+  testthat::expect_error({plot(PDP(model, variable = "X.1"))}, NA)
+  testthat::expect_error({plot(ALE(model, variable = "X.1"))}, NA)
 }
 
 
