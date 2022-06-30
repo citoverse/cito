@@ -1,6 +1,5 @@
 get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE, x_dtype, y_dtype) {
   self = NULL
-  ### dataset  ###
   torch.dataset <- torch::dataset(
     name = "dataset",
     initialize = function(X,Y) {
@@ -80,54 +79,70 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
 
 
 
-get_family = function(family) {
-  out = list()
-  out$parameter = NULL
+get_loss = function(loss) {
+  out <- list()
+  out$parameter <- NULL
 
-  if(!inherits(family, "family")){
-    family <- switch(tolower(family),
-             "gaussian"= stats::gaussian(),
+  if(!inherits(loss, "family")){
+    loss <- switch(tolower(loss),
+             "gaussian" = stats::gaussian(),
              "binomial" = stats::binomial(),
              "poisson" = stats::poisson(),
-             "softmax"  = list(family = "softmax"),
-             stop(paste0("Family \"",family,"\"is not supported"))
+             tolower(loss)
       )
   }
 
-  if(family$family == "gaussian") {
-    out$parameter = torch::torch_tensor(0.1, requires_grad = TRUE)
-    out$invlink = function(a) a
-    out$loss = function(pred, true) {
-      return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
-    }
-  } else if(family$family == "binomial") {
-    if(family$link == "logit") {
-      out$invlink = function(a) torch::torch_sigmoid(a)
-    } else if(family$link == "probit")  {
-      out$invlink = function(a) torch::torch_sigmoid(a*1.7012)
-    } else {
-      out$invlink = function(a) a
-    }
-    out$loss = function(pred, true) {
-      return(torch::distr_bernoulli( out$invlink(pred) )$log_prob(true)$negative())
-    }
-  } else if(family$family == "poisson") {
-    if(family$link == "log") {
-      out$invlink = function(a) torch::torch_exp(a)
-    } else {
-      out$invlink = function(a) a
-    }
-    out$loss = function(pred, true) {
-      return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
-    }
-  } else if(family$family == "softmax") {
-    out$invlink = function(a) torch::nnf_softmax(a, dim = 2)
-    out$loss = function(pred, true) {
-      return( torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
-    }
-  }
+  if(inherits(loss, "family")){
+    if(loss$family == "gaussian") {
+      out$parameter <- torch::torch_tensor(0.1, requires_grad = TRUE)
+      out$invlink <- function(a) a
+      out$loss <- function(pred, true) {
+        return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
+      }
+    } else if(loss$family == "binomial") {
+      if(loss$link == "logit") {
+        out$invlink <- function(a) torch::torch_sigmoid(a)
+      } else if(loss$link == "probit")  {
+        out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
+      } else {
+        out$invlink <- function(a) a
+      }
+      out$loss <- function(pred, true) {
+        return(torch::distr_bernoulli( out$invlink(pred))$log_prob(true)$negative())
+      }
+    } else if(loss$family == "poisson") {
+      if(loss$link == "log") {
+        out$invlink <- function(a) torch::torch_exp(a)
+      } else {
+        out$invlink <- function(a) a
+      }
+      out$loss <- function(pred, true) {
+        return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
+      }
+    }else { stop("family not supported")}
+  }else {
+    if(loss == "mae"){
+      out$invlink <- function(a) a
+      out$loss <- function(pred, true) return(torch::nnf_l1_loss(input = pred, target = true))
+    }else if(loss == "mse"){
+      out$invlink <- function(a) a
+      out$loss <- function(pred,true) return(torch::nnf_mse_loss(input= pred, target = true))
+    }else if(loss == "softmax" | loss == "cross-entropy") {
+      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
+      out$loss <- function(pred, true) {
+        return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
+      }
 
-  out$family = family
+    }else if (is.function(loss)){
+      if(is.null(formals(loss)$pred | is.null(formals(loss)$true))){
+        stop("loss function has to take two arguments, \"pred\" and \"true\"")
+      }
+      out$loss <- loss
+      out$invlink <- function(a) a
+    }
+
+  }
+  out$call <- loss
   return(out)
 }
 

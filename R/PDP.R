@@ -77,7 +77,7 @@ PDP <- function(model, variable, data = NULL, ice = FALSE, resolution.ice = 20){
       df_ <- sapply(seq_len(length(instances)), function(i){
         perm_dat<- data
         perm_dat[,variable] <- instances[i]
-        return(predict(model,perm_dat))
+        return(stats::predict(model,perm_dat))
       })
 
       df_<- data.frame( x = instances,

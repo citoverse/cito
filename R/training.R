@@ -4,7 +4,7 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
 
   ### Optimizer ###
   optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
-                             parameters = c(model$net$parameters, model$family$parameter),
+                             parameters = c(model$net$parameters, model$loss$parameter),
                              lr = model$training_properties$lr)
 
   ### LR Scheduler ###
@@ -24,8 +24,10 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
   if((length(model$model_properties$hidden)+1) != length(model$training_properties$alpha)) {
     model$training_properties$alpha <- rep(model$training_properties$alpha[1],length(model$model_properties$hidden)+1)}
 
-  loss.fkt <- model$family$loss
-
+  loss.fkt <- model$loss$loss
+  generalize <- FALSE
+  if((!all(model$training_properties$alpha == F)|anyNA(model$training_properties$alpha))
+     & model$training_properties$lambda>0) generalize <- TRUE
 
   for (epoch in min(which(is.na(model$losses$train_l))):(epochs+ min(which(is.na(model$losses$train_l))) - 1)) {
     train_l <- c()
@@ -36,9 +38,12 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
       optimizer$zero_grad()
       output <- model$net(b[[1]]$to(device = device))
       loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-      loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
-                               loss = loss, lambda = model$training_properties$lambda,
-                               intercept = model$model_properties$bias[1])
+      if(generalize){
+        loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
+                                 loss = loss, lambda = model$training_properties$lambda,
+                                 intercept = model$model_properties$bias[1])
+
+      }
       loss$backward()
       optimizer$step()
 
@@ -92,33 +97,38 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
 
 
 
-generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept=TRUE){
+generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept = TRUE){
 
   weight_layers<-  grepl("weight",names(parameters),fixed = TRUE)
-  if(!all(alpha == F)|anyNA(alpha)){
-    counter <- 1
-    if(intercept){
-      l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]])))
-      l2 <- torch::torch_norm(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
-      regularization <- lambda * ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-      loss<-  torch::torch_add(loss,regularization)
-      counter<- counter + 1
-    }
+  counter <- 1
+  if(intercept){
+    l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]])))
+    l1 <- l1$mul(1-alpha[counter])
+    l2 <- torch::torch_norm(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
+    l2 <- l2$mul(alpha[counter])
+    regularization <- torch::torch_add(l1,l2)
+    regularization <- regularization$mul(lambda)
+    loss <-  torch::torch_add(loss,regularization)
+    counter <- counter + 1
+  }
 
-    for (i in c(counter:length(parameters))){
-      if(is.na(alpha[counter])){
-        counter<- counter+1
-      }else{
-        if (weight_layers[i]){
-          l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters[i])))
-          l2 <- torch::torch_norm(torch::torch_cat(parameters[i]),p=2L)
-          regularization <- lambda * ((1-alpha[counter])* l1) + (alpha[counter]* l2)
-          loss<-  torch::torch_add(loss, regularization)
-          counter <- counter + 1
-        }
+  for (i in c(counter:length(parameters))){
+    if(is.na(alpha[counter])){
+      counter<- counter+1
+    }else{
+      if (weight_layers[i]){
+        l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters[i])))
+        l1 <- l1$mul(1-alpha[counter])
+        l2 <- torch::torch_norm(torch::torch_cat(parameters[i]),p=2L)
+        l2 <- l2$mul(alpha[counter])
+        regularization <- torch::torch_add(l1,l2)
+        regularization <- regularization$mul(lambda)
+        loss <-  torch::torch_add(loss, regularization)
+        counter <- counter + 1
       }
     }
   }
+
 
 
   return(loss)

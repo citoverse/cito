@@ -12,7 +12,7 @@ check_model <- function(object) {
                     bias = object$model_properties$bias,
                     dropout = object$model_properties$dropout)
     object$loaded_model_epoch<- 0
-    object$family<- get_family(object$called_with_family)
+    object$loss<- get_loss(object$loss$call)
     }
 
   if(object$loaded_model_epoch!= object$use_model_epoch){
@@ -80,12 +80,10 @@ get_importance<- function(model, n_permute){
 
   model<- check_model(model)
 
-  loss<- function(pred, true){
-    return(mean(abs(pred-true)**2))
-  }
+  loss<- model$loss$loss
 
-  org_err <- loss(pred = stats::predict(model,model$data$data),
-                  true = model$data$Y)
+  org_err <- as.numeric(loss(pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link")),
+                  true = torch::torch_tensor(model$data$Y))$mean())
 
 
   importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
@@ -102,7 +100,7 @@ get_importance<- function(model, n_permute){
         perm_data <- model$data$data
         perm_data[,importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = F),importance$variable[i]]
 
-        perm_preds <- append(perm_preds,stats::predict(model,perm_data)[,1])
+        perm_preds <- rbind(perm_preds,stats::predict(model,perm_data, type = "response"))
         true <- append(true, model$data$Y)
 
       }
@@ -111,7 +109,7 @@ get_importance<- function(model, n_permute){
         perm_data <- model$data$data[j,]
         for(k in seq_len(nrow(model$data$data))[-j]){
           perm_data[i] <- model$data$data[k,i]
-          perm_preds <- append(perm_preds, stats::predict(model, perm_data))
+          perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link"))
           true <- append(true, model$data$Y[j])
 
         }
@@ -119,8 +117,8 @@ get_importance<- function(model, n_permute){
       }
     }
 
-    new_err <- loss(pred = perm_preds,
-                    true = true)
+    new_err <- as.numeric(loss(pred = torch::torch_tensor(perm_preds),
+                    true = torch::torch_tensor(true))$mean())
     importance$importance[i] <- new_err/org_err
 
   }

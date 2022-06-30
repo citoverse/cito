@@ -34,6 +34,7 @@ Then an average is calculated per category and put out in a bar plot.
 
 If ice is set to true additional the individual conditional dependence will be shown and the original PDP will be colored yellow.
 These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
+Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
 }
 \examples{
 \dontrun{

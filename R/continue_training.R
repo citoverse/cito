@@ -74,12 +74,13 @@ continue_training <- function(model,
   if(is.character(Y)) {
     y_dim = length(unique(as.integer(as.factor(Y[,1]))))
     Y = matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(model$family$family$family == "binomial") {
-      Y = torch::as_array(torch::nnf_one_hot( torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze() )
+    if(inherits(model$loss$call, "family")){
+      if(model$loss$call$family == "binomial") {
+        Y = torch::as_array(torch::nnf_one_hot( torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze() )
+      }
     }
   }
-  if(model$family$family$family == "softmax") y_dtype = torch::torch_long()
-
+  if(all(model$loss$call == "softmax")) y_dtype = torch::torch_long()
 
 
   if(model$training_properties$validation != 0){

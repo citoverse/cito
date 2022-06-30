@@ -6,7 +6,7 @@
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
-#' @param family error distribution with link function or standard loss function
+#' @param loss loss after which network should be optimized. Can also be own a distribution from the stats package or own function
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
@@ -29,7 +29,7 @@
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}
-#' \item{family}{A list which contains relevant information for the target variable}
+#' \item{loss}{A list which contains relevant information for the target variable}
 #' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' \item{data}{Contains data used for training the model}
 #' \item{weigths}{List of weights for each training epoch}
@@ -39,7 +39,7 @@
 #' @export
 dnn <- function(formula,
                 data = NULL,
-                family = stats::gaussian(),
+                loss = c("mae", "mse", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
                 hidden = c(10L, 10L, 10L),
                 activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                                "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
@@ -73,20 +73,22 @@ dnn <- function(formula,
   if(identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
+  if(!is.function(loss) & !inherits(loss,"family")){
+    loss <- match.arg(loss)
+  }
 
 
-
-  if(device== "cuda"){
+  if(device == "cuda"){
     if (torch::cuda_is_available()) {
-      device<- torch::torch_device("cuda")}
+      device <- torch::torch_device("cuda")}
     else{
       warning("No Cuda device detected, device is set to cpu")
-      device<- torch::torch_device("cpu")
+      device <- torch::torch_device("cpu")
     }
 
   }else {
-    if(device!= "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
-    device<- torch::torch_device("cpu")
+    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    device <- torch::torch_device("cpu")
   }
 
   ### Generate X & Y data ###
@@ -105,7 +107,7 @@ dnn <- function(formula,
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
 
-  fam <- get_family(family)
+  loss_obj <- get_loss(loss)
 
   y_dim <- ncol(Y)
   x_dtype <- torch::torch_float32()
@@ -113,12 +115,13 @@ dnn <- function(formula,
   if(is.character(Y)) {
     y_dim <- length(unique(as.integer(as.factor(Y[,1]))))
     Y <- matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(fam$family$family == "binomial") {
-      Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
-    }
+    if(inherits(loss_obj$call, "family")){
+      if(loss_obj$call$family == "binomial") {
+        Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
+    }}
   }
-  if(fam$family$family == "softmax") y_dtype = torch::torch_long()
 
+  if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
 
   ### dataloader  ###
   if(validation != 0){
@@ -133,15 +136,12 @@ dnn <- function(formula,
   }
 
 
-  ### build model ###
-  # bias in first layer is set by formula intercept
-  net = build_model(input = ncol(X), output = y_dim,
+  net <- build_model(input = ncol(X), output = y_dim,
                     hidden = hidden, activation = activation,
                     bias = bias, dropout = dropout)
 
 
 
-  ### generating citodnn object ###
   model_properties <- list(input = ncol(X),
                            output = y_dim,
                            hidden = hidden,
@@ -149,7 +149,7 @@ dnn <- function(formula,
                            bias = bias,
                            dropout = dropout)
 
-  training_properties<- list(lr = lr,
+  training_properties <- list(lr = lr,
                              lr_scheduler = lr_scheduler,
                              optimizer = optimizer,
                              epochs = epochs,
@@ -167,8 +167,7 @@ dnn <- function(formula,
   class(out) <- "citodnn"
   out$net <- net
   out$call <- match.call()
-  out$family <- fam
-  out$called_with_family <- family
+  out$loss <- loss_obj
   out$data <- list(X = X, Y = Y, data = data)
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$weights <- list()
@@ -199,6 +198,25 @@ print.citodnn <- function(x,...){
   print(x$call)
   print(x$net)
 }
+
+#' Print class citodnn
+#'
+#' @param object a model created by \code{\link{dnn}}
+#' @param ... no additional arguments implemented
+#' @return residuals of training set
+#' @export
+residuals.citodnn <- function(object,...){
+  object <- check_model(object)
+  out <- data.frame(
+    true = object$data$Y,
+    pred = stats::predict(object, object$data$data)
+  )
+  return(out)
+}
+
+
+
+
 
 #' Summarize Neural Network of class citodnn
 #'
@@ -261,7 +279,7 @@ coef.citodnn <- function(object,...){
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),...) {
+predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -271,7 +289,7 @@ predict.citodnn <- function(object, newdata = NULL,type=c("link", "response"),..
 
   type = match.arg(type)
 
-  if(type == "link") link = function(a) object$family$invlink(a)
+  if(type == "link") link = object$loss$invlink
   else link = function(a) a
 
   ### TO DO: use dataloaders via get_data_loader function

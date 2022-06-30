@@ -7,7 +7,7 @@
 dnn(
   formula,
   data = NULL,
-  family = stats::gaussian(),
+  loss = c("mae", "mse", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
   hidden = c(10L, 10L, 10L),
   activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
     "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
@@ -33,7 +33,7 @@ dnn(
 
 \item{data}{matrix or data.frame}
 
-\item{family}{error distribution with link function or standard loss function}
+\item{loss}{loss after which network should be optimized. Can also be own a distribution from the stats package or own function}
 
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 
@@ -72,7 +72,7 @@ an S3 object of class \code{"cito.dnn"} is returned. It is a list containing eve
 The list consists of the following attributes:
 \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 \item{call}{The original function call}
-\item{family}{A list which contains relevant information for the target variable}
+\item{loss}{A list which contains relevant information for the target variable}
 \item{losses}{A data.frame containing training and validation losses of each epoch}
 \item{data}{Contains data used for training the model}
 \item{weigths}{List of weights for each training epoch}
@@ -101,8 +101,19 @@ plot(iris[validation_set,]$Sepal.Length,predictions)
 # MAE
 mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 
+# Get variable importances
+summary(nn.fit)
+
+# Partial dependencies
+p <- PDP(nn.fit, variable = "Petal.Length")
+plot(p)
+
+# Accumulated local effect plots
+a <- ALE(nn.fit, variable = "Petal.Length")
+plot(a)
+
 }
 }
 \seealso{
-\code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+\code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
 }
