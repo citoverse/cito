@@ -80,6 +80,7 @@ get_importance<- function(model, n_permute){
 
   model<- check_model(model)
 
+  if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(0)}
   loss<- model$loss$loss
 
   org_err <- as.numeric(loss(pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link")),
