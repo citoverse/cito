@@ -4,12 +4,12 @@
 \alias{PDP}
 \title{Partial Dependence Plot (PDP)}
 \usage{
-PDP(model, variable, data = NULL, ice = FALSE, resolution.ice = 20)
+PDP(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice = 20)
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
-\item{variable}{variable as string for which the PDP should be done}
+\item{variable}{variable as string for which the PDP should be done. If none is supplied it is done for all variables.}
 
 \item{data}{specify new data PDP should be performed on, otherwise PDP is performed on the training data}
 

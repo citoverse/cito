@@ -303,7 +303,6 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),.
     newdata <- torch::torch_tensor(newdata)
   }
 
-
   pred <- torch::as_array(link(object$net(newdata,...)))
   return(pred)
 }

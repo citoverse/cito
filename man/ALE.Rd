@@ -4,14 +4,14 @@
 \alias{ALE}
 \title{Accumulated Local Effect Plot (ALE)}
 \usage{
-ALE(model, variable, neighborhoods = 10)
+ALE(model, variable = NULL, data = NULL, K = 10)
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
 \item{variable}{variable as string for which the PDP should be done}
 
-\item{neighborhoods}{number of neighborhoods original feature space gets divided into}
+\item{K}{number of neighborhoods original feature space gets divided into}
 }
 \description{
 Performs an ALE for one feature and returns a centered plot.
