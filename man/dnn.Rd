@@ -105,12 +105,11 @@ mean(abs(predictions-iris[validation_set,]$Sepal.Length))
 summary(nn.fit)
 
 # Partial dependencies
-p <- PDP(nn.fit, variable = "Petal.Length")
-plot(p)
+PDP(nn.fit, variable = "Petal.Length")
 
 # Accumulated local effect plots
-a <- ALE(nn.fit, variable = "Petal.Length")
-plot(a)
+ALE(nn.fit, variable = "Petal.Length")
+
 
 }
 }

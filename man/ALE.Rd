@@ -4,7 +4,13 @@
 \alias{ALE}
 \title{Accumulated Local Effect Plot (ALE)}
 \usage{
-ALE(model, variable = NULL, data = NULL, K = 10)
+ALE(
+  model,
+  variable = NULL,
+  data = NULL,
+  K = 10,
+  type = c("equidistant", "quantile")
+)
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}

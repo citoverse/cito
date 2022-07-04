@@ -22,7 +22,7 @@
 #' @example /inst/examples/ALE-example.R
 #' @export
 
-ALE <- function(model, variable = NULL,data = NULL, K = 10){
+ALE <- function(model, variable = NULL,data = NULL, K = 10, type = c("equidistant", "quantile")){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -30,7 +30,7 @@ ALE <- function(model, variable = NULL,data = NULL, K = 10){
     )
   }
   model <- check_model(model)
-
+  type <- match.arg(type)
   if(is.null(data)){
     data <- model$data$data
   }
@@ -46,51 +46,77 @@ ALE <- function(model, variable = NULL,data = NULL, K = 10){
   p_ret <- lapply (variable,function(v){
     if(is.numeric(model$data$data[,v])){
 
+      if ( type == "equidistant"){
+        repeat{
+          borders <- seq(from = min(model$data$data[,v]),
+                         to = max(model$data$data[,v]),
+                         length.out = K+1)
 
-      repeat{
-        borders <- seq(from = min(model$data$data[,v]),
-                       to = max(model$data$data[,v]),
-                       length.out = K+1)
+          df <- data.frame(
+            x = borders[1:K] + ((borders[2]-borders[1])/2),
 
-        df <- data.frame(
-          x = borders[1:K] + ((borders[2]-borders[1])/2),
+            y = sapply(seq_len(length(borders))[-1], function(i){
 
-          y = sapply(seq_len(length(borders))[-1], function(i){
+              region_indizes <- which(model$data$data[,v]<= borders[i] &
+                                        model$data$data[,v]>= borders[i-1])
 
-            region_indizes <- which(model$data$data[,v]<= borders[i] &
-                                      model$data$data[,v]>= borders[i-1])
+              if(length(region_indizes)>0){
+                perm_data <- model$data$data[region_indizes,]
 
-            if(length(region_indizes)>0){
-              perm_data <- model$data$data[region_indizes,]
+                perm_data[,v] <- borders[i-1]
+                lower_preds <- stats::predict(model, perm_data)
 
-              perm_data[,v] <- borders[i-1]
-              lower_preds <- stats::predict(model, perm_data)
+                perm_data[,v] <- borders[i]
+                upper_preds <- stats::predict(model, perm_data)
 
-              perm_data[,v] <- borders[i]
-              upper_preds <- stats::predict(model, perm_data)
+                return(mean(upper_preds - lower_preds))
+              }else{
 
-              return(mean(upper_preds - lower_preds))
-            }else{
+                return(NA)
 
-              return(NA)
+              }
+            })
+          )
 
-            }
-          })
-        )
-
-        if(any(is.na(df$y))){
-          warning("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one K <- K-1")
-          K <- K - 1
-        }else{
-          break
+          if(any(is.na(df$y))){
+            cat("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one\n")
+            K <- K - 1
+          }else{
+            break
+          }
         }
-      }
+      }else if ( type == "quantile"){
 
+        quants <- quantile(data[,v],probs = seq(0,1,1/K))
+        groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
+        groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
+
+
+        df <- data.frame (
+          x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
+          y = unlist(lapply(seq_len(length(groups)), function(i){
+
+            perm_data <- model$data$data[groups[[i]],]
+
+            perm_data[,v] <- quants[i]
+            lower_preds <- stats::predict(model, perm_data)
+
+            perm_data[,v] <- quants[i+1]
+            upper_preds <- stats::predict(model, perm_data)
+
+            return(mean(upper_preds - lower_preds))
+            })))
+
+
+
+
+      }
       for ( i in seq_len(nrow(df))[-1]){
         df$y[i]<- df$y[i-1]+df$y[i]
       }
 
       df$y <- df$y - mean(df$y)
+
 
       p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
       p <- p + ggplot2::geom_line()
@@ -102,14 +128,14 @@ ALE <- function(model, variable = NULL,data = NULL, K = 10){
                                  mapping = ggplot2::aes(x = x),
                                  inherit.aes = FALSE)
 
-
       return(p)
     }else{
       warning("Categorical features are not yet supported.")
       return(NULL)
     }
-  })
 
+  })
+  names(p_ret) <- variable
   return(p_ret)
 }
 

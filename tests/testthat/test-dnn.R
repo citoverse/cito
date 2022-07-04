@@ -9,8 +9,8 @@ wrap_dnn = function(pars) {
   testthat::expect_error({plot(model)}, NA)
   testthat::expect_error({residuals(model)}, NA)
   testthat::expect_error({summary(model)}, NA)
-  testthat::expect_error({plot(PDP(model, variable = "X.1"))}, NA)
-  testthat::expect_error({plot(ALE(model, variable = "X.1"))}, NA)
+  testthat::expect_error({PDP(model, variable = "X.1")}, NA)
+  testthat::expect_error({ALE(model, variable = "X.1")}, NA)
 }
 
 
