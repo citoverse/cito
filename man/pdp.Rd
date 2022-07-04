@@ -11,7 +11,7 @@ PDP(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice = 20)
 
 \item{variable}{variable as string for which the PDP should be done. If none is supplied it is done for all variables.}
 
-\item{data}{specify new data PDP should be performed on, otherwise PDP is performed on the training data}
+\item{data}{specify new data PDP should be performed . If NULL, PDP is performed on the training data.}
 
 \item{ice}{Individual Conditional Dependence will be shown if TRUE}
 

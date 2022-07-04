@@ -21,7 +21,7 @@
 #'
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done. If none is supplied it is done for all variables.
-#' @param data specify new data PDP should be performed on, otherwise PDP is performed on the training data
+#' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
 #' @param ice Individual Conditional Dependence will be shown if TRUE
 #' @param resolution.ice resolution in which ice will be computed
 #' @seealso \code{\link{ALE}}
@@ -53,7 +53,7 @@ PDP <- function(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice
   x <- NULL
   y <- NULL
 
-  perm_data <- model.matrix(model$training_properties$formula, data)
+  perm_data <- stats::model.matrix(model$training_properties$formula, data)
 
   link <- model$loss$invlink
   p_ret <- lapply (variable,function(v){
@@ -76,13 +76,13 @@ PDP <- function(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice
 
 
       if(ice){
-        perm_dat<-model.matrix(model$training_properties$formula, data)
+        perm_dat<-stats::model.matrix(model$training_properties$formula, data)
         instances <- seq(from = min(perm_dat[,v]),
                          to = max(perm_dat[,v]),
                          length.out = resolution.ice + 1)
 
         df_ice <- sapply(seq_len(length(instances)), function(i){
-          perm_dat<-model.matrix(model$training_properties$formula, data)
+          perm_dat<-stats::model.matrix(model$training_properties$formula, data)
           perm_dat[,v] <- instances[i]
           return(as.numeric(link(model$net(torch::torch_tensor(perm_dat)))))
         })

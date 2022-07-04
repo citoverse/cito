@@ -17,7 +17,11 @@ ALE(
 
 \item{variable}{variable as string for which the PDP should be done}
 
+\item{data}{data on which ALE is performed on, if NULL trainings data will be used.}
+
 \item{K}{number of neighborhoods original feature space gets divided into}
+
+\item{type}{method on how the feature space is divided into neighborhoods.}
 }
 \description{
 Performs an ALE for one feature and returns a centered plot.
