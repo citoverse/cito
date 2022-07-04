@@ -33,7 +33,7 @@ dnn(
 
 \item{data}{matrix or data.frame}
 
-\item{loss}{loss after which network should be optimized. Can also be own a distribution from the stats package or own function}
+\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function}
 
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 

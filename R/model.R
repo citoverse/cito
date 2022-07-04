@@ -83,12 +83,13 @@ get_loss = function(loss) {
   out <- list()
   out$parameter <- NULL
 
-  if(!inherits(loss, "family")){
-    loss <- switch(tolower(loss),
+  if(is.character(loss)) loss <- tolower(loss)
+  if(!inherits(loss, "family")& is.character(loss)){
+    loss <- switch(loss,
              "gaussian" = stats::gaussian(),
              "binomial" = stats::binomial(),
              "poisson" = stats::poisson(),
-             tolower(loss)
+             loss
       )
   }
 
@@ -119,8 +120,14 @@ get_loss = function(loss) {
       out$loss <- function(pred, true) {
         return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
       }
-    }else { stop("family not supported")}
-  }else {
+    } else { stop("family not supported")}
+  } else  if (is.function(loss)){
+    if(is.null(formals(loss)$pred) | is.null(formals(loss)$true)){
+      stop("loss function has to take two arguments, \"pred\" and \"true\"")
+    }
+    out$loss <- loss
+    out$invlink <- function(a) a
+  } else {
     if(loss == "mae"){
       out$invlink <- function(a) a
       out$loss <- function(pred, true) return(torch::nnf_l1_loss(input = pred, target = true))
@@ -133,16 +140,11 @@ get_loss = function(loss) {
         return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
       }
 
-    }else if (is.function(loss)){
-      if(is.null(formals(loss)$pred | is.null(formals(loss)$true))){
-        stop("loss function has to take two arguments, \"pred\" and \"true\"")
-      }
-      out$loss <- loss
-      out$invlink <- function(a) a
     }
 
   }
   out$call <- loss
+  if (is.function(loss))
   return(out)
 }
 

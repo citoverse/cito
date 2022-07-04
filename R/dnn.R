@@ -6,7 +6,7 @@
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
-#' @param loss loss after which network should be optimized. Can also be own a distribution from the stats package or own function
+#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
@@ -120,9 +120,9 @@ dnn <- function(formula,
         Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
     }}
   }
-
-  if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
-
+  if(!is.function(loss_obj$call)){
+    if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
+  }
   ### dataloader  ###
   if(validation != 0){
     valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))

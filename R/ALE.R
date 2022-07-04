@@ -132,7 +132,7 @@ ALE <- function(model, variable = NULL,data = NULL, K = 10, type = c("equidistan
 
       return(p)
     }else{
-      warning("Categorical features are not yet supported.")
+      cat("Categorical features are not yet supported.\n")
       return(NULL)
     }
 
