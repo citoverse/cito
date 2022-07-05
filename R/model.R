@@ -79,7 +79,7 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
 
 
 
-get_loss = function(loss) {
+get_loss <- function(loss) {
   out <- list()
   out$parameter <- NULL
 
@@ -139,12 +139,14 @@ get_loss = function(loss) {
       out$loss <- function(pred, true) {
         return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
       }
-
     }
+    else{
+      cat( "unidentified loss \n")
+      }
 
   }
   out$call <- loss
-  if (is.function(loss))
+
   return(out)
 }
 

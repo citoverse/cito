@@ -80,8 +80,9 @@ continue_training <- function(model,
       }
     }
   }
-  if(all(model$loss$call == "softmax")) y_dtype = torch::torch_long()
-
+  if(!is.function(model$loss$call)){
+    if(all(model$loss$call == "softmax")) y_dtype = torch::torch_long()
+  }
 
   if(model$training_properties$validation != 0){
 
