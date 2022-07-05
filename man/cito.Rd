@@ -27,7 +27,7 @@ in order to install cito please follow these steps:
 \itemize{
 \item \code{\link{dnn}}: train deep neural network
 \item \code{\link{continue_training}}: continues training of an existing cito dnn model for additional epochs
-\item \code{\link{PDP}}: plot the partial dependecy plot for a specific feature
+\item \code{\link{PDP}}: plot the partial dependency plot for a specific feature
 \item \code{\link{ALE}}: plot the accumulated local effect plot for a specific feature
 }
 }

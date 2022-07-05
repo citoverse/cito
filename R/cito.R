@@ -18,7 +18,7 @@
 #' @section cito functions:
 #' - \code{\link{dnn}}: train deep neural network
 #' - \code{\link{continue_training}}: continues training of an existing cito dnn model for additional epochs
-#' - \code{\link{PDP}}: plot the partial dependecy plot for a specific feature
+#' - \code{\link{PDP}}: plot the partial dependency plot for a specific feature
 #' - \code{\link{ALE}}: plot the accumulated local effect plot for a specific feature
 #'
 #' @examples

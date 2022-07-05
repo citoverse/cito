@@ -224,11 +224,11 @@ residuals.citodnn <- function(object,...){
 #'
 #' @details
 #'
-#' Performs the feautre importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
-#' For each feature n permutation get done and original and permuted predictive mean squarred error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squarred Error.
+#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
+#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
-#' @param n_permute number of permutations performed, higher euqals more accurate importance results
+#' @param n_permute number of permutations performed, higher equals more accurate importance results
 #' @param ... additional arguments
 #' @return summary.glm returns an object of class "summary.citodnn", a list with components
 #' @export
@@ -260,7 +260,7 @@ print(x$importance)
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param ... nothing implemented yet
-#' @return list of weigths of neural network
+#' @return list of weights of neural network
 #'
 #' @example /inst/examples/coef.citodnn-example.R
 #' @export

@@ -17,7 +17,7 @@
 #' represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done
-#' @param data data on which ALE is performed on, if NULL trainings data will be used.
+#' @param data data on which ALE is performed on, if NULL training data will be used.
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param type method on how the feature space is divided into neighborhoods.
 #' @seealso \code{\link{PDP}}
