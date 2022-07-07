@@ -5,6 +5,7 @@
 #' @param epochs additional epochs the training should continue for
 #' @param continue_from define which epoch should be used as starting point for training, 0 if last epoch should be used
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
+#' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
 #'
@@ -18,6 +19,7 @@ continue_training <- function(model,
                               continue_from= NULL,
                               data=NULL,
                               device= "cpu",
+                              verbose = TRUE,
                               changed_params=NULL){
 
   checkmate::qassert(device, "S+[3,)")
@@ -97,7 +99,7 @@ continue_training <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
 
     return(model)
 }

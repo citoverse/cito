@@ -13,7 +13,7 @@ Authors@R:
            role = c("aut"),
            email = "maximilian.pichler@ur.de")
            )
-Description: Creation of Neural Networks with one line of code and typical R syntax. This package simplifies the process of creating and validating Neural Network based on the R native torch implementation. So far only deep neural networks (DNNs) can be trained, however it is planned to include RNNs and CNNs.
+Description: Building and training custom neural networks in the typical R syntax. Builds on the torch machine learning framework and therefore offers plenty of options for building and training as well as training on a gpu. 
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

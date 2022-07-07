@@ -1,4 +1,4 @@
-train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
+train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE){
   model$net$to(device = device)
 
 
@@ -66,7 +66,7 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
         model$losses$valid_l[epoch] <- mean(valid_l)
       })
 
-      cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+      if(verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                   epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
 
       if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
@@ -77,7 +77,7 @@ train_model <- function(model, epochs, device, train_dl,  valid_dl=NULL){
       }
 
     }else{
-      cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
+      if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
 
     model$weights[[epoch]] <- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))

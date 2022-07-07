@@ -21,6 +21,7 @@
 #' @param epochs epochs the training goes on for
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param plot plot training loss
+#' @param verbose print training and validation loss of epochs
 #' @param device device on which network should be trained on.
 #' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
 #'
@@ -55,6 +56,7 @@ dnn <- function(formula,
                 shuffle = FALSE,
                 epochs = 32,
                 plot = TRUE,
+                verbose = TRUE,
                 lr_scheduler = NULL,
                 device = c("cpu","cuda"),
                 early_stopping = FALSE) {
@@ -178,7 +180,7 @@ dnn <- function(formula,
 
 
   ### training loop ###
-  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
+  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
 
 
 

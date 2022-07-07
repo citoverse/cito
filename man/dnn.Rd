@@ -23,6 +23,7 @@ dnn(
   shuffle = FALSE,
   epochs = 32,
   plot = TRUE,
+  verbose = TRUE,
   lr_scheduler = NULL,
   device = c("cpu", "cuda"),
   early_stopping = FALSE
@@ -60,6 +61,8 @@ dnn(
 \item{epochs}{epochs the training goes on for}
 
 \item{plot}{plot training loss}
+
+\item{verbose}{print training and validation loss of epochs}
 
 \item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
 

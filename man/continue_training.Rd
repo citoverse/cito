@@ -10,6 +10,7 @@ continue_training(
   continue_from = NULL,
   data = NULL,
   device = "cpu",
+  verbose = TRUE,
   changed_params = NULL
 )
 }
@@ -23,6 +24,8 @@ continue_training(
 \item{data}{matrix or data.frame if not provided data from original training will be used}
 
 \item{device}{device on which network should be trained on, either "cpu" or "cuda"}
+
+\item{verbose}{print training and validation loss of epochs}
 
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
 }

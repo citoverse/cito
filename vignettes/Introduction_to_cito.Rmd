@@ -226,7 +226,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
 
 
 ### Optimizer 
-Optimizer are responsible for calculating the direction when updating weights in the training process. As standard dnn() uses the Adam optimizer. 
+Optimizer are responsible for calculating the direction when updating weights in the training process. The optimizer always tries to minimise the loss function. As standard the adam optimizer will be used. 
 
 
 However, you can customize your optimizer with config_optimizer() and use other types of optimizer and adjust the hyperparameter of you optimizer. 
@@ -245,6 +245,19 @@ nn.fit <- dnn(Species~., data = data, optimizer = opt, lr=0.002)
 
 ```
 
+### Loss functions 
+Loss function evaluate the current residuals and measure how good the network performs. 
+Of course the standard Loss functions like mean absolute error, real mean squared error and cross-entropy are implemented , you can also fit to certain probability distributions. 
+```{r lossfkt, eval = FALSE}
+# Real Mean squared error
+nn.fit <- dnn(Sepal.Length~. data = data, loss = "rmse") 
+
+# Fit to a normal distribution, you can also define the parameters of the distribution
+nn.fit <- dnn(Sepal.Length~. data = data, loss = stats::gaussian()) 
+
+```
+
+
 ### Early Stopping 
 Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation > 0. 
 ```{r early_stopping,eval = FALSE}
@@ -256,7 +269,7 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000, validation = 0.2, earl
 
 
 
-## Continue training 
+## Continue training process
 In case you want to continue the training process of an existing model you need to use continue_training(). This function allows you to continue the training process where dnn() stopped. 
 ```{r setup3, include=FALSE}
 
