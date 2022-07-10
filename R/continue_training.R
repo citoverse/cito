@@ -99,7 +99,7 @@ continue_training <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
 
     return(model)
 }

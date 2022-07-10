@@ -1,4 +1,4 @@
-train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE){
+train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE){
   model$net$to(device = device)
 
 
@@ -72,7 +72,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
          model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
         model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        if(model$training_properties$plot) visualize.training(model$losses,epoch)
+        if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
         break
       }
 
@@ -84,8 +84,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
 
     ### create plot ###
-    if(model$training_properties$plot) visualize.training(model$losses,epoch)
-
+    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
+    plot_new <- FALSE
   }
 
   model$use_model_epoch <- epoch
