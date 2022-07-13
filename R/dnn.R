@@ -2,8 +2,8 @@
 #'
 #' @description
 #'
-#' dnn is used to fit a deep neural network. The function supports the formula syntax as well as different response families (see details).
-#'
+#' fits a custom deep neural network. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
+#' So far, only Multilayer Perceptrons are possible. To learn more about Deep Learning, see [here](https://www.nature.com/articles/nature14539)
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
 #' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function
@@ -24,6 +24,14 @@
 #' @param verbose print training and validation loss of epochs
 #' @param device device on which network should be trained on.
 #' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
+#'
+#' @details
+#'
+#' In a Multilayer Perceptron (MLP) network every neuron is connected with all neurons of the previous layer and connected to all neurons of the layer afterwards.
+#' The value of each neuron is calculated with:
+#' \eqn{ a (\sum_j{ w_j * a_j})}
+#' Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+#' As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 #'
 #'
 #' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
