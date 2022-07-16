@@ -1,4 +1,4 @@
-\dontrun{
+\donttest{
 library(cito)
 
 # create optimizer object

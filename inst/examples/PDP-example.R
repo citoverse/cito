@@ -1,4 +1,4 @@
-\dontrun{
+\donttest{
 library(cito)
 
 # Build and train  Network

@@ -38,7 +38,7 @@
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}
-#' \item{loss}{A list which contains relevant information for the target variable}
+#' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 #' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' \item{data}{Contains data used for training the model}
 #' \item{weigths}{List of weights for each training epoch}
@@ -202,6 +202,7 @@ dnn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
+#' @value No return value, called for printing
 #' @export
 print.citodnn <- function(x,...){
   x <- check_model(x)
@@ -257,6 +258,7 @@ summary.citodnn <- function(object, n_permute = 256, ...){
 #'
 #' @param x a summary object created by \code{\link{summary.citodnn}}
 #' @param ... additional arguments
+#' @value No return value, called for printing
 #' @export
 print.summary.citodnn <- function(x, ... ){
 cat("Deep Neural Network Model summary\n")
@@ -323,7 +325,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),.
 #' @param node_size size of node in plot
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
-#'
+#' @value A plot made with 'ggraph' that represents the neural network
 #' @example /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){

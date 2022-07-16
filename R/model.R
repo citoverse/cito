@@ -1,5 +1,5 @@
 get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE, x_dtype, y_dtype) {
-  self = NULL
+  self <- NULL
   torch.dataset <- torch::dataset(
     name = "dataset",
     initialize = function(X,Y) {

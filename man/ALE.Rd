@@ -24,7 +24,7 @@ ALE(
 \item{type}{method on how the feature space is divided into neighborhoods.}
 }
 \description{
-Performs an ALE for one feature and returns a centered plot.
+Performs an ALE for one or more features.
 }
 \details{
 If the defined variable is a numeric feature, the ALE is performed.

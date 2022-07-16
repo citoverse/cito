@@ -1,4 +1,4 @@
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

@@ -75,7 +75,7 @@ an S3 object of class \code{"cito.dnn"} is returned. It is a list containing eve
 The list consists of the following attributes:
 \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 \item{call}{The original function call}
-\item{loss}{A list which contains relevant information for the target variable}
+\item{loss}{A list which contains relevant information for the target variable and the used loss function}
 \item{losses}{A data.frame containing training and validation losses of each epoch}
 \item{data}{Contains data used for training the model}
 \item{weigths}{List of weights for each training epoch}

@@ -10,11 +10,11 @@ analyze_training(object)
 \item{object}{a model created by \code{\link{dnn}}}
 }
 \value{
-a plotly figure
+a 'plotly' figure
 }
 \description{
 After training a model with cito, this function helps to analyze the training process and decide on best performing model.
-Creates a plotly figure which allows to zoom in and out on training graph
+Creates a "plotly' figure which allows to zoom in and out on training graph
 }
 \examples{
 \dontrun{

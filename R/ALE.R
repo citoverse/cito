@@ -1,7 +1,7 @@
 #' Accumulated Local Effect Plot (ALE)
 #'
 #'
-#' Performs an ALE for one feature and returns a centered plot.
+#' Performs an ALE for one or more features.
 #'
 #' @details
 #'
@@ -21,10 +21,15 @@
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param type method on how the feature space is divided into neighborhoods.
 #' @seealso \code{\link{PDP}}
+#' @value A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
 #' @export
 
-ALE <- function(model, variable = NULL,data = NULL, K = 10, type = c("equidistant", "quantile")){
+ALE <- function(model,
+                variable = NULL,
+                data = NULL,
+                K = 10,
+                type = c("equidistant", "quantile")){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
