@@ -11,6 +11,9 @@
 
 \item{...}{additional arguments}
 }
+\value{
+No return value, called for printing
+}
 \description{
 Print method for class summary.citodnn
 }

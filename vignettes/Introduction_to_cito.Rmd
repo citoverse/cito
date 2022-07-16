@@ -63,7 +63,7 @@ Before using cito you have to make sure that the current version of torch is ins
 
 if(!require(torch)) install.packages("torch")
 library(torch)
-install_torch(reinstall = TRUE)
+if(!torch_is_installed()) install_torch()
 
 devtools::install_github("citoverse/cito")
 library (cito)

@@ -17,6 +17,9 @@ PDP(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice = 20)
 
 \item{resolution.ice}{resolution in which ice will be computed}
 }
+\value{
+A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+}
 \description{
 Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 }
@@ -37,7 +40,7 @@ These lines show, how each individual data sample reacts to changes in the featu
 Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 # Build and train  Network

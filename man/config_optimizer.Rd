@@ -33,7 +33,7 @@ For more information see the corresponding functions:
 }
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 # create optimizer object

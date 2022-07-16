@@ -13,12 +13,14 @@
 }
 \value{
 prediction matrix
+
+No return value, called for printing
 }
 \description{
 Print class citodnn
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

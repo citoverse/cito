@@ -17,7 +17,7 @@ After training a model with cito, this function helps to analyze the training pr
 Creates a "plotly' figure which allows to zoom in and out on training graph
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 set.seed(222)
 validation_set<- sample(c(1:nrow(datasets::iris)),25)

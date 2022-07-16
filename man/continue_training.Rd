@@ -36,7 +36,7 @@ a model of class cito.dnn same as created by  \code{\link{dnn}}
 Continues training of a model for additional periods
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

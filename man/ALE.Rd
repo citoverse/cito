@@ -23,6 +23,9 @@ ALE(
 
 \item{type}{method on how the feature space is divided into neighborhoods.}
 }
+\value{
+A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+}
 \description{
 Performs an ALE for one or more features.
 }
@@ -39,7 +42,7 @@ The last part of the equation,
 represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 # Build and train  Network

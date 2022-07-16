@@ -18,7 +18,7 @@ list of weights of neural network
 Returns list of parameters the neural network model currently has in use
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

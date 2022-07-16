@@ -15,11 +15,14 @@
 
 \item{...}{no further functionality implemented yet}
 }
+\value{
+A plot made with 'ggraph' that represents the neural network
+}
 \description{
 Creates graph plot which gives an overview of the network architecture.
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

@@ -30,7 +30,7 @@ different learning rate scheduler need different variables, these functions will
 }
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 # create optimizer object

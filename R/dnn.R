@@ -29,7 +29,9 @@
 #'
 #' In a Multilayer Perceptron (MLP) network every neuron is connected with all neurons of the previous layer and connected to all neurons of the layer afterwards.
 #' The value of each neuron is calculated with:
+#'
 #' \eqn{ a (\sum_j{ w_j * a_j})}
+#'
 #' Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 #' As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 #'
@@ -39,9 +41,13 @@
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}
 #' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
-#' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' \item{data}{Contains data used for training the model}
 #' \item{weigths}{List of weights for each training epoch}
+#' \item{use_model_epoch}{Integer, which defines which model from which trining epoch should be used for prediction.}
+#' \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
+#' \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, wheter bias is included and if dropout layers are included.}
+#' \item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsizes, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
+#' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' @import checkmate
 #' @example /inst/examples/dnn-example.R
 #' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
@@ -202,7 +208,7 @@ dnn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
-#' @value No return value, called for printing
+#' @return No return value, called for printing
 #' @export
 print.citodnn <- function(x,...){
   x <- check_model(x)
@@ -258,7 +264,7 @@ summary.citodnn <- function(object, n_permute = 256, ...){
 #'
 #' @param x a summary object created by \code{\link{summary.citodnn}}
 #' @param ... additional arguments
-#' @value No return value, called for printing
+#' @return No return value, called for printing
 #' @export
 print.summary.citodnn <- function(x, ... ){
 cat("Deep Neural Network Model summary\n")
@@ -325,7 +331,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),.
 #' @param node_size size of node in plot
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
-#' @value A plot made with 'ggraph' that represents the neural network
+#' @return A plot made with 'ggraph' that represents the neural network
 #' @example /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){

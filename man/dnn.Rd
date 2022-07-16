@@ -76,9 +76,13 @@ The list consists of the following attributes:
 \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 \item{call}{The original function call}
 \item{loss}{A list which contains relevant information for the target variable and the used loss function}
-\item{losses}{A data.frame containing training and validation losses of each epoch}
 \item{data}{Contains data used for training the model}
 \item{weigths}{List of weights for each training epoch}
+\item{use_model_epoch}{Integer, which defines which model from which trining epoch should be used for prediction.}
+\item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
+\item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, wheter bias is included and if dropout layers are included.}
+\item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsizes, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
+\item{losses}{A data.frame containing training and validation losses of each epoch}
 }
 \description{
 fits a custom deep neural network. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
@@ -87,12 +91,14 @@ So far, only Multilayer Perceptrons are possible. To learn more about Deep Learn
 \details{
 In a Multilayer Perceptron (MLP) network every neuron is connected with all neurons of the previous layer and connected to all neurons of the layer afterwards.
 The value of each neuron is calculated with:
+
 \eqn{ a (\sum_j{ w_j * a_j})}
+
 Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

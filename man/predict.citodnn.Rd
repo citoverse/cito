@@ -22,7 +22,7 @@ prediction matrix
 Predict from a fitted dnn model
 }
 \examples{
-\dontrun{
+\donttest{
 library(cito)
 
 set.seed(222)

@@ -24,7 +24,7 @@
 #' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
 #' @param ice Individual Conditional Dependence will be shown if TRUE
 #' @param resolution.ice resolution in which ice will be computed
-#' @value A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+#' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R
 #'

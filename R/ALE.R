@@ -21,7 +21,7 @@
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param type method on how the feature space is divided into neighborhoods.
 #' @seealso \code{\link{PDP}}
-#' @value A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+#' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
 #' @export
 
