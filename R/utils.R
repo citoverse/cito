@@ -36,7 +36,7 @@ check_model <- function(object) {
 
 
 
-check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check_var = F){
+check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALSE, verbose = FALSE){
   value <- NULL
   if(variable %in% names(mc)){
     if(dim ==1){
@@ -52,7 +52,7 @@ check_call_config <- function(mc, variable ,standards, print = T, dim = 1, check
     value <- unlist(standards[which(names(standards) == variable)])
   }
 
-  if(print) cat( paste0(variable,": [", paste(value, collapse = ", "),"] \n"))
+  if(verbose) cat( paste0(variable,": [", paste(value, collapse = ", "),"] \n"))
   return(value)
 }
 

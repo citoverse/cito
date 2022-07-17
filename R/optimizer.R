@@ -3,6 +3,7 @@
 #' Helps you create custom optimizer for \code{\link{dnn}}. It is recommended to set learning rate in \code{\link{dnn}}.
 #'
 #' @param type character string defining which optimizer should be used. See Details.
+#' @param verbose If TRUE, additional information about scheduler will be printed to console
 #' @param ... additional arguments to be passed to optimizer. See Details.
 #' @return object of class cito_optim to give to \code{\link{dnn}}
 #'
@@ -18,102 +19,107 @@
 #' - sgd: \code{\link[torch]{optim_sgd}}
 #'
 #'
-#' @example /inst/examples/config_optimizer.R
+#' @example /inst/examples/config_optimizer-example.R
 #'
+#' @import checkmate
 #' @export
 
-config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"), ... ){
+config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"),
+                            verbose = FALSE, ... ){
 
+  checkmate::qassert(verbose,"B1")
   type <- match.arg(tolower(type), choices =  c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"))
   out <- list()
   out$optim <- type
   class(out) <- "cito_optim"
   mc <- match.call(expand.dots = TRUE)
   if("lr" %in% names(mc)){
-    cat("learning rate set here will overwrite lr you give to dnn() \n")
+    if(verbose) cat("learning rate set here will overwrite lr you give to dnn() \n")
     checkmate::qassert(mc$lr,"R1[0,)")
     out$lr <- mc$lr
   }
   if (out$optim == "adam"){
 
-    cat("adam optimizer with following values \n")
+    if(verbose) cat("adam optimizer with following values \n")
 
     out$betas <- check_call_config(mc = mc, "betas", standards =formals(torch::optim_adam),
-                                   check_var = "R2", dim = 2)
+                                   check_var = "R2", dim = 2, verbose = verbose)
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_adam),
-                                 check_var = "R1")
+                                 check_var = "R1", verbose = verbose)
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_adam),
-                                          check_var = "R1")
+                                          check_var = "R1", verbose = verbose)
     out$amsgrad <- check_call_config(mc = mc, "amsgrad", standards =formals(torch::optim_adam),
-                                     check_var = "B1")
+                                     check_var = "B1", verbose = verbose)
 
   }else if(out$optim == "adadelta"){
 
-    print("set adadelta optimizer with following values \n")
+    if(verbose) cat("set adadelta optimizer with following values \n")
     out$rho <- check_call_config(mc = mc, "rho", standards =formals(torch::optim_adadelta),
-                                 check_var = "R1")
+                                 check_var = "R1", verbose = verbose)
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_adadelta),
-                                 check_var = "R1")
+                                 check_var = "R1", verbose = verbose)
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_adadelta),
-                                          check_var = "R1")
+                                          check_var = "R1", verbose = verbose)
 
 
 
 
   }else if(out$optim == "adagrad"){
 
-    cat("set adagrad optimizer with following values \n")
+    if(verbose) cat("set adagrad optimizer with following values \n")
     out$lr_decay <- check_call_config(mc = mc, "lr_decay", standards =formals(torch::optim_adagrad),
-                                      check_var = "R1")
+                                      check_var = "R1", verbose = verbose)
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_adagrad),
-                                          check_var = "R1")
+                                          check_var = "R1", verbose = verbose)
     out$initial_accumulator_value <- check_call_config(mc = mc, "initial_accumulator_value", standards = formals(torch::optim_adagrad),
-                                                       check_var = "R1")
+                                                       check_var = "R1", verbose = verbose)
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_adagrad),
-                                 check_var = "R1")
+                                 check_var = "R1", verbose = verbose)
 
 
 
   }else if(out$optim == "rmsprop"){
 
-    cat("set rmsprop optimizer with following values \n")
+    if(verbose) cat("set rmsprop optimizer with following values \n")
     out$alpha <- check_call_config(mc = mc, "alpha", standards =formals(torch::optim_rmsprop),
-                                   check_var = "R1")
+                                   check_var = "R1", verbose = verbose)
     out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_rmsprop),
-                                 check_var = "R1")
+                                 check_var = "R1", verbose = verbose)
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_rmsprop),
-                                          check_var = "R1")
+                                          check_var = "R1", verbose = verbose)
     out$momentum <- check_call_config(mc = mc, "momentum", standards =formals(torch::optim_rmsprop),
-                                      check_var = "R1")
+                                      check_var = "R1", verbose = verbose)
     out$centered <- check_call_config(mc = mc, "centered", standards =formals(torch::optim_rmsprop),
-                                      check_var = "B1")
+                                      check_var = "B1", verbose = verbose)
 
 
   }else if(out$optim == "rprop"){
 
-    cat("set rprop optimizer with following values \n")
+    if(verbose) cat("set rprop optimizer with following values \n")
     out$etas <- check_call_config(mc = mc, "etas", standards =formals(torch::optim_rprop),
-                                  check_var = "R2", dim = 2)
+                                  check_var = "R2", dim = 2, verbose = verbose)
     out$step_sizes <- check_call_config(mc = mc, "step_sizes", standards =formals(torch::optim_rprop),
-                                        check_var = "R2", dim = 2)
+                                        check_var = "R2", dim = 2, verbose = verbose)
 
 
   }else if(out$optim == "sgd"){
 
-    cat("set sgd optimizer with following values \n")
+    if(verbose) cat("set sgd optimizer with following values \n")
     out$momentum <- check_call_config(mc = mc, "momentum", standards =formals(torch::optim_sgd),
-                                      check_var = "R1")
+                                      check_var = "R1", verbose = verbose)
     out$dampening <- check_call_config(mc = mc, "dampening", standards =formals(torch::optim_sgd),
-                                       check_var = "R1")
+                                       check_var = "R1", verbose = verbose)
     out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_sgd),
-                                          check_var = "R1")
+                                          check_var = "R1", verbose = verbose)
     out$nesterov <- check_call_config(mc = mc, "nesterov", standards =formals(torch::optim_sgd),
-                                      check_var = "B1")
+                                      check_var = "B1", verbose = verbose)
   }
 
   for(var in names(mc)[2:length(names(mc))]){
-    if(!(var%in% names(out)) & var != "type"){
-      cat(paste0(var, " could not be assigned for ", out$optim," optimizer \n"))
+    if(!(var %in%c( "type", "verbose"))){
+      if(!(var %in% names(out))){
+        warning(paste0(var, " could not be assigned for ", out$optim," optimizer \n"))
+      }
     }
   }
 

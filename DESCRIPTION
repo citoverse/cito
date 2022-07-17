@@ -1,6 +1,6 @@
 Package: cito
 Type: Package
-Date: 2022-07-05
+Date: 2022-07-016
 Title: Building and Training Neural Networks
 Version: 1.0.0
 Authors@R:
@@ -13,7 +13,7 @@ Authors@R:
            role = c("aut"),
            email = "maximilian.pichler@ur.de")
            )
-Description: Building and training custom neural networks in the typical R syntax. Builds on the torch machine learning framework and therefore offers plenty of options for building and training as well as training on a graphics card. 
+Description: Building and training custom neural networks in the typical R syntax. Builds on the 'torch' machine learning framework and therefore offers plenty of options for building and training as well as training on a graphics card. 
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

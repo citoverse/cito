@@ -2,7 +2,8 @@
 #'
 #' Helps create custom learning rate schedulers for \code{\link{dnn}}.
 #'
-#' @param type string defining which type of scheduler should be used. See Details.
+#' @param type String defining which type of scheduler should be used. See Details.
+#' @param verbose If TRUE, additional information about scheduler will be printed to console.
 #' @param ... additional arguments to be passed to scheduler. See Details.
 #' @return object of class cito_lr_scheduler to give to \code{\link{dnn}}
 #'
@@ -15,89 +16,94 @@
 #' - step: \code{\link[torch]{lr_step}}
 #'
 #'
-#' @example /inst/examples/config_optimizer.R
+#' @example /inst/examples/config_lr_scheduler-example.R
 #'
 #' @export
 
-config_lr_scheduler <- function(type = c("lambda", "multiplicative", "one_cycle", "step"), ...){
+config_lr_scheduler <- function(type = c("lambda", "multiplicative", "one_cycle", "step"),
+                                verbose = FALSE, ...){
+
+  checkmate::qassert(verbose,"B1")
   type <- match.arg(tolower(type), choices =  c("lambda", "multiplicative", "one_cycle", "step"))
   out <- list()
   out$lr_scheduler <- type
   class(out) <- "cito_lr_scheduler"
   mc <- match.call(expand.dots = TRUE)
-  cat(paste0("Learning rate Scheduler ",out$lr_scheduler, "\n"))
+  if (verbose) cat(paste0("Learning rate Scheduler ",out$lr_scheduler, "\n"))
   if (out$lr_scheduler == "lambda"){
     if("lr_lambda" %in% names(mc)){
       out$lr_lambda <- mc$lr_lambda
-      cat(paste0("lr_lambda: ", out$lr_lambda, "\n"))
+      if (verbose) cat(paste0("lr_lambda: [", out$lr_lambda, "]\n"))
     } else{
       warning("You need to supply lr_lambda to this function")
     }
-ut$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_lambda),
-                                   check_var = "R1")
+  out$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_lambda),
+                                   check_var = "R1", verbose = verbose)
     out$verbose <- check_call_config(mc = mc, "verbose", standards =formals(torch::lr_lambda),
-                                 check_var = "B1")
+                                 check_var = "B1", verbose = verbose)
 
   }else if (out$lr_scheduler == "multiplicative"){
     out$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_multiplicative),
-                                        check_var = "R1")
+                                        check_var = "R1", verbose = verbose)
     out$verbose <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_multiplicative),
-                                        check_var = "B1")
+                                        check_var = "B1", verbose = verbose)
 
   }else if (out$lr_scheduler == "one_cycle"){
     if("max_lr" %in% names(mc)){
       out$max_lr <- mc$max_lr
-      cat(paste0("max_lr: ", out$max_lr, "\n"))
+      if (verbose) cat(paste0("max_lr: [", out$max_lr, "]\n"))
     } else{
       warning("You need to supply max_lr to this function")
     }
     out$total_steps <- check_call_config(mc = mc, "total_steps", standards = formals(torch::lr_one_cycle),
-                                        check_var = F)
+                                        check_var = F, verbose = verbose)
     out$epochs <- check_call_config(mc = mc, "epochs", standards = formals(torch::lr_one_cycle),
-                                        check_var = F)
+                                        check_var = F, verbose = verbose)
     out$steps_per_epoch <- check_call_config(mc = mc, "steps_per_epoch", standards = formals(torch::lr_one_cycle),
-                                        check_var = F)
+                                        check_var = F, verbose = verbose)
     out$pct_start <- check_call_config(mc = mc, "pct_start", standards = formals(torch::lr_one_cycle),
-                                        check_var = "R1")
+                                        check_var = "R1", verbose = verbose)
     out$anneal_strategy <- check_call_config(mc = mc, "anneal_strategy", standards = formals(torch::lr_one_cycle),
-                                        check_var = "S+")
+                                        check_var = "S+", verbose = verbose)
     out$cycle_momentum <- check_call_config(mc = mc, "cycle_momentum", standards = formals(torch::lr_one_cycle),
-                                        check_var = "B1")
+                                        check_var = "B1", verbose = verbose)
     out$base_momentum <- check_call_config(mc = mc, "base_momentum", standards = formals(torch::lr_one_cycle),
-                                        check_var = F)
+                                        check_var = F, verbose = verbose)
     out$max_momentum <- check_call_config(mc = mc, "max_momentum", standards = formals(torch::lr_one_cycle),
-                                        check_var = F)
+                                        check_var = F, verbose = verbose)
     out$div_factor <- check_call_config(mc = mc, "div_factor", standards = formals(torch::lr_one_cycle),
-                                        check_var = "R1")
+                                        check_var = "R1", verbose = verbose)
 
     out$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_one_cycle),
-                                        check_var = "R1")
+                                        check_var = "R1", verbose = verbose)
 
     out$final_div_factor <- check_call_config(mc = mc, "final_div_factor", standards = formals(torch::lr_one_cycle),
-                                        check_var = "R1")
+                                        check_var = "R1", verbose = verbose)
     out$verbose <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_one_cycle),
-                                        check_var = "B1")
+                                        check_var = "B1", verbose = verbose)
 
 
   }else if (out$lr_scheduler == "step"){
     if("step_size" %in% names(mc)){
       out$step_size <- mc$step_size
-      cat(paste0("step_size: ", out$step_size, "\n"))
+      if (verbose) cat(paste0("step_size: [", out$step_size, "]\n"))
     } else{
       warning("You need to supply step_size to this function")
     }
     out$gamma <- check_call_config(mc = mc, "gamma", standards = formals(torch::lr_step),
-                                     check_var = "R1")
+                                     check_var = "R1", verbose = verbose)
     out$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_step),
-                                     check_var = "R1")
+                                     check_var = "R1", verbose = verbose)
 
 
 
   }
 
   for(var in names(mc)[2:length(names(mc))]){
-    if(!(var%in% names(out)) & var != "type"){
-      cat(paste0(var, " could not be assigned to ", out$lr_scheduler," scheduler \n"))
+    if(!(var %in%c( "type", "verbose"))){
+      if(!(var%in% names(out)) & var != "type"){
+        warning(paste0(var, " could not be assigned to ", out$lr_scheduler," scheduler \n"))
+      }
     }
   }
 

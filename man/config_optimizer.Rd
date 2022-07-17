@@ -6,11 +6,14 @@
 \usage{
 config_optimizer(
   type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"),
+  verbose = FALSE,
   ...
 )
 }
 \arguments{
 \item{type}{character string defining which optimizer should be used. See Details.}
+
+\item{verbose}{If TRUE, additional information about scheduler will be printed to console}
 
 \item{...}{additional arguments to be passed to optimizer. See Details.}
 }
@@ -37,7 +40,10 @@ For more information see the corresponding functions:
 library(cito)
 
 # create optimizer object
-opt <- config_optimizer(type = "adagrad", lr_decay = 1e-04, weight_decay = 0.1 )
+opt <- config_optimizer(type = "adagrad",
+                        lr_decay = 1e-04,
+                        weight_decay = 0.1,
+                        verbose = TRUE)
 
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris, optimizer = opt)

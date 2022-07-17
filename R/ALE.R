@@ -86,7 +86,7 @@ ALE <- function(model,
           )
 
           if(any(is.na(df$y))){
-            cat("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one\n")
+            warning("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one\n")
             K <- K - 1
           }else{
             break

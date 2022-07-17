@@ -6,11 +6,14 @@
 \usage{
 config_lr_scheduler(
   type = c("lambda", "multiplicative", "one_cycle", "step"),
+  verbose = FALSE,
   ...
 )
 }
 \arguments{
-\item{type}{string defining which type of scheduler should be used. See Details.}
+\item{type}{String defining which type of scheduler should be used. See Details.}
+
+\item{verbose}{If TRUE, additional information about scheduler will be printed to console.}
 
 \item{...}{additional arguments to be passed to scheduler. See Details.}
 }
@@ -33,11 +36,14 @@ different learning rate scheduler need different variables, these functions will
 \donttest{
 library(cito)
 
-# create optimizer object
-opt <- config_optimizer(type = "adagrad", lr_decay = 1e-04, weight_decay = 0.1 )
+# create learning rate scheduler object
+scheduler <- config_lr_scheduler(type = "step",
+                        step_size = 30,
+                        gamma = 0.15,
+                        verbose = TRUE)
 
 # Build and train  Network
-nn.fit<- dnn(Sepal.Length~., data = datasets::iris, optimizer = opt)
+nn.fit<- dnn(Sepal.Length~., data = datasets::iris, lr_scheduler = scheduler)
 
 }
 }

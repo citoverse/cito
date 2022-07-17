@@ -82,6 +82,7 @@ dnn <- function(formula,
   checkmate::qassert(dropout, "R+[0,)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(plot,"B1")
+  checkmate::qassert(verbose,"B1")
   checkmate::qassert(early_stopping,c("R1[1,)","B1"))
   checkmate::qassert(device, "S+[3,)")
 
