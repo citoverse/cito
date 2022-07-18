@@ -14,7 +14,7 @@
 \value{
 prediction matrix
 
-No return value, called for printing
+original object x gets returned
 }
 \description{
 Print class citodnn

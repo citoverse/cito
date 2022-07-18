@@ -209,12 +209,13 @@ dnn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
-#' @return No return value, called for printing
+#' @return original object x gets returned
 #' @export
 print.citodnn <- function(x,...){
   x <- check_model(x)
   print(x$call)
   print(x$net)
+  return(invisible(x))
 }
 
 #' Print class citodnn
@@ -265,13 +266,13 @@ summary.citodnn <- function(object, n_permute = 256, ...){
 #'
 #' @param x a summary object created by \code{\link{summary.citodnn}}
 #' @param ... additional arguments
-#' @return No return value, called for printing
+#' @return original object x gets returned
 #' @export
 print.summary.citodnn <- function(x, ... ){
-cat("Deep Neural Network Model summary\n")
-cat("Feature Importance:\n")
-print(x$importance)
-
+  cat("Deep Neural Network Model summary\n")
+  cat("Feature Importance:\n")
+  print(x$importance)
+  return(invisible(x))
 }
 
 

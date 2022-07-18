@@ -12,7 +12,7 @@
 \item{...}{additional arguments}
 }
 \value{
-No return value, called for printing
+original object x gets returned
 }
 \description{
 Print method for class summary.citodnn
