@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{a model created by \code{\link{dnn}}}
 
-\item{newdata}{newdata for predictions}
+\item{newdata}{new data for predictions}
 
 \item{type}{link or response}
 

@@ -27,7 +27,7 @@ visualize.training <- function(losses,epoch,new = FALSE){
 #' Visualize training of Neural Network
 #'
 #' After training a model with cito, this function helps to analyze the training process and decide on best performing model.
-#' Creates a "plotly' figure which allows to zoom in and out on training graph
+#' Creates a 'plotly' figure which allows to zoom in and out on training graph
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @return a 'plotly' figure

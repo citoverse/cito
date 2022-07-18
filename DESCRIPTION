@@ -34,3 +34,5 @@ Suggests:
     igraph,
     ggplot2
 VignetteBuilder: knitr
+BugReports: https://github.com/citoverse/cito/issues
+

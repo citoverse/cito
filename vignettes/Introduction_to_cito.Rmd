@@ -22,7 +22,7 @@ knitr::opts_chunk$set(
 ```
 
 ## Abstract
-Cito allows you to build and train Neural Networks with the standard R syntax. The whole process of generating and training a deep neural network can be done with command. Afterwards all generic R methods can be used on the model, which makes comparisons way easier. It is based on the torch machine learning framework which is natively available for R. Therefore, no Python installation or API is needed for this package. 
+'cito' allows you to build and train Neural Networks with the standard R syntax. The whole process of generating and training a deep neural network can be done with command. Afterwards all generic R methods can be used on the model, which makes comparisons way easier. It is based on the 'torch' machine learning framework which for R. Since it is native to R, no Python installation or API is needed for this package. 
 
 ## Setup 
 ### Installing torch 
@@ -92,7 +92,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,
 
 
 ### Adding a validation set to the training process
-In order to see where your model might start to overfit the addition of a validation set can be useful. In dnn() you can put activation = 0.x and the defined percentage will be not used for training and only for validation after each epoch. 
+In order to see where your model might start overfitting the addition of a validation set can be useful. In dnn() you can put activation = 0.x and the defined percentage will be not used for training and only for validation after each epoch. 
 
 ```{r validation, results = "hide", eval = FALSE, out.lines=3, fig.show='hide'}
 #20% of data set is used as validation set
@@ -181,17 +181,20 @@ Feature Importance:
 
 ## Training parameter for the Neural Network 
 Training a neural network can be an art of itself. Fitting a neural network usually takes some trial and error. 
+
 ### Regularization 
 Neural Networks tend to overfit to your dataset. Therefore it is best to use some kind of regularization. In dnn() you can use elastic net regularization and dropout layers.
 
 #### L1/L2 Regularization
 The L1/L2 loss is controlled by alpha and lambda, where the loss is simply added to the general loss of the network. 
-\eqn{
-L1/L2 loss = \lambda * \left[ (1 - \alpha) * |weights| + \alpha ||weights||^2\right
-}
+
+$$
+L1/L2 loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+$$
+
 The optimizer will try to also minimize the equation above which can lead to a nice generalization and avoids over fitting. 
 
-If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since the input layer also has weights that are relevant. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no penalty should be added on a specific layer.
+If a single alpha value is provided each layer w    ill get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since the input layer also has weights that are relevant. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no penalty should be added on a specific layer.
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
 #elastic net penalty in all layers: 
@@ -202,7 +205,6 @@ nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10),
 ``` 
 
 #### Dropout Regularization 
-
 Dropouts are another way to regularize your model. During training in every epoch a perceptrons has a chance to get left out. You can control this percentage with the dropout parameter.
 
 
@@ -234,7 +236,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
 
 
 ### Optimizer 
-Optimizer are responsible for calculating the direction when updating weights in the training process. The optimizer always tries to minimise the loss function. As standard the adam optimizer will be used. 
+Optimizer are responsible for calculating the direction when updating weights in the training process. The optimizer always tries to minimize the loss function. As standard the adam optimizer will be used. 
 
 
 However, you can customize your optimizer with config_optimizer() and use other types of optimizer and adjust the hyperparameter of you optimizer. 

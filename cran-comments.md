@@ -1,5 +1,5 @@
 # Version 1.0.0
-## cito submission 2022/07/18
+## cito submission 2 2022/07/18
 Hello, 
 
 Thanks for the feedback, I adressed all your points below.
@@ -40,24 +40,14 @@ Done.
 
 ## R CMD check results
    Successfull R CMD checks under
-
 * Locally: Windows 11 (R x86_64 version)
 * Github actions:
   - MacOS -latest R-release
   - Ubuntu 20.04 R-release, R-oldrelease, and R-development
-  - Windows-latest R-release
+  
 * Rhub:
   - Windows Server 2022, R-devel, 64 bit
 * Win-builder R-release, R-development, and R-oldrelease
-
-Github Windows-latest R-release fails. 
-
-> Error: Error: <callr_remote_error: Failed to build source package 'igraph'>
-> in process 4736 
-> -->
-> Failed to build source package 'igraph', stdout + stderr:
-
-This seems to be a temporary problem with the windows and I expect it to be gone in a couple of days.
 
 
 1 Note for all Win-builder logs: 
@@ -68,5 +58,14 @@ This seems to be a temporary problem with the windows and I expect it to be gone
 
 This is expected
 
+The devtools spell_check() gives out  some words, however all of them have been checked and are indeed correct.
+
+The Github Windows-latest R-release fails with: 
+> Error: Error: <callr_remote_error: Failed to build source package 'igraph'>  
+> in process 4736   
+> -->  
+> Failed to build source package 'igraph', stdout + stderr:  
+
+This seems to be a temporary external problem and I expect it to be gone in a couple of days. 
 
 
