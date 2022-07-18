@@ -21,59 +21,24 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
-
-set.seed(123)
-
-# save the built-in output hook
-hook_output <- knitr::knit_hooks$get("output")
-
-# set a new output hook to truncate text output
-
-knitr::knit_hooks$set(output = function(x, options) {
-  if (!is.null(n <- options$out.lines)) {
-    
-    x = gsub("\n$", "\n\n", x)
-    x[x == ""] = "\n"
-    unlist(strsplit(x, "\n"))
-    
-    x <- unlist(strsplit(x, '\n'))
-    if (length(x) > (n+n+1)) {
-      # truncate the output
-      x <- c(head(x, n), " \n .... \n ",tail(x,n))
-    }
-    x <- paste(x, sep = " \n ")
-  }
-  hook_output(x, options)
-})
-
-if(!require(torch)) install.packages("torch")
-torch::install_torch()
-
-```
-
 ## Abstract
 Cito allows you to build and train Neural Networks with the standard R syntax. The whole process of generating and training a deep neural network can be done with command. Afterwards all generic R methods can be used on the model, which makes comparisons way easier. It is based on the torch machine learning framework which is natively available for R. Therefore, no Python installation or API is needed for this package. 
 
 ## Setup 
 ### Installing torch 
-Before using cito you have to make sure that the current version of torch is installed running. 
+Before using cito for the first time, make sure that the current version of 'torch' is installed running. 
 ```{r setuptorch, eval = FALSE}
-
 if(!require(torch)) install.packages("torch")
 library(torch)
 if(!torch_is_installed()) install_torch()
 
-devtools::install_github("citoverse/cito")
 library (cito)
 
 ``` 
 ### Data
-As an example we will work with the irirs dataset. Which consists of three species and four descriptive variables the flower.  
+As an example we will work with the irirs dataset. Which consists of three species and four descriptive variables.  
 
 ```{r data}
-
 data <- datasets::iris
 head(data)
 
@@ -85,17 +50,27 @@ data <- data.frame(scale(data[,-5]),Species = data[,5])
 cito allows you to use the formula syntax to build multi layer perceptron networks. Here we build a network with 4 Hidden layers, each with 10 perceptrons. You do not need to adjust factors or include interactions as data columns manually this can be done through the formula syntax.
 
 While this training is done on the cpu, all models can be trained on the gpu with device = "cuda".
-```{r simp_models, fig.show='hide',out.lines = 3}
+```{r simp_models, fig.show='hide',out.lines = 3,eval= FALSE}
 library(cito)
 nn.fit <- dnn(Sepal.Length~. , data = data, hidden = c(10,10,10,10), epochs = 12, device = "cpu")
 
 
 ```
+```{r print1, eval = TRUE,echo = FALSE, results = TRUE}
+cat ("Loss at epoch 1: 0.906718, lr: 0.01000 
+Loss at epoch 2: 0.863654, lr: 0.01000 
+Loss at epoch 3: 0.843066, lr: 0.01000 
+Loss at epoch 4: 0.825574, lr: 0.01000 
+
+....  
+
+Loss at epoch 11: 0.408130, lr: 0.01000 
+Loss at epoch 12: 0.403822, lr: 0.01000 ")
+```
 
 You can plot the networks structure to give you an overview of the created object. Be aware that this may take some time for really big networks.  
 ```{r plotnn, eval = FALSE}
 plot(nn.fit)
-
 ```
 ![Structure plot of the generate network](structure_nn.png){ width=70%}
 
@@ -112,8 +87,6 @@ nn.fit <- dnn(Sepal.Length~., data = data, hidden = c(10,10,10,10), activation= 
 #layer specific activation functions: 
 nn.fit <- dnn(Sepal.Length~., data = data, 
               hidden = c(10,10,10,10), activation= c("relu","selu","tanh","sigmoid"))
-
-
 ``` 
 
 
@@ -121,60 +94,101 @@ nn.fit <- dnn(Sepal.Length~., data = data,
 ### Adding a validation set to the training process
 In order to see where your model might start to overfit the addition of a validation set can be useful. In dnn() you can put activation = 0.x and the defined percentage will be not used for training and only for validation after each epoch. 
 
-```{r validation, results = "hide", eval = TRUE, out.lines=3, fig.show='hide'}
-#30% of data set is used as validation set
-nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32, hidden = c(10,10,10,10), validation = 0.3)
-
-
+```{r validation, results = "hide", eval = FALSE, out.lines=3, fig.show='hide'}
+#20% of data set is used as validation set
+nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
+              loss= "mae", hidden = c(10,10,10,10), validation = 0.2)
 ```
+```{r print 4, echo= FALSE, results = TRUE}
+cat("Loss at epoch 1: training: 5.868, validation: 5.621, lr: 0.01000
+Loss at epoch 2: training: 5.464, validation: 4.970, lr: 0.01000
+Loss at epoch 3: training: 4.471, validation: 3.430, lr: 0.01000
+Loss at epoch 4: training: 2.220, validation: 0.665, lr: 0.01000
+
+... 
+
+
+Loss at epoch 31: training: 0.267, validation: 0.277, lr: 0.01000
+Loss at epoch 32: training: 0.265, validation: 0.275, lr: 0.01000")
+```
+
 ![Training loss](trainingsloss.png){width=70%}
 
-
+The validation loss allows us to choose the model which has the minimum validation loss as out optimal one. By setting nn.fit$use_model_epoch to the model with the least validation loss, from now on always this model will be used for all following functions 
+```{r epoch1,eval = FALSE}
+nn.fit$use_model_epoch <- which.min(nn.fit$losses$valid_l)
+```
 
 ### Interpreting model output
 The standard S3 functions can be used to interpret the model: 
 
 
-```{r interpret}
-#prints the model structure
-print(nn.fit) 
-
+```{r interpret,eval=FALSE}
 #utilize model on new data 
 predict(nn.fit,data[1:3,])
+```
+```{r print5, eval = TRUE, echo = FALSE, results = TRUE}
+cat("         [,1]
+[1,] 5.046695
+[2,] 4.694821
+[3,] 4.788142
+")
+
 
 ```
 
-
-```{r coef}
+```{r coef, eval = FALSE}
 #returns weights of neural network
 coef(nn.fit)
+```
+```{r print2, eval = TRUE, echo = FALSE, results = TRUE}
+cat("[[1]] 
+[[1]]$`0.weight` 
+            [,1]        [,2]        [,3]        [,4]        [,5]        [,6] 
+[1,]  0.21469544  0.17144544  0.06233330  0.05737647 -0.56643492  0.30539653 
+[2,]  0.02309913  0.32601142 -0.04106455 -0.05251846  0.06156364 -0.16903549 
+[3,]  0.02779424 -0.39305094  0.22446594 -0.11260942  0.40277928 -0.14661779 
+[4,] -0.17715086 -0.34669805  0.41711944 -0.07970788  0.28087401 -0.32001352 
+[5,]  0.10428729  0.46002910  0.12490098 -0.25849682 -0.49987957 -0.19863304 
+[6,]  0.08653354  0.02208819 -0.18835779 -0.18991815 -0.19675359 -0.37495106 
+[7,]  0.28858119  0.02029459 -0.40138969 -0.39148667 -0.29556298  0.17978610 
+[8,]  0.34569272 -0.04052169  0.76198137  0.31320053 -0.06051779  0.34071702 
+[9,]  0.34511277 -0.42506409 -0.50092584 -0.22993636  0.05683114  0.38136607 
+[10,] -0.13597916  0.25648212 -0.08427665 -0.46611786  0.14236088  0.04671739 
 
+... 
+ 
+[[1]]$`8.bias` 
+[1] 0.2862495 ")
 ```
 
 Feature Importance based on [Fisher, Rudin, and Dominici (2018)](https://arxiv.org/abs/1801.01489)
-```{r summary}
+```{r summary,eval = FALSE}
 # Calculate and return feature importance
 summary(nn.fit)
-
 ```
-
-
-```{r setup2, include = FALSE}
-knitr::knit_hooks$set(output = hook_output)
+```{r print3, eval = TRUE,echo = FALSE, results = TRUE}
+cat( "Deep Neural Network Model summary
+Feature Importance:
+     variable importance
+1  Sepal.Width   3.373757
+2 Petal.Length   3.090394
+3  Petal.Width   2.992742
+4      Species   3.278064")
 ```
 
 
 
 ## Training parameter for the Neural Network 
-Training a neural network can be an art of itself. Fitting a neural network can take some trial and error. All commonly used approaches to 
+Training a neural network can be an art of itself. Fitting a neural network usually takes some trial and error. 
 ### Regularization 
 Neural Networks tend to overfit to your dataset. Therefore it is best to use some kind of regularization. In dnn() you can use elastic net regularization and dropout layers.
 
 #### L1/L2 Regularization
 The L1/L2 loss is controlled by alpha and lambda, where the loss is simply added to the general loss of the network. 
-$$
+\eqn{
 L1/L2 loss = \lambda * \left[ (1 - \alpha) * |weights| + \alpha ||weights||^2\right
-$$ 
+}
 The optimizer will try to also minimize the equation above which can lead to a nice generalization and avoids over fitting. 
 
 If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, since the input layer also has weights that are relevant. Since FALSE gets converted to 0 in an numeric vector you have to enter NA if no penalty should be added on a specific layer.
@@ -185,8 +199,6 @@ nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5, lamb
 #L1 generalization in the first layer no penalty on the other layers: 
 nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), 
               alpha = c(0,NA,NA,NA,NA), lambda = 0.01)
-
-
 ``` 
 
 #### Dropout Regularization 
@@ -200,8 +212,6 @@ nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), dropout = 0.35)
 #dropout of 35% only on last 2 layers: 
 nn.fit <- dnn(Species~., data = data, 
               hidden = c(10,10,10,10), dropout = c(0, 0, 0.35, 0.35))
-
-
 ``` 
 
 ### Learning rate
@@ -220,8 +230,6 @@ scheduler <- config_lr_scheduler(type = "step",
                                  0.5) 
 
 nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
-
-
 ```
 
 
@@ -241,8 +249,6 @@ opt <- config_optimizer(
   eps = 1.5e-08)
 
 nn.fit <- dnn(Species~., data = data, optimizer = opt, lr=0.002)
-
-
 ```
 
 ### Loss functions 
@@ -254,7 +260,6 @@ nn.fit <- dnn(Sepal.Length~. data = data, loss = "rmse")
 
 # Fit to a normal distribution, you can also define the parameters of the distribution
 nn.fit <- dnn(Sepal.Length~. data = data, loss = stats::gaussian()) 
-
 ```
 
 
@@ -262,59 +267,31 @@ nn.fit <- dnn(Sepal.Length~. data = data, loss = stats::gaussian())
 Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation > 0. 
 ```{r early_stopping,eval = FALSE}
 # Stops training if validation loss at current epoch is bigger than that 15 epochs earlier  
-nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000, validation = 0.2, early_stopping = 15)
-
-
+nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000, 
+              validation = 0.2, early_stopping = 15)
 ```
 
 
 
 ## Continue training process
 In case you want to continue the training process of an existing model you need to use continue_training(). This function allows you to continue the training process where dnn() stopped. 
-```{r setup3, include=FALSE}
-
-# save the built-in output hook
-hook_output <- knitr::knit_hooks$get("output")
-
-# set a new output hook to truncate text output
-
-knitr::knit_hooks$set(output = function(x, options) {
-  if (!is.null(n <- options$out.lines)) {
-    
-    x = gsub("\n$", "\n\n", x)
-    x[x == ""] = "\n"
-    unlist(strsplit(x, "\n"))
-    
-    x <- unlist(strsplit(x, '\n'))
-    if (length(x) > (n+n+1)) {
-      # truncate the output
-      x <- c(head(x, n), " \n .... \n ",tail(x,n))
-    }
-    x <- paste(x, sep = " \n ")
-  }
-  hook_output(x, options)
-})
-```
 
 ```{r continue_training,eval = FALSE, fig.show='hide',out.lines = 3}
-# simple example, simply adding another 10 epochs to the training process   
-nn.fit <- continue_training(nn.fit, epochs = 10)
-
+# simple example, simply adding another 12 epochs to the training process   
+nn.fit <- continue_training(nn.fit, epochs = 12)
 ```
 It also allows you to change any training parameters, for example the learning rate. Additional, you can define which epoch the training should continue from. So you can analyze the training process with analyze_training() and afterwards pick an epoch from which on the training should be continued from with other training parameters. 
 
 ```{r continue_training2,eval = FALSE, fig.show='hide', out.lines = 3}
 
-# picking a specific epoch, from which on the net should be trained 
+# picking the model with the smalles validation loss 
 # with changed parameters, in this case a smaller learning rate and a smaller batchsize
-nn.fit <- continue_training(nn.fit, continue_from = 10, epochs = 10, 
+nn.fit <- continue_training(nn.fit, 
+                            continue_from = which.min(nn.fit$losses$valid_l), 
+                            epochs = 32, 
                             changed_params = list(lr = 0.001, batchsize = 16))
-
 ```
 
-```{r setup4,include= FALSE}
-knitr::knit_hooks$set(output = hook_output)
-```
 
 
 
