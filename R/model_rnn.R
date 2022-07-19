@@ -1,18 +1,15 @@
-
-get_data_loader_rnn<- function(X, Y, lag, batch_size = 25L, shuffle = TRUE, x_dtype, y_dtype){
+get_data_loader_rnn<- function(X, Y, lag, batch_size, shuffle = TRUE, x_dtype, y_dtype){
   torch.dataset <- torch::dataset(
     name = "dataset",
-    initialize <- function(X, Y, lag) {
+    initialize = function(X, Y, lag) {
       self$lag <- lag
-      self$starting_index <-c (1:nrows(X))
-      self$Y <- torch::torch_tensor(X)
-      self$Y <- torch::torch_tensor(Y[(lag+1):nrow(Y),])
+      self$X <- torch::torch_tensor(X[c(1:nrow(X)),,drop = FALSE])
+      self$Y <- torch::torch_tensor(Y[c((lag+1):nrow(Y)),,drop = FALSE])
     },
 
     .getitem = function(index) {
-
       list(
-        x = self$X[index+self$lag,],
+        x = self$X[index:(self$lag+index),],
         y = self$Y[index,]
       )
 
@@ -22,19 +19,19 @@ get_data_loader_rnn<- function(X, Y, lag, batch_size = 25L, shuffle = TRUE, x_dt
     }
   )
 
-  ds <- torch.dataset(X,Y,lag)
+  ds <- torch.dataset(X = X, Y = Y, lag = lag)
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
 
   return(dl)
-
 }
 
 
-build_rnn <- function(type, num_layers, input_size,  hidden_size, bias, dropout){
+build_rnn <- function(type, num_layers, input_size, output_size,  hidden_size, bias, dropout){
 
   rnn_net <- torch::nn_module(
-
-    initialize = function(type, input_size, hidden_size, num_layers = num_layers, dropout = dropout, bias = bias) {
+    initialize = function(type= type, input_size = input_size,
+                          output_size = output_size, hidden_size = hidden_size,
+                          num_layers = num_layers, dropout = dropout, bias = bias) {
 
       self$type <- type
       self$num_layers <- num_layers
@@ -59,7 +56,7 @@ build_rnn <- function(type, num_layers, input_size,  hidden_size, bias, dropout)
         )
       }
 
-      self$out <- torch::nn_linear(hidden_size, 1)
+      self$out <- torch::nn_linear(hidden_size, output_size, bias = bias)
 
     },
 
@@ -72,7 +69,8 @@ build_rnn <- function(type, num_layers, input_size,  hidden_size, bias, dropout)
 
   )
 
-  net<- rnn_net(type = type, input_size = input_size, hidden_size = hidden_size,
+  net<- rnn_net(type= type, input_size = input_size,
+                output_size = output_size, hidden_size = hidden_size,
                 num_layers = num_layers, dropout = dropout, bias = bias)
   return(net)
 }
