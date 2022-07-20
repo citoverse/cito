@@ -41,6 +41,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if(generalize){
         loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
                                  loss = loss, lambda = model$training_properties$lambda,
+                                 bias_exception = inherits(model,"citodnn"),
                                  intercept = model$model_properties$bias[1])
 
       }
@@ -59,9 +60,12 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       coro::loop(for (b in valid_dl) {
         output <- model$net(b[[1]]$to(device = device))
         loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
-        loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
-                                 loss = loss, lambda = model$training_properties$lambda,
-                                 intercept= model$model_properties$bias[1])
+        if(generalize){
+          loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
+                                   loss = loss, lambda = model$training_properties$lambda,
+                                   bias_exception = inherits(model,"citodnn"),
+                                   intercept= model$model_properties$bias[1])
+        }
         valid_l <- c(valid_l, loss$item())
         model$losses$valid_l[epoch] <- mean(valid_l)
       })
@@ -97,11 +101,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
 
 
-generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept = TRUE){
+generalize_alpha<- function (parameters, alpha, loss, lambda, bias_exception, intercept){
 
   weight_layers<-  grepl("weight",names(parameters),fixed = TRUE)
   counter <- 1
-  if(intercept){
+  if(intercept & bias_exception){
     l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]])))
     l1 <- l1$mul(1-alpha[counter])
     l2 <- torch::torch_norm(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
@@ -110,6 +114,7 @@ generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept = TRUE)
     regularization <- regularization$mul(lambda)
     loss <-  torch::torch_add(loss,regularization)
     counter <- counter + 1
+
   }
 
   for (i in c(counter:length(parameters))){
