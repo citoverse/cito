@@ -1,3 +1,4 @@
+source("utils.R")
 
 wrap_dnn = function(pars) {
   testthat::expect_error({model = do.call(dnn, pars)}, NA)
@@ -32,6 +33,10 @@ scenarios =
 )
 
 testthat::test_that("DNN architecture", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
   }
@@ -47,6 +52,10 @@ scenarios =
     list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L)
   )
 testthat::test_that("DNN softmax/binomial", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
   }
@@ -64,6 +73,10 @@ scenarios =
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L)
   )
 testthat::test_that("DNN rnorm/poisson", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
   }
@@ -71,6 +84,10 @@ testthat::test_that("DNN rnorm/poisson", {
 
 
 testthat::test_that("DNN save and reload", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
   testthat::skip_on_cran()
   set.seed(222)
   validation_set<- sample(c(1:nrow(datasets::iris)),25)

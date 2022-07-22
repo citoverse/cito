@@ -132,7 +132,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 get_optimizer <- function(optimizer, lr, parameters){
 
   if(!inherits(optimizer, "cito_optim")){
-    optimizer <- match.arg(tolower(optimizer), choices = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"))
+    optimizer <- match.arg(tolower(optimizer), choices = c("adam","adadelta", "adagrad", "rmsprop", "rprop", "sgd"))
 
     optim <- switch(optimizer,
                     "adam"= torch::optim_adam(params= parameters, lr=lr),

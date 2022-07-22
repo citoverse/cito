@@ -17,7 +17,7 @@ dnn(
   lambda = 0,
   alpha = 0.5,
   dropout = 0,
-  optimizer = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "lbfgs"),
+  optimizer = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"),
   lr = 0.01,
   batchsize = 32L,
   shuffle = FALSE,

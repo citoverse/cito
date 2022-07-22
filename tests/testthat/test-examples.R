@@ -1,6 +1,10 @@
 library(cito)
+source("utils.R")
+
 testthat::test_that("cito examples", {
   testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
 
   path = system.file("examples", package = "cito")
   to_do = list.files(path, full.names = TRUE)

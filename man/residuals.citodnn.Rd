@@ -2,7 +2,7 @@
 % Please edit documentation in R/dnn.R
 \name{residuals.citodnn}
 \alias{residuals.citodnn}
-\title{Print class citodnn}
+\title{Extract Model Residuals}
 \usage{
 \method{residuals}{citodnn}(object, ...)
 }
@@ -15,5 +15,5 @@
 residuals of training set
 }
 \description{
-Print class citodnn
+Returns residuals of training set.
 }
