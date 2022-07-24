@@ -34,6 +34,7 @@ different learning rate scheduler need different variables, these functions will
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 # create learning rate scheduler object
@@ -45,5 +46,6 @@ scheduler <- config_lr_scheduler(type = "step",
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris, lr_scheduler = scheduler)
 
+}
 }
 }

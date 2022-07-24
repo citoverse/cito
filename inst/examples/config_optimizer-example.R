@@ -1,4 +1,5 @@
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 # create optimizer object
@@ -10,4 +11,5 @@ opt <- config_optimizer(type = "adagrad",
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris, optimizer = opt)
 
+}
 }

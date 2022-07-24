@@ -35,6 +35,9 @@
 #' Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 #' As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 #'
+#' Training on graphic cards:
+#' If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have xactly these versions installed, since it does not wor kwith other version.
+#' For more information see [mlverse: 'torch'](https://torch.mlverse.org/docs/articles/installation.html)
 #'
 #' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:

@@ -41,12 +41,14 @@ Unlike PDP the ICE curves are computed with a value grid instead of utilizing ev
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris)
 
 PDP(nn.fit, variable = "Petal.Length")
+}
 }
 }
 \seealso{

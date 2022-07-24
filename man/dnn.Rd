@@ -96,9 +96,14 @@ The value of each neuron is calculated with:
 
 Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
+
+Training on graphic cards:
+If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have xactly these versions installed, since it does not wor kwith other version.
+For more information see \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch'}
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -127,7 +132,7 @@ PDP(nn.fit, variable = "Petal.Length")
 # Accumulated local effect plots
 ALE(nn.fit, variable = "Petal.Length")
 
-
+}
 }
 }
 \seealso{

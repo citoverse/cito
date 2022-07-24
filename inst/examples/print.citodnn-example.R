@@ -1,4 +1,5 @@
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -9,4 +10,5 @@ nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
 
 # Sturcture of Neural Network
 print(nn.fit)
+}
 }

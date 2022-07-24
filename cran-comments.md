@@ -1,4 +1,14 @@
 # Version 1.0.0
+## cito submission 3  2022/07/22
+
+There was an issue with the tests, which Brian Ripley kindly found out and took of CRAN. 
+This issue is resolved and the tests as well as examples have been reworked.
+
+Sorry for the inconvenience 
+
+Cheers,
+Christian
+
 ## cito submission 2 2022/07/18
 Hello, 
 

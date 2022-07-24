@@ -23,6 +23,7 @@ Predict from a fitted dnn model
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -37,5 +38,6 @@ predictions <- predict(nn.fit, iris[validation_set,])
 plot(iris[validation_set,]$Sepal.Length,predictions)
 # MAE
 mean(abs(predictions-iris[validation_set,]$Sepal.Length))
+}
 }
 }

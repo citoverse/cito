@@ -1,4 +1,5 @@
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 set.seed(222)
 validation_set<- sample(c(1:nrow(datasets::iris)),25)
@@ -17,4 +18,5 @@ predictions <- predict(nn.fit, iris[validation_set,])
 
 # Scatterplot
 plot(iris[validation_set,]$Sepal.Length,predictions)
+}
 }

@@ -19,7 +19,7 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.0
 Depends:
-    R (>= 3.5.0)
+    R (>= 3.5)
 Imports:
     coro,
     checkmate,
@@ -32,6 +32,7 @@ Suggests:
     plotly,
     ggraph,
     igraph,
+    stats,
     ggplot2
 VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues

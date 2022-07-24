@@ -1,4 +1,5 @@
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -12,4 +13,5 @@ nn.fit<- continue_training(nn.fit,epochs = 32)
 
 # Use model on validation set
 predictions <- predict(nn.fit, iris[validation_set,])
+}
 }

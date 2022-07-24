@@ -43,12 +43,14 @@ represents the difference in model prediction when the value of feature j is exc
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris)
 
 ALE(nn.fit, variable = "Petal.Length")
+}
 }
 }
 \seealso{

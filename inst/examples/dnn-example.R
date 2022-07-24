@@ -1,4 +1,5 @@
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -27,5 +28,5 @@ PDP(nn.fit, variable = "Petal.Length")
 # Accumulated local effect plots
 ALE(nn.fit, variable = "Petal.Length")
 
-
+}
 }

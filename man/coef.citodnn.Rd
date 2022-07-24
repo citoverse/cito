@@ -19,6 +19,7 @@ Returns list of parameters the neural network model currently has in use
 }
 \examples{
 \donttest{
+if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
@@ -32,5 +33,6 @@ print(nn.fit)
 
 #analyze weights of Neural Network
 coef(nn.fit)
+}
 }
 }
