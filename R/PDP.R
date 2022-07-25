@@ -27,7 +27,6 @@
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R
-#'
 #' @export
 
 PDP <- function(model,
