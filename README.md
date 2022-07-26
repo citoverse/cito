@@ -7,22 +7,26 @@
 'cito' aims at helping you build and train Neural Networks with the standard R syntax. It allows the whole model creation process and training to be done with one line of code. Furthermore, all generic R methods such as print or  plot can be used on the created object. It is based on the 'torch' machine learning framework which is  available for R. Since it is native to R, no Python installation or any further API is needed for this package. 
 
 ## Installation
-Before installing cito make sure torch is installed. 
+Before installing cito make sure torch is installed. See the code chunk below if you are unsure on how to check this 
 
 
 ``` torch 
-install.packages('torch')
+#check package 
+if(!require('torch',quietly = T)) install.packages('torch'
+library('torch') 
 
+#install torch
+if(!torch_is_installed()) install_torch()
 ```
 The development version from [GitHub](https://github.com/) is available with:
 
 ``` r
-# install.packages('devtools')
+if(!require('devtools', quietly= TRUE)) install.packages('devtools')
 devtools::install_github('citoverse/cito')
 ```
 
 ## Example 
-Once installed, the main function dnn() can be used. See the example below. A more in depth example with more explanation can be found in the vignette.
+Once installed, the main function dnn() can be used. See the example below. A more in depth explanation can be found in the vignette.
 
 ``` r
 library(cito)
