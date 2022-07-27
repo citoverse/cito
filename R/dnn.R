@@ -252,11 +252,11 @@ residuals.citodnn <- function(object,...){
 #' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
-#' @param n_permute number of permutations performed, higher equals more accurate importance results
+#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
 #' @param ... additional arguments
 #' @return summary.glm returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnn <- function(object, n_permute = 256, ...){
+summary.citodnn <- function(object, n_permute = NULL, ...){
   object <- check_model(object)
   out <- list()
   class(out) <- "summary.citodnn"

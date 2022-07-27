@@ -4,12 +4,12 @@
 \alias{summary.citodnn}
 \title{Summarize Neural Network of class citodnn}
 \usage{
-\method{summary}{citodnn}(object, n_permute = 256, ...)
+\method{summary}{citodnn}(object, n_permute = NULL, ...)
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}
 
-\item{n_permute}{number of permutations performed, higher equals more accurate importance results}
+\item{n_permute}{number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set}
 
 \item{...}{additional arguments}
 }
