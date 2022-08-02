@@ -15,7 +15,7 @@ Before installing cito make sure torch is installed. See the code chunk below if
 
 ``` r
 #check package 
-if(!require('torch',quietly = T)) install.packages('torch'
+if(!require('torch',quietly = TRUE)) install.packages('torch')
 library('torch') 
 
 #install torch
@@ -24,7 +24,7 @@ if(!torch_is_installed()) install_torch()
 The development version from [GitHub](https://github.com/) is available with:
 
 ``` r
-if(!require('devtools', quietly= TRUE)) install.packages('devtools')
+if(!require('devtools', quietly = TRUE)) install.packages('devtools')
 devtools::install_github('citoverse/cito')
 ```
 
