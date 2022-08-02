@@ -5,7 +5,7 @@
 \title{Creation of customized learning rate scheduler objects}
 \usage{
 config_lr_scheduler(
-  type = c("lambda", "multiplicative", "one_cycle", "step"),
+  type = c("lambda", "multiplicative", "reduce_on_plateau", "one_cycle", "step"),
   verbose = FALSE,
   ...
 )
@@ -28,6 +28,7 @@ different learning rate scheduler need different variables, these functions will
 \itemize{
 \item lambda: \code{\link[torch]{lr_lambda}}
 \item multiplicative: \code{\link[torch]{lr_multiplicative}}
+\item reduce_on_plateau: \code{\link[torch]{lr_reduce_on_plateau}}
 \item one_cycle: \code{\link[torch]{lr_one_cycle}}
 \item step: \code{\link[torch]{lr_step}}
 }

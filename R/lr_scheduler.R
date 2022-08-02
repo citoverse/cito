@@ -12,6 +12,7 @@
 #' different learning rate scheduler need different variables, these functions will tell you which variables can be set:
 #' - lambda: \code{\link[torch]{lr_lambda}}
 #' - multiplicative: \code{\link[torch]{lr_multiplicative}}
+#' - reduce_on_plateau: \code{\link[torch]{lr_reduce_on_plateau}}
 #' - one_cycle: \code{\link[torch]{lr_one_cycle}}
 #' - step: \code{\link[torch]{lr_step}}
 #'
@@ -20,11 +21,11 @@
 #'
 #' @export
 
-config_lr_scheduler <- function(type = c("lambda", "multiplicative", "one_cycle", "step"),
+config_lr_scheduler <- function(type = c("lambda", "multiplicative", "reduce_on_plateau", "one_cycle", "step"),
                                 verbose = FALSE, ...){
 
   checkmate::qassert(verbose,"B1")
-  type <- match.arg(tolower(type), choices =  c("lambda", "multiplicative", "one_cycle", "step"))
+  type <- match.arg(tolower(type), choices =  c("lambda", "multiplicative", "reduce_on_plateau", "one_cycle", "step"))
   out <- list()
   out$lr_scheduler <- type
   class(out) <- "cito_lr_scheduler"
@@ -47,6 +48,29 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "one_cycle"
                                         check_var = "R1", verbose = verbose)
     out$verbose <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_multiplicative),
                                         check_var = "B1", verbose = verbose)
+
+  }else if (out$lr_scheduler == "reduce_on_plateau"){
+    out$mode <- check_call_config(mc = mc, "mode", standards = formals(torch::lr_reduce_on_plateau),
+                                  check_var = F, verbose = verbose)
+    out$factor <- check_call_config(mc = mc, "factor", standards = formals(torch::lr_reduce_on_plateau),
+                                  check_var = "R1", verbose = verbose)
+    out$patience <- check_call_config(mc = mc, "patience", standards = formals(torch::lr_reduce_on_plateau),
+                                                  check_var = "R1", verbose = verbose)
+    out$threshold <-  check_call_config(mc = mc, "threshold", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = "R1", verbose = verbose)
+    out$threshold_mode <- check_call_config(mc = mc, "threshold_mode", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = F, verbose = verbose)
+    out$cooldown <- check_call_config(mc = mc, "cooldown", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = "R1", verbose = verbose)
+    out$min_lr <- check_call_config(mc = mc, "min_lr", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = F, verbose = verbose)
+    out$eps <- check_call_config(mc = mc, "eps", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = "R1", verbose = verbose)
+    out$threshold <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_reduce_on_plateau),
+                                                   check_var = "B1", verbose = verbose)
+
+
+
 
   }else if (out$lr_scheduler == "one_cycle"){
     if("max_lr" %in% names(mc)){
@@ -127,6 +151,7 @@ if(!inherits(lr_scheduler, "cito_lr_scheduler")){
                       "step" = do.call(torch::lr_step,param_lr_scheduler),
                       "one_cycle" = do.call(torch::lr_one_cycle,param_lr_scheduler),
                       "multiplicative" = do.call(torch::lr_multiplicative,param_lr_scheduler),
+                      "reduce_on_plateau" = do.call(torch::lr_reduce_on_plateau,param_lr_scheduler),
                       "lambda" = do.call(torch::lr_lambda,param_lr_scheduler),
                       stop(paste0("lr_scheduler = ",lr_scheduler," is not supported")))
 

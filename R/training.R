@@ -45,9 +45,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
       }
       loss$backward()
+
       optimizer$step()
 
-      if(!is.null(scheduler)) scheduler$step()
+
       train_l <- c(train_l, loss$item())
       model$losses$train_l[epoch] <- mean(train_l)
     })
@@ -66,8 +67,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         model$losses$valid_l[epoch] <- mean(valid_l)
       })
 
-      if(verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
-                  epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
+
+
 
       if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
          model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
@@ -76,6 +77,23 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         break
       }
 
+    }
+
+    if(!is.null(scheduler)){
+      if(model$training_properties$lr_scheduler$lr_scheduler == "reduce_on_plateau"){
+        if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+          scheduler$step(model$losses$valid_l[epoch])
+        }else{
+          scheduler$step(model$losses$train_l[epoch])
+        }
+      }else{
+        scheduler$step()
+      }
+    }
+
+    if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+      if(verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+                              epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
     }else{
       if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
