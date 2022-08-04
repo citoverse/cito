@@ -124,6 +124,8 @@ dnn <- function(formula,
   }
   X <- stats::model.matrix(formula, data)
   Y <- stats::model.response(stats::model.frame(formula, data))
+  ylvls <- NULL
+  if(is.factor(Y)) ylvls <- levels(Y)
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
 
@@ -187,8 +189,14 @@ dnn <- function(formula,
   class(out) <- "citodnn"
   out$net <- net
   out$call <- match.call()
+  out$call$formula <- stats::terms.formula(formula,data = data)
   out$loss <- loss_obj
   out$data <- list(X = X, Y = Y, data = data)
+  out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
+  if(!is.null(ylvls))  {
+    out$data$ylvls <- ylvls
+    out$data$xlvls <- out$data$xlvls[-which(as.character(formula[2]) == names(out$data$xlvls))]
+  }
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$weights <- list()
   out$use_model_epoch <- 0
@@ -298,13 +306,13 @@ coef.citodnn <- function(object,...){
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param newdata new data for predictions
-#' @param type link or response
+#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),...) {
+predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -312,23 +320,34 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response"),.
                      checkmate::checkScalarNA(newdata))
   object <- check_model(object)
 
-  type = match.arg(type)
+  type <- match.arg(type)
 
-  if(type == "link") link = object$loss$invlink
-  else link = function(a) a
+  if(type %in% c("link","class")) {
+    link <- object$loss$invlink
+  }else{
+    link = function(a) a
+  }
 
   ### TO DO: use dataloaders via get_data_loader function
-  if(is.null(newdata)) newdata = torch::torch_tensor(object$data$X)
-  else {
+  if(is.null(newdata)){
+    newdata = torch::torch_tensor(object$data$X)
+  } else {
     if(is.data.frame(newdata)) {
-      newdata <- stats::model.matrix(stats::as.formula(object$call$formula), newdata)
+      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)
     } else {
-      newdata <- stats::model.matrix(stats::as.formula(object$call$formula), data.frame(newdata))
+      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)
     }
     newdata <- torch::torch_tensor(newdata)
   }
 
-  pred <- torch::as_array(link(object$net(newdata,...)))
+  pred <- torch::as_array(link(object$net(newdata)))
+
+  if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
+  if(type == "class") pred <- as.factor(apply(pred,1, function(x) colnames(pred)[which.max(x)]))
+
+  rownames(pred) <- rownames(newdata)
+
+
   return(pred)
 }
 
