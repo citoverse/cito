@@ -101,3 +101,50 @@ testthat::test_that("DNN save and reload", {
   testthat::expect_error(continue_training(nn.fit,epochs = 5), NA)
   file.remove("test_model.RDS")
 })
+
+
+
+testthat::test_that("DNN custom loss and custom parameters", {
+custom_loss = function(true, pred) {
+  logLik = torch::distr_normal(pred,
+                               scale = torch::nnf_relu(scale)+
+                                 0.001)$log_prob(true)
+  return(-logLik$mean())
+}
+
+testthat::expect_error({
+  nn.fit<- dnn(Sepal.Length~.,
+               data = datasets::iris[-validation_set,],
+               loss = custom_loss,
+               epochs = 2L,
+               custom_parameters = list(scale = 1.0)
+  )
+  }, NA)
+nn.fit$parameter$scale
+
+create_cov = function(LU, Diag) {
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+}
+
+custom_loss_MVN = function(true, pred) {
+  Sigma = create_cov(SigmaPar, SigmaDiag)
+  logLik = torch::distr_multivariate_normal(pred,
+                                            covariance_matrix = Sigma)$
+    log_prob(true)
+  return(-logLik$mean())
+}
+
+testthat::expect_error({
+nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
+             data = datasets::iris[-validation_set,],
+             lr = 0.01,
+             epochs = 100L,
+             loss = custom_loss_MVN,
+             custom_parameters =
+               list(SigmaDiag =  rep(1., 3),
+                    SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
+)
+}, NA)
+as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
+                     nn.fit$loss$parameter$SigmaDiag))
+})

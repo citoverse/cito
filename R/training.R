@@ -47,7 +47,6 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       }
 
       loss$backward()
-      if(!is.null(model$loss$parameter)) lapply(model$loss$parameter,function(x) x$backward())
 
       optimizer$step()
 
