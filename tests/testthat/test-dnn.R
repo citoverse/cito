@@ -120,7 +120,6 @@ testthat::expect_error({
                custom_parameters = list(scale = 1.0)
   )
   }, NA)
-nn.fit$parameter$scale
 
 create_cov = function(LU, Diag) {
   return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
@@ -145,6 +144,4 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 }, NA)
-as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
-                     nn.fit$loss$parameter$SigmaDiag))
 })
