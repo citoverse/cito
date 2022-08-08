@@ -98,7 +98,7 @@ get_loss <- function(loss) {
       out$parameter <- torch::torch_tensor(0.1, requires_grad = TRUE)
       out$invlink <- function(a) a
       out$loss <- function(pred, true) {
-        return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
+        return(torch::distr_normal(pred, torch::torch_clamp(torch::torch_tensor(unlist(out$parameter),requires_grad = TRUE), 0.0001, 20))$log_prob(true)$negative())
       }
     } else if(loss$family == "binomial") {
       if(loss$link == "logit") {

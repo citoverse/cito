@@ -30,6 +30,9 @@ check_model <- function(object) {
     }
     object$loaded_model_epoch <-  object$use_model_epoch
   }
+
+  if(!is.null(object$parameter)) object$loss$parameter <- lapply(object$parameter, torch::torch_tensor)
+
   return(object)
 }
 

@@ -3,7 +3,7 @@
 #' @description
 #'
 #' fits a custom deep neural network. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
-#' So far, only Multilayer Perceptrons are possible. To learn more about Deep Learning, see [here](https://www.nature.com/articles/nature14539)
+#' So far, only Multilayer Perceptrons are possible.
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
 #' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function
@@ -22,6 +22,7 @@
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param plot plot training loss
 #' @param verbose print training and validation loss of epochs
+#' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on.
 #' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
 #'
@@ -36,7 +37,7 @@
 #' As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 #'
 #' Training on graphic cards:
-#' If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have xactly these versions installed, since it does not wor kwith other version.
+#' If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have exactly these versions installed, since it does not work with other version.
 #' For more information see [mlverse: 'torch'](https://torch.mlverse.org/docs/articles/installation.html)
 #'
 #' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
@@ -75,6 +76,7 @@ dnn <- function(formula,
                 plot = TRUE,
                 verbose = TRUE,
                 lr_scheduler = NULL,
+                custom_parameters = NULL,
                 device = c("cpu","cuda"),
                 early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
@@ -130,6 +132,16 @@ dnn <- function(formula,
 
 
   loss_obj <- get_loss(loss)
+  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
+  if(!is.null(custom_parameters)){
+    if(!inherits(custom_parameters,"list")){
+      warning("custom_parameters has to be list")
+    }else{
+      custom_parameters<- lapply(custom_parameters,function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
+      loss_obj$parameter <- append(loss_obj$parameter,unlist(custom_parameters))
+
+      }
+  }
 
   y_dim <- ncol(Y)
   x_dtype <- torch::torch_float32()
@@ -205,10 +217,9 @@ dnn <- function(formula,
   out$training_properties <- training_properties
 
 
+
   ### training loop ###
   out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
-
 
 
   return(out)

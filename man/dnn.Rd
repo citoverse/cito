@@ -25,6 +25,7 @@ dnn(
   plot = TRUE,
   verbose = TRUE,
   lr_scheduler = NULL,
+  custom_parameters = NULL,
   device = c("cpu", "cuda"),
   early_stopping = FALSE
 )
@@ -66,6 +67,8 @@ dnn(
 
 \item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
 
+\item{custom_parameters}{List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.}
+
 \item{device}{device on which network should be trained on.}
 
 \item{early_stopping}{if set to integer, training will stop if validation loss worsened between current defined past epoch.}
@@ -86,7 +89,7 @@ The list consists of the following attributes:
 }
 \description{
 fits a custom deep neural network. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
-So far, only Multilayer Perceptrons are possible. To learn more about Deep Learning, see \href{https://www.nature.com/articles/nature14539}{here}
+So far, only Multilayer Perceptrons are possible.
 }
 \details{
 In a Multilayer Perceptron (MLP) network every neuron is connected with all neurons of the previous layer and connected to all neurons of the layer afterwards.
@@ -98,7 +101,7 @@ Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the cu
 As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 
 Training on graphic cards:
-If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have xactly these versions installed, since it does not wor kwith other version.
+If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have exactly these versions installed, since it does not work with other version.
 For more information see \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch'}
 }
 \examples{

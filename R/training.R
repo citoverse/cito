@@ -1,10 +1,9 @@
 train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE){
   model$net$to(device = device)
 
-
   ### Optimizer ###
   optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
-                             parameters = c(model$net$parameters, model$loss$parameter),
+                             parameters = c(model$net$parameters, unlist(model$loss$parameter)),
                              lr = model$training_properties$lr)
 
   ### LR Scheduler ###
@@ -25,6 +24,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     model$training_properties$alpha <- rep(model$training_properties$alpha[1],length(model$model_properties$hidden)+1)}
 
   loss.fkt <- model$loss$loss
+  if(!is.null(model$loss$parameter)) list2env(model$loss$parameter,envir = environment(fun= loss.fkt))
+
   generalize <- FALSE
   if((!all(model$training_properties$alpha == F)|anyNA(model$training_properties$alpha))
      & model$training_properties$lambda>0) generalize <- TRUE
@@ -44,10 +45,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
                                  intercept = model$model_properties$bias[1])
 
       }
+
       loss$backward()
+      if(!is.null(model$loss$parameter)) lapply(model$loss$parameter,function(x) x$backward())
 
       optimizer$step()
-
 
       train_l <- c(train_l, loss$item())
       model$losses$train_l[epoch] <- mean(train_l)
@@ -67,9 +69,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         model$losses$valid_l[epoch] <- mean(valid_l)
       })
 
-
-
-
+      ### early stopping ###
       if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
          model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
         model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
@@ -79,6 +79,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
     }
 
+    ### learning rate scheduler ###
     if(!is.null(scheduler)){
       if(model$training_properties$lr_scheduler$lr_scheduler == "reduce_on_plateau"){
         if(model$training_properties$validation != 0 & !is.null(valid_dl)){
@@ -106,6 +107,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     plot_new <- FALSE
   }
 
+  if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, as.numeric)
   model$use_model_epoch <- epoch
   model$loaded_model_epoch <- epoch
 
