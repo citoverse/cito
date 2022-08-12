@@ -22,12 +22,21 @@ library('torch')
 #install torch
 if(!torch_is_installed()) install_torch()
 ```
+
+A stable version of cito from CRAN can be installed with: 
+
+```r 
+install.packages("cito")
+
+```
+
 The development version from [GitHub](https://github.com/) is available with:
 
 ``` r
 if(!require('devtools', quietly = TRUE)) install.packages('devtools')
 devtools::install_github('citoverse/cito')
 ```
+
 
 ## Example 
 Once installed, the main function dnn() can be used. See the example below. A more in depth explanation can be found in the vignette.
