@@ -50,6 +50,7 @@ ALE <- function(model,
 
   x <- NULL
   y <- NULL
+  reduced_k <- FALSE
   p_ret <- lapply (variable,function(v){
     if(is.numeric(model$data$data[,v])){
 
@@ -86,9 +87,12 @@ ALE <- function(model,
           )
 
           if(any(is.na(df$y))){
-            warning("There are neighborhoods with no observations, amount of neighborhoods gets reduced by one\n")
+            reduced_k <- TRUE
             K <- K - 1
           }else{
+            if(reduced_K){
+              warning(paste0("Number of Neighborhoods reduced to ",K))
+            }
             break
           }
         }
