@@ -356,7 +356,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
   pred <- torch::as_array(link(object$net(newdata)))
 
   if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
-  if(type == "class") pred <- as.factor(apply(pred,1, function(x) colnames(pred)[which.max(x)]))
+  if(type == "class") pred <- as.factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]))
 
   rownames(pred) <- rownames(newdata)
 
