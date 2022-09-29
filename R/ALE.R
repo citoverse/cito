@@ -55,7 +55,7 @@ ALE <- function(model,
     if(is.numeric(data[,v])){
 
       if ( type == "equidistant"){
-        reduced_k <- FALSE
+        reduced_K <- FALSE
         repeat{
           borders <- seq(from = min(data[,v]),
                          to = max(data[,v]),
@@ -88,7 +88,7 @@ ALE <- function(model,
           )
 
           if(any(is.na(df$y))){
-            reduced_k <- TRUE
+            reduced_K <- TRUE
             K <- K - 1
           }else{
             if(reduced_K){
