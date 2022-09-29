@@ -52,12 +52,12 @@ ALE <- function(model,
   y <- NULL
   reduced_k <- FALSE
   p_ret <- lapply (variable,function(v){
-    if(is.numeric(model$data$data[,v])){
+    if(is.numeric(data[,v])){
 
       if ( type == "equidistant"){
         repeat{
-          borders <- seq(from = min(model$data$data[,v]),
-                         to = max(model$data$data[,v]),
+          borders <- seq(from = min(data[,v]),
+                         to = max(data[,v]),
                          length.out = K+1)
 
           df <- data.frame(
@@ -65,11 +65,11 @@ ALE <- function(model,
 
             y = sapply(seq_len(length(borders))[-1], function(i){
 
-              region_indizes <- which(model$data$data[,v]<= borders[i] &
-                                        model$data$data[,v]>= borders[i-1])
+              region_indizes <- which(data[,v]<= borders[i] &
+                                        data[,v]>= borders[i-1])
 
               if(length(region_indizes)>0){
-                perm_data <- model$data$data[region_indizes,]
+                perm_data <- data[region_indizes,]
 
                 perm_data[,v] <- borders[i-1]
                 lower_preds <- stats::predict(model, perm_data)
@@ -107,7 +107,7 @@ ALE <- function(model,
           x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
           y = unlist(lapply(seq_len(length(groups)), function(i){
 
-            perm_data <- model$data$data[groups[[i]],]
+            perm_data <- data[groups[[i]],]
 
             perm_data[,v] <- quants[i]
             lower_preds <- stats::predict(model, perm_data)
@@ -134,7 +134,7 @@ ALE <- function(model,
       p <- p + ggplot2::ggtitle(label = "Accumulated Local Effect Plot")
       p <- p + ggplot2::xlab(label = v)
       p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
-      geom_df<- data.frame(x = model$data$data[,v])
+      geom_df<- data.frame(x = data[,v])
       p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
                                  mapping = ggplot2::aes(x = x),
                                  inherit.aes = FALSE)
