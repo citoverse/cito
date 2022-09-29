@@ -50,11 +50,12 @@ ALE <- function(model,
 
   x <- NULL
   y <- NULL
-  reduced_k <- FALSE
+
   p_ret <- lapply (variable,function(v){
     if(is.numeric(data[,v])){
 
       if ( type == "equidistant"){
+        reduced_k <- FALSE
         repeat{
           borders <- seq(from = min(data[,v]),
                          to = max(data[,v]),
