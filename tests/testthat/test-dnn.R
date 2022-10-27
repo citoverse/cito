@@ -114,7 +114,7 @@ custom_loss = function(true, pred) {
 
 testthat::expect_error({
   nn.fit<- dnn(Sepal.Length~.,
-               data = datasets::iris[-validation_set,],
+               data = datasets::iris[],
                loss = custom_loss,
                epochs = 2L,
                custom_parameters = list(scale = 1.0)
@@ -135,7 +135,7 @@ custom_loss_MVN = function(true, pred) {
 
 testthat::expect_error({
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              lr = 0.01,
              epochs = 100L,
              loss = custom_loss_MVN,
