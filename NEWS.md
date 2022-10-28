@@ -9,3 +9,4 @@
 
 ## Bug fixes
 * in ALE function providing new data did not work properly
+* Performance improvements with new dataloader
