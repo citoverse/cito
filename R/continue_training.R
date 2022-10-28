@@ -50,17 +50,12 @@ continue_training <- function(model,
 
 
   ### set training environment ###
-
-  x_dtype = torch::torch_float32()
-  y_dtype = torch::torch_float32()
-
   if(!is.null(changed_params)){
     for (i in 1:length(changed_params)){
       if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
       eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
     }
   }
-
 
   ### set dataloader  ###
   fm<- stats::as.formula(model$call$formula)
@@ -71,7 +66,6 @@ continue_training <- function(model,
   Y = as.matrix(Y)
 
   y_dim = ncol(Y)
-  x_dtype = torch::torch_float32()
   y_dtype = torch::torch_float32()
   if(is.character(Y)) {
     y_dim = length(unique(as.integer(as.factor(Y[,1]))))
@@ -90,11 +84,11 @@ continue_training <- function(model,
 
     train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(model$training_properties$validation*nrow(X))))
     valid <- c(1:nrow(X))[-train]
-    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
-    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
+    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
 
   }else{
-    train_dl <- get_data_loader(X,Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    train_dl <- get_data_loader(X,Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
     valid_dl <- NULL
   }
 

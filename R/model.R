@@ -1,24 +1,12 @@
-get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE, x_dtype, y_dtype) {
-  self <- NULL
-  torch.dataset <- torch::dataset(
-    name = "dataset",
-    initialize = function(X,Y) {
-      self$X <- torch::torch_tensor(as.matrix(X), dtype = x_dtype)
-      self$Y <- torch::torch_tensor(as.matrix(Y), dtype = y_dtype)
-    },
-    .getitem = function(index) {
-      x <- self$X[index,]
-      y <- self$Y[index,]
-      list(x, y)
-    },
-    .length = function() {
-      self$Y$size()[[1]]
-    }
-  )
-  ds <- torch.dataset(X,Y)
+get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE,y_dtype) {
+
+  ds <- torch::tensor_dataset(X =torch::torch_tensor(as.matrix(X)),
+                              Y = torch::torch_tensor(as.matrix(Y),dtype = y_dtype))
+
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
   return(dl)
 }
+
 
 
 

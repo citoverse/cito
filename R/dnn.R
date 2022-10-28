@@ -144,7 +144,6 @@ dnn <- function(formula,
   }
 
   y_dim <- ncol(Y)
-  x_dtype <- torch::torch_float32()
   y_dtype <- torch::torch_float32()
   if(is.character(Y)) {
     y_dim <- length(unique(as.integer(as.factor(Y[,1]))))
@@ -154,6 +153,7 @@ dnn <- function(formula,
         Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
     }}
   }
+
   if(!is.function(loss_obj$call)){
     if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
   }
@@ -161,11 +161,11 @@ dnn <- function(formula,
   if(validation != 0){
     valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
     train <- c(1:nrow(X))[-valid]
-    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
-    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
 
   }else{
-    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, x_dtype=x_dtype, y_dtype=y_dtype)
+    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
     valid_dl <- NULL
   }
 
@@ -356,7 +356,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
   pred <- torch::as_array(link(object$net(newdata)))
 
   if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
-  if(type == "class") pred <- as.factor(apply(pred,1, function(x) colnames(pred)[which.max(x)]))
+  if(type == "class") pred <- as.factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]))
 
   rownames(pred) <- rownames(newdata)
 

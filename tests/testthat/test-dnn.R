@@ -105,6 +105,10 @@ testthat::test_that("DNN save and reload", {
 
 
 testthat::test_that("DNN custom loss and custom parameters", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
 custom_loss = function(true, pred) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
@@ -113,8 +117,12 @@ custom_loss = function(true, pred) {
 }
 
 testthat::expect_error({
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
   nn.fit<- dnn(Sepal.Length~.,
-               data = datasets::iris[-validation_set,],
+               data = datasets::iris[],
                loss = custom_loss,
                epochs = 2L,
                custom_parameters = list(scale = 1.0)
@@ -134,10 +142,14 @@ custom_loss_MVN = function(true, pred) {
 }
 
 testthat::expect_error({
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              lr = 0.01,
-             epochs = 100L,
+             epochs = 2L,
              loss = custom_loss_MVN,
              custom_parameters =
                list(SigmaDiag =  rep(1., 3),
