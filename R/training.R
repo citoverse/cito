@@ -37,8 +37,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### Batch evaluation ###
     coro::loop(for (b in train_dl) {
       optimizer$zero_grad()
-      output <- model$net(b[[1]]$to(device = device))
-      loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+      output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+      loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
       if(generalize){
         loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
                                  loss = loss, lambda = model$training_properties$lambda,
@@ -59,8 +59,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-        output <- model$net(b[[1]]$to(device = device))
-        loss <- loss.fkt(output, b[[2]]$to(device = device))$mean()
+        output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+        loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
         loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
                                  loss = loss, lambda = model$training_properties$lambda,
                                  intercept= model$model_properties$bias[1])

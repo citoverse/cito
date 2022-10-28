@@ -3,7 +3,9 @@ get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE,y_dtype) {
   ds <- torch::tensor_dataset(X =torch::torch_tensor(as.matrix(X)),
                               Y = torch::torch_tensor(as.matrix(Y),dtype = y_dtype))
 
-  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle)
+  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
+
+
   return(dl)
 }
 
