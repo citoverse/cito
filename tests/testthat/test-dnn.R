@@ -156,4 +156,31 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 }, NA)
+
+testthat::expect_error("DNN coef accuracy check",{
+
+
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  data <- as.data.frame(matrix(rnorm(n=200*10, mean= 0, sd=1),nrow=200,ncol=10))
+  coefs <- runif(n=10)
+  data$Y <- apply(data,1,function(x) sum(x*coefs))
+
+  nn.fit<- dnn(Y~., data=data, hidden= NULL,epochs=200)
+  if(!all(abs((unlist(coef(nn.fit))[-1] - coefs)) < 1e-02)){
+    warning("Linear Model not converged")
+  }
+
+}, NA)
+
+
+
 })
+
+
+
+
+
+
