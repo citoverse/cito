@@ -30,6 +30,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   if((!all(model$training_properties$alpha == F)|anyNA(model$training_properties$alpha))
      & model$training_properties$lambda>0) generalize <- TRUE
 
+  best_train_loss = Inf
+  best_val_loss = Inf
+  counter = 0
+
   for (epoch in min(which(is.na(model$losses$train_l))):(epochs+ min(which(is.na(model$losses$train_l))) - 1)) {
     train_l <- c()
     model$training_properties$epoch <- epoch
@@ -54,6 +58,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       model$losses$train_l[epoch] <- mean(train_l)
     })
 
+
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){
 
       valid_l <- c()
@@ -69,12 +74,39 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       })
 
       ### early stopping ###
-      if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
-         model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
-        model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+      # if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
+      #    model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
+      #
+      #
+      #
+      #   model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+      #   if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
+      #   break
+      # }
+
+    }
+
+    if(is.numeric(model$training_properties$early_stopping)) {
+      if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(model$losses$train_l[epoch] < best_val_loss) {
+          best_val_loss = model$losses$valid_l[epoch]
+          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+          counter = 0
+        }
+
+      } else {
+        if(model$losses$train_l[epoch] < best_train_loss) {
+          best_train_loss = model$losses$train_l[epoch]
+          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+          counter = 0
+        }
+      }
+
+      if(counter >= model$training_properties$early_stopping) {
         if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
         break
       }
+      counter = counter + 1
 
     }
 
