@@ -27,7 +27,8 @@ dnn(
   lr_scheduler = NULL,
   custom_parameters = NULL,
   device = c("cpu", "cuda"),
-  early_stopping = FALSE
+  early_stopping = FALSE,
+  num_cores = NULL
 )
 }
 \arguments{
@@ -72,6 +73,8 @@ dnn(
 \item{device}{device on which network should be trained on.}
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+
+\item{num_cores}{number of cores utilized when training on a CPU, if NULL all cores are used (does not work on MacOS)}
 }
 \value{
 an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.

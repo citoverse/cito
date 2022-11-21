@@ -25,6 +25,7 @@
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
+#' @param num_cores number of cores utilized when training on a CPU, if NULL all cores are used (does not work on MacOS)
 #'
 #' @details
 #'
@@ -78,7 +79,8 @@ dnn <- function(formula,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda"),
-                early_stopping = FALSE) {
+                early_stopping = FALSE,
+                num_cores = NULL) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -97,6 +99,11 @@ dnn <- function(formula,
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
   if(!is.function(loss) & !inherits(loss,"family")){
     loss <- match.arg(loss)
+  }
+
+
+  if(!is.null(num_cores)){
+    torch::torch_set_num_threads(num_cores)
   }
 
 

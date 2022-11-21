@@ -11,7 +11,8 @@ continue_training(
   data = NULL,
   device = "cpu",
   verbose = TRUE,
-  changed_params = NULL
+  changed_params = NULL,
+  num_cores = NULL
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ continue_training(
 \item{verbose}{print training and validation loss of epochs}
 
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
+
+\item{num_cores}{number of cores utilized when training on a CPU, if NULL all cores are used (does not work on MacOS)}
 }
 \value{
 a model of class cito.dnn same as created by  \code{\link{dnn}}

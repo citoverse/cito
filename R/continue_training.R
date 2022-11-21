@@ -7,6 +7,8 @@
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
+#' @param num_cores number of cores utilized when training on a CPU, if NULL all cores are used (does not work on MacOS)
+#'
 #' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
@@ -20,9 +22,16 @@ continue_training <- function(model,
                               data=NULL,
                               device= "cpu",
                               verbose = TRUE,
-                              changed_params=NULL){
+                              changed_params=NULL,
+                              num_cores = NULL){
 
   checkmate::qassert(device, "S+[3,)")
+
+
+  if(!is.null(num_cores)){
+    torch::torch_set_num_threads(num_cores)
+  }
+
 
   ### Training device ###
   if(device== "cuda"){
