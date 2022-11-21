@@ -71,7 +71,7 @@ dnn(
 
 \item{device}{device on which network should be trained on.}
 
-\item{early_stopping}{if set to integer, training will stop if validation loss worsened between current defined past epoch.}
+\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
 }
 \value{
 an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.

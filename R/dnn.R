@@ -24,7 +24,7 @@
 #' @param verbose print training and validation loss of epochs
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on.
-#' @param early_stopping if set to integer, training will stop if validation loss worsened between current defined past epoch.
+#' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
 #'
 #' @details
 #'
