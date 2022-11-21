@@ -47,9 +47,8 @@ data <- data.frame(scale(data[,-5]),Species = data[,5])
 ```
 
 ## Introduction to models and model structures 
-Using 'cito', you can fit neural networks with the dnn function. Here you can specify all 
-
-While this training is done on the CPU, all models can be trained on the GPU with device = "cuda". This is suggested if you are working with large models and networks. 
+In 'cito', you can fit neural networks with the dnn function. 
+Models can also be trained on the GPU by setting device = "cuda". This is suggested if you are working with large data sets or networks. 
 ```{r simp_models, fig.show='hide',out.lines = 3,eval= FALSE}
 library(cito)
 
@@ -70,18 +69,18 @@ Loss at epoch 11: 0.408130, lr: 0.01000
 Loss at epoch 12: 0.403822, lr: 0.01000 ")
 ```
 
-You can plot the networks structure to give you a visual feedback of the created object. Be aware that this may take some time for large networks.  
+You can plot the network structure to give you a visual feedback of the created object. Be aware that this may take some time for large networks.  
 ```{r plotnn, eval = FALSE}
 plot(nn.fit)
 ```
 ![Structure plot of the generate network](structure_nn.png){ width=70%}
 
 ### Adding activation functions
-By default  all layers are fitted with ReLu as activation layer.
+By default,  all layers are fitted with ReLU as activation function.
 $$
 relu(x) = max (0,x)
 $$
-However, you can adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function for the output layer  is chosen with the loss argument and does not have to be provided. 
+You can also adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function of the output layer  is chosen with the loss argument and does not have to be provided. 
 
 ```{r activation, results ="hide",fig.show='hide' ,eval = FALSE}
 #selu as activation function for all layers: 
@@ -94,7 +93,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,
 
 
 ### Adding a validation set to the training process
-In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and the defined percentage will be not used for training and only for validation after each epoch. The loss plot will show you how the two losses behave. 
+In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and  define a percentage that will not be used for training and only for validation after each epoch. During training, the loss plot will show you how the two losses behave. 
 
 ```{r validation, results = "hide", eval = FALSE, out.lines=3, fig.show='hide'}
 #20% of data set is used as validation set
@@ -116,13 +115,13 @@ Loss at epoch 32: training: 0.265, validation: 0.275, lr: 0.01000")
 
 ![Training loss](trainingsloss.png){width=70%}
 
-We can choose the model with minimal validation loss. By setting nn.fit$use_model_epoch to the model with the lowest validation loss, this model will be used for new predictions. 
+We can choose the model with minimal validation loss with the  nn.fit$use_model_epoch argument. 
 ```{r epoch1,eval = FALSE}
 nn.fit$use_model_epoch <- which.min(nn.fit$losses$valid_l)
 ```
 
 ### Interpreting model output
-The standard S3 functions can be used to interpret the model: 
+The standard generic functions can be used to interpret the model: 
 
 
 ```{r interpret,eval=FALSE}
@@ -181,18 +180,16 @@ Feature Importance:
 
 
 
-## Training parameters  
-Training a neural network can be difficult. You probably have to try out some variations of hyperparameters and explore which work best for your data set.
-
+## Training hyperparameters  
 ### Regularization 
 #### Elastic net regularization
-If elastic net is used, 'cito' will produce a sparse, generalized neural network. The L1/L2 loss can be  controlled by the arguments alpha and lambda.  The elastic net loss is defined as following.
+If elastic net is used, 'cito' will produce a sparse, generalized neural network. The L1/L2 loss can be  controlled with the arguments alpha and lambda.
 
 $$
  loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
 $$
 
-If a single alpha value is provided each layer will get regularized the same. However, you can regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, the +1 comes from the input layer. With NA you can turn off generalization for specific layers.
+If a single alpha value is provided each layer will get regularized the same. You can also regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, the +1 comes from the input layer. With NA you can turn off generalization for specific layers.
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
 #elastic net penalty in all layers: 
@@ -203,7 +200,7 @@ nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10),
 ``` 
 
 #### Dropout Regularization 
-Dropout can also regularize your network. During training in every epoch defined percentage of nodes gets left out.
+Dropout also regularizes your network. During training in every epoch a defined percentage of nodes gets left out.
 
 
 ```{r dropout, results ="hide",fig.show='hide' ,eval = FALSE}
@@ -215,8 +212,6 @@ nn.fit <- dnn(Species~., data = data,
 ``` 
 
 ### Learning rate
-The lr parameter controls the so called learning rate. This parameter defines the step size the optimizer takes. If set too high the optimizer might not find a good optimum because you shoot across certain valleys. If set too low the training process takes too long to be viable. The default value of 0.01 usually performs quite good. 
-
 ### Learning rate scheduler
 Learning rate scheduler allow you to start with a high learning rate and decrease it during the training process. 
 You can choose between different types of schedulers. Namely, lambda, multiplicative, one_cycle and step.
