@@ -99,7 +99,7 @@ get_loss <- function(loss) {
         out$invlink <- function(a) a
       }
       out$loss <- function(pred, true) {
-        return(torch::distr_bernoulli( out$invlink(pred))$log_prob(true)$negative())
+        return(torch::distr_bernoulli(probs = out$invlink(pred))$log_prob(true)$negative())
       }
     } else if(loss$family == "poisson") {
       if(loss$link == "log") {

@@ -84,11 +84,24 @@ get_importance<- function(model, n_permute= NULL, data = NULL){
   if(is.null(n_permute)) n_permute <- ceiling(sqrt(nrow(model$data$data))*3)
   model<- check_model(model)
 
-  if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(0)}
+  if(inherits(model$loss$call, "character")) {
+    if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(0)}
+  } else {
+    if(!any(model$loss$call$family  == c("binomial")  )){ return(0)}
+  }
   loss<- model$loss$loss
 
-  org_err <- as.numeric(loss(pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link")),
-                  true = torch::torch_tensor(model$data$Y))$mean())
+  true = model$data$Y
+
+  if(inherits(model$loss$call, "character")) {
+    true = torch::torch_tensor(model$data$Y)
+  } else {
+    if(model$loss$call$family  == c("binomial") ){
+      mode(true) = "numeric"
+      true = torch::torch_tensor(true)
+      }
+  }
+  org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link")) ,true = true)$mean())
 
 
   importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
@@ -103,13 +116,13 @@ get_importance<- function(model, n_permute= NULL, data = NULL){
         perm_preds <- c()
 
         perm_data <- model$data$data
-        perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = F),importance$variable[i]]
+        perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = FALSE),importance$variable[i]]
 
         perm_preds <- rbind(perm_preds,stats::predict(model, perm_data, type = "response"))
 
 
         new_err <- append(new_err, as.numeric(loss(pred = torch::torch_tensor(perm_preds),
-                                   true = torch::torch_tensor(model$data$Y))$mean()))
+                                   true = true)$mean() ))
 
 
       }
