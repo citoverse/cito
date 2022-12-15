@@ -1,3 +1,13 @@
+# Version 1.0.1
+## cito submission 1 2022/12/17
+This is a minor update, fixing a few bugs in the ALE and PDP functions, 
+and improving the runtime by changing the dataloader
+
+
+### Successfull R CMD checks under
+
+
+
 # Version 1.0.0
 ## cito submission 3  2022/07/22
 

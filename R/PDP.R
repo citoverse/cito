@@ -108,7 +108,7 @@ PDP <- function(model,
         df_ice = as.data.frame(df_ice)
         df_ice$group = as.factor(df_ice$group)
 
-        p <- p + ggplot2::geom_line(data = df_ice, mapping = ggplot2::aes(x = x, y = y, group = group ))
+        p <- p + ggplot2::geom_line(data = df_ice, mapping = ggplot2::aes_string(x = "x", y = "y", group = "group" ))
         p <- p + ggplot2::geom_line(colour = "yellow", size = 2, data=df, mapping = ggplot2::aes(x=x,y=y))
         }
     }else if (is.factor(data[,v])){
@@ -130,7 +130,7 @@ PDP <- function(model,
                         return(mean(df$y[which(df$x==i)]))
                       }))
 
-      if(ice) warning("ice not available for categorical features")
+      if(ice) message("ice not available for categorical features")
 
       if(!is.null(model$data$ylvls)) {
         label = paste0("PDP - ", model$data$ylvls[n_output])

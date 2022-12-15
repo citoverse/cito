@@ -100,7 +100,7 @@ ALE <- function(model,
                   K <- K - 1
                 }else{
                   if(reduced_K){
-                    warning(paste0("Number of Neighborhoods reduced to ",K))
+                    message(paste0("Number of Neighborhoods reduced to ",K))
                   }
                   break
                 }

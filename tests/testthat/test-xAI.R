@@ -63,7 +63,7 @@ testthat::test_that("PDP", {
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
   iris2$Species = as.integer(iris2$Species) - 1
-  model = dnn(Species~., data = iris2, epoch = 15, loss = "binomial", lr = 0.1, verbose = TRUE)
+  model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE)
   testthat::expect_error({PDP(model)}, NA)
   testthat::expect_error({PDP(model, variable = "Sepal.Width")}, NA)
   testthat::expect_error({PDP(model, ice = TRUE)}, NA)
@@ -109,7 +109,7 @@ testthat::test_that("ALE", {
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
   iris2$Species = as.integer(iris2$Species) - 1
-  model = dnn(Species~., data = iris2, epoch = 15, loss = "binomial", lr = 0.1, verbose = TRUE)
+  model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE)
   testthat::expect_error({ALE(model)}, NA)
   testthat::expect_error({ALE(model, variable = "Sepal.Width")}, NA)
   testthat::expect_error({ALE(model, variable = c("Sepal.Width",  "Petal.Length"))}, NA)
