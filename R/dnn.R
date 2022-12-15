@@ -295,7 +295,7 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
 print.summary.citodnn <- function(x, ... ){
   cat("Deep Neural Network Model summary\n")
   cat("Model generated on basis of: \n")
-  cat(paste(as.character(x$call$formula)[c(2,1,3)],collapse =" "))
+  #cat(paste(as.character(x$call$formula)[c(2,1,3)],collapse =" ")) # Unncessary, right? Variables names are the column names of the importance matrix
   cat("Feature Importance:\n")
   print(x$importance)
   return(invisible(x))

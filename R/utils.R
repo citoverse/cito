@@ -118,7 +118,7 @@ get_importance<- function(model, n_permute= NULL, data = NULL){
         perm_data <- model$data$data
         perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = FALSE),importance$variable[i]]
 
-        perm_preds <- rbind(perm_preds,stats::predict(model, perm_data, type = "link"))
+        perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link"))
 
 
         new_err <- append(new_err, as.numeric(loss(pred = torch::torch_tensor(perm_preds),
@@ -133,9 +133,7 @@ get_importance<- function(model, n_permute= NULL, data = NULL){
           perm_data[i] <- model$data$data[k,i]
           perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link"))
           true <- append(true, model$data$Y[j])
-
         }
-
       }
     }
 

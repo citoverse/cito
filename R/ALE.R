@@ -47,107 +47,128 @@ ALE <- function(model,
     return(NULL)
   }
 
-
   x <- NULL
   y <- NULL
 
-  p_ret <- lapply (variable,function(v){
-    if(is.numeric(data[,v])){
+  is_categorical = sapply(data[, variable], is.factor )
 
-      if ( type == "equidistant"){
-        reduced_K <- FALSE
-        repeat{
-          borders <- seq(from = min(data[,v]),
-                         to = max(data[,v]),
-                         length.out = K+1)
+  if(any(is_categorical)) {
+    cat("Categorical features are not yet supported.\n")
+    variable = variable[!is_categorical]
+  }
 
-          df <- data.frame(
-            x = borders[1:K] + ((borders[2]-borders[1])/2),
 
-            y = sapply(seq_len(length(borders))[-1], function(i){
+  p_ret <- sapply (variable,function(v){
+      results =
+            lapply(1:model$model_properties$output, function(n_output) {
 
-              region_indizes <- which(data[,v]<= borders[i] &
-                                        data[,v]>= borders[i-1])
+            if ( type == "equidistant"){
+              reduced_K <- FALSE
+              repeat{
+                borders <- seq(from = min(data[,v]),
+                               to = max(data[,v]),
+                               length.out = K+1)
 
-              if(length(region_indizes)>0){
-                perm_data <- data[region_indizes,]
+                df <- data.frame(
+                  x = borders[1:K] + ((borders[2]-borders[1])/2),
 
-                perm_data[,v] <- borders[i-1]
-                lower_preds <- stats::predict(model, perm_data)
+                  y = sapply(seq_len(length(borders))[-1], function(i){
 
-                perm_data[,v] <- borders[i]
-                upper_preds <- stats::predict(model, perm_data)
+                    region_indizes <- which(data[,v]<= borders[i] &
+                                              data[,v]>= borders[i-1])
 
-                return(mean(upper_preds - lower_preds))
-              }else{
+                    if(length(region_indizes)>0){
+                      perm_data <- data[region_indizes,]
 
-                return(NA)
+                      perm_data[,v] <- borders[i-1]
+                      lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
 
+                      perm_data[,v] <- borders[i]
+                      upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+
+                      return(mean(upper_preds - lower_preds))
+                    }else{
+
+                      return(NA)
+
+                    }
+                  })
+                )
+
+                if(any(is.na(df$y))){
+                  reduced_K <- TRUE
+                  K <- K - 1
+                }else{
+                  if(reduced_K){
+                    warning(paste0("Number of Neighborhoods reduced to ",K))
+                  }
+                  break
+                }
               }
-            })
-          )
+            }else if ( type == "quantile"){
 
-          if(any(is.na(df$y))){
-            reduced_K <- TRUE
-            K <- K - 1
-          }else{
-            if(reduced_K){
-              warning(paste0("Number of Neighborhoods reduced to ",K))
+              quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
+              groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
+              groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
+
+
+              df <- data.frame (
+                x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
+                y = unlist(lapply(seq_len(length(groups)), function(i){
+
+                  perm_data <- data[groups[[i]],]
+
+                  perm_data[,v] <- quants[i]
+                  lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+
+                  perm_data[,v] <- quants[i+1]
+                  upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+
+                  return(mean(upper_preds - lower_preds))
+                  })))
+
+
+
+
             }
-            break
-          }
-        }
-      }else if ( type == "quantile"){
+            for ( i in seq_len(nrow(df))[-1]){
+              df$y[i]<- df$y[i-1]+df$y[i]
+            }
 
-        quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
-        groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
-        groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
+            df$y <- df$y - mean(df$y)
 
+            if(!is.null(model$data$ylvls)) {
+              label = paste0("ALE - ", model$data$ylvls[n_output])
+            } else {
+              label = "ALE"
+            }
 
-        df <- data.frame (
-          x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
-          y = unlist(lapply(seq_len(length(groups)), function(i){
+            p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
+            p <- p + ggplot2::geom_line()
+            p <- p + ggplot2::ggtitle(label = label)
+            p <- p + ggplot2::xlab(label = v)
+            p <- p + ggplot2::ylab(label = "ALE")
+            geom_df<- data.frame(x = data[,v])
+            p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
+                                       mapping = ggplot2::aes(x = x),
+                                       inherit.aes = FALSE)
 
-            perm_data <- data[groups[[i]],]
+            return(p)
+        })
 
-            perm_data[,v] <- quants[i]
-            lower_preds <- stats::predict(model, perm_data)
+      results[sapply(results, is.null)] = NULL
 
-            perm_data[,v] <- quants[i+1]
-            upper_preds <- stats::predict(model, perm_data)
+      return(results)
+    })
 
-            return(mean(upper_preds - lower_preds))
-            })))
+  p_ret = do.call(list, p_ret)
 
+  if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
+  else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
 
-
-
-      }
-      for ( i in seq_len(nrow(df))[-1]){
-        df$y[i]<- df$y[i-1]+df$y[i]
-      }
-
-      df$y <- df$y - mean(df$y)
-
-
-      p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
-      p <- p + ggplot2::geom_line()
-      p <- p + ggplot2::ggtitle(label = "Accumulated Local Effect Plot")
-      p <- p + ggplot2::xlab(label = v)
-      p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
-      geom_df<- data.frame(x = data[,v])
-      p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
-                                 mapping = ggplot2::aes(x = x),
-                                 inherit.aes = FALSE)
-
-      return(p)
-    }else{
-      cat("Categorical features are not yet supported.\n")
-      return(NULL)
-    }
-
-  })
-  names(p_ret) <- variable
-  return(p_ret)
+  if(!is.null(model$data$ylvls)) {
+    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  }
+  return(invisible(p_ret))
 }
 

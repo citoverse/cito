@@ -23,7 +23,8 @@ Depends:
 Imports:
     coro,
     checkmate,
-    torch
+    torch,
+    gridExtra
 License: GPL (>= 3)
 Suggests:
     rmarkdown,
@@ -36,4 +37,3 @@ Suggests:
     ggplot2
 VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues
-
