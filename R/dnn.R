@@ -372,7 +372,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
     newdata <- torch::torch_tensor(newdata, device = device)
   }
 
-  pred <- torch::as_array(link(object$net(newdata)))
+  pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
 
   if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
   if(type == "class") pred <- as.factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]))
