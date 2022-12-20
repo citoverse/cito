@@ -320,12 +320,13 @@ coef.citodnn <- function(object,...){
 #' @param object a model created by \code{\link{dnn}}
 #' @param newdata new data for predictions
 #' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
+#' @param device device on which network should be trained on.
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"),...) {
+predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"),device = c("cpu","cuda"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -335,22 +336,40 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
 
   type <- match.arg(type)
 
+  device <- match.arg(device)
+
   if(type %in% c("link","class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
   }
 
+  if(device == "cuda"){
+    if (torch::cuda_is_available()) {
+      device <- torch::torch_device("cuda")}
+    else{
+      warning("No Cuda device detected, device is set to cpu")
+      device <- torch::torch_device("cpu")
+    }
+
+  }else {
+    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    device <- torch::torch_device("cpu")
+  }
+
+  object$net$to(device = device)
+
+
   ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
-    newdata = torch::torch_tensor(object$data$X)
+    newdata = torch::torch_tensor(object$data$X, device = device)
   } else {
     if(is.data.frame(newdata)) {
       newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)
     } else {
       newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)
     }
-    newdata <- torch::torch_tensor(newdata)
+    newdata <- torch::torch_tensor(newdata, device = device)
   }
 
   pred <- torch::as_array(link(object$net(newdata)))
