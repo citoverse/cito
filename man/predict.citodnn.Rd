@@ -4,7 +4,13 @@
 \alias{predict.citodnn}
 \title{Predict from a fitted dnn model}
 \usage{
-\method{predict}{citodnn}(object, newdata = NULL, type = c("link", "response", "class"), ...)
+\method{predict}{citodnn}(
+  object,
+  newdata = NULL,
+  type = c("link", "response", "class"),
+  device = c("cpu", "cuda"),
+  ...
+)
 }
 \arguments{
 \item{object}{a model created by \code{\link{dnn}}}
@@ -12,6 +18,8 @@
 \item{newdata}{new data for predictions}
 
 \item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
+
+\item{device}{device on which network should be trained on.}
 
 \item{...}{additional arguments}
 }
