@@ -20,6 +20,7 @@
 #' @param data data on which ALE is performed on, if NULL training data will be used.
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param type method on how the feature space is divided into neighborhoods.
+#' @param plot plot ALE or not
 #' @seealso \code{\link{PDP}}
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
@@ -29,7 +30,8 @@ ALE <- function(model,
                 variable = NULL,
                 data = NULL,
                 K = 10,
-                type = c("equidistant", "quantile")){
+                type = c("equidistant", "quantile"),
+                plot=TRUE){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -152,6 +154,7 @@ ALE <- function(model,
             p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
                                        mapping = ggplot2::aes(x = x),
                                        inherit.aes = FALSE)
+            p <- p + ggplot2::theme_bw()
 
             return(p)
         })
@@ -162,9 +165,10 @@ ALE <- function(model,
     })
 
   p_ret = do.call(list, p_ret)
-
-  if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
-  else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
+  if(plot) {
+    if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
+    else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
+  }
 
   if(!is.null(model$data$ylvls)) {
     names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))

@@ -4,7 +4,14 @@
 \alias{PDP}
 \title{Partial Dependence Plot (PDP)}
 \usage{
-PDP(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice = 20)
+PDP(
+  model,
+  variable = NULL,
+  data = NULL,
+  ice = FALSE,
+  resolution.ice = 20,
+  plot = TRUE
+)
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
@@ -16,6 +23,8 @@ PDP(model, variable = NULL, data = NULL, ice = FALSE, resolution.ice = 20)
 \item{ice}{Individual Conditional Dependence will be shown if TRUE}
 
 \item{resolution.ice}{resolution in which ice will be computed}
+
+\item{plot}{plot ALE or not}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.

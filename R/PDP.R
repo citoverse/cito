@@ -24,6 +24,7 @@
 #' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
 #' @param ice Individual Conditional Dependence will be shown if TRUE
 #' @param resolution.ice resolution in which ice will be computed
+#' @param plot plot ALE or not
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R
@@ -33,7 +34,8 @@ PDP <- function(model,
                 variable = NULL,
                 data = NULL,
                 ice = FALSE,
-                resolution.ice = 20){
+                resolution.ice = 20,
+                plot=TRUE){
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
@@ -145,8 +147,8 @@ PDP <- function(model,
       p <- p + ggplot2::ggtitle(label = label)
       p <- p + ggplot2::xlab(label = v)
       p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
-
       p <- p + ggplot2::xlab(v) + ggplot2::ylab(model$call$formula[2])
+      p <- p + ggplot2::theme_bw()
     }
     return(p)
   })
@@ -155,10 +157,10 @@ PDP <- function(model,
   })
 
   p_ret = do.call(list, p_ret)
-
-  if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
-  else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
-
+  if(plot) {
+    if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
+    else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
+  }
   if(!is.null(model$data$ylvls)) {
     names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
   }

@@ -9,7 +9,8 @@ ALE(
   variable = NULL,
   data = NULL,
   K = 10,
-  type = c("equidistant", "quantile")
+  type = c("equidistant", "quantile"),
+  plot = TRUE
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ ALE(
 \item{K}{number of neighborhoods original feature space gets divided into}
 
 \item{type}{method on how the feature space is divided into neighborhoods.}
+
+\item{plot}{plot ALE or not}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
