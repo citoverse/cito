@@ -1,6 +1,6 @@
 Package: cito
 Type: Package
-Date: 2022-12-28
+Date: 2022-02-05
 Title: Building and Training Neural Networks
 Version: 1.0.1
 Authors@R:

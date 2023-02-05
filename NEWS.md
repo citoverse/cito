@@ -16,3 +16,4 @@
 * PDP ICE return now correct curves
 * Early stopping works now
 * lr reducer on plateau didn't reduce lr
+* Predictions are now made on cuda of the model is stored on cuda
