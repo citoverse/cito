@@ -1,13 +1,13 @@
 Package: cito
 Type: Package
-Date: 2022-02-05
+Date: 2023-02-05
 Title: Building and Training Neural Networks
 Version: 1.0.1
 Authors@R:
     c(person(given = "Christian",
            family = "Amesöder",
            role = c("aut", "cre"),
-           email = "Christian.Amesoeder@stud.uni-regensburg.de"),
+           email = "Christian.Amesoeder@informatik.uni-regensburg.de"),
       person(given = "Maximilian",
            family = "Pichler",
            role = c("aut"),
