@@ -22,7 +22,8 @@
 #' - \code{\link{ALE}}: plot the accumulated local effect plot for a specific feature
 #'
 #' @examples
-#' vignette("cito", package="cito")
+#'
+#' vignette("Introduction_to_cito", "cito")
 #'
 #' @docType package
 #' @name cito
