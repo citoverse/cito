@@ -1,5 +1,5 @@
 ---
-title: "cito"
+title: "Introduction_to_cito"
 author: "Christian Amesoeder"
 date: "`r Sys.Date()`"
 output:
@@ -7,7 +7,7 @@ output:
  rmarkdown::html_vignette:
     toc: true
 vignette: >
-  %\VignetteIndexEntry{cito}
+  %\VignetteIndexEntry{Introduction_to_cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
