@@ -13,7 +13,7 @@ The main function is \code{\link{dnn}} which trains a custom deep neural network
 
 in order to install cito please follow these steps:
 
-\code{install.packges("cito")}
+\code{install.packages("cito")}
 
 \code{library(torch)}
 

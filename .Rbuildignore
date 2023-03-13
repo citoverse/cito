@@ -6,3 +6,5 @@
 ^cran-comments.md$
 ^doc$
 ^Meta$
+^CRAN-SUBMISSION$
+^revdep$

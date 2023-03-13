@@ -1,6 +1,6 @@
 Package: cito
 Type: Package
-Date: 2023-02-05
+Date: 2023-03-10
 Title: Building and Training Neural Networks
 Version: 1.0.1
 Authors@R:
@@ -17,7 +17,7 @@ Description: Building and training custom neural networks in the typical R synta
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Depends:
     R (>= 3.5)
 Imports:

@@ -7,7 +7,7 @@
 #'
 #' in order to install cito please follow these steps:
 #'
-#' \code{install.packges("cito")}
+#' \code{install.packages("cito")}
 #'
 #' \code{library(torch)}
 #'
