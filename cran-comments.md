@@ -1,8 +1,8 @@
 # Version 1.0.1
-## cito submission 1 2022/12/17
+## cito submission 1 2022/03/10
 This is a minor update, fixing a few bugs in the ALE and PDP functions, 
 and improving the runtime by changing the dataloader
-
+Maintainer E-mail updated from *@stud.uni-regensburg.de to @informatik.uni-regensburg.de
 
 ### Successfull R CMD checks under
 
