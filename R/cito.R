@@ -21,9 +21,8 @@
 #' - \code{\link{PDP}}: plot the partial dependency plot for a specific feature
 #' - \code{\link{ALE}}: plot the accumulated local effect plot for a specific feature
 #'
-#' @examples
+#' @example /inst/examples/dnn-example.R
 #'
-#' vignette("Introduction_to_cito", "cito")
 #'
 #' @docType package
 #' @name cito
