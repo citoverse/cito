@@ -73,41 +73,6 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         model$losses$valid_l[epoch] <- mean(valid_l)
       })
 
-      ### early stopping ###
-      # if(epoch > model$training_properties$early_stopping && is.numeric(model$training_properties$early_stopping) &&
-      #    model$losses$valid_l[epoch-model$training_properties$early_stopping] < model$losses$valid_l[epoch]) {
-      #
-      #
-      #
-      #   model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-      #   if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
-      #   break
-      # }
-
-    }
-
-    if(is.numeric(model$training_properties$early_stopping)) {
-      if(model$training_properties$validation != 0 & !is.null(valid_dl)){
-        if(model$losses$train_l[epoch] < best_val_loss) {
-          best_val_loss = model$losses$valid_l[epoch]
-          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-          counter = 0
-        }
-
-      } else {
-        if(model$losses$train_l[epoch] < best_train_loss) {
-          best_train_loss = model$losses$train_l[epoch]
-          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-          counter = 0
-        }
-      }
-
-      if(counter >= model$training_properties$early_stopping) {
-        if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
-        break
-      }
-      counter = counter + 1
-
     }
 
     ### learning rate scheduler ###
@@ -136,6 +101,32 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### create plot ###
     if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
     plot_new <- FALSE
+
+    ### early stopping ###
+    if(is.numeric(model$training_properties$early_stopping)) {
+      if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(model$losses$train_l[epoch] < best_val_loss) {
+          best_val_loss = model$losses$valid_l[epoch]
+          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+          counter = 0
+        }
+
+      } else {
+        if(model$losses$train_l[epoch] < best_train_loss) {
+          best_train_loss = model$losses$train_l[epoch]
+          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+          counter = 0
+        }
+      }
+
+      if(counter >= model$training_properties$early_stopping) {
+        if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
+        break
+      }
+      counter = counter + 1
+
+    }
+
   }
 
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, as.numeric)
