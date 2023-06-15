@@ -2,8 +2,8 @@
 #'
 #' @description
 #'
-#' fits a custom deep neural network. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
-#' So far, only Multilayer Perceptrons are possible.
+#' fits a custom deep neural network using the Multilayer Perceptron architecture. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
+#'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame
 #' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function
@@ -28,17 +28,38 @@
 #'
 #' @details
 #'
-#' In a Multilayer Perceptron (MLP) network every neuron is connected with all neurons of the previous layer and connected to all neurons of the layer afterwards.
-#' The value of each neuron is calculated with:
-#'
-#' \eqn{ a (\sum_j{ w_j * a_j})}
+#' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function.
+#' Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network.
+#' The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached.
+#' The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+
+#' Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}
 #'
 #' Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
-#' As regularization methods there is dropout and elastic net regularization available. These methods help you avoid over fitting.
 #'
-#' Training on graphic cards:
-#' If you want to train on your cuda devide, you have to install the NVIDIA CUDA toolkit version 11.3. and cuDNN 8.4. beforehand. Make sure that you have exactly these versions installed, since it does not work with other version.
-#' For more information see [mlverse: 'torch'](https://torch.mlverse.org/docs/articles/installation.html)
+#'
+#' **Regularization**
+#'
+#' Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
+#'
+#' Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection.
+#'
+#' By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
+#'
+#'
+#' **Custom Optimizer and Learning Rate Schedulers**
+#'
+#' When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
+#'
+#' \code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
+#'
+#' Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
+#' **Training on graphic cards**
+#'
+#' If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
+#' For detailed installation instructions and more information on utilizing GPUs for training, please refer to the [mlverse: 'torch' documentation](https://torch.mlverse.org/docs/articles/installation.html).
+#'
+#' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 #'
 #' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
