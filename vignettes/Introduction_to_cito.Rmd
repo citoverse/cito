@@ -1,5 +1,5 @@
 ---
-title: "Introduction_to_cito"
+title: "Introduction to cito"
 author: "Christian Amesoeder"
 date: "`r Sys.Date()`"
 output:

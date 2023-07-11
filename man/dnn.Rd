@@ -26,7 +26,7 @@ dnn(
   verbose = TRUE,
   lr_scheduler = NULL,
   custom_parameters = NULL,
-  device = c("cpu", "cuda"),
+  device = c("cpu", "cuda", "mps"),
   early_stopping = FALSE
 )
 }

@@ -143,3 +143,26 @@ get_importance<- function(model, n_permute= NULL, data = NULL){
 
   return(importance)
 }
+
+check_device = function(device) {
+  if(device == "cuda"){
+    if (torch::cuda_is_available()) {
+      device <- torch::torch_device("cuda")}
+    else{
+      warning("No Cuda device detected, device is set to cpu")
+      device <- torch::torch_device("cpu")
+    }
+
+  } else if(device == "mps") {
+    if (torch::backends_mps_is_available()) {
+      device <- torch::torch_device("mps")}
+    else{
+      warning("No mps device detected, device is set to cpu")
+      device <- torch::torch_device("cpu")
+    }
+  } else {
+    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    device <- torch::torch_device("cpu")
+  }
+  return(device)
+}

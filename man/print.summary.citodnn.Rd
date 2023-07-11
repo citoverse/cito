@@ -12,7 +12,7 @@
 \item{...}{additional arguments}
 }
 \value{
-original object x gets returned
+List with Matrices for importance, average CE, absolute sum of CE, and standard deviation of the CE
 }
 \description{
 Print method for class summary.citodnn

@@ -77,7 +77,7 @@ dnn <- function(formula,
                 verbose = TRUE,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
-                device = c("cpu","cuda"),
+                device = c("cpu","cuda", "mps"),
                 early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -99,19 +99,7 @@ dnn <- function(formula,
     loss <- match.arg(loss)
   }
 
-
-  if(device == "cuda"){
-    if (torch::cuda_is_available()) {
-      device <- torch::torch_device("cuda")}
-    else{
-      warning("No Cuda device detected, device is set to cpu")
-      device <- torch::torch_device("cpu")
-    }
-
-  }else {
-    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
-    device <- torch::torch_device("cpu")
-  }
+  device = check_device(device)
 
   ### Generate X & Y data ###
   if(!is.data.frame(data)) data <- data.frame(data)
@@ -280,6 +268,7 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
   out <- list()
   class(out) <- "summary.citodnn"
   out$importance <- get_importance(object, n_permute)
+  out$conditionalEffects = conditionalEffects(object)
 
   return(out)
 }
@@ -290,15 +279,34 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
 #'
 #' @param x a summary object created by \code{\link{summary.citodnn}}
 #' @param ... additional arguments
-#' @return original object x gets returned
+#' @return List with Matrices for importance, average CE, absolute sum of CE, and standard deviation of the CE
 #' @export
 print.summary.citodnn <- function(x, ... ){
+  out = list()
   cat("Deep Neural Network Model summary\n")
-  cat("Model generated on basis of: \n")
   #cat(paste(as.character(x$call$formula)[c(2,1,3)],collapse =" ")) # Unncessary, right? Variables names are the column names of the importance matrix
   cat("Feature Importance:\n")
   print(x$importance)
-  return(invisible(x))
+  cat("\nAverage Conditional Effects:\n")
+  ACE = sapply(x$conditionalEffects, function(R) diag(R$mean))
+  colnames(ACE) = paste0("Response_", 1:ncol(ACE))
+  print(ACE)
+  cat("\nAbsolute Sum Conditional Effects:\n")
+  AbsCE = sapply(x$conditionalEffects, function(R) diag(R$abs))
+  colnames(AbsCE) = paste0("Response_", 1:ncol(AbsCE))
+  rownames(AbsCE) = rownames(ACE)
+  print(AbsCE)
+  cat("\nStandard Deviation of Conditional Effects:\n")
+  SDce = sapply(x$conditionalEffects, function(R) diag(R$sd))
+  colnames(SDce) = paste0("Response_", 1:ncol(SDce))
+  rownames(SDce) = rownames(ACE)
+  print(SDce)
+
+  out$importance = x$importance
+  out$ACE = ACE
+  out$AbsCE = AbsCE
+  out$SDce = SDce
+  return(invisible(out))
 }
 
 
@@ -326,7 +334,7 @@ coef.citodnn <- function(object,...){
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"),device = c("cpu","cuda"),...) {
+predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -344,21 +352,9 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
     link = function(a) a
   }
 
-  if(device == "cuda"){
-    if (torch::cuda_is_available()) {
-      device <- torch::torch_device("cuda")}
-    else{
-      warning("No Cuda device detected, device is set to cpu")
-      device <- torch::torch_device("cpu")
-    }
-
-  }else {
-    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
-    device <- torch::torch_device("cpu")
-  }
+  device <- check_device(device)
 
   object$net$to(device = device)
-
 
   ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){

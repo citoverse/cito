@@ -8,7 +8,7 @@
   object,
   newdata = NULL,
   type = c("link", "response", "class"),
-  device = c("cpu", "cuda"),
+  device = c("cpu", "cuda", "mps"),
   ...
 )
 }

@@ -163,7 +163,6 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 
 testthat::test_that("DNN coef accuracy check",{
 
-
   #testthat::skip_on_cran()
   #testthat::skip_on_ci()
   skip_if_no_torch()
