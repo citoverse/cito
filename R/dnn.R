@@ -84,7 +84,7 @@ dnn <- function(formula,
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(dropout, "R+[0,)")
+  checkmate::qassert(dropout, "R+[0,1)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(plot,"B1")
   checkmate::qassert(verbose,"B1")
