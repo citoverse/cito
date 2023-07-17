@@ -55,8 +55,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       optimizer$step()
 
       train_l <- c(train_l, loss$item())
-      model$losses$train_l[epoch] <- mean(train_l)
     })
+    model$losses$train_l[epoch] <- mean(train_l)
 
 
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){
@@ -70,9 +70,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
                                  loss = loss, lambda = model$training_properties$lambda,
                                  intercept= model$model_properties$bias[1])
         valid_l <- c(valid_l, loss$item())
-        model$losses$valid_l[epoch] <- mean(valid_l)
       })
-
+      model$losses$valid_l[epoch] <- mean(valid_l)
     }
 
     ### learning rate scheduler ###
