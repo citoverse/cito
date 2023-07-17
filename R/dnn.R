@@ -169,6 +169,8 @@ dnn <- function(formula,
     valid_dl <- NULL
   }
 
+  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+
 
   net <- build_model(input = ncol(X), output = y_dim,
                     hidden = hidden, activation = activation,
