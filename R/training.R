@@ -105,7 +105,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### early stopping ###
     if(is.numeric(model$training_properties$early_stopping)) {
       if(model$training_properties$validation != 0 & !is.null(valid_dl)){
-        if(model$losses$train_l[epoch] < best_val_loss) {
+        if(model$losses$valid_l[epoch] < best_val_loss) {
           best_val_loss = model$losses$valid_l[epoch]
           counter = 0
         }
