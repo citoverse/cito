@@ -30,9 +30,6 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
         layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
       }
       counter = counter+1
-      if(activation[i] == "relu") layers[[counter]] = torch::nn_relu()
-      if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
-      if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
       layers[[counter]]<- switch(tolower(activation[i]),
              "relu" = torch::nn_relu(),
              "leaky_relu" = torch::nn_leaky_relu(),
