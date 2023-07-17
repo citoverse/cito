@@ -19,7 +19,7 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
     layers[[1]] = torch::nn_linear(input, out_features = output,bias = FALSE)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
-    if(length(hidden) != length(bias)) bias = rep(bias, (length(hidden)+1))
+    if(length(hidden)+1 != length(bias)) bias = rep(bias, (length(hidden)+1))
     if(length(hidden) != length(dropout)) dropout = rep(dropout,length(hidden))
 
     counter = 1
@@ -58,7 +58,7 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
         counter = counter+1
       }
     }
-    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i])
+    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i+1])
   }
   net = do.call(torch::nn_sequential, layers)
   return(net)
