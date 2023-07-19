@@ -60,6 +60,16 @@ check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALS
 }
 
 
+check_listable_parameter <- function(parameter, check, vname = checkmate::vname(parameter)) {
+  checkmate::qassert(parameter, c(check, "L+"), vname)
+  if(inherits(parameter, "list")) {
+    for (i in names(parameter)) {
+      checkmate::qassert(parameter[[i]], check, paste0(vname, "$", i))
+    }
+  }
+}
+
+
 get_var_names <- function(formula, data){
   X_helper <- stats::model.matrix(formula,data[1,])
   var_names <- c()
