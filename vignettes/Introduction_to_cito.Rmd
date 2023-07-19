@@ -22,7 +22,8 @@ knitr::opts_chunk$set(
 ```
 
 ## Abstract
-With 'cito'  you can build and train fully-connected neural networks using the formula syntax. It is based on the 'torch' deep learning framework. Since 'torch' is native to R, no Python installation or API is needed. 
+'cito' allows you to build and train fully-connected neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and graphic card support. 
+
 
 ## Setup 
 ### Installing torch 
@@ -47,8 +48,7 @@ data <- data.frame(scale(data[,-5]),Species = data[,5])
 ```
 
 ## Introduction to models and model structures 
-In 'cito', you can fit neural networks with the dnn function. 
-Models can also be trained on the GPU by setting device = "cuda". This is suggested if you are working with large data sets or networks. 
+In 'cito', neural networks are specified and fitted with the dnn function. Models can also be trained on the GPU by setting device = "cuda". This is suggested if you are working with large data sets or networks. 
 ```{r simp_models, fig.show='hide',out.lines = 3,eval= FALSE}
 library(cito)
 
@@ -75,7 +75,7 @@ plot(nn.fit)
 ```
 ![Structure plot of the generate network](structure_nn.png){ width=70%}
 
-### Adding activation functions
+### Activation functions
 By default,  all layers are fitted with ReLU as activation function.
 $$
 relu(x) = max (0,x)
@@ -93,7 +93,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,
 
 
 ### Adding a validation set to the training process
-In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and  define a percentage that will not be used for training and only for validation after each epoch. During training, the loss plot will show you how the two losses behave. 
+In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and  define a percentage that will not be used for training and only for validation after each epoch. During training, a loss plot will show you how the two losses behave. 
 
 ```{r validation, results = "hide", eval = FALSE, out.lines=3, fig.show='hide'}
 #20% of data set is used as validation set
@@ -121,7 +121,7 @@ nn.fit$use_model_epoch <- which.min(nn.fit$losses$valid_l)
 ```
 
 ### Interpreting model output
-The standard generic functions can be used to interpret the model: 
+The standard generic R functions can be used to interpret the model: 
 
 
 ```{r interpret,eval=FALSE}
@@ -179,7 +179,6 @@ Feature Importance:
 ```
 
 
-
 ## Training hyperparameters  
 ### Regularization 
 #### Elastic net regularization
@@ -189,7 +188,7 @@ $$
  loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
 $$
 
-If a single alpha value is provided each layer will get regularized the same. You can also regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1, the +1 comes from the input layer. With NA you can turn off generalization for specific layers.
+If a single alpha value is provided each layer will get regularized with the same elastic net regularization. However, you can also regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1. With NA you can turn off generalization for specific layers.
 
 ```{r alpha, results ="hide",fig.show='hide',eval = FALSE }
 #elastic net penalty in all layers: 
@@ -200,7 +199,7 @@ nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10),
 ``` 
 
 #### Dropout Regularization 
-Dropout also regularizes your network. During training in every epoch a defined percentage of nodes gets left out.
+Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf?utm_content=buffer79b43&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer,) can be controlled similar to elastic net regularization. In this approach, a percentage of different nodes gets left during each epoch.
 
 
 ```{r dropout, results ="hide",fig.show='hide' ,eval = FALSE}
@@ -213,7 +212,7 @@ nn.fit <- dnn(Species~., data = data,
 
 ### Learning rate
 ### Learning rate scheduler
-Learning rate scheduler allow you to start with a high learning rate and decrease it during the training process. 
+Learning rate scheduler allow you to start with a high learning rate and decrease it during the training process. This leads to an overall faster training.
 You can choose between different types of schedulers. Namely, lambda, multiplicative, one_cycle and step.
 
 The function config_lr_scheduler() helps you setup such a scheduler. See ?config_lr_scheduler() for more information
@@ -229,7 +228,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
 
 
 ### Optimizer 
-Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom  optimizers can be used  with config_optimizer().  
+Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom optimizers can be used  with config_optimizer().  
 See ?config_optimizer() for more information.
 
 ```{r optim,eval = FALSE}
