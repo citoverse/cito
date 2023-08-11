@@ -87,6 +87,8 @@ cnn <- function(X,
   n_samples <- dim(X)[1]
   input_shape <- dim(X)[-1]
 
+  X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+
   if(is.matrix(Y)) {
     y_dim <- ncol(Y)
     ylvls <- colnames(Y)
@@ -101,7 +103,7 @@ cnn <- function(X,
   } else if(is.factor(Y)) {
     y_dim <- length(levels(Y))
     ylvls <- levels(Y)
-    Y <- torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long()))
+    Y <- torch::torch_tensor(Y, dtype=torch::torch_long())
     y_dtype <- torch::torch_long()
   } else {
     y_dim <- 1
@@ -123,8 +125,8 @@ cnn <- function(X,
   if(validation != 0) {
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype = y_dtype)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype = y_dtype)
+    train_dl <- get_data_loader(X[train,..], Y[train,..], batch_size = batchsize, shuffle = shuffle, y_dtype = y_dtype)
+    valid_dl <- get_data_loader(X[valid,..], Y[valid,..], batch_size = batchsize, shuffle = shuffle, y_dtype = y_dtype)
   } else {
     train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, y_dtype = y_dtype)
     valid_dl <- NULL
@@ -141,13 +143,54 @@ cnn <- function(X,
                                   bias = bias,
                                   activation = activation,
                                   normalization = normalization,
-                                  dropout = dropout)
+                                  dropout = dropout,
+                                  lambda = lambda,
+                                  alpha = alpha)
+
+  regularization_parameters <- get_regularization_parameters(layers)
+  lambda <- regularization_parameters$lambda
+  alpha <- regularization_parameters$alpha
 
   net <- build_cnn(input_shape = input_shape,
-                   output = y_dim,
+                   output_shape = y_dim,
                    layers = layers)
 
-  return(net)
+  model_properties <- list(input = input_shape,
+                           output_shape = y_dim,
+                           layers = layers)
+
+  training_properties <- list(lr = lr,
+                              lr_scheduler = lr_scheduler,
+                              optimizer = optimizer,
+                              epochs = epochs,
+                              early_stopping = early_stopping,
+                              plot = plot,
+                              validation = validation,
+                              lambda = lambda,
+                              alpha = alpha,
+                              batchsize = batchsize,
+                              shuffle = shuffle)
+
+  out <- list()
+  class(out) <- "citocnn"
+  out$net <- net
+  out$call <- match.call()
+  out$loss <- loss_obj
+  out$data <- list(X = X, Y = Y)
+  if(validation != 0) out$data <- append(out$data, list(validation = valid))
+  out$weights <- list()
+  out$use_model_epoch <- 0
+  out$loaded_model_epoch <- 0
+  out$model_properties <- model_properties
+  out$training_properties <- training_properties
+
+
+
+  ### training loop ###
+  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+
+
+  return(out)
 }
 
 
