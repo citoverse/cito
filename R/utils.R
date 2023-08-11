@@ -1,17 +1,12 @@
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
-  if(!inherits(object, c("citodnn"))) stop("model not of class citodnn")
+  if(!inherits(object, c("citodnn", "citocnn"))) stop("model not of class citodnn or citocnn")
 
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
-    object$net<- build_model(input =object$model_properties$input,
-                    output = object$model_properties$output,
-                    hidden = object$model_properties$hidden,
-                    activation = object$model_properties$activation,
-                    bias = object$model_properties$bias,
-                    dropout = object$model_properties$dropout)
-    object$loaded_model_epoch<- 0
+    object$net <- build_model(object)
+    object$loaded_model_epoch <- 0
     object$loss<- get_loss(object$loss$call)
     }
 
@@ -35,9 +30,6 @@ check_model <- function(object) {
 
   return(object)
 }
-
-
-
 
 check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALSE, verbose = FALSE){
   value <- NULL
