@@ -125,7 +125,7 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "reduce_on_
 
   for(var in names(mc)[2:length(names(mc))]){
     if(!(var %in%c( "type", "verbose"))){
-      if(!(var%in% names(out)) & var != "type"){
+      if(!(var%in% names(out))){
         warning(paste0(var, " could not be assigned to ", out$lr_scheduler," scheduler \n"))
       }
     }

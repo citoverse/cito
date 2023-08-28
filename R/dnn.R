@@ -105,7 +105,7 @@ dnn <- function(formula,
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
   checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(dropout, "R+[0,)")
+  checkmate::qassert(dropout, "R+[0,1)")
   checkmate::qassert(lr, "R+[0,)")
   checkmate::qassert(plot,"B1")
   checkmate::qassert(verbose,"B1")
@@ -177,6 +177,8 @@ dnn <- function(formula,
     train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
     valid_dl <- NULL
   }
+
+  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
 
 
   net <- build_model(input = ncol(X), output = y_dim,
