@@ -1,7 +1,7 @@
 #' 'cito': Building and training neural networks
 #'
-#' Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card.
-#' The main function is \code{\link{dnn}} which trains a custom deep neural network.
+#' Building and training custom neural networks in the typical R syntax. It relies on the 'torch' package for numerical computations and graphic card support.
+#' Cito is built around its main function \code{\link{dnn}}, which creates and trains a custom deep neural network. Various tools for analyzing the trained neural network are available.
 #'
 #' @section Installation:
 #'
