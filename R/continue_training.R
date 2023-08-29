@@ -3,7 +3,6 @@
 #' @param model a model created by \code{\link{dnn}}
 #' @param data matrix or data.frame if not provided data from original training will be used
 #' @param epochs additional epochs the training should continue for
-#' @param continue_from define which epoch should be used as starting point for training, 0 if last epoch should be used
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
@@ -16,7 +15,6 @@
 #' @export
 continue_training <- function(model,
                               epochs = 32,
-                              continue_from= NULL,
                               data=NULL,
                               device= "cpu",
                               verbose = TRUE,
@@ -38,15 +36,7 @@ continue_training <- function(model,
     device<- torch::torch_device("cpu")
   }
 
-
-  ### initiate model ###
-  if(!is.null(continue_from)){
-    model$use_model_epoch <- continue_from
-  }else{
-    model$use_model_epoch <- max(which(!is.na(model$losses$train_l)))
-  }
   model<- check_model(model)
-
 
 
   ### set training environment ###

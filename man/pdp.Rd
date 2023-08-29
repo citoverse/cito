@@ -33,14 +33,23 @@ A list of plots made with 'ggplot2' consisting of an individual plot for each de
 Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 }
 \details{
-Performs the estimation of the partial function \eqn{\hat{f}_S}{}
+Description
+Performs a Partial Dependency Plot (PDP) estimation to analyze the relationship between a selected feature and the target variable.
+
+The PDP function estimates the partial function \eqn{\hat{f}_S}{}:
 
 \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 
 with a Monte Carlo Estimation:
 
 \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
+using a Monte Carlo estimation method. It calculates the average prediction of the target variable for different values of the selected feature while keeping other features constant.
 
+For categorical features, all data instances are used, and each instance is set to one level of the categorical feature. The average prediction per category is then calculated and visualized in a bar plot.
+
+If the \code{ice} parameter is set to \code{TRUE}, the Individual Conditional Expectation (ICE) curves are also shown. These curves illustrate how each individual data sample reacts to changes in the feature value. Please note that this option is not available for categorical features. Unlike PDP, the ICE curves are computed using a value grid instead of utilizing every value of every data entry.
+
+Note: The PDP analysis provides valuable insights into the relationship between a specific feature and the target variable, helping to understand the feature's impact on the model's predictions.
 If a categorical feature is analyzed, all data instances are used and set to each level.
 Then an average is calculated per category and put out in a bar plot.
 

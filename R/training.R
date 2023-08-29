@@ -98,7 +98,20 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
 
-    model$weights[[epoch]] <- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+    # Save best weights
+    if(epoch > 1) {
+      if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(min(model$losses$valid_l[epoch-1]) > model$losses$valid_l[epoch]) {
+          model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        }
+      } else {
+        if(min(model$losses$train_l[epoch-1]) > model$losses$train_l[epoch]) {
+          model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        }
+      }
+    } else {
+      model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+    }
 
 
     ### create plot ###
@@ -129,9 +142,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
   }
 
+  model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, as.numeric)
-  model$use_model_epoch <- epoch
-  model$loaded_model_epoch <- epoch
+  model$use_model_epoch <- 1
+  model$loaded_model_epoch <- 1
 
 
   return(model)

@@ -11,7 +11,11 @@ Authors@R:
       person(given = "Maximilian",
            family = "Pichler",
            role = c("aut"),
-           email = "maximilian.pichler@ur.de")
+           email = "maximilian.pichler@ur.de"),
+      person(given = "Armin",
+             family = "Schenk",
+             role = "ctb",
+             email = "armin.schenk@stud.uni-regensburg.de")
            )
 Description: Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card. 
 Encoding: UTF-8

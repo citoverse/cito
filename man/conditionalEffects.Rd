@@ -16,7 +16,7 @@ conditionalEffects(
 )
 }
 \arguments{
-\item{object}{object of class nn.fit}
+\item{object}{object of class \code{citodnn}}
 
 \item{interactions}{calculate interactions or not (computationally expensive)}
 
@@ -24,7 +24,7 @@ conditionalEffects(
 
 \item{device}{which device}
 
-\item{indices}{calculation of effects until which column index}
+\item{indices}{of variables for which the ACE are calculated}
 
 \item{data}{data which is used to calculate the ACE}
 

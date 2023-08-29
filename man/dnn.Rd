@@ -81,7 +81,7 @@ The list consists of the following attributes:
 \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 \item{data}{Contains data used for training the model}
 \item{weigths}{List of weights for each training epoch}
-\item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
+\item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction. 1 = best model, 2 = last model}
 \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
 \item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
@@ -107,13 +107,6 @@ Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) r
 
 By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
 
-\strong{Training on graphic cards}
-
-If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
-For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
-
-Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
-
 \strong{Custom Optimizer and Learning Rate Schedulers}
 
 When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
@@ -121,6 +114,12 @@ When training a network, you have the flexibility to customize the optimizer set
 \code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 
 Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
+\strong{Training on graphic cards}
+
+If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
+For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
+
+Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 }
 \examples{
 \donttest{

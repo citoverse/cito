@@ -68,7 +68,7 @@
 #' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 #' \item{data}{Contains data used for training the model}
 #' \item{weigths}{List of weights for each training epoch}
-#' \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
+#' \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction. 1 = best model, 2 = last model}
 #' \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 #' \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
 #' \item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
@@ -222,7 +222,7 @@ dnn <- function(formula,
   }
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$weights <- list()
-  out$use_model_epoch <- 0
+  out$use_model_epoch <- 1
   out$loaded_model_epoch <- 0
   out$model_properties <- model_properties
   out$training_properties <- training_properties
@@ -306,29 +306,29 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
 #' @export
 print.summary.citodnn <- function(x, ... ){
   out = list()
-  cat("Deep Neural Network Model summary\n")
+  cat("Summary of Deep Neural Network Model\n")
   #cat(paste(as.character(x$call$formula)[c(2,1,3)],collapse =" ")) # Unncessary, right? Variables names are the column names of the importance matrix
-  cat("Feature Importance:\n")
+  cat("\nFeature Importance:\n")
   print(x$importance)
   cat("\nAverage Conditional Effects:\n")
   ACE = sapply(x$conditionalEffects, function(R) diag(R$mean))
   colnames(ACE) = paste0("Response_", 1:ncol(ACE))
   print(ACE)
-  cat("\nAbsolute Sum Conditional Effects:\n")
+  cat("\nAbsolute sum of Conditional Effects:\n")
   AbsCE = sapply(x$conditionalEffects, function(R) diag(R$abs))
   colnames(AbsCE) = paste0("Response_", 1:ncol(AbsCE))
   rownames(AbsCE) = rownames(ACE)
   print(AbsCE)
-  cat("\nStandard Deviation of Conditional Effects:\n")
-  SDce = sapply(x$conditionalEffects, function(R) diag(R$sd))
-  colnames(SDce) = paste0("Response_", 1:ncol(SDce))
-  rownames(SDce) = rownames(ACE)
-  print(SDce)
+  # cat("\nStandard Deviation of Conditional Effects:\n")
+  # SDce = sapply(x$conditionalEffects, function(R) diag(R$sd))
+  # colnames(SDce) = paste0("Response_", 1:ncol(SDce))
+  # rownames(SDce) = rownames(ACE)
+  # print(SDce)
 
   out$importance = x$importance
   out$ACE = ACE
   out$AbsCE = AbsCE
-  out$SDce = SDce
+  #out$SDce = SDce
   return(invisible(out))
 }
 

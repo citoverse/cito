@@ -119,7 +119,7 @@ PDP <- function(model,
         df_ice = as.data.frame(df_ice)
         df_ice$group = as.factor(df_ice$group)
 
-        p <- p + ggplot2::geom_line(data = df_ice, mapping = ggplot2::aes_string(x = "x", y = "y", group = "group" ))
+        p <- p + ggplot2::geom_line(data = df_ice, mapping = ggplot2::aes(x = x, y = y, group = group ))
         p <- p + ggplot2::geom_line(colour = "yellow", linewidth = 2, data=df, mapping = ggplot2::aes(x=x,y=y))
         }
     }else if (is.factor(data[,v])){
