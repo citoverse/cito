@@ -39,7 +39,7 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
   H[, length(n), length(n)] <-  ( f(x0_tmp) - f_x0 )/h[length(n)]
   effs = apply(H, 2:3, mean)
   abs = apply(H, 2:3, function(d) mean(abs(d)))
-  sds = apply(H, 2:3, sd)
+  sds = apply(H, 2:3, stats::sd)
   if(!obs_level) return(list(effs = effs, abs = abs, sds = sds))
   else return(H)
 }
@@ -92,7 +92,7 @@ conditionalEffects = function(object, interactions=FALSE, epsilon = 0.1, device 
       predict_f = function(model, newdata) {
         df = data.frame(newdata)
         colnames(df) = colnames(data)
-        return(predict(model, df, device = device, type = type, ...)[,n_prediction])
+        return(stats::predict(model, df, device = device, type = type, ...)[,n_prediction])
       },
       model = object, obs_level = TRUE,
       interactions=interactions,
@@ -105,7 +105,7 @@ conditionalEffects = function(object, interactions=FALSE, epsilon = 0.1, device 
     colnames(tmp$mean) = colnames(data)[indices]
     rownames(tmp$mean) = colnames(data)[indices]
     tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
-    tmp$sd = apply(result, 2:3, function(d) sd(d))
+    tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
     tmp$interactions = interactions
     out[[n_prediction]] = tmp
   }

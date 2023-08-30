@@ -92,6 +92,8 @@ dnn <- function(formula,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 batchsize = 32L,
+                bootstrap = NULL,
+                bootstrap_parallel = FALSE,
                 shuffle = TRUE,
                 epochs = 100,
                 plot = TRUE,
@@ -119,12 +121,12 @@ dnn <- function(formula,
   if(!is.function(loss) & !inherits(loss,"family")){
     loss <- match.arg(loss)
   }
-
+  device_old = device
   device = check_device(device)
 
   ### Generate X & Y data ###
   if(!is.data.frame(data)) data <- data.frame(data)
-
+  old_formula = formula
   if(!is.null(formula)){
     fct_call <- match.call()
     m <- match("formula", names(fct_call))
@@ -166,73 +168,97 @@ dnn <- function(formula,
   if(!is.function(loss_obj$call)){
     if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
   }
-  ### dataloader  ###
-  if(validation != 0){
-    valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
-    train <- c(1:nrow(X))[-valid]
-    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
 
-  }else{
-    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-    valid_dl <- NULL
+  if(is.null(bootstrap)) {
+
+    ### dataloader  ###
+    if(validation != 0){
+      valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
+      train <- c(1:nrow(X))[-valid]
+      train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+      valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+
+    }else{
+      train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+      valid_dl <- NULL
+    }
+    if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+    net <- build_model(input = ncol(X), output = y_dim,
+                      hidden = hidden, activation = activation,
+                      bias = bias, dropout = dropout)
+    model_properties <- list(input = ncol(X),
+                             output = y_dim,
+                             hidden = hidden,
+                             activation = activation,
+                             bias = bias,
+                             dropout = dropout)
+    training_properties <- list(lr = lr,
+                               lr_scheduler = lr_scheduler,
+                               optimizer = optimizer,
+                               epochs = epochs,
+                               early_stopping = early_stopping,
+                               plot = plot,
+                               validation = validation,
+                               lambda = lambda,
+                               alpha = alpha,
+                               batchsize = batchsize,
+                               shuffle = shuffle,
+                               formula = formula)
+    out <- list()
+    class(out) <- "citodnn"
+    out$net <- net
+    out$call <- match.call()
+    out$call$formula <- stats::terms.formula(formula,data = data)
+    out$loss <- loss_obj
+    out$data <- list(X = X, Y = Y, data = data)
+    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
+    if(!is.null(ylvls))  {
+      out$data$ylvls <- ylvls
+      out$data$xlvls <- out$data$xlvls[-which(as.character(formula[2]) == names(out$data$xlvls))]
+    }
+    if(validation != 0) out$data <- append(out$data, list(validation = valid))
+    out$weights <- list()
+    out$use_model_epoch <- 1
+    out$loaded_model_epoch <- 0
+    out$model_properties <- model_properties
+    out$training_properties <- training_properties
+
+    ### training loop ###
+    out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+
+
+  } else {
+    out <- list()
+    class(out) <- "citodnnBootstrap"
+    if(is.logical(bootstrap_parallel)) {
+      if(!bootstrap_parallel) {
+        backend = NULL
+      } else {
+        bootstrap_parallel = parallel::detectCores()
+      }
+    }
+
+      if(is.numeric(bootstrap_parallel)) {
+        backend = parabar::start_backend(bootstrap_parallel)
+        parabar::export(backend, ls(environment()), environment())
+      }
+      parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = getOption("width")/2)
+      models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
+          indices <- sample(nrow(data),replace = TRUE)
+          m = do.call(dnn, args = list(
+            formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+            bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
+            optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
+            bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
+            bootstrap_parallel = FALSE
+          ))
+          m
+      })
+      if(!is.null(backend)) parabar::stop_backend(backend)
+
+    out$models <- models
+    out$data <- list(X = X, Y = Y, data = data)
   }
-
-  if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
-
-
-  net <- build_model(input = ncol(X), output = y_dim,
-                    hidden = hidden, activation = activation,
-                    bias = bias, dropout = dropout)
-
-
-
-  model_properties <- list(input = ncol(X),
-                           output = y_dim,
-                           hidden = hidden,
-                           activation = activation,
-                           bias = bias,
-                           dropout = dropout)
-
-  training_properties <- list(lr = lr,
-                             lr_scheduler = lr_scheduler,
-                             optimizer = optimizer,
-                             epochs = epochs,
-                             early_stopping = early_stopping,
-                             plot = plot,
-                             validation = validation,
-                             lambda = lambda,
-                             alpha = alpha,
-                             batchsize = batchsize,
-                             shuffle = shuffle,
-                             formula = formula)
-
-
-  out <- list()
-  class(out) <- "citodnn"
-  out$net <- net
-  out$call <- match.call()
-  out$call$formula <- stats::terms.formula(formula,data = data)
-  out$loss <- loss_obj
-  out$data <- list(X = X, Y = Y, data = data)
-  out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
-  if(!is.null(ylvls))  {
-    out$data$ylvls <- ylvls
-    out$data$xlvls <- out$data$xlvls[-which(as.character(formula[2]) == names(out$data$xlvls))]
-  }
-  if(validation != 0) out$data <- append(out$data, list(validation = valid))
-  out$weights <- list()
-  out$use_model_epoch <- 1
-  out$loaded_model_epoch <- 0
-  out$model_properties <- model_properties
-  out$training_properties <- training_properties
-
-
-
-  ### training loop ###
-  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
-
   return(out)
 }
 
@@ -248,6 +274,20 @@ print.citodnn <- function(x,...){
   x <- check_model(x)
   print(x$call)
   print(x$net)
+  return(invisible(x))
+}
+
+#' Print class citodnnBootstrap
+#'
+#' @param x a model created by \code{\link{dnn}}
+#' @param ... additional arguments
+#' @return prediction matrix
+#' @example /inst/examples/print.citodnn-example.R
+#' @return original object x gets returned
+#' @export
+print.citodnnBootstrap <- function(x,...){
+  x$models <- lapply(x$models, check_model)
+  print(x$models[[1]]$net)
   return(invisible(x))
 }
 
@@ -296,6 +336,29 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
   return(out)
 }
 
+#' Summarize Neural Network of class citodnnBootstrap
+#'
+#' Performs a Feature Importance calculation based on Permutations
+#'
+#' @details
+#'
+#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
+#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
+#'
+#' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
+#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
+#' @param ... additional arguments
+#' @return summary.glm returns an object of class "summary.citodnn", a list with components
+#' @export
+summary.citodnnBootstrap <- function(object, n_permute = NULL, ...){
+  object$models <- lapply(object$models, check_model)
+  out <- list()
+  class(out) <- "summary.citodnnBootstrap"
+  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute))
+  out$conditionalEffects <- lapply(object$models, conditionalEffects)
+  return(out)
+}
+
 
 
 #' Print method for class summary.citodnn
@@ -307,7 +370,6 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
 print.summary.citodnn <- function(x, ... ){
   out = list()
   cat("Summary of Deep Neural Network Model\n")
-  #cat(paste(as.character(x$call$formula)[c(2,1,3)],collapse =" ")) # Unncessary, right? Variables names are the column names of the importance matrix
   cat("\nFeature Importance:\n")
   print(x$importance)
   cat("\nAverage Conditional Effects:\n")
@@ -319,16 +381,100 @@ print.summary.citodnn <- function(x, ... ){
   colnames(AbsCE) = paste0("Response_", 1:ncol(AbsCE))
   rownames(AbsCE) = rownames(ACE)
   print(AbsCE)
-  # cat("\nStandard Deviation of Conditional Effects:\n")
-  # SDce = sapply(x$conditionalEffects, function(R) diag(R$sd))
-  # colnames(SDce) = paste0("Response_", 1:ncol(SDce))
-  # rownames(SDce) = rownames(ACE)
-  # print(SDce)
 
   out$importance = x$importance
   out$ACE = ACE
   out$AbsCE = AbsCE
-  #out$SDce = SDce
+  return(invisible(out))
+}
+
+#' Print method for class summary.citodnnBootstrap
+#'
+#' @param x a summary object created by \code{\link{summary.citodnnBootstrap}}
+#' @param ... additional arguments
+#' @return List with Matrices for importance, average CE, absolute sum of CE, and standard deviation of the CE
+#' @export
+print.summary.citodnnBootstrap <- function(x, ... ){
+  out = list()
+  cat("Summary of Deep Neural Network Model\n\n")
+  cat("\t##########################################################\n")
+  cat("\t# \tFeature Importance \n")
+  cat("\t##########################################################\n")
+  #cat("\nFeature Importance:\n")
+
+  res_imps = list()
+
+  for(i in 2:ncol(x$importance[[1]])) {
+    tmp = sapply(x$importance, function(x) x[,i])
+    imps = apply(tmp, 1, mean) - 1
+    imps_se = apply(tmp, 1, sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(imps)),
+      as.vector(as.matrix(imps_se)),
+      as.vector(as.matrix(imps/imps_se)),
+      as.vector(as.matrix(pnorm(imps/imps_se, lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i-1, ": ",x$importance[[1]]$variable)
+    res_imps[[i-1]] = coefmat
+  }
+  stats::printCoefmat(do.call(rbind, res_imps), signif.stars = getOption("show.signif.stars"), digits = 3)
+
+
+  cat("\n\n\t##########################################################\n")
+  cat("\t# \tAverage Conditional Effects \n")
+  cat("\t##########################################################\n")
+
+  #cat("\nAverage Conditional Effects:\n")
+
+  res_ACE = list()
+
+  for(i in 1:length(x$conditionalEffects[[1]])) {
+    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$mean))
+    eff = apply(tmp, 1, mean)
+    eff_se = apply(tmp, 1, sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(eff)),
+      as.vector(as.matrix(eff_se)),
+      as.vector(as.matrix(eff/eff_se)),
+      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i, ": ", rownames(x$conditionalEffects[[1]][[1]]$mean))
+    res_ACE[[i]] = coefmat
+  }
+  stats::printCoefmat(do.call(rbind, res_ACE), signif.stars = getOption("show.signif.stars"), digits = 3)
+
+  cat("\n\n\t##########################################################\n")
+  cat("\t# \tAbsolute sum of Conditional Effects \n")
+  cat("\t##########################################################\n")
+  #cat("\nAbsolute sum of Conditional Effects:\n")
+
+  res_ASCE = list()
+
+  for(i in 1:length(x$conditionalEffects[[1]])) {
+    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$abs))
+    eff = apply(tmp, 1, mean)
+    eff_se = apply(tmp, 1, sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(eff)),
+      as.vector(as.matrix(eff_se)),
+      as.vector(as.matrix(eff/eff_se)),
+      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i, ": ", rownames(x$conditionalEffects[[1]][[1]]$mean))
+    res_ASCE[[i]] = coefmat
+  }
+  stats::printCoefmat(do.call(rbind, res_ASCE), signif.stars = getOption("show.signif.stars"), digits = 3)
+
+
+  out$importance = res_imps
+  out$ACE = res_ACE
+  out$AbsCE = res_ASCE
   return(invisible(out))
 }
 
@@ -402,6 +548,36 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
   return(pred)
 }
 
+
+
+
+#' Predict from a fitted dnn model
+#'
+#' @param object a model created by \code{\link{dnn}} with bootstrapping
+#' @param newdata new data for predictions
+#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
+#' @param device device on which network should be trained on.
+#' @param ... additional arguments
+#' @return prediction array
+#'
+#' @example /inst/examples/predict.citodnn-example.R
+#' @export
+predict.citodnnBootstrap <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"),...) {
+
+  checkmate::assert( checkmate::checkNull(newdata),
+                     checkmate::checkMatrix(newdata),
+                     checkmate::checkDataFrame(newdata),
+                     checkmate::checkScalarNA(newdata))
+
+  if(is.null(newdata)) newdata = object$data$X
+
+  predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device))
+  return(abind::abind(predictions, along = 0L))
+}
+
+
+
+
 #' Creates graph plot which gives an overview of the network architecture.
 #'
 #' @param x a model created by \code{\link{dnn}}
@@ -457,3 +633,19 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
     ggraph::geom_node_point(size = node_size)
   print(p)
 }
+
+
+
+#' Creates graph plot which gives an overview of the network architecture.
+#'
+#' @param x a model created by \code{\link{dnn}} with bootstrapping
+#' @param node_size size of node in plot
+#' @param scale_edges edge weight gets scaled according to other weights (layer specific)
+#' @param ... no further functionality implemented yet
+#' @return A plot made with 'ggraph' + 'igraph' that represents the neural network
+#' @example /inst/examples/plot.citodnn-example.R
+#' @export
+plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,...){
+ plot(x$models[[1]], node_size = node_size, scale_edges = scale_edges)
+}
+

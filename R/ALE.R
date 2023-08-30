@@ -25,13 +25,21 @@
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
 #' @export
-
 ALE <- function(model,
                 variable = NULL,
                 data = NULL,
                 K = 10,
                 type = c("equidistant", "quantile"),
-                plot=TRUE){
+                plot=TRUE) UseMethod("ALE")
+
+#' @rdname ALE
+#' @export
+ALE.citodnn <- function(model,
+                        variable = NULL,
+                        data = NULL,
+                        K = 10,
+                        type = c("equidistant", "quantile"),
+                        plot=TRUE){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -58,111 +66,28 @@ ALE <- function(model,
     cat("Categorical features are not yet supported.\n")
     variable = variable[!is_categorical]
   }
-
-
   p_ret <- sapply (variable,function(v){
-      results =
-            lapply(1:model$model_properties$output, function(n_output) {
-
-            if ( type == "equidistant"){
-              reduced_K <- FALSE
-              repeat{
-                borders <- seq(from = min(data[,v]),
-                               to = max(data[,v]),
-                               length.out = K+1)
-
-                df <- data.frame(
-                  x = borders[1:K] + ((borders[2]-borders[1])/2),
-
-                  y = sapply(seq_len(length(borders))[-1], function(i){
-
-                    region_indizes <- which(data[,v]<= borders[i] &
-                                              data[,v]>= borders[i-1])
-
-                    if(length(region_indizes)>0){
-                      perm_data <- data[region_indizes,]
-
-                      perm_data[,v] <- borders[i-1]
-                      lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
-
-                      perm_data[,v] <- borders[i]
-                      upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
-
-                      return(mean(upper_preds - lower_preds))
-                    }else{
-
-                      return(NA)
-
-                    }
-                  })
-                )
-
-                if(any(is.na(df$y))){
-                  reduced_K <- TRUE
-                  K <- K - 1
-                }else{
-                  if(reduced_K){
-                    message(paste0("Number of Neighborhoods reduced to ",K))
-                  }
-                  break
-                }
-              }
-            }else if ( type == "quantile"){
-
-              quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
-              groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
-              groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
-
-
-              df <- data.frame (
-                x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
-                y = unlist(lapply(seq_len(length(groups)), function(i){
-
-                  perm_data <- data[groups[[i]],]
-
-                  perm_data[,v] <- quants[i]
-                  lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
-
-                  perm_data[,v] <- quants[i+1]
-                  upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
-
-                  return(mean(upper_preds - lower_preds))
-                  })))
-
-
-
-
-            }
-            for ( i in seq_len(nrow(df))[-1]){
-              df$y[i]<- df$y[i-1]+df$y[i]
-            }
-
-            df$y <- df$y - mean(df$y)
-
-            if(!is.null(model$data$ylvls)) {
-              label = paste0("ALE - ", model$data$ylvls[n_output])
-            } else {
-              label = "ALE"
-            }
-
-            p <- ggplot2::ggplot(data=df, mapping = ggplot2::aes(x = x,y = y))
-            p <- p + ggplot2::geom_line()
-            p <- p + ggplot2::ggtitle(label = label)
-            p <- p + ggplot2::xlab(label = v)
-            p <- p + ggplot2::ylab(label = "ALE")
-            geom_df<- data.frame(x = data[,v])
-            p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
-                                       mapping = ggplot2::aes(x = x),
-                                       inherit.aes = FALSE)
-            p <- p + ggplot2::theme_bw()
-
-            return(p)
-        })
+      results = getALE(model = model, v = v, type = type, data = data, K = K)
 
       results[sapply(results, is.null)] = NULL
 
       return(results)
     })
+
+  p_ret = lapply(p_ret, function(res) {
+    p <- ggplot2::ggplot(data=res$df, mapping = ggplot2::aes(x = x,y = y))
+    p <- p + ggplot2::geom_line()
+    p <- p + ggplot2::ggtitle(label = res$label)
+    p <- p + ggplot2::xlab(label = res$v)
+    p <- p + ggplot2::ylab(label = "ALE")
+    geom_df<- data.frame(x = res$data)
+    p <- p + ggplot2::geom_rug(sides="b", data = geom_df,
+                               mapping = ggplot2::aes(x = x),
+                               inherit.aes = FALSE)
+    p <- p + ggplot2::theme_bw()
+    return(p)
+  })
+
 
   p_ret = do.call(list, p_ret)
   if(plot) {
@@ -175,4 +100,147 @@ ALE <- function(model,
   }
   return(invisible(p_ret))
 }
+
+
+#' @rdname ALE
+#' @export
+ALE.citodnnBootstrap <- function(model,
+                        variable = NULL,
+                        data = NULL,
+                        K = 10,
+                        type = c("equidistant", "quantile"),
+                        plot=TRUE){
+  if (!requireNamespace("ggplot2", quietly = TRUE)) {
+    stop(
+      "Package \"ggplot2\" must be installed to use this function.",
+      call. = FALSE
+    )
+  }
+
+  type <- match.arg(type)
+  results_boot = lapply(1:length(model$models), function(i) {
+    model_indv = model$models[[i]]
+    model_indv <- check_model(model_indv)
+    if(is.null(data)){
+      data <- model$data$data
+    }
+    if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
+    if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
+      warning("unknown variable")
+      return(NULL)
+    }
+    x <- NULL
+    y <- NULL
+    is_categorical = sapply(data[, variable], is.factor )
+    if(any(is_categorical)) {
+      # cat("Categorical features are not yet supported.\n")
+      variable = variable[!is_categorical]
+    }
+    p_ret <- sapply (variable,function(v){
+      results = getALE(model = model_indv, v = v, type = type, data = data, K = K)
+      results[sapply(results, is.null)] = NULL
+      return(results)
+    })
+    return(p_ret)
+  })
+
+  p_ret =
+  lapply(1:length(results_boot[[1]]), function(j) {
+    df_tmp = data.frame(
+      x = results_boot[[1]][[j]]$df[,1],
+      mean = apply(sapply(1:length(results_boot), function(i) results_boot[[i]][[j]]$df[,2]), 1, mean),
+      ci = 1.96*apply(sapply(1:length(results_boot), function(i) results_boot[[i]][[j]]$df[,2]), 1, sd)
+                        )
+    p =
+      ggplot2::ggplot(data =df_tmp, ggplot2::aes(x = x, y = mean)) +
+        ggplot2::geom_ribbon(ggplot2::aes(ymin = mean - ci, ymax = mean+ci), fill = "grey70") +
+        ggplot2::geom_line(ggplot2::aes(y = mean)) +
+        ggplot2::ggtitle(label = results_boot[[1]][[j]]$label) +
+        ggplot2::xlab(label = results_boot[[1]][[j]]$v) +
+        ggplot2::ylab(label = "ALE") +
+        ggplot2::theme_bw()
+    return(p)
+  })
+
+  p_ret = do.call(list, p_ret)
+  if(plot) {
+    if(model$models[[1]]$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$models[[1]]$model_properties$output)))
+    else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
+  }
+
+  if(!is.null(model$data$ylvls)) {
+    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  }
+  return(invisible(p_ret))
+}
+
+
+
+getALE = function(model, type, data, K, v ) {
+  return(
+  lapply(1:model$model_properties$output, function(n_output) {
+    if ( type == "equidistant"){
+      reduced_K <- FALSE
+      repeat{
+        borders <- seq(from = min(data[,v]),
+                       to = max(data[,v]),
+                       length.out = K+1)
+        df <- data.frame(
+          x = borders[1:K] + ((borders[2]-borders[1])/2),
+          y = sapply(seq_len(length(borders))[-1], function(i){
+            region_indizes <- which(data[,v]<= borders[i] &
+                                      data[,v]>= borders[i-1])
+            if(length(region_indizes)>0){
+              perm_data <- data[region_indizes,]
+              perm_data[,v] <- borders[i-1]
+              lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+              perm_data[,v] <- borders[i]
+              upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+              return(mean(upper_preds - lower_preds))
+            }else{
+              return(NA)
+            }
+          })
+        )
+        if(any(is.na(df$y))){
+          reduced_K <- TRUE
+          K <- K - 1
+        }else{
+          if(reduced_K){
+            message(paste0("Number of Neighborhoods reduced to ",K))
+          }
+          break
+        }
+      }
+    }else if ( type == "quantile"){
+
+      quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
+      groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
+      groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
+
+      df <- data.frame (
+        x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
+        y = unlist(lapply(seq_len(length(groups)), function(i){
+          perm_data <- data[groups[[i]],]
+          perm_data[,v] <- quants[i]
+          lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+          perm_data[,v] <- quants[i+1]
+          upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+          return(mean(upper_preds - lower_preds))
+        })))
+
+    }
+    for ( i in seq_len(nrow(df))[-1]){
+      df$y[i]<- df$y[i-1]+df$y[i]
+    }
+    df$y <- df$y - mean(df$y)
+    if(!is.null(model$data$ylvls)) {
+      label = paste0("ALE - ", model$data$ylvls[n_output])
+    } else {
+      label = "ALE"
+    }
+    return(list(df = df, label = label, data = data[,v], v = v))
+  }))
+}
+
 

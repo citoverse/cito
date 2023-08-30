@@ -28,7 +28,9 @@ Imports:
     coro,
     checkmate,
     torch,
-    gridExtra
+    gridExtra,
+    parabar,
+    abind
 License: GPL (>= 3)
 Suggests:
     rmarkdown,

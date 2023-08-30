@@ -20,6 +20,8 @@ dnn(
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
   batchsize = 32L,
+  bootstrap = NULL,
+  bootstrap_parallel = FALSE,
   shuffle = TRUE,
   epochs = 100,
   plot = TRUE,

@@ -2,9 +2,29 @@
 % Please edit documentation in R/ALE.R
 \name{ALE}
 \alias{ALE}
+\alias{ALE.citodnn}
+\alias{ALE.citodnnBootstrap}
 \title{Accumulated Local Effect Plot (ALE)}
 \usage{
 ALE(
+  model,
+  variable = NULL,
+  data = NULL,
+  K = 10,
+  type = c("equidistant", "quantile"),
+  plot = TRUE
+)
+
+\method{ALE}{citodnn}(
+  model,
+  variable = NULL,
+  data = NULL,
+  K = 10,
+  type = c("equidistant", "quantile"),
+  plot = TRUE
+)
+
+\method{ALE}{citodnnBootstrap}(
   model,
   variable = NULL,
   data = NULL,

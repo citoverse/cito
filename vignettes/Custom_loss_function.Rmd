@@ -1,5 +1,5 @@
 ---
-title: "Species distribution modeling with cito"
+title: "Custom loss functions"
 author: "Maximilian Pichler"
 date: "`r Sys.Date()`"
 output:
@@ -35,7 +35,7 @@ What we can do with it:
 
 Poisson regression (Al:
 
-```{r}
+```{r,eval=FALSE}
 
 
 
@@ -44,7 +44,7 @@ Poisson regression (Al:
 
 
 ### Example 2: Quantile regression
-```{r}
+```{r,eval=FALSE}
 library(torch)
 
 q1 = torch_tensor(0.05)
