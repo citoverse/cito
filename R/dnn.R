@@ -232,31 +232,50 @@ dnn <- function(formula,
   } else {
     out <- list()
     class(out) <- "citodnnBootstrap"
-    if(is.logical(bootstrap_parallel)) {
-      if(!bootstrap_parallel) {
-        backend = NULL
-      } else {
-        bootstrap_parallel = parallel::detectCores() - 1
-      }
-    }
 
+
+    if(bootstrap_parallel == FALSE) {
+      pb = progress::progress_bar$new(total = bootstrap, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+      models = list()
+
+      for(b in 1:bootstrap) {
+        indices <- sample(nrow(data),replace = TRUE)
+        m = do.call(dnn, args = list(
+          formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
+          optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
+          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
+          bootstrap_parallel = FALSE
+        ))
+        pb$tick()
+        models[[b]] = m
+      }
+
+    } else {
+      if(is.logical(bootstrap_parallel)) {
+        if(bootstrap_parallel) {
+          bootstrap_parallel = parallel::detectCores() -1
+        }
+      }
       if(is.numeric(bootstrap_parallel)) {
         backend = parabar::start_backend(bootstrap_parallel)
         parabar::export(backend, ls(environment()), environment())
       }
       parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
-          indices <- sample(nrow(data),replace = TRUE)
-          m = do.call(dnn, args = list(
-            formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-            bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
-            optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
-            bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-            bootstrap_parallel = FALSE
-          ))
-          m
+        indices <- sample(nrow(data),replace = TRUE)
+        m = do.call(dnn, args = list(
+          formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
+          optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
+          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
+          bootstrap_parallel = FALSE
+        ))
+        m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)
+
+    }
 
     out$models <- models
     out$data <- list(X = X, Y = Y, data = data)
