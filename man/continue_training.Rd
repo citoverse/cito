@@ -2,6 +2,8 @@
 % Please edit documentation in R/continue_training.R
 \name{continue_training}
 \alias{continue_training}
+\alias{continue_training.citodnn}
+\alias{continue_training.citodnnBootstrap}
 \title{Continues training of a model generated with \code{\link{dnn}} for additional epochs.}
 \usage{
 continue_training(
@@ -10,7 +12,28 @@ continue_training(
   data = NULL,
   device = "cpu",
   verbose = TRUE,
-  changed_params = NULL
+  changed_params = NULL,
+  parallel = FALSE
+)
+
+\method{continue_training}{citodnn}(
+  model,
+  epochs = 32,
+  data = NULL,
+  device = "cpu",
+  verbose = TRUE,
+  changed_params = NULL,
+  parallel = FALSE
+)
+
+\method{continue_training}{citodnnBootstrap}(
+  model,
+  epochs = 32,
+  data = NULL,
+  device = "cpu",
+  verbose = TRUE,
+  changed_params = NULL,
+  parallel = FALSE
 )
 }
 \arguments{
@@ -25,9 +48,11 @@ continue_training(
 \item{verbose}{print training and validation loss of epochs}
 
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
+
+\item{parallel}{train bootstrapped model in parallel}
 }
 \value{
-a model of class cito.dnn same as created by  \code{\link{dnn}}
+a model of class citodnn or citodnnBoostrap created by  \code{\link{dnn}}
 }
 \description{
 Continues training of a model generated with \code{\link{dnn}} for additional epochs.

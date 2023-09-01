@@ -42,25 +42,44 @@ analyze_training<- function(object){
       call. = FALSE
     )
   }
-  if(!inherits(object,"citodnn")) stop("Function requires an object of class citodnn")
+  if(!inherits(object, c("citodnn", "citodnnBootstrap"))) stop("Function requires an object of class citodnn")
 
-  fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
-                         width = 900)
 
-  fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss")
-  if(object$call$validation>0 && !is.null(object$call$validation))  {
-    fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss")
+  if(inherits(object, "citodnn")) {
+    fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
+                           width = 900)
+
+    fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss")
+    if(object$call$validation>0 && !is.null(object$call$validation))  {
+      fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss")
+    }
+    fig<- plotly::layout(fig, showlegend = F, title='DNN Training',
+                         xaxis = list(rangeslider = list(visible = T)),
+                         yaxis = list(fixedrange = F))
+    fig<- plotly::layout(fig,xaxis = list(zerolinecolor = '#ffff',
+                                          zerolinewidth = 2,
+                                          gridcolor = 'ffff'),
+                         yaxis = list(zerolinecolor = '#ffff',
+                                      zerolinewidth = 2,
+                                      gridcolor = 'ffff'),
+                         plot_bgcolor='#e5ecf6')
+
+    return(fig)
   }
-  fig<- plotly::layout(fig, showlegend = F, title='DNN Training',
-                       xaxis = list(rangeslider = list(visible = T)),
-                       yaxis = list(fixedrange = F))
-  fig<- plotly::layout(fig,xaxis = list(zerolinecolor = '#ffff',
-                                        zerolinewidth = 2,
-                                        gridcolor = 'ffff'),
-                       yaxis = list(zerolinecolor = '#ffff',
-                                    zerolinewidth = 2,
-                                    gridcolor = 'ffff'),
-                       plot_bgcolor='#e5ecf6')
 
-  return(fig)
+  if(inherits(object, "citodnnBootstrap")) {
+
+    train_l = sapply(object$models, function(i) i$losses$train_l)
+    fig <- plotly::plot_ly(type = 'scatter', mode = 'lines+markers',
+                           width = 900)
+    for(i in 1:length(object$models)) {
+      fig = plotly::add_trace(fig, x = object$models[[1]]$losses$epoch, name = i,
+                              y = train_l[,i])
+    }
+    fig<- plotly::layout(fig, showlegend = F, title='DNN Training - Training loss',
+                         xaxis = list(rangeslider = list(visible = T)),
+                         yaxis = list(fixedrange = F))
+    return(fig)
+  }
+
 }

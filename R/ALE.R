@@ -21,6 +21,7 @@
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param type method on how the feature space is divided into neighborhoods.
 #' @param plot plot ALE or not
+#' @param parallel parallelize over bootstrap models or not
 #' @seealso \code{\link{PDP}}
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
@@ -30,7 +31,8 @@ ALE <- function(model,
                 data = NULL,
                 K = 10,
                 type = c("equidistant", "quantile"),
-                plot=TRUE) UseMethod("ALE")
+                plot=TRUE,
+                parallel = FALSE) UseMethod("ALE")
 
 #' @rdname ALE
 #' @export
@@ -39,7 +41,8 @@ ALE.citodnn <- function(model,
                         data = NULL,
                         K = 10,
                         type = c("equidistant", "quantile"),
-                        plot=TRUE){
+                        plot=TRUE,
+                        parallel = FALSE){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -109,7 +112,8 @@ ALE.citodnnBootstrap <- function(model,
                         data = NULL,
                         K = 10,
                         type = c("equidistant", "quantile"),
-                        plot=TRUE){
+                        plot=TRUE,
+                        parallel = FALSE){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -118,38 +122,85 @@ ALE.citodnnBootstrap <- function(model,
   }
 
   type <- match.arg(type)
-  results_boot = lapply(1:length(model$models), function(i) {
-    model_indv = model$models[[i]]
-    model_indv <- check_model(model_indv)
-    if(is.null(data)){
-      data <- model$data$data
-    }
-    if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
-    if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
-      warning("unknown variable")
-      return(NULL)
-    }
-    x <- NULL
-    y <- NULL
-    is_categorical = sapply(data[, variable], is.factor )
-    if(any(is_categorical)) {
-      # cat("Categorical features are not yet supported.\n")
-      variable = variable[!is_categorical]
-    }
-    p_ret <- sapply (variable,function(v){
-      results = getALE(model = model_indv, v = v, type = type, data = data, K = K)
-      results[sapply(results, is.null)] = NULL
-      return(results)
-    })
-    return(p_ret)
-  })
+  # parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = getOption("width")/2)
+  ci <- NULL
 
+  if(parallel == FALSE) {
+    pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+    results_boot = list()
+
+    for(b in 1:length(model$models)) {
+      model_indv = model$models[[b]]
+      model_indv <- check_model(model_indv)
+      if(is.null(data)){
+        data <- model$data$data
+      }
+      if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
+      if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
+        warning("unknown variable")
+        return(NULL)
+      }
+      x <- NULL
+      y <- NULL
+      is_categorical = sapply(data[, variable], is.factor )
+      if(any(is_categorical)) {
+        # cat("Categorical features are not yet supported.\n")
+        variable = variable[!is_categorical]
+      }
+      p_ret <- sapply (variable,function(v){
+        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE)
+        results[sapply(results, is.null)] = NULL
+        return(results)
+      })
+      pb$tick()
+      results_boot[[b]] = p_ret
+    }
+  } else {
+    if(is.logical(parallel)) {
+      if(parallel) {
+        parallel = parallel::detectCores() -1
+      }
+    }
+    if(is.numeric(parallel)) {
+      backend = parabar::start_backend(parallel)
+      parabar::export(backend, ls(environment()), environment())
+    }
+
+    parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+    results_boot <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
+      model_indv = model$models[[b]]
+      model_indv <- check_model(model_indv)
+      if(is.null(data)){
+        data <- model$data$data
+      }
+      if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
+      if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
+        warning("unknown variable")
+        return(NULL)
+      }
+      x <- NULL
+      y <- NULL
+      is_categorical = sapply(data[, variable], is.factor )
+      if(any(is_categorical)) {
+        # cat("Categorical features are not yet supported.\n")
+        variable = variable[!is_categorical]
+      }
+      p_ret <- sapply (variable,function(v){
+        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE)
+        results[sapply(results, is.null)] = NULL
+        return(results)
+      })
+      return(p_ret)
+    })
+    parabar::stop_backend(backend)
+
+  }
   p_ret =
   lapply(1:length(results_boot[[1]]), function(j) {
     df_tmp = data.frame(
       x = results_boot[[1]][[j]]$df[,1],
       mean = apply(sapply(1:length(results_boot), function(i) results_boot[[i]][[j]]$df[,2]), 1, mean),
-      ci = 1.96*apply(sapply(1:length(results_boot), function(i) results_boot[[i]][[j]]$df[,2]), 1, sd)
+      ci = 1.96*apply(sapply(1:length(results_boot), function(i) results_boot[[i]][[j]]$df[,2]), 1, stats::sd)
                         )
     p =
       ggplot2::ggplot(data =df_tmp, ggplot2::aes(x = x, y = mean)) +
@@ -176,7 +227,7 @@ ALE.citodnnBootstrap <- function(model,
 
 
 
-getALE = function(model, type, data, K, v ) {
+getALE = function(model, type, data, K, v, verbose = TRUE ) {
   return(
   lapply(1:model$model_properties$output, function(n_output) {
     if ( type == "equidistant"){
@@ -207,7 +258,7 @@ getALE = function(model, type, data, K, v ) {
           K <- K - 1
         }else{
           if(reduced_K){
-            message(paste0("Number of Neighborhoods reduced to ",K))
+            if(verbose) message(paste0("Number of Neighborhoods reduced to ",K))
           }
           break
         }

@@ -4,7 +4,7 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
   if(is.null(max_indices)) n = 1:ncol(x0)
   else n = max_indices
   f = function(x0) predict_f(model, x0, ...)
-  h = epsilon*apply(data[,max_indices,drop=FALSE], 2, sd)
+  h = epsilon*apply(data[,max_indices,drop=FALSE], 2, stats::sd)
   H = array(NA, c(nrow(x0), length(n), length(n)))
   hh = diag(h, length(n))
   f_x0 = f(x0)
@@ -128,11 +128,3 @@ print.conditionalEffects = function(x, ...) {
   return(invisible(ACE))
 }
 
-
-
-#' Hello World
-#'
-#' @export
-hello_world = function() {
-  print("Hi..")
-}

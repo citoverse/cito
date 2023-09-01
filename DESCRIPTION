@@ -30,7 +30,8 @@ Imports:
     torch,
     gridExtra,
     parabar,
-    abind
+    abind,
+    progress
 License: GPL (>= 3)
 Suggests:
     rmarkdown,

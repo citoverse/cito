@@ -6,7 +6,8 @@
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
-#' @return a model of class cito.dnn same as created by  \code{\link{dnn}}
+#' @param parallel train bootstrapped model in parallel
+#' @return a model of class citodnn or citodnnBoostrap created by  \code{\link{dnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
 #'
@@ -18,7 +19,18 @@ continue_training <- function(model,
                               data=NULL,
                               device= "cpu",
                               verbose = TRUE,
-                              changed_params=NULL){
+                              changed_params=NULL,
+                              parallel = FALSE){UseMethod("continue_training")}
+
+#' @rdname continue_training
+#' @export
+continue_training.citodnn <- function(model,
+                              epochs = 32,
+                              data=NULL,
+                              device= "cpu",
+                              verbose = TRUE,
+                              changed_params=NULL,
+                              parallel = FALSE){
 
   checkmate::qassert(device, "S+[3,)")
 
@@ -87,3 +99,49 @@ continue_training <- function(model,
 
     return(model)
 }
+
+
+#' @rdname continue_training
+#' @export
+continue_training.citodnnBootstrap <- function(model,
+                                      epochs = 32,
+                                      data=NULL,
+                                      device= "cpu",
+                                      verbose = TRUE,
+                                      changed_params=NULL,
+                                      parallel = FALSE){
+
+  if(parallel == FALSE) {
+    pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+
+    for(b in 1:length(model$models)) {
+      model$models[[b]] = continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL)
+      pb$tick()
+    }
+  } else {
+    if(is.logical(parallel)) {
+      if(parallel) {
+        parallel = parallel::detectCores() -1
+      }
+    }
+    if(is.numeric(parallel)) {
+      backend = parabar::start_backend(parallel)
+      parabar::export(backend, ls(environment()), environment())
+    }
+
+    parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+    model$models <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
+      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL))
+
+    })
+    parabar::stop_backend(backend)
+
+  }
+  return(model)
+}
+
+
+
+
+
+

@@ -19,6 +19,8 @@
 #' @param batchsize number of samples that are used to calculate one learning rate step
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
+#' @param bootstrap bootstrap neural network or not, numeric corresond to number of bootstrap samples
+#' @param bootstrap_parallel parallelize (CPU) bootstrapping
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param plot plot training loss
 #' @param verbose print training and validation loss of epochs
@@ -92,10 +94,10 @@ dnn <- function(formula,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 batchsize = 32L,
-                bootstrap = NULL,
-                bootstrap_parallel = FALSE,
                 shuffle = TRUE,
                 epochs = 100,
+                bootstrap = NULL,
+                bootstrap_parallel = FALSE,
                 plot = TRUE,
                 verbose = TRUE,
                 lr_scheduler = NULL,
@@ -234,7 +236,7 @@ dnn <- function(formula,
       if(!bootstrap_parallel) {
         backend = NULL
       } else {
-        bootstrap_parallel = parallel::detectCores()
+        bootstrap_parallel = parallel::detectCores() - 1
       }
     }
 
@@ -242,7 +244,7 @@ dnn <- function(formula,
         backend = parabar::start_backend(bootstrap_parallel)
         parabar::export(backend, ls(environment()), environment())
       }
-      parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = getOption("width")/2)
+      parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
           indices <- sample(nrow(data),replace = TRUE)
           m = do.call(dnn, args = list(
@@ -407,13 +409,13 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   for(i in 2:ncol(x$importance[[1]])) {
     tmp = sapply(x$importance, function(x) x[,i])
     imps = apply(tmp, 1, mean) - 1
-    imps_se = apply(tmp, 1, sd)
+    imps_se = apply(tmp, 1, stats::sd)
 
     coefmat = cbind(
       as.vector(as.matrix(imps)),
       as.vector(as.matrix(imps_se)),
       as.vector(as.matrix(imps/imps_se)),
-      as.vector(as.matrix(pnorm(imps/imps_se, lower.tail = FALSE)*2))
+      as.vector(as.matrix(stats::pnorm(imps/imps_se, lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i-1, ": ",x$importance[[1]]$variable)
@@ -433,7 +435,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   for(i in 1:length(x$conditionalEffects[[1]])) {
     tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$mean))
     eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, sd)
+    eff_se = apply(tmp, 1, stats::sd)
 
     coefmat = cbind(
       as.vector(as.matrix(eff)),
@@ -457,7 +459,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   for(i in 1:length(x$conditionalEffects[[1]])) {
     tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$abs))
     eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, sd)
+    eff_se = apply(tmp, 1, stats::sd)
 
     coefmat = cbind(
       as.vector(as.matrix(eff)),

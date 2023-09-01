@@ -20,10 +20,10 @@ dnn(
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
   batchsize = 32L,
-  bootstrap = NULL,
-  bootstrap_parallel = FALSE,
   shuffle = TRUE,
   epochs = 100,
+  bootstrap = NULL,
+  bootstrap_parallel = FALSE,
   plot = TRUE,
   verbose = TRUE,
   lr_scheduler = NULL,
@@ -62,6 +62,10 @@ dnn(
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
 \item{epochs}{epochs the training goes on for}
+
+\item{bootstrap}{bootstrap neural network or not, numeric corresond to number of bootstrap samples}
+
+\item{bootstrap_parallel}{parallelize (CPU) bootstrapping}
 
 \item{plot}{plot training loss}
 

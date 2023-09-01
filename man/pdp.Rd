@@ -2,6 +2,8 @@
 % Please edit documentation in R/PDP.R
 \name{PDP}
 \alias{PDP}
+\alias{PDP.citodnn}
+\alias{PDP.citodnnBootstrap}
 \title{Partial Dependence Plot (PDP)}
 \usage{
 PDP(
@@ -10,7 +12,28 @@ PDP(
   data = NULL,
   ice = FALSE,
   resolution.ice = 20,
-  plot = TRUE
+  plot = TRUE,
+  parallel = FALSE
+)
+
+\method{PDP}{citodnn}(
+  model,
+  variable = NULL,
+  data = NULL,
+  ice = FALSE,
+  resolution.ice = 20,
+  plot = TRUE,
+  parallel = FALSE
+)
+
+\method{PDP}{citodnnBootstrap}(
+  model,
+  variable = NULL,
+  data = NULL,
+  ice = FALSE,
+  resolution.ice = 20,
+  plot = TRUE,
+  parallel = FALSE
 )
 }
 \arguments{
@@ -24,7 +47,9 @@ PDP(
 
 \item{resolution.ice}{resolution in which ice will be computed}
 
-\item{plot}{plot ALE or not}
+\item{plot}{plot PDP or not}
+
+\item{parallel}{parallelize over bootstrap models or not}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
