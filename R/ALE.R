@@ -22,6 +22,7 @@
 #' @param type method on how the feature space is divided into neighborhoods.
 #' @param plot plot ALE or not
 #' @param parallel parallelize over bootstrap models or not
+#' @param ... arguments passed to \code{\link{predict}}
 #' @seealso \code{\link{PDP}}
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @example /inst/examples/ALE-example.R
@@ -32,7 +33,7 @@ ALE <- function(model,
                 K = 10,
                 type = c("equidistant", "quantile"),
                 plot=TRUE,
-                parallel = FALSE) UseMethod("ALE")
+                parallel = FALSE, ...) UseMethod("ALE")
 
 #' @rdname ALE
 #' @export
@@ -42,7 +43,7 @@ ALE.citodnn <- function(model,
                         K = 10,
                         type = c("equidistant", "quantile"),
                         plot=TRUE,
-                        parallel = FALSE){
+                        parallel = FALSE, ...){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -70,7 +71,7 @@ ALE.citodnn <- function(model,
     variable = variable[!is_categorical]
   }
   p_ret <- sapply (variable,function(v){
-      results = getALE(model = model, v = v, type = type, data = data, K = K)
+      results = getALE(model = model, v = v, type = type, data = data, K = K, ...)
 
       results[sapply(results, is.null)] = NULL
 
@@ -113,7 +114,8 @@ ALE.citodnnBootstrap <- function(model,
                         K = 10,
                         type = c("equidistant", "quantile"),
                         plot=TRUE,
-                        parallel = FALSE){
+                        parallel = FALSE,
+                        ...){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
       "Package \"ggplot2\" must be installed to use this function.",
@@ -148,7 +150,7 @@ ALE.citodnnBootstrap <- function(model,
         variable = variable[!is_categorical]
       }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE)
+        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -186,7 +188,7 @@ ALE.citodnnBootstrap <- function(model,
         variable = variable[!is_categorical]
       }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE)
+        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -227,7 +229,7 @@ ALE.citodnnBootstrap <- function(model,
 
 
 
-getALE = function(model, type, data, K, v, verbose = TRUE ) {
+getALE = function(model, type, data, K, v, verbose = TRUE, ...) {
   return(
   lapply(1:model$model_properties$output, function(n_output) {
     if ( type == "equidistant"){
@@ -244,9 +246,9 @@ getALE = function(model, type, data, K, v, verbose = TRUE ) {
             if(length(region_indizes)>0){
               perm_data <- data[region_indizes,]
               perm_data[,v] <- borders[i-1]
-              lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+              lower_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
               perm_data[,v] <- borders[i]
-              upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+              upper_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
               return(mean(upper_preds - lower_preds))
             }else{
               return(NA)
@@ -274,9 +276,9 @@ getALE = function(model, type, data, K, v, verbose = TRUE ) {
         y = unlist(lapply(seq_len(length(groups)), function(i){
           perm_data <- data[groups[[i]],]
           perm_data[,v] <- quants[i]
-          lower_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+          lower_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
           perm_data[,v] <- quants[i+1]
-          upper_preds <- stats::predict(model, perm_data)[,n_output,drop=FALSE]
+          upper_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
           return(mean(upper_preds - lower_preds))
         })))
 

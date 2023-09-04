@@ -35,6 +35,7 @@
 #' @param resolution.ice resolution in which ice will be computed
 #' @param plot plot PDP or not
 #' @param parallel parallelize over bootstrap models or not
+#' @param ... arguments passed to \code{\link{predict}}
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R
@@ -46,7 +47,7 @@ PDP <- function(model,
                 ice = FALSE,
                 resolution.ice = 20,
                 plot=TRUE,
-                parallel = FALSE) UseMethod("PDP")
+                parallel = FALSE, ...) UseMethod("PDP")
 
 #' @rdname PDP
 #' @export
@@ -56,7 +57,7 @@ PDP.citodnn <- function(model,
                 ice = FALSE,
                 resolution.ice = 20,
                 plot=TRUE,
-                parallel = FALSE) {
+                parallel = FALSE, ...) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
@@ -89,7 +90,7 @@ PDP.citodnn <- function(model,
   p_ret <- sapply (variable,function(v){
 
     results = getPDP(model = model, v = v, data = data,
-                     resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = link)
+                     resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = link, ...)
     results[sapply(results, is.null)] = NULL
     return(results)
   })
@@ -142,7 +143,7 @@ PDP.citodnnBootstrap <- function(model,
                         ice = FALSE,
                         resolution.ice = 20,
                         plot=TRUE,
-                        parallel = FALSE) {
+                        parallel = FALSE ,...) {
 
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
@@ -179,7 +180,7 @@ PDP.citodnnBootstrap <- function(model,
     p_ret <- sapply (variable,function(v){
 
       results = getPDP(model = model_indv, v = v, data = data,
-                       resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = model_indv$loss$invlink)
+                       resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = model_indv$loss$invlink, ...)
       results[sapply(results, is.null)] = NULL
       return(results)
     })
@@ -206,7 +207,7 @@ PDP.citodnnBootstrap <- function(model,
       p_ret <- sapply (variable,function(v){
 
         results = getPDP(model = model_indv, v = v, data = data,
-                                resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = model_indv$loss$invlink)
+                                resolution.ice = resolution.ice, ice = ice, perm_data = perm_data, link = model_indv$loss$invlink, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -265,7 +266,7 @@ PDP.citodnnBootstrap <- function(model,
 
 
 
-getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , link ) {
+getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , link, ... ) {
   return(
     lapply(1:model$model_properties$output, function(n_output) {
       df_ice = NULL
@@ -314,7 +315,7 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
             for(j in seq_len(nrow(perm_data))){
               perm_data[j,v] <- i
             }
-            return(stats::predict(model,perm_data)[,n_output,drop=FALSE])
+            return(stats::predict(model,perm_data, ...)[,n_output,drop=FALSE])
           }))
         )
         df$x<- as.factor(df$x)

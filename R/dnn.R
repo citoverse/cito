@@ -224,6 +224,7 @@ dnn <- function(formula,
     out$loaded_model_epoch <- 0
     out$model_properties <- model_properties
     out$training_properties <- training_properties
+    out$device = device_old
 
     ### training loop ###
     out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
@@ -279,6 +280,7 @@ dnn <- function(formula,
 
     out$models <- models
     out$data <- list(X = X, Y = Y, data = data)
+    out$device = device_old
   }
   return(out)
 }
@@ -344,15 +346,17 @@ residuals.citodnn <- function(object,...){
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
+#' @param device for calculating variable importance and conditional effects
 #' @param ... additional arguments
 #' @return summary.glm returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnn <- function(object, n_permute = NULL, ...){
+summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
   object <- check_model(object)
   out <- list()
   class(out) <- "summary.citodnn"
-  out$importance <- get_importance(object, n_permute)
-  out$conditionalEffects = conditionalEffects(object)
+  if(is.null(device)) device = object$device
+  out$importance <- get_importance(object, n_permute, device)
+  out$conditionalEffects = conditionalEffects(object, device = device)
 
   return(out)
 }
@@ -368,15 +372,17 @@ summary.citodnn <- function(object, n_permute = NULL, ...){
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
+#' @param device for calculating variable importance and conditional effects
 #' @param ... additional arguments
 #' @return summary.glm returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnnBootstrap <- function(object, n_permute = NULL, ...){
+summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ...){
   object$models <- lapply(object$models, check_model)
   out <- list()
   class(out) <- "summary.citodnnBootstrap"
-  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute))
-  out$conditionalEffects <- lapply(object$models, conditionalEffects)
+  if(is.null(device)) device = object$device
+  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device))
+  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
   return(out)
 }
 
