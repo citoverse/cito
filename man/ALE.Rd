@@ -11,9 +11,10 @@ ALE(
   variable = NULL,
   data = NULL,
   K = 10,
-  type = c("equidistant", "quantile"),
+  ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 
 \method{ALE}{citodnn}(
@@ -21,9 +22,10 @@ ALE(
   variable = NULL,
   data = NULL,
   K = 10,
-  type = c("equidistant", "quantile"),
+  ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 
 \method{ALE}{citodnnBootstrap}(
@@ -31,9 +33,10 @@ ALE(
   variable = NULL,
   data = NULL,
   K = 10,
-  type = c("equidistant", "quantile"),
+  ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 }
 \arguments{
@@ -45,11 +48,13 @@ ALE(
 
 \item{K}{number of neighborhoods original feature space gets divided into}
 
-\item{type}{method on how the feature space is divided into neighborhoods.}
+\item{ALE_type}{method on how the feature space is divided into neighborhoods.}
 
 \item{plot}{plot ALE or not}
 
 \item{parallel}{parallelize over bootstrap models or not}
+
+\item{...}{arguments passed to \code{\link{predict}}}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.

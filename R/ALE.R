@@ -19,7 +19,7 @@
 #' @param variable variable as string for which the PDP should be done
 #' @param data data on which ALE is performed on, if NULL training data will be used.
 #' @param K number of neighborhoods original feature space gets divided into
-#' @param type method on how the feature space is divided into neighborhoods.
+#' @param ALE_type method on how the feature space is divided into neighborhoods.
 #' @param plot plot ALE or not
 #' @param parallel parallelize over bootstrap models or not
 #' @param ... arguments passed to \code{\link{predict}}
@@ -31,7 +31,7 @@ ALE <- function(model,
                 variable = NULL,
                 data = NULL,
                 K = 10,
-                type = c("equidistant", "quantile"),
+                ALE_type = c("equidistant", "quantile"),
                 plot=TRUE,
                 parallel = FALSE, ...) UseMethod("ALE")
 
@@ -41,7 +41,7 @@ ALE.citodnn <- function(model,
                         variable = NULL,
                         data = NULL,
                         K = 10,
-                        type = c("equidistant", "quantile"),
+                        ALE_type = c("equidistant", "quantile"),
                         plot=TRUE,
                         parallel = FALSE, ...){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -51,7 +51,7 @@ ALE.citodnn <- function(model,
     )
   }
   model <- check_model(model)
-  type <- match.arg(type)
+  ALE_type <- match.arg(ALE_type)
   if(is.null(data)){
     data <- model$data$data
   }
@@ -71,7 +71,7 @@ ALE.citodnn <- function(model,
     variable = variable[!is_categorical]
   }
   p_ret <- sapply (variable,function(v){
-      results = getALE(model = model, v = v, type = type, data = data, K = K, ...)
+      results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, ...)
 
       results[sapply(results, is.null)] = NULL
 
@@ -112,7 +112,7 @@ ALE.citodnnBootstrap <- function(model,
                         variable = NULL,
                         data = NULL,
                         K = 10,
-                        type = c("equidistant", "quantile"),
+                        ALE_type = c("equidistant", "quantile"),
                         plot=TRUE,
                         parallel = FALSE,
                         ...){
@@ -123,8 +123,8 @@ ALE.citodnnBootstrap <- function(model,
     )
   }
 
-  type <- match.arg(type)
-  # parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = getOption("width")/2)
+  ALE_type <- match.arg(ALE_type)
+  # parabar::configure_bar(ALE_type = "modern", format = "[:bar] :percent :eta", width = getOption("width")/2)
   ci <- NULL
 
   if(parallel == FALSE) {
@@ -150,7 +150,7 @@ ALE.citodnnBootstrap <- function(model,
         variable = variable[!is_categorical]
       }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE, ...)
+        results = getALE(model = model_indv, v = v, ALE_type = ALE_type, data = data, K = K, verbose = FALSE, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -188,7 +188,7 @@ ALE.citodnnBootstrap <- function(model,
         variable = variable[!is_categorical]
       }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, type = type, data = data, K = K, verbose = FALSE, ...)
+        results = getALE(model = model_indv, v = v, ALE_type = ALE_type, data = data, K = K, verbose = FALSE, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -229,10 +229,10 @@ ALE.citodnnBootstrap <- function(model,
 
 
 
-getALE = function(model, type, data, K, v, verbose = TRUE, ...) {
+getALE = function(model, ALE_type, data, K, v, verbose = TRUE, ...) {
   return(
   lapply(1:model$model_properties$output, function(n_output) {
-    if ( type == "equidistant"){
+    if ( ALE_type == "equidistant"){
       reduced_K <- FALSE
       repeat{
         borders <- seq(from = min(data[,v]),
@@ -265,7 +265,7 @@ getALE = function(model, type, data, K, v, verbose = TRUE, ...) {
           break
         }
       }
-    }else if ( type == "quantile"){
+    }else if ( ALE_type == "quantile"){
 
       quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
       groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))

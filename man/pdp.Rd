@@ -13,7 +13,8 @@ PDP(
   ice = FALSE,
   resolution.ice = 20,
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 
 \method{PDP}{citodnn}(
@@ -23,7 +24,8 @@ PDP(
   ice = FALSE,
   resolution.ice = 20,
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 
 \method{PDP}{citodnnBootstrap}(
@@ -33,7 +35,8 @@ PDP(
   ice = FALSE,
   resolution.ice = 20,
   plot = TRUE,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
 )
 }
 \arguments{
@@ -50,6 +53,8 @@ PDP(
 \item{plot}{plot PDP or not}
 
 \item{parallel}{parallelize over bootstrap models or not}
+
+\item{...}{arguments passed to \code{\link{predict}}}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
