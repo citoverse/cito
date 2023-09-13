@@ -425,7 +425,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   out = list()
   cat("Summary of Deep Neural Network Model\n\n")
   cat("\t##########################################################\n")
-  cat("\t# \tFeature Importance \n")
+  cat("\t \tFeature Importance \n")
   cat("\t##########################################################\n")
   #cat("\nFeature Importance:\n")
 
@@ -450,7 +450,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
 
 
   cat("\n\n\t##########################################################\n")
-  cat("\t# \tAverage Conditional Effects \n")
+  cat("\t \tAverage Conditional Effects \n")
   cat("\t##########################################################\n")
 
   #cat("\nAverage Conditional Effects:\n")
@@ -475,14 +475,14 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   stats::printCoefmat(do.call(rbind, res_ACE), signif.stars = getOption("show.signif.stars"), digits = 3)
 
   cat("\n\n\t##########################################################\n")
-  cat("\t# \tAbsolute sum of Conditional Effects \n")
+  cat("\t \tStandard Deviation of Conditional Effects \n")
   cat("\t##########################################################\n")
   #cat("\nAbsolute sum of Conditional Effects:\n")
 
   res_ASCE = list()
 
   for(i in 1:length(x$conditionalEffects[[1]])) {
-    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$abs))
+    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$sd))
     eff = apply(tmp, 1, mean)
     eff_se = apply(tmp, 1, stats::sd)
 
