@@ -151,7 +151,7 @@ dnn <- function(formula,
       warning("custom_parameters has to be list")
     }else{
       custom_parameters<- lapply(custom_parameters,function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter,unlist(custom_parameters))
+      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
 
       }
   }
@@ -164,14 +164,27 @@ dnn <- function(formula,
     if(inherits(loss_obj$call, "family")){
       if(loss_obj$call$family == "binomial") {
         Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
-    }}
+        Y_base = matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE)
+
+      }}
+  } else {
   }
+
+  Y_base = matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE)
 
   if(!is.function(loss_obj$call)){
-    if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
+    if(all(loss_obj$call == "softmax")) {
+        Y_base = as.vector(1/table(Y)[Y])*stats::model.matrix(~0+., data = data.frame(Y = as.factor(Y)))
+        y_dtype = torch::torch_long()
+      }
   }
 
+
   if(is.null(bootstrap)) {
+
+    loss.fkt <- loss_obj$loss
+    if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
+    base_loss = as.numeric(loss.fkt(torch::torch_tensor(as.matrix(Y_base)), torch::torch_tensor(as.matrix(Y), dtype = y_dtype))$mean())
 
     ### dataloader  ###
     if(validation != 0){
@@ -214,6 +227,7 @@ dnn <- function(formula,
     out$loss <- loss_obj
     out$data <- list(X = X, Y = Y, data = data)
     out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
+    out$base_loss = base_loss
     if(!is.null(ylvls))  {
       out$data$ylvls <- ylvls
       out$data$xlvls <- out$data$xlvls[-which(as.character(formula[2]) == names(out$data$xlvls))]
@@ -357,32 +371,11 @@ summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
   if(is.null(device)) device = object$device
   out$importance <- get_importance(object, n_permute, device)
   out$conditionalEffects = conditionalEffects(object, device = device)
-
-  return(out)
-}
-
-#' Summarize Neural Network of class citodnnBootstrap
-#'
-#' Performs a Feature Importance calculation based on Permutations
-#'
-#' @details
-#'
-#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
-#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
-#'
-#' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
-#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
-#' @param device for calculating variable importance and conditional effects
-#' @param ... additional arguments
-#' @return summary.glm returns an object of class "summary.citodnn", a list with components
-#' @export
-summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ...){
-  object$models <- lapply(object$models, check_model)
-  out <- list()
-  class(out) <- "summary.citodnnBootstrap"
-  if(is.null(device)) device = object$device
-  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device))
-  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
+  out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
+  colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
+  out$AbsCE = sapply(out$conditionalEffects, function(R) diag(R$abs))
+  colnames(out$AbsCE) = paste0("Response_", 1:ncol(out$AbsCE))
+  rownames(out$AbsCE) = rownames(out$ACE)
   return(out)
 }
 
@@ -400,20 +393,103 @@ print.summary.citodnn <- function(x, ... ){
   cat("\nFeature Importance:\n")
   print(x$importance)
   cat("\nAverage Conditional Effects:\n")
-  ACE = sapply(x$conditionalEffects, function(R) diag(R$mean))
-  colnames(ACE) = paste0("Response_", 1:ncol(ACE))
-  print(ACE)
+  print(x$ACE)
   cat("\nAbsolute sum of Conditional Effects:\n")
-  AbsCE = sapply(x$conditionalEffects, function(R) diag(R$abs))
-  colnames(AbsCE) = paste0("Response_", 1:ncol(AbsCE))
-  rownames(AbsCE) = rownames(ACE)
-  print(AbsCE)
-
+  print(x$AbsCE)
   out$importance = x$importance
-  out$ACE = ACE
-  out$AbsCE = AbsCE
+  out$ACE = x$ACE
+  out$AbsCE = x$AbsCE
   return(invisible(out))
 }
+
+
+
+#' Summarize Neural Network of class citodnnBootstrap
+#'
+#' Performs a Feature Importance calculation based on Permutations
+#'
+#' @details
+#'
+#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
+#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
+#'
+#' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
+#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
+#' @param device for calculating variable importance and conditional effects
+#' @param ... additional arguments
+#' @return summary.citodnnBootstrap returns an object of class "summary.citodnn", a list with components
+#' @export
+summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ...){
+  object$models <- lapply(object$models, check_model)
+  out <- list()
+  class(out) <- "summary.citodnnBootstrap"
+  if(is.null(device)) device = object$device
+  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device))
+  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
+
+
+  res_imps = list()
+  for(i in 2:ncol(out$importance[[1]])) {
+    tmp = sapply(out$importance, function(X) X[,i])
+    imps = apply(tmp, 1, mean) - 1
+    imps_se = apply(tmp, 1, stats::sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(imps)),
+      as.vector(as.matrix(imps_se)),
+      as.vector(as.matrix(imps/imps_se)),
+      as.vector(as.matrix(stats::pnorm(imps/imps_se, lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i-1, ": ", out$importance[[1]]$variable)
+    res_imps[[i-1]] = coefmat
+  }
+  out$importance_coefmat = do.call(rbind, res_imps)
+
+
+  res_ACE = list()
+
+  for(i in 1:length(out$conditionalEffects[[1]])) {
+    tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
+    eff = apply(tmp, 1, mean)
+    eff_se = apply(tmp, 1, stats::sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(eff)),
+      as.vector(as.matrix(eff_se)),
+      as.vector(as.matrix(eff/eff_se)),
+      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
+    res_ACE[[i]] = coefmat
+  }
+  out$ACE_coefmat = do.call(rbind, res_ACE)
+
+
+  res_ASCE = list()
+
+  for(i in 1:length(out$conditionalEffects[[1]])) {
+    tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
+    eff = apply(tmp, 1, mean)
+    eff_se = apply(tmp, 1, stats::sd)
+
+    coefmat = cbind(
+      as.vector(as.matrix(eff)),
+      as.vector(as.matrix(eff_se)),
+      as.vector(as.matrix(eff/eff_se)),
+      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+    )
+    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+    rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
+    res_ASCE[[i]] = coefmat
+  }
+  out$ASCE_coefmat = do.call(rbind, res_ASCE)
+
+  return(out)
+}
+
+
 
 #' Print method for class summary.citodnnBootstrap
 #'
@@ -429,24 +505,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   cat("\t##########################################################\n")
   #cat("\nFeature Importance:\n")
 
-  res_imps = list()
-
-  for(i in 2:ncol(x$importance[[1]])) {
-    tmp = sapply(x$importance, function(x) x[,i])
-    imps = apply(tmp, 1, mean) - 1
-    imps_se = apply(tmp, 1, stats::sd)
-
-    coefmat = cbind(
-      as.vector(as.matrix(imps)),
-      as.vector(as.matrix(imps_se)),
-      as.vector(as.matrix(imps/imps_se)),
-      as.vector(as.matrix(stats::pnorm(imps/imps_se, lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i-1, ": ",x$importance[[1]]$variable)
-    res_imps[[i-1]] = coefmat
-  }
-  stats::printCoefmat(do.call(rbind, res_imps), signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$importance_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
 
 
   cat("\n\n\t##########################################################\n")
@@ -454,25 +513,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   cat("\t##########################################################\n")
 
   #cat("\nAverage Conditional Effects:\n")
-
-  res_ACE = list()
-
-  for(i in 1:length(x$conditionalEffects[[1]])) {
-    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$mean))
-    eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, stats::sd)
-
-    coefmat = cbind(
-      as.vector(as.matrix(eff)),
-      as.vector(as.matrix(eff_se)),
-      as.vector(as.matrix(eff/eff_se)),
-      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i, ": ", rownames(x$conditionalEffects[[1]][[1]]$mean))
-    res_ACE[[i]] = coefmat
-  }
-  stats::printCoefmat(do.call(rbind, res_ACE), signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$ACE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
 
   cat("\n\n\t##########################################################\n")
   cat("\t \tStandard Deviation of Conditional Effects \n")
@@ -481,27 +522,12 @@ print.summary.citodnnBootstrap <- function(x, ... ){
 
   res_ASCE = list()
 
-  for(i in 1:length(x$conditionalEffects[[1]])) {
-    tmp = sapply(1:length(x$conditionalEffects), function(j) diag(x$conditionalEffects[[j]][[i]]$sd))
-    eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, stats::sd)
-
-    coefmat = cbind(
-      as.vector(as.matrix(eff)),
-      as.vector(as.matrix(eff_se)),
-      as.vector(as.matrix(eff/eff_se)),
-      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i, ": ", rownames(x$conditionalEffects[[1]][[1]]$mean))
-    res_ASCE[[i]] = coefmat
-  }
-  stats::printCoefmat(do.call(rbind, res_ASCE), signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$ASCE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
 
 
-  out$importance = res_imps
-  out$ACE = res_ACE
-  out$AbsCE = res_ASCE
+  out$importance = x$res_imps
+  out$ACE = x$res_ACE
+  out$AbsCE = x$res_ASCE
   return(invisible(out))
 }
 

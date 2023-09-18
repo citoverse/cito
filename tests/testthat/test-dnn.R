@@ -149,7 +149,7 @@ testthat::expect_error({
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              data = datasets::iris,
              lr = 0.01,
-             epochs = 2L,
+             epochs = 200L,
              loss = custom_loss_MVN,
              custom_parameters =
                list(SigmaDiag =  rep(1., 3),

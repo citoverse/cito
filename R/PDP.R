@@ -107,6 +107,7 @@ PDP.citodnn <- function(model,
         p <- p + ggplot2::geom_line(data = res$df_ice, mapping = ggplot2::aes(x = x, y = y, group = group ))
         p <- p + ggplot2::geom_line(colour = "yellow", linewidth = 2, data=res$df, mapping = ggplot2::aes(x=x,y=y))
       }
+      p <- p + ggplot2::theme_bw()
     } else if (is.factor(data[,res$v])){
       p <- ggplot2::ggplot(data = res$df,mapping = ggplot2::aes(x = x,y = y),)
       p <- p + ggplot2::geom_bar(stat= "identity")
@@ -232,6 +233,7 @@ PDP.citodnnBootstrap <- function(model,
       p <- p + ggplot2::xlab(label = results_boot[[1]][[j]]$v)
       p <- p + ggplot2::ylab(label = as.character(model$models[[1]]$call$formula[[2]]))
       p <- p + ggplot2::geom_rug(sides = "b")
+      p <- p + ggplot2::theme_bw()
 
     } else if (is.factor(data[,results_boot[[1]][[j]]$v])){
       p <- ggplot2::ggplot(data = df_tmp,mapping = ggplot2::aes(x = x,y = y),)

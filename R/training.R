@@ -43,16 +43,22 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
       loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
       if(regularize){
-        loss <- regularize_weights(loss = loss, parameters = model$net$parameters,
+        regularization_loss <- regularize_weights( parameters = model$net$parameters,
                                    alpha = model$training_properties$alpha,
                                    lambda = model$training_properties$lambda,
                                    intercept = intercept)
+        total_loss = torch::torch_add(loss, regularization_loss)
 
+      } else {
+        total_loss = loss
       }
-
-      loss$backward()
+      total_loss$backward()
 
       optimizer$step()
+
+      if(is.na(loss$item())) {
+        stop("Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.")
+      }
 
       train_l <- c(train_l, loss$item())
     })
@@ -66,12 +72,6 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       coro::loop(for (b in valid_dl) {
         output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
         loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
-        if (regularize) {
-          loss <- regularize_weights(loss = loss, parameters = model$net$parameters,
-                                     alpha = model$training_properties$alpha,
-                                     lambda = model$training_properties$lambda,
-                                     intercept = intercept)
-        }
 
         valid_l <- c(valid_l, loss$item())
       })
@@ -115,7 +115,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
 
     ### create plot ###
-    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
+    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new, baseline = model$base_loss)
     plot_new <- FALSE
 
     ### early stopping ###
@@ -152,18 +152,20 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   return(model)
 }
 
-regularize_weights <- function (loss, parameters, alpha, lambda, intercept = TRUE){
+regularize_weights <- function (parameters, alpha, lambda, intercept = TRUE){
 
   weight_layers <- names(which(sapply(parameters, function(x) length(dim(x))) > 1))
+
+  regularization = torch::torch_zeros(1L, dtype = parameters[[1]]$dtype, device = parameters[[1]]$device)
 
   if(intercept){
     l1 <- torch::torch_sum(torch::torch_abs(parameters$`0.weight`$hsplit(1)[[2]]))
     l1 <- l1$mul(1-alpha[1])
     l2 <- torch::torch_norm(parameters$`0.weight`$hsplit(1)[[2]],p=2L)
     l2 <- l2$mul(alpha[1])
-    regularization <- torch::torch_add(l1,l2)
-    regularization <- regularization$mul(lambda)
-    loss <-  torch::torch_add(loss, regularization)
+    regularization_tmp <- torch::torch_add(l1,l2)
+    #regularization_tmp <- regularization_tmp$mul(lambda)
+    regularization = regularization$add(regularization_tmp)
 
     weight_layers <- weight_layers[-1]
     alpha <- alpha[-1]
@@ -175,11 +177,11 @@ regularize_weights <- function (loss, parameters, alpha, lambda, intercept = TRU
         l1 <- l1$mul(1-alpha[i])
         l2 <- torch::torch_norm(parameters[[weight_layers[i]]],p=2L)
         l2 <- l2$mul(alpha[i])
-        regularization <- torch::torch_add(l1,l2)
-        regularization <- regularization$mul(lambda)
-        loss <-  torch::torch_add(loss, regularization)
+        regularization_tmp <- torch::torch_add(l1,l2)
+        #regularization <- regularization$mul(lambda)
+        regularization = regularization$add(regularization_tmp)
     }
   }
-
-  return(loss)
+  regularization <- regularization$mul(lambda)
+  return(regularization)
 }

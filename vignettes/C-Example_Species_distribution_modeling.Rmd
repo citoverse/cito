@@ -1,5 +1,5 @@
 ---
-title: "Custom loss functions"
+title: "Example SDM"
 author: "Maximilian Pichler"
 date: "`r Sys.Date()`"
 output:

@@ -16,7 +16,7 @@
 \item{...}{additional arguments}
 }
 \value{
-summary.glm returns an object of class "summary.citodnn", a list with components
+summary.citodnnBootstrap returns an object of class "summary.citodnn", a list with components
 }
 \description{
 Performs a Feature Importance calculation based on Permutations
