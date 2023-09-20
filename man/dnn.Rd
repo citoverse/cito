@@ -8,7 +8,7 @@ dnn(
   formula,
   data = NULL,
   loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
-  hidden = c(10L, 10L, 10L),
+  hidden = c(50L, 50L),
   activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
     "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
     "softshrink", "hardshrink", "log_sigmoid"),
@@ -35,9 +35,9 @@ dnn(
 \arguments{
 \item{formula}{an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted}
 
-\item{data}{matrix or data.frame}
+\item{data}{matrix or data.frame with features/predictors and response variable}
 
-\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function}
+\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
 
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 
@@ -75,7 +75,7 @@ dnn(
 
 \item{custom_parameters}{List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.}
 
-\item{device}{device on which network should be trained on.}
+\item{device}{device on which network should be trained on. mps correspond to M1/M2 GPU devices.}
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
 }
@@ -94,39 +94,88 @@ The list consists of the following attributes:
 \item{losses}{A data.frame containing training and validation losses of each epoch}
 }
 \description{
-fits a custom deep neural network using the Multilayer Perceptron architecture. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
+fits a custom deep neural network using the Multilayer Perceptron architecture. \code{dnn()} supports the formula syntax and allows to customize the neural network to a maximal degree.
 }
-\details{
-In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function.
-Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network.
-The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached.
-The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
-Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}
+\section{Loss functions / Likelihoods}{
+We support loss functions and likelihoods for different tasks:\tabular{lll}{
+   Name \tab Explanation \tab Example / Task \cr
+   mse \tab mean squared error \tab Regression, predicting continuous values \cr
+   mae \tab mean absolute error \tab Regression, predicting continuous values \cr
+   softmax \tab categorical cross entropy \tab Multi-class, species classification \cr
+   cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
+   gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
+   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
+   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+}
+}
 
-Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+\section{Training and convergence of neural networks}{
+Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
 
-\strong{Regularization}
+\figure{learning_rates.jpg}{Learning rates}
+
+If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+
+A common strategy is to try (manually) a few different learning rates to see if the learning rate is roughly on the same scale.
+
+See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
+}
+
+\section{Finding the right architecture}{
+As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in \href{https://arxiv.org/abs/2306.10551}{Pichler & Hartig, 2023}, we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the \code{selu} activation function outperforms \code{relu} for small data sizes (<100 observations).
+
+We recommend starting with moderate sizes (like the defaults), and if the model doesn't generalize/converge, try larger networks along with a regularization that helps minimize the risk of overfitting (see \code{vignette("B-Training_neural_networks")} ).
+}
+
+\section{Overfitting}{
+Overfitting means that the model fits the training data well, but generalizes poorly to new observations. We can use the validation argument to detect overfitting. If the validation loss starts to increase again at a certain point, it often means that the models are starting to overfit your training data:
+
+\figure{overfitting.jpg}{Overfitting}
+
+\strong{Solutions}:
+
+\itemize{
+\item Re-train with epochs = point where model started to overfit
+\item Early stopping, stop training when model starts to overfit, can be specified using the \verb{early_stopping=…} argument
+\item Use regularization (dropout or elastic-net, see next section)
+}
+}
+
+\section{Regularization}{
+Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
 
 Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
 
-Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection.
-
 By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
+}
 
-\strong{Custom Optimizer and Learning Rate Schedulers}
+\section{Uncertainty}{
+We can use bootstrapping to generate uncertainties for all outputs. Bootstrapping can be enabled by setting \code{bootstrap = ...} to the number of bootstrap samples to be used. Note, however, that the computational cost can be excessive.
 
+In some cases it may be worthwhile to parallelize bootstrapping, for example if you have a GPU and the neural network is small. Parallelization for bootstrapping can be enabled by setting the \code{bootstrap_parallel = ...} argument to the desired number of calls to run in parallel.
+}
+
+\section{Custom Optimizer and Learning Rate Schedulers}{
 When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
 
 \code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 
 Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
-\strong{Training on graphic cards}
+}
 
+\section{How neural networks work}{
+In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+
+Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+}
+
+\section{Training on graphic cards}{
 If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
 For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
 
 Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 }
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){

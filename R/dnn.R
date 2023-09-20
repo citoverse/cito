@@ -2,11 +2,11 @@
 #'
 #' @description
 #'
-#' fits a custom deep neural network using the Multilayer Perceptron architecture. dnn() supports the formula syntax and allows to customize the neural network to a maximal degree.
+#' fits a custom deep neural network using the Multilayer Perceptron architecture. `dnn()` supports the formula syntax and allows to customize the neural network to a maximal degree.
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
-#' @param data matrix or data.frame
-#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function
+#' @param data matrix or data.frame with features/predictors and response variable
+#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
@@ -25,38 +25,86 @@
 #' @param plot plot training loss
 #' @param verbose print training and validation loss of epochs
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
-#' @param device device on which network should be trained on.
+#' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
 #'
 #' @details
 #'
-#' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function.
-#' Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network.
-#' The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached.
-#' The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
-
-#' Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}
+#' # Loss functions / Likelihoods
 #'
-#' Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+#' We support loss functions and likelihoods for different tasks:
 #'
+#' | Name| Explanation| Example / Task|
+#' | :--- | :--- | :--- |
+#' | mse | mean squared error |Regression, predicting continuous values|
+#' | mae | mean absolute error | Regression, predicting continuous values |
+#' | softmax | categorical cross entropy |Multi-class, species classification|
+#' | cross-entropy | categorical cross entropy |Multi-class, species classification|
+#' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
+#' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
+#' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
 #'
-#' **Regularization**
+#' # Training and convergence of neural networks
+#'
+#' Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
+#'
+#' ![](learning_rates.jpg "Learning rates")
+#'
+#' If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+#'
+#' A common strategy is to try (manually) a few different learning rates to see if the learning rate is roughly on the same scale.
+#'
+#' See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
+#'
+#' # Finding the right architecture
+#'
+#' As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in [Pichler & Hartig, 2023](https://arxiv.org/abs/2306.10551), we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the `selu` activation function outperforms `relu` for small data sizes (<100 observations).
+#'
+#' We recommend starting with moderate sizes (like the defaults), and if the model doesn't generalize/converge, try larger networks along with a regularization that helps minimize the risk of overfitting (see \code{vignette("B-Training_neural_networks")} ).
+#'
+#' # Overfitting
+#'
+#' Overfitting means that the model fits the training data well, but generalizes poorly to new observations. We can use the validation argument to detect overfitting. If the validation loss starts to increase again at a certain point, it often means that the models are starting to overfit your training data:
+#'
+#' ![](overfitting.jpg "Overfitting")
+#'
+#' **Solutions**:
+#'
+#' \itemize{
+#'   \item Re-train with epochs = point where model started to overfit
+#'   \item Early stopping, stop training when model starts to overfit, can be specified using the `early_stopping=…` argument
+#'   \item Use regularization (dropout or elastic-net, see next section)
+#' }
+#'
+#' # Regularization
+#'
+#' Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
 #'
 #' Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
 #'
-#' Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection.
-#'
 #' By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
 #'
+#' # Uncertainty
 #'
-#' **Custom Optimizer and Learning Rate Schedulers**
+#' We can use bootstrapping to generate uncertainties for all outputs. Bootstrapping can be enabled by setting `bootstrap = ...` to the number of bootstrap samples to be used. Note, however, that the computational cost can be excessive.
+#'
+#' In some cases it may be worthwhile to parallelize bootstrapping, for example if you have a GPU and the neural network is small. Parallelization for bootstrapping can be enabled by setting the `bootstrap_parallel = ...` argument to the desired number of calls to run in parallel.
+#'
+#' # Custom Optimizer and Learning Rate Schedulers
 #'
 #' When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
 #'
 #' \code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 #'
 #' Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
-#' **Training on graphic cards**
+#'
+#'# How neural networks work
+#' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+#'
+#' Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+#'
+#'
+#' # Training on graphic cards
 #'
 #' If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
 #' For detailed installation instructions and more information on utilizing GPUs for training, please refer to the [mlverse: 'torch' documentation](https://torch.mlverse.org/docs/articles/installation.html).
@@ -82,7 +130,7 @@
 dnn <- function(formula,
                 data = NULL,
                 loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
-                hidden = c(10L, 10L, 10L),
+                hidden = c(50L, 50L),
                 activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                                "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                                "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
@@ -103,6 +151,7 @@ dnn <- function(formula,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda", "mps"),
+                baseline = TRUE,
                 early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -198,6 +247,7 @@ dnn <- function(formula,
       valid_dl <- NULL
     }
     if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+
     net <- build_model(input = ncol(X), output = y_dim,
                       hidden = hidden, activation = activation,
                       bias = bias, dropout = dropout)
@@ -355,14 +405,21 @@ residuals.citodnn <- function(object,...){
 #'
 #' @details
 #'
-#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
+#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
+#'
+#' Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
+#'
+#' Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
+#'
+#' The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
+#'
 #' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
 #' @param device for calculating variable importance and conditional effects
 #' @param ... additional arguments
-#' @return summary.glm returns an object of class "summary.citodnn", a list with components
+#' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
 #' @export
 summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
   object <- check_model(object)
@@ -410,8 +467,14 @@ print.summary.citodnn <- function(x, ... ){
 #'
 #' @details
 #'
-#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
-#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
+#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
+#'
+#' Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
+#'
+#' Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
+#'
+#' The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
+#'
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
@@ -429,6 +492,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 
 
   res_imps = list()
+  pb = progress::progress_bar$new(total = length(ncol(out$importance[[1]]))-1, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
   for(i in 2:ncol(out$importance[[1]])) {
     tmp = sapply(out$importance, function(X) X[,i])
     imps = apply(tmp, 1, mean) - 1
@@ -438,16 +502,18 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
       as.vector(as.matrix(imps)),
       as.vector(as.matrix(imps_se)),
       as.vector(as.matrix(imps/imps_se)),
-      as.vector(as.matrix(stats::pnorm(imps/imps_se, lower.tail = FALSE)*2))
+      as.vector(as.matrix(stats::pnorm(abs(imps/imps_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i-1, ": ", out$importance[[1]]$variable)
     res_imps[[i-1]] = coefmat
+    pb$tick()
   }
   out$importance_coefmat = do.call(rbind, res_imps)
 
 
   res_ACE = list()
+  pb = progress::progress_bar$new(total = length(out$conditionalEffects[[1]]), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
@@ -463,11 +529,13 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
     res_ACE[[i]] = coefmat
+    pb$tick()
   }
   out$ACE_coefmat = do.call(rbind, res_ACE)
 
 
   res_ASCE = list()
+  pb = progress::progress_bar$new(total = length(out$conditionalEffects[[1]]), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
@@ -483,6 +551,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
     res_ASCE[[i]] = coefmat
+    pb$tick()
   }
   out$ASCE_coefmat = do.call(rbind, res_ASCE)
 
@@ -701,4 +770,5 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,...){
  plot(x$models[[1]], node_size = node_size, scale_edges = scale_edges)
 }
+
 

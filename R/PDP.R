@@ -2,9 +2,20 @@
 #'
 #' Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 #'
+#'
+#' @param model a model created by \code{\link{dnn}}
+#' @param variable variable as string for which the PDP should be done. If none is supplied it is done for all variables.
+#' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
+#' @param ice Individual Conditional Dependence will be shown if TRUE
+#' @param resolution.ice resolution in which ice will be computed
+#' @param plot plot PDP or not
+#' @param parallel parallelize over bootstrap models or not
+#' @param ... arguments passed to \code{\link{predict}}
+#'
+#'
 #' @details
 #'
-#' Description
+#' # Description
 #' Performs a Partial Dependency Plot (PDP) estimation to analyze the relationship between a selected feature and the target variable.
 #'
 #' The PDP function estimates the partial function \eqn{\hat{f}_S}{}:
@@ -28,14 +39,7 @@
 #' These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
 #' Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
 #'
-#' @param model a model created by \code{\link{dnn}}
-#' @param variable variable as string for which the PDP should be done. If none is supplied it is done for all variables.
-#' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
-#' @param ice Individual Conditional Dependence will be shown if TRUE
-#' @param resolution.ice resolution in which ice will be computed
-#' @param plot plot PDP or not
-#' @param parallel parallelize over bootstrap models or not
-#' @param ... arguments passed to \code{\link{predict}}
+#'
 #' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R

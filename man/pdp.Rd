@@ -62,8 +62,7 @@ A list of plots made with 'ggplot2' consisting of an individual plot for each de
 \description{
 Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 }
-\details{
-Description
+\section{Description}{
 Performs a Partial Dependency Plot (PDP) estimation to analyze the relationship between a selected feature and the target variable.
 
 The PDP function estimates the partial function \eqn{\hat{f}_S}{}:
@@ -87,6 +86,7 @@ If ice is set to true additional the individual conditional dependence will be s
 These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
 Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
 }
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){

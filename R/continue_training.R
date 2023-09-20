@@ -84,8 +84,8 @@ continue_training.citodnn <- function(model,
 
   if(model$training_properties$validation != 0){
 
-    train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(model$training_properties$validation*nrow(X))))
-    valid <- c(1:nrow(X))[-train]
+    valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(model$training_properties$validation*nrow(X))))
+    train <- c(1:nrow(X))[-valid]
     train_dl <- get_data_loader(X[train,],Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
     valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
 

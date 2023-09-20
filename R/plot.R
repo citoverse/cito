@@ -1,28 +1,34 @@
 visualize.training <- function(losses,epoch,new = FALSE, baseline = NULL){
   if (epoch==1|new){
 
-    graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l[1],losses$valid_l[1],baseline,na.rm=T)),
+    graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l,losses$valid_l,baseline,na.rm=T)),
                    main= "Training of DNN",
                    xlab= "epoch",
                    ylab= "loss",
-                   las = 2)
+                   las = 1)
+    if(!is.na(losses$valid_l[1])) {
     graphics::legend("topright",legend= c("training","validation", "baseline"),
-                     col= c("#5B84B1FF","#FC766AFF", "#00c49aAA"),lty=1:2, cex=0.8,
+                     col= c("#5B84B1FF","#FC766AFF", "#00c49aAA"),lty=1, cex=0.8,
                      title="Line types", bg='white', bty = "n")
+    } else {
+      graphics::legend("topright",legend= c("training", "baseline"),
+                       col= c("#5B84B1FF","#00c49aAA"),lty=1, cex=0.8,
+                       title="Line types", bg='white', bty = "n")
 
+      }
     graphics::points(x=c(1),y=c(losses$train_l[1]),pch=19, col="#5B84B1FF", lty=1)
-    graphics::points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FC766AFF", lty=2)
+    graphics::points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FC766AFF", lty=1)
     graphics::abline(h = baseline, col = "#00c49aAA", lwd = 1.8)
     if(epoch > 1){
       for ( i in c(2:epoch)){
         graphics::lines(c(i-1,i), c(losses$train_l[i-1],losses$train_l[i]), pch=19, col="#5B84B1FF", type="b", lty=1)
-        graphics::lines(c(i-1,i), c(losses$valid_l[i-1],losses$valid_l[i]), pch=18, col="#FC766AFF", type="b", lty=2)
+        graphics::lines(c(i-1,i), c(losses$valid_l[i-1],losses$valid_l[i]), pch=18, col="#FC766AFF", type="b", lty=1)
       }
     }
   } else{
 
     graphics::lines(c(epoch-1,epoch), c(losses$train_l[epoch-1],losses$train_l[epoch]), pch=19, col="#5B84B1FF", type="b", lty=1)
-    graphics::lines(c(epoch-1,epoch), c(losses$valid_l[epoch-1],losses$valid_l[epoch]), pch=18, col="#FC766AFF", type="b", lty=2)
+    graphics::lines(c(epoch-1,epoch), c(losses$valid_l[epoch-1],losses$valid_l[epoch]), pch=18, col="#FC766AFF", type="b", lty=1)
   }
 }
 

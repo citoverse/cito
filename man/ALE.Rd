@@ -62,7 +62,11 @@ A list of plots made with 'ggplot2' consisting of an individual plot for each de
 \description{
 Performs an ALE for one or more features.
 }
-\details{
+\section{Explanation}{
+Accumulated Local Effect plots (ALE) quantify how the predictions change when the features change. They are similar to partial dependency plots but are more robust to feature collinearity.
+}
+
+\section{Mathematical details}{
 If the defined variable is a numeric feature, the ALE is performed.
 Here, the non centered effect for feature j with k equally distant neighborhoods is defined as:
 
@@ -74,6 +78,7 @@ The last part of the equation,
 \eqn{\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
 represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 }
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){

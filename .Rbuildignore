@@ -8,3 +8,4 @@
 ^Meta$
 ^CRAN-SUBMISSION$
 ^revdep$
+^vignettes_build$

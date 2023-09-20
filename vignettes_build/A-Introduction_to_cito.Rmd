@@ -1,0 +1,236 @@
+---
+title: "Introduction to cito"
+author: "Christian Amesoeder & Maximilian Pichler"
+date: "`r Sys.Date()`"
+abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
+output:
+ rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Introduction_to_cito}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Abstract
+
+'cito' allows you to build and train fully-connected neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and graphic card support.
+
+## Setup
+
+### Installing torch
+
+Before using 'cito' make sure that the current version of 'torch' is installed and running.
+
+```{r setuptorch, eval = TRUE}
+if(!require(torch)) install.packages("torch")
+library(torch)
+if(!torch_is_installed()) install_torch()
+
+library (cito)
+
+```
+
+If you have problems installing Torch, check out the [installation help from the torch developer](https://torch.mlverse.org/docs/articles/installation.html).
+
+## Introduction to models and model structures
+
+### Data
+
+In this vignette, we will work with the irirs dataset and build a regression model.
+
+```{r data}
+data <- datasets::iris
+head(data)
+
+#scale dataset 
+data <- data.frame(scale(data[,-5]),Species = data[,5])
+```
+
+### Our first model
+
+In 'cito', neural networks are specified and fitted with the dnn function. Models can also be trained on the GPU by setting device = "cuda". This is suggested if you are working with large data sets or networks.
+
+```{r simp_models, fig.show='hide',out.lines = 3,eval=TRUE}
+library(cito)
+
+#fitting a regression model to predict Sepal.Length
+nn.fit <- dnn(Sepal.Length~. , data = data, hidden = c(10,10,10,10), epochs = 12, device = "cpu")
+
+```
+
+You can plot the network structure to give you a visual feedback of the created object. Be aware that this may take some time for large networks.
+
+```{r plotnn, eval=TRUE}
+plot(nn.fit)
+```
+
+### Activation functions
+
+By default, all layers are fitted with ReLU as activation function. $$
+relu(x) = max (0,x)
+$$ You can also adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function of the output layer is chosen with the loss argument and does not have to be provided.
+
+```{r activation, results ="hide",fig.show='hide' ,eval=TRUE}
+#selu as activation function for all layers: 
+nn.fit <- dnn(Sepal.Length~., data = data, hidden = c(10,10,10,10), activation= "selu")
+#layer specific activation functions: 
+nn.fit <- dnn(Sepal.Length~., data = data, 
+              hidden = c(10,10,10,10), activation= c("relu","selu","tanh","sigmoid"))
+```
+
+### Adding a validation set to the training process
+
+In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and define a percentage that will not be used for training and only for validation after each epoch. During training, a loss plot will show you how the two losses behave.
+
+```{r validation, results = "hide", eval=TRUE, out.lines=3, fig.show='hide'}
+#20% of data set is used as validation set
+nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
+              loss= "mae", hidden = c(10,10,10,10), validation = 0.2)
+```
+
+We can choose the model with minimal validation loss with the nn.fit\$use_model_epoch argument.
+
+```{r epoch1,eval=TRUE}
+nn.fit$use_model_epoch <- which.min(nn.fit$losses$valid_l)
+```
+
+### Interpreting model output
+
+The standard generic R functions can be used to interpret the model:
+
+```{r interpret,eval=TRUE}
+#utilize model on new data 
+predict(nn.fit,data[1:3,])
+```
+
+```{r coef, eval=TRUE}
+#returns weights of neural network
+coef(nn.fit)
+```
+
+With summary(), the feature Importance based on [Fisher, Rudin, and Dominici (2018)](https://arxiv.org/abs/1801.01489) gets calculated for all variables.
+
+```{r summary,eval=TRUE}
+# Calculate and return feature importance
+summary(nn.fit)
+```
+
+## Training hyperparameters
+
+### Regularization
+
+#### Elastic net regularization
+
+If elastic net is used, 'cito' will produce a sparse, generalized neural network. The L1/L2 loss can be controlled with the arguments alpha and lambda.
+
+$$
+ loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+$$
+
+If a single alpha value is provided each layer will get regularized with the same elastic net regularization. However, you can also regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1. With NA you can turn off generalization for specific layers.
+
+```{r alpha, results ="hide",fig.show='hide',eval=TRUE }
+#elastic net penalty in all layers: 
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5, lambda = 0.01)
+#L1 generalization in the first layer no penalty on the other layers: 
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), 
+              alpha = c(0,NA,NA,NA,NA), lambda = 0.01)
+```
+
+#### Dropout Regularization
+
+Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf?utm_content=buffer79b43&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer,) can be controlled similar to elastic net regularization. In this approach, a percentage of different nodes gets left during each epoch.
+
+```{r dropout, results ="hide",fig.show='hide' ,eval=TRUE}
+#dropout of 35% on all layers: 
+nn.fit <- dnn(Species~., data = data, hidden = c(10,10,10,10), dropout = 0.35)
+#dropout of 35% only on last 2 layers: 
+nn.fit <- dnn(Species~., data = data, 
+              hidden = c(10,10,10,10), dropout = c(0, 0, 0.35, 0.35))
+```
+
+### Learning rate
+
+### Learning rate scheduler
+
+Learning rate scheduler allow you to start with a high learning rate and decrease it during the training process. This leads to an overall faster training. You can choose between different types of schedulers. Namely, lambda, multiplicative, one_cycle and step.
+
+The function config_lr_scheduler() helps you setup such a scheduler. See ?config_lr_scheduler() for more information
+
+```{r lr_scheduler,eval=TRUE}
+# Step Learning rate scheduler that reduces learning rate every 16 steps by a factor of 0.5
+scheduler <- config_lr_scheduler(type = "step",
+                                 step_size = 16,
+                                 0.5) 
+
+nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
+```
+
+### Optimizer
+
+Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom optimizers can be used with config_optimizer().\
+See ?config_optimizer() for more information.
+
+```{r optim,eval=TRUE}
+
+# adam optimizer with learning rate 0.002, betas to 0.95, 0.999 and eps to 1.5e-08
+opt <- config_optimizer(
+  type = "adam", 
+  betas = c(0.95, 0.999), 
+  eps = 1.5e-08)
+
+nn.fit <- dnn(Species~., data = data, optimizer = opt, lr=0.002)
+```
+
+### Loss functions
+
+Loss function measure how good the network performs. Standard Loss functions are implemented along with some probability distributions.
+
+```{r lossfkt, eval=TRUE}
+# Real Mean squared error
+nn.fit <- dnn(Sepal.Length~. data = data, loss = "rmse") 
+
+# normal distribution 
+nn.fit <- dnn(Sepal.Length~. data = data, loss = stats::gaussian()) 
+```
+
+### Early Stopping
+
+Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation \> 0.
+
+```{r early_stopping,eval=TRUE}
+# Stops training if validation loss at current epoch is bigger than that 15 epochs earlier  
+nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000, 
+              validation = 0.2, early_stopping = 15)
+```
+
+## Continue training process
+
+You can continue the training process of an existing model with continue_training().
+
+```{r continue_training,eval=TRUE, fig.show='hide',out.lines = 3}
+# simple example, simply adding another 12 epochs to the training process   
+nn.fit <- continue_training(nn.fit, epochs = 12)
+```
+
+It also allows you to change any training parameters, for example the learning rate. You can also define which epoch the training should continue from. You can analyze the training process with analyze_training() and pick an epoch from which on the training should be continued from.
+
+```{r continue_training2,eval=TRUE, fig.show='hide', out.lines = 3}
+
+# picking the model with the smalles validation loss 
+# with changed parameters, in this case a smaller learning rate and a smaller batchsize
+nn.fit <- continue_training(nn.fit, 
+                            continue_from = which.min(nn.fit$losses$valid_l), 
+                            epochs = 32, 
+                            changed_params = list(lr = 0.001, batchsize = 16))
+```

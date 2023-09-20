@@ -20,7 +20,7 @@ Authors@R:
       person(given = "Armin",
              family = "Schenk",
              role = "ctb",
-             email = "armin.schenk@stud.uni-regensburg.de")
+             email = "armin.schenk99@gmail.com")
            )
 Description: Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card. 
 Encoding: UTF-8
@@ -46,6 +46,7 @@ Suggests:
     ggraph,
     igraph,
     stats,
-    ggplot2
-VignetteBuilder: knitr
+    ggplot2,
+    R.rsp (>= 0.40.0)
+VignetteBuilder: R.rsp
 BugReports: https://github.com/citoverse/cito/issues

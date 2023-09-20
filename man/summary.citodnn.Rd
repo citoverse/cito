@@ -16,12 +16,19 @@
 \item{...}{additional arguments}
 }
 \value{
-summary.glm returns an object of class "summary.citodnn", a list with components
+summary.citodnn returns an object of class "summary.citodnn", a list with components
 }
 \description{
 Performs a Feature Importance calculation based on Permutations
 }
 \details{
-Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018).
+Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
+
+Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
+
+Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
+
+The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
+
 For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
 }
