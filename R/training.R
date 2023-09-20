@@ -147,11 +147,12 @@ regularize_weights <- function (loss, parameters, alpha, lambda, intercept = TRU
     l2 <- torch::torch_norm(parameters$`0.weight`$hsplit(1)[[2]],p=2L)
     l2 <- l2$mul(alpha[1])
     regularization <- torch::torch_add(l1,l2)
-    regularization <- regularization$mul(lambda)
+    regularization <- regularization$mul(lambda[1])
     loss <-  torch::torch_add(loss, regularization)
 
     weight_layers <- weight_layers[-1]
     alpha <- alpha[-1]
+    lambda <- lambda[-1]
   }
 
   for (i in 1:length(weight_layers)) {
@@ -161,7 +162,7 @@ regularize_weights <- function (loss, parameters, alpha, lambda, intercept = TRU
         l2 <- torch::torch_norm(parameters[[weight_layers[i]]],p=2L)
         l2 <- l2$mul(alpha[i])
         regularization <- torch::torch_add(l1,l2)
-        regularization <- regularization$mul(lambda)
+        regularization <- regularization$mul(lambda[i])
         loss <-  torch::torch_add(loss, regularization)
     }
   }

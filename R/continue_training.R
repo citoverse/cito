@@ -63,32 +63,23 @@ continue_training <- function(model,
 
   X = stats::model.matrix(fm, data)
   Y = stats::model.response(stats::model.frame(fm, data))
-  Y = as.matrix(Y)
 
-  y_dim = ncol(Y)
-  y_dtype = torch::torch_float32()
-  if(is.character(Y)) {
-    y_dim = length(unique(as.integer(as.factor(Y[,1]))))
-    Y = matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(inherits(model$loss$call, "family")){
-      if(model$loss$call$family == "binomial") {
-        Y = torch::as_array(torch::nnf_one_hot( torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze() )
-      }
-    }
-  }
-  if(!is.function(model$loss$call)){
-    if(all(model$loss$call == "softmax")) y_dtype = torch::torch_long()
-  }
+  targets <- format_targets(Y, model$loss)
+  Y <- targets$Y
+  y_dim <- targets$y_dim
+  ylvls <- targets$ylvls
 
-  if(model$training_properties$validation != 0){
+  X <- torch::torch_tensor(as.matrix(X))
 
-    train <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(model$training_properties$validation*nrow(X))))
-    valid <- c(1:nrow(X))[-train]
-    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
-    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
-
-  }else{
-    train_dl <- get_data_loader(X,Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, y_dtype=y_dtype)
+  ### dataloader  ###
+  if(model$training_properties$validation != 0) {
+    n_samples <- nrow(X)
+    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+    train <- c(1:n_samples)[-valid]
+    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+  } else {
+    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     valid_dl <- NULL
   }
 

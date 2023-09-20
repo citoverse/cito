@@ -126,10 +126,6 @@ dnn <- function(formula,
   }
   X <- stats::model.matrix(formula, data)
   Y <- stats::model.response(stats::model.frame(formula, data))
-  ylvls <- NULL
-  if(is.factor(Y)) ylvls <- levels(Y)
-  if(!inherits(Y, "matrix")) Y = as.matrix(Y)
-
 
   loss_obj <- get_loss(loss)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
@@ -143,33 +139,27 @@ dnn <- function(formula,
       }
   }
 
-  y_dim <- ncol(Y)
-  y_dtype <- torch::torch_float32()
-  if(is.character(Y)) {
-    y_dim <- length(unique(as.integer(as.factor(Y[,1]))))
-    Y <- matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(inherits(loss_obj$call, "family")){
-      if(loss_obj$call$family == "binomial") {
-        Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
-    }}
-  }
+  targets <- format_targets(Y, loss_obj)
+  Y <- targets$Y
+  y_dim <- targets$y_dim
+  ylvls <- targets$ylvls
 
-  if(!is.function(loss_obj$call)){
-    if(all(loss_obj$call == "softmax")) y_dtype = torch::torch_long()
-  }
+  X <- torch::torch_tensor(as.matrix(X))
+
   ### dataloader  ###
-  if(validation != 0){
-    valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
-    train <- c(1:nrow(X))[-valid]
-    train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-    valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-
-  }else{
-    train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+  if(validation != 0) {
+    n_samples <- nrow(X)
+    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    train <- c(1:n_samples)[-valid]
+    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
+    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
+  } else {
+    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle)
     valid_dl <- NULL
   }
 
   if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
+  if((length(hidden)+1) != length(lambda)) lambda <- rep(lambda,length(hidden)+1)
 
 
   net <- build_dnn(input = ncol(X), output = y_dim,
@@ -205,7 +195,7 @@ dnn <- function(formula,
   out$call <- match.call()
   out$call$formula <- stats::terms.formula(formula,data = data)
   out$loss <- loss_obj
-  out$data <- list(X = X, Y = Y, data = data)
+  out$data <- list(X = torch::as_array(X), Y = torch::as_array(Y), data = data)
   out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
   if(!is.null(ylvls))  {
     out$data$ylvls <- ylvls
@@ -231,7 +221,6 @@ dnn <- function(formula,
 #'
 #' @param x a model created by \code{\link{dnn}}
 #' @param ... additional arguments
-#' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
 #' @return original object x gets returned
 #' @export

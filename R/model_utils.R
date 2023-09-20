@@ -1,7 +1,31 @@
-get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE, y_dtype) {
+format_targets <- function(Y, loss_obj) {
+  y_dtype <- torch::torch_float32()
+  if(!is.function(loss_obj$call) && all(loss_obj$call == "softmax")) y_dtype <- torch::torch_long()
+  if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
-  ds <- torch::tensor_dataset(X = torch::torch_tensor(as.array(X)),
-                              Y = torch::torch_tensor(as.matrix(Y), dtype = y_dtype))
+  if(is.character(Y)) {
+    Y <- as.factor(Y[,1])
+    ylvls <- levels(Y)
+    y_dim <- length(ylvls)
+
+    if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
+      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y)), torch::torch_float32())
+    } else {
+      Y <- torch::torch_tensor(matrix(as.integer(Y), ncol = 1L), dtype = y_dtype)
+    }
+  } else {
+    ylvls <- NULL
+    y_dim <- ncol(Y)
+    Y <- torch::torch_tensor(Y, dtype = y_dtype)
+  }
+
+  return(list(Y=Y, y_dim=y_dim, ylvls=ylvls))
+}
+
+
+get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE) {
+
+  ds <- torch::tensor_dataset(X = X, Y=Y)
 
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
 
@@ -185,9 +209,22 @@ get_regularization_parameters <- function(layers) {
   alpha <- c()
   for(layer in layers) {
     if(layer[[1]] %in% c("conv", "linear")) {
-      lamda <- c(lambda, layer[["lambda"]])
+      lambda <- c(lambda, layer[["lambda"]])
       alpha <- c(alpha, layer[["alpha"]])
     }
   }
   return(list(lambda=lambda, alpha=alpha))
 }
+
+get_output_shape <- function(input_shape, n_kernels, kernel_size, stride, padding, dilation) {
+  input_shape[1] <- n_kernels
+  for(i in 2:length(input_shape)) {
+    l <- input_shape[i] + 2*padding[i-1]
+    k <- kernel_size[i-1] + (kernel_size[i-1]-1)*(dilation[i-1]-1)
+    s <- stride[i-1]
+    input_shape[i] <- floor((l-k)/s)+1
+  }
+  return(input_shape)
+}
+
+

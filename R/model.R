@@ -7,8 +7,8 @@ build_model <- function(object) {
                      bias = object$model_properties$bias,
                      dropout = object$model_properties$dropout)
   } else if(inherits(object, "citocnn")) {
-    net <- build_cnn(input_shape = object$model_properties$input_shape,
-                     output_shape = object$model_properties$output_shape,
+    net <- build_cnn(input_shape = object$model_properties$input,
+                     output_shape = object$model_properties$output,
                      layers = object$model_properties$layers)
   } else {
     stop("model not of class citodnn or citocnn")
@@ -66,13 +66,12 @@ build_cnn <- function(input_shape, output_shape, layers) {
                                       torch::nn_conv3d(input_shape[1], layer[["n_kernels"]], layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]], bias = layer[["bias"]]))
       counter <- counter+1
 
-      input_shape[1] <- layer[["n_kernels"]]
-      for(i in 2:length(input_shape)) {
-        l <- input_shape[i] + 2*layer[["padding"]][i-1]
-        k <- layer[["kernel_size"]][i-1] + (layer[["kernel_size"]][i-1]-1)*(layer[["dilation"]][i-1]-1)
-        s <- layer[["stride"]][i-1]
-        input_shape[i] <- floor((l-k)/s)+1
-      }
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                      n_kernels = layer[["n_kernels"]],
+                                      kernel_size = layer[["kernel_size"]],
+                                      stride = layer[["stride"]],
+                                      padding = layer[["padding"]],
+                                      dilation = layer[["dilation"]])
 
       if(layer[["normalization"]]) {
         net_layers[[counter]] <- switch(input_dim,
@@ -97,12 +96,12 @@ build_cnn <- function(input_shape, output_shape, layers) {
                                       torch::nn_max_pool3d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]]))
       counter <- counter+1
 
-      for(i in 2:length(input_shape)) {
-        l <- input_shape[i] + 2*layer[["padding"]][i-1]
-        k <- layer[["kernel_size"]][i-1] + (layer[["kernel_size"]][i-1]-1)*(layer[["dilation"]][i-1]-1)
-        s <- layer[["stride"]][i-1]
-        input_shape[i] <- floor((l-k)/s)+1
-      }
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                      n_kernels = input_shape[1],
+                                      kernel_size = layer[["kernel_size"]],
+                                      stride = layer[["stride"]],
+                                      padding = layer[["padding"]],
+                                      dilation = layer[["dilation"]])
 
     } else if(layer_type == "avgPool") {
       net_layers[[counter]] <- switch(input_dim,
@@ -111,12 +110,12 @@ build_cnn <- function(input_shape, output_shape, layers) {
                                       torch::nn_avg_pool3d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]]))
       counter <- counter+1
 
-      for(i in 2:length(input_shape)) {
-        l <- input_shape[i] + 2*layer[["padding"]][i-1]
-        k <- layer[["kernel_size"]][i-1]
-        s <- layer[["stride"]][i-1]
-        input_shape[i] <- floor((l-k)/s)+1
-      }
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                      n_kernels = input_shape[1],
+                                      kernel_size = layer[["kernel_size"]],
+                                      stride = layer[["stride"]],
+                                      padding = layer[["padding"]],
+                                      dilation = 1)
 
     } else if(layer_type == "linear") {
       if(!flattened) {
