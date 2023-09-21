@@ -95,10 +95,10 @@ summary(nn.fit)
     ##      Feature Importance 
     ##  ##########################################################
     ##                          Importance Std.Err Z value Pr(>|z|)   
-    ## Response_1: Sepal.Width       1.836   0.585    3.14   0.0017 **
-    ## Response_1: Petal.Length     22.641   8.236    2.75   0.0060 **
-    ## Response_1: Petal.Width       0.883   0.984    0.90   0.3695   
-    ## Response_1: Species           0.367   0.313    1.17   0.2407   
+    ## Response_1: Sepal.Width       1.782   0.688    2.59   0.0096 **
+    ## Response_1: Petal.Length     20.415   8.067    2.53   0.0114 * 
+    ## Response_1: Petal.Width       0.659   0.661    1.00   0.3188   
+    ## Response_1: Species           0.405   0.235    1.73   0.0842 . 
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -107,9 +107,9 @@ summary(nn.fit)
     ##      Average Conditional Effects 
     ##  ##########################################################
     ##                              ACE Std.Err Z value Pr(>|z|)    
-    ## Response_1: Sepal.Width   0.7299  0.0746    9.79   <2e-16 ***
-    ## Response_1: Petal.Length  0.6647  0.0609   10.92   <2e-16 ***
-    ## Response_1: Petal.Width  -0.2270  0.1385   -1.64      0.1    
+    ## Response_1: Sepal.Width   0.7443  0.0534   13.93   <2e-16 ***
+    ## Response_1: Petal.Length  0.6625  0.0733    9.04   <2e-16 ***
+    ## Response_1: Petal.Width  -0.1866  0.1137   -1.64      0.1    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -117,10 +117,10 @@ summary(nn.fit)
     ##  ##########################################################
     ##      Standard Deviation of Conditional Effects 
     ##  ##########################################################
-    ##                             ACE Std.Err Z value Pr(>|z|)  
-    ## Response_1: Sepal.Width  0.1271  0.0534    2.38    0.017 *
-    ## Response_1: Petal.Length 0.1067  0.0424    2.52    0.012 *
-    ## Response_1: Petal.Width  0.0392  0.0213    1.84    0.066 .
+    ##                             ACE Std.Err Z value Pr(>|z|)   
+    ## Response_1: Sepal.Width  0.1524  0.0481    3.17   0.0015 **
+    ## Response_1: Petal.Length 0.1263  0.0452    2.80   0.0052 **
+    ## Response_1: Petal.Width  0.0414  0.0215    1.93   0.0539 . 
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 

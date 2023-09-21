@@ -2,6 +2,7 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^README\.Rmd$
+^README_files$
 ^\.github$
 ^cran-comments.md$
 ^doc$
