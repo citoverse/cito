@@ -34,8 +34,14 @@ visualize.training <- function(losses,epoch,new = FALSE, baseline = NULL){
 
 #' Visualize training of Neural Network
 #'
+#' @description
+#'
 #' After training a model with cito, this function helps to analyze the training process and decide on best performing model.
 #' Creates a 'plotly' figure which allows to zoom in and out on training graph
+#'
+#' @details
+#' The baseline loss is the most important reference. If the model was not able to achieve a better (lower) loss than the baseline (which is the loss for a intercept only model), the model probably did not converge. Possible reasons include an improper learning rate, too few epochs, or too much regularization. See the `?dnn` help or the `vignette("B-Training_neural_networks")`.
+#'
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @return a 'plotly' figure

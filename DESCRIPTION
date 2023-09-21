@@ -5,11 +5,11 @@ Version: 1.0.2
 Authors@R:
     c(person(given = "Christian",
            family = "Amesöder",
-           role = c("aut", "cre"),
+           role = c("aut"),
            email = "Christian.Amesoeder@informatik.uni-regensburg.de"),
       person(given = "Maximilian",
            family = "Pichler",
-           role = c("aut"),
+           role = c("aut", "cre"),
            email = "maximilian.pichler@biologie.uni-regensburg.de",
            comment = c(ORCID = "0000-0003-2252-8327")),
       person(given = "Florian",
@@ -40,13 +40,13 @@ Imports:
 License: GPL (>= 3)
 Suggests:
     rmarkdown,
-    knitr,
     testthat,
     plotly,
     ggraph,
     igraph,
     stats,
     ggplot2,
-    R.rsp (>= 0.40.0)
+    R.rsp
 VignetteBuilder: R.rsp
 BugReports: https://github.com/citoverse/cito/issues
+URL: https://citoverse.github.io/cito/

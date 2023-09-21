@@ -29,6 +29,7 @@ dnn(
   lr_scheduler = NULL,
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
+  baseline = TRUE,
   early_stopping = FALSE
 )
 }
@@ -116,7 +117,7 @@ Ensuring convergence can be tricky when training neural networks. Their training
 
 If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
 
-A common strategy is to try (manually) a few different learning rates to see if the learning rate is roughly on the same scale.
+A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
 
 See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
 }
@@ -255,4 +256,7 @@ as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
 }
 \seealso{
 \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
+}
+\author{
+Christian Amesoeder, Maximilian Pichler
 }

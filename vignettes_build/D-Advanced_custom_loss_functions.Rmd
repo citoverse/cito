@@ -18,8 +18,12 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  cache = TRUE
+  dpi=32,
+  out.width="400px",
+  fig.align="center"
 )
+options("progress_enabled" = FALSE)
+
 ```
 
 ## Custom loss functions
@@ -150,3 +154,4 @@ mean(predict(m)[,1])
 # SD
 mean(exp(predict(m)[,2]))
 ```
+

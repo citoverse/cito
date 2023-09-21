@@ -55,7 +55,7 @@ continue_training(
 a model of class citodnn or citodnnBoostrap created by  \code{\link{dnn}}
 }
 \description{
-Continues training of a model generated with \code{\link{dnn}} for additional epochs.
+If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
 }
 \examples{
 \donttest{

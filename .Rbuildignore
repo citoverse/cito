@@ -9,3 +9,6 @@
 ^CRAN-SUBMISSION$
 ^revdep$
 ^vignettes_build$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

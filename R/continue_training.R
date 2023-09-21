@@ -1,5 +1,9 @@
 #' Continues training of a model generated with \code{\link{dnn}} for additional epochs.
 #'
+#' @description
+#' If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
+#'
+#'
 #' @param model a model created by \code{\link{dnn}}
 #' @param data matrix or data.frame if not provided data from original training will be used
 #' @param epochs additional epochs the training should continue for

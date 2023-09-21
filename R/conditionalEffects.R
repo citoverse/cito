@@ -49,6 +49,11 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
 
 #' Calculate average conditional effects
 #'
+#' @description
+#' Average conditional effects calculate the local derivatives for each observation for each feature. They are similar to marginal effects. And the average of these conditional effects is an approximation of linear effects (see Pichler and Hartig, 2023 for more details). You can use this function to either calculate main effects (on the diagonal, take a look at the example) or interaction effects (off-diagonals) between features.
+#'
+#' To obtain uncertainties for these effects, enable the bootstrapping option in the `dnn(..)` function (see example).
+#'
 #' @param object object of class \code{citodnn}
 #' @param interactions calculate interactions or not (computationally expensive)
 #' @param epsilon difference used to calculate derivatives
@@ -65,6 +70,8 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
 #' \item{abs}{Matrix, summed absolute conditional effects}
 #' \item{sd}{Matrix, standard deviation of the conditional effects}
 #'
+#' @example /inst/examples/conditionalEffects-example.R
+#' @references Pichler, M., & Hartig, F. (2023). Can predictive models be used for causal inference?. arXiv preprint arXiv:2306.10551.
 #' @author Maximilian Pichler
 #' @export
 conditionalEffects = function(object, interactions=FALSE, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = NULL, data = NULL, type = "response",...) UseMethod("conditionalEffects")

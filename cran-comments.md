@@ -1,3 +1,20 @@
+# Version 1.0.2
+## cito submission 1 2023/22/9
+This is a major update, several functionalities such as bootstrapping for uncertainties or additional xAI methods
+were added. Moreover, several bugs were fixed, documentation was improved, and 3 vignettes were added.
+
+We would also like to announce a change of maintainer: Maximilian Pichler, co-author of cito, 
+will take over the position of maintainer.
+
+Old maintainer: 
+Christian Amesöder, Christian.Amesoeder@informatik.uni-regensburg.de
+
+New maintainer:
+Maximilian Pichler, maximilian.pichler@biologie.uni-regensburg.de
+
+### Successfull R CMD checks under
+
+
 # Version 1.0.1
 ## cito submission 1 2022/03/10
 This is a minor update, fixing a few bugs in the ALE and PDP functions, 

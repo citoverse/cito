@@ -52,7 +52,7 @@
 #'
 #' If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
 #'
-#' A common strategy is to try (manually) a few different learning rates to see if the learning rate is roughly on the same scale.
+#' A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
 #'
 #' See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
 #'
@@ -125,6 +125,7 @@
 #' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' @import checkmate
 #' @example /inst/examples/dnn-example.R
+#' @author Christian Amesoeder, Maximilian Pichler
 #' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
 #' @export
 dnn <- function(formula,
@@ -151,7 +152,6 @@ dnn <- function(formula,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda", "mps"),
-                baseline = TRUE,
                 early_stopping = FALSE) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
@@ -430,9 +430,9 @@ summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
   out$conditionalEffects = conditionalEffects(object, device = device)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
   colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
-  out$AbsCE = sapply(out$conditionalEffects, function(R) diag(R$abs))
-  colnames(out$AbsCE) = paste0("Response_", 1:ncol(out$AbsCE))
-  rownames(out$AbsCE) = rownames(out$ACE)
+  out$ASCE = sapply(out$conditionalEffects, function(R) diag(R$sd))
+  colnames(out$ASCE) = paste0("Response_", 1:ncol(out$ASCE))
+  rownames(out$ASCE) = rownames(out$ACE)
   return(out)
 }
 
@@ -451,11 +451,11 @@ print.summary.citodnn <- function(x, ... ){
   print(x$importance)
   cat("\nAverage Conditional Effects:\n")
   print(x$ACE)
-  cat("\nAbsolute sum of Conditional Effects:\n")
-  print(x$AbsCE)
+  cat("\nStandard Deviation of Conditional Effects:\n")
+  print(x$ASCE)
   out$importance = x$importance
   out$ACE = x$ACE
-  out$AbsCE = x$AbsCE
+  out$ASCE = x$ASCE
   return(invisible(out))
 }
 
@@ -492,7 +492,6 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 
 
   res_imps = list()
-  pb = progress::progress_bar$new(total = length(ncol(out$importance[[1]]))-1, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
   for(i in 2:ncol(out$importance[[1]])) {
     tmp = sapply(out$importance, function(X) X[,i])
     imps = apply(tmp, 1, mean) - 1
@@ -507,13 +506,11 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
     colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i-1, ": ", out$importance[[1]]$variable)
     res_imps[[i-1]] = coefmat
-    pb$tick()
   }
   out$importance_coefmat = do.call(rbind, res_imps)
 
 
   res_ACE = list()
-  pb = progress::progress_bar$new(total = length(out$conditionalEffects[[1]]), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
@@ -529,13 +526,11 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
     res_ACE[[i]] = coefmat
-    pb$tick()
   }
   out$ACE_coefmat = do.call(rbind, res_ACE)
 
 
   res_ASCE = list()
-  pb = progress::progress_bar$new(total = length(out$conditionalEffects[[1]]), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
@@ -551,7 +546,6 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
     rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
     res_ASCE[[i]] = coefmat
-    pb$tick()
   }
   out$ASCE_coefmat = do.call(rbind, res_ASCE)
 
