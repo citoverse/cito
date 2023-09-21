@@ -29,7 +29,6 @@ dnn(
   lr_scheduler = NULL,
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
-  baseline = TRUE,
   early_stopping = FALSE
 )
 }

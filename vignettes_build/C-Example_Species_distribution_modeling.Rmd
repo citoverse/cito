@@ -86,7 +86,7 @@ model = dnn(Presence~., data = df,
             verbose = FALSE)
 ```
 
-At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by using a weak regularization (but we only want a L2 regularization, so we set alpha to 1.0):
+At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by adding a weak regularization (but we only want a L2 regularization, so we set alpha to 1.0):
 
 ```{r}
 model = dnn(Presence~., data = df, 
@@ -286,11 +286,10 @@ model_boot = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, AR
 
 We haven't really adjusted the training procedure, so let's check the convergence first:
 
-```{r}
+```{r, eval=FALSE}
 analyze_training(model_boot)
 ```
 
-Looks good!
 
 ### Inference
 
@@ -307,5 +306,3 @@ ale_plots = ALE(model_boot, variable = "cvTemp", plot = FALSE)
 do.call(gridExtra::grid.arrange, ale_plots)
 
 ```
-
-Species react differently to cvTemp (different niches).
