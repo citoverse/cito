@@ -1,0 +1,308 @@
+---
+title: "Example: (Multi-) Species distribution models with cito"
+author: "Maximilian Pichler"
+abstract: "This vignette shows working examples of how to fit (multi-) species distribution models with cito"
+date: "`r Sys.Date()`"
+output:
+ rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Example SDM}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dpi=32,
+  out.width="400px",
+  fig.align="center"
+)
+options("progress_enabled" = FALSE)
+
+```
+
+## Purpose
+
+Training neural networks is tricky compared to other ML algorithms that converge more easily (due to various reasons). The purpose of this vignette is to provide an example workflow and to point out common caveats when training a neural network
+
+## Species distribution model - African elephant
+
+The goal is to build a SDM for the African elephant. A pre-processed dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be found in the EcoData package which is only available on github:
+
+```{r}
+if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData", 
+                         dependencies = FALSE, build_vignettes = FALSE)
+
+library(EcoData)
+df = EcoData::elephant$occurenceData
+head(df)
+```
+
+Presence is our response variable and we have the 19 bioclim variables as features/predictors.
+
+Let's split part of the data away so that we can use it at the end to evaluate our model:
+
+```{r}
+indices = sample.int(nrow(df), 300)
+test = df[indices,]
+df = df[-indices,]
+```
+
+### Adjusting optimization parameters - Convergence
+
+We will first try a simple DNN with default values and the binomial likelihood. We use 30% of the data as validation holdout to check for overfitting:
+
+```{r}
+library(cito)
+model = dnn(Presence~., data = df, 
+            batchsize = 100L, 
+            validation = 0.3, loss = "binomial",
+            verbose = FALSE)
+```
+
+We see that the training and test losses were still decreasing which means we didn't train the model long enough. We could now either increase the number of epochs or increase the learning rate so that the model trains faster:
+
+```{r}
+model = dnn(Presence~., data = df, 
+            batchsize = 100L,
+            lr = 0.05,
+            validation = 0.3, loss = "binomial",
+            verbose = FALSE)
+```
+
+Much better! But still now enough epochs. Also, let's see if we can further decrease the loss by using a wider and deeper neural network:
+
+```{r}
+model = dnn(Presence~., data = df, 
+            batchsize = 100L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            validation = 0.3, loss = "binomial",
+            verbose = FALSE)
+```
+
+At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by adding a weak regularization (but we only want a L2 regularization, so we set alpha to 1.0):
+
+```{r}
+model = dnn(Presence~., data = df, 
+            batchsize = 100L,
+            epochs = 150L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            lambda = 0.001,
+            alpha = 1.0,
+            validation = 0.3, loss = "binomial",
+            verbose = FALSE)
+```
+
+We will turn on now advanced features that help with the convergence and to reduce overfitting:
+
+-   learning rate scheduler - reduces learning rate during training
+
+-   early stopping - stop training when validation loss starts to increase
+
+```{r}
+model = dnn(Presence~., data = df, 
+            batchsize = 100L,
+            epochs = 150L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            lambda = 0.001,
+            alpha = 1.0,
+            validation = 0.3, loss = "binomial",
+            verbose = FALSE,
+            lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+            early_stopping = 14 # stop training when validation loss didn't decrease for 10 epochs
+            )
+```
+
+Great! We found now a model architecture and training procedure that fits and trains well. Let's proceed to our final model
+
+### Train final model with bootstrapping to obtain uncertainties
+
+We haven't directly started with bootstrapping because it complicates the adjustment of the training procedure.
+
+Uncertainties can be obtained by using bootstrapping. Be aware that this can be computational expensive:
+
+```{r}
+model_boot = dnn(Presence~., data = df, 
+                 batchsize = 100L,
+                 epochs = 150L,
+                 hidden = c(100L, 100L, 100L),
+                 lr = 0.05,
+                 lambda = 0.001,
+                 alpha = 1.0,
+                 validation = 0.3, loss = "binomial",
+                 verbose = FALSE,
+                 lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+                 early_stopping = 14, # stop training when validation loss didn't decrease for 10 epochs
+                 bootstrap = 20L,
+                 bootstrap_parallel = 5L
+            )
+```
+
+### Predictions
+
+We can use the model now for predictions:
+
+```{r}
+predictions = predict(model_boot, newdata = test)
+dim(predictions)
+```
+
+The predictions are 2/3 dimensional because of the bootstrapping. Calculate the AUC interval:
+
+```{r}
+hist(sapply(1:20, function(i) Metrics::auc(test$Presence, predictions[i,,])), 
+     xlim = c(0, 1), main = "AUC of ensemble model", xlab = "AUC")
+```
+
+We can now predict the habitat suitability of the elephant (Note that spatial dependencies are required):
+
+```{r}
+library(raster)
+library(sp)
+library(rsample)
+library(latticeExtra)
+library(sp)
+library(ggplot2)
+library(maptools)
+customPredictFun = function(model, data) {
+  return(apply(predict(model, data), 2:3, mean)[,1])
+}
+
+normalized_raster = EcoData::elephant$predictionData
+
+predictions =
+  raster::predict(normalized_raster,
+                  model_boot,
+                  fun = customPredictFun)
+
+habitat_plot = 
+  spplot(predictions, colorkey = list(space = "left") ) 
+habitat_plot
+```
+
+Moreover, we can visualize the uncertainty of our model, instead of calculating the average occurrence probability, we calculate for each prediction the standard deviation and visualize it:
+
+```{r}
+customPredictFun_sd = function(model, data) {
+  return(apply(predict(model, data), 2:3, sd)[,1])
+}
+predictions =
+  raster::predict(normalized_raster,
+                  model_boot,
+                  fun = customPredictFun_sd)
+
+uncertain_plot = 
+  spplot(predictions, colorkey = list(space = "left") ) 
+uncertain_plot
+```
+
+### Inference
+
+Neural networks are often called black-box models but the tools of explainable AI (xAI) allows us to understand them - and actually infer properties similar to what a linear regression model can provide (the calculation can take some time...):
+
+```{r}
+results = summary(model_boot)
+results
+```
+
+Bioclim9, 12, 14, and 16 have large significant average conditional effects (\$\\approx\$ linear effects). We can visualize them using accumulated local effect plots:
+
+```{r}
+par(mfrow = c(1, 4))
+ALE(model_boot, variable = "bio9")
+ALE(model_boot, variable = "bio12")
+ALE(model_boot, variable = "bio14")
+ALE(model_boot, variable = "bio16")
+```
+
+## Multi-species distribution model
+
+Cito supports many different loss functions which we can use to build multi-species distribution models (MSDM). MSDM are multi-label, i.e. they model and predict simoustanously many responses. We will use eucalypts data from [Pollock et al., 2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180). The dataset has occurrence of 12 species over 458 sites.
+
+```{r}
+load(url("https://github.com/TheoreticalEcology/s-jSDM/raw/master/sjSDM/data/eucalypts.rda"))
+# Environment
+head(eucalypts$env)
+
+# PA
+head(eucalypts$PA)
+```
+
+Bring data into a format that is usable by cito:
+
+```{r}
+df = cbind(eucalypts$PA, scale(eucalypts$env))
+head(df)
+```
+
+We will use the binomial likelihood - each species occurrence data will be modeled by a binomial likelihood. Build simple model:
+
+```{r}
+model = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+            data = df,
+            verbose = FALSE,
+            loss = "binomial")
+```
+
+Plot model:
+
+```{r}
+plot(model)
+```
+
+Our NN has now 12 output nodes, one for each species.
+
+```{r}
+head(predict(model))
+```
+
+### Train model with bootstrapping
+
+```{r}
+model_boot = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+                 data = df,
+                 loss = "binomial",
+                                  epochs = 200L,
+                 hidden = c(50L, 50L),
+                 batchsize = 50L,
+                 lr = 0.05,
+                 lambda = 0.001,
+                 alpha = 1.0,
+                 validation = 0.2,
+                 verbose = FALSE,
+                 lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+                 early_stopping = 14, # stop training when validation loss didn't decrease for 10 epochs
+                 bootstrap = 20L,
+                 bootstrap_parallel = 5L)
+```
+
+We haven't really adjusted the training procedure, so let's check the convergence first:
+
+```{r, eval=FALSE}
+analyze_training(model_boot)
+```
+
+
+### Inference
+
+```{r}
+results = summary(model_boot)
+results
+
+```
+
+cvTemp is significant for many species. Visualization of the effect:
+
+```{r}
+ale_plots = ALE(model_boot, variable = "cvTemp", plot = FALSE)
+do.call(gridExtra::grid.arrange, ale_plots)
+
+```

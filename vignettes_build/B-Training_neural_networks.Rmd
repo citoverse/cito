@@ -1,0 +1,160 @@
+---
+title: "Training neural networks"
+author: "Maximilian Pichler"
+date: "`r Sys.Date()`"
+output:
+ rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Training_neural_networks}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  dpi=32,
+  out.width="400px",
+  fig.align="center"
+)
+options("progress_enabled" = FALSE)
+
+```
+
+## Abstract
+
+This vignette helps to address certain problems that occur when training neural networks (NN) and gives hints on how to increase the likelihood of their convergence.
+
+## Possible issues
+
+-   Convergence issues, (often because of the learning rate), **training loss above baseline loss**:
+
+    ```{r,echo=FALSE}
+    library(cito)
+    m = dnn(Sepal.Length~., data = iris, lr = 0.0000001, verbose = FALSE, plot = FALSE)
+    cito:::visualize.training(m$losses, epoch = 100, new = TRUE, baseline = m$base_loss)
+    ```
+
+    If it looks like that, go to the [adjusting the learning rate section](#lr)
+
+-   Overfitting, difference between training and testing/holdout/new data error is too high, or validation loss starts to increase again at some point during the training
+
+    ```{r, echo=FALSE}
+    library(EcoData)
+    df = elephant$occurenceData
+    m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "binomial", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = FALSE)
+    cito:::visualize.training(m$losses, epoch = 600L, new = TRUE, baseline = m$base_loss)
+    ```
+
+    if it loos like that, go to the [overfitting section](#overfitting)
+
+## Convergence issues {#lr}
+
+Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps).
+
+### Epochs
+
+Give the neural network enough time to learn. The epochs should be high enough so that the training loss "stabilizes":
+
+```{r}
+m = dnn(Species~., data = iris, epochs = 10L, loss = "softmax", verbose=FALSE)
+```
+
+After 10 epochs the loss was still decreasing, let's run the model for more epochs:
+
+```{r}
+m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", verbose=FALSE)
+```
+
+It takes around 190-200 epochs until the loss doesn't decrease anymore. The "speed" of the learning depends also on the learning rate. Higher rates means larger steps into direction of the minima of the loss function:
+
+```{r}
+m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", lr = 0.05, verbose=FALSE)
+```
+
+Now it only takes about 100 epochs, but we also see that the training loss becomes wobbly. Larger learning rates increase the probability that local minima are skipped and the optimizer has problems to hit a minima.
+
+### Learning rate
+
+Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate.
+
+```{r}
+nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+
+par(mfrow = c(1, 3), mar = c(4, 3, 2, 2))
+cito:::visualize.training(nn.fit_good$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+cito:::visualize.training(nn.fit_high$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+cito:::visualize.training(nn.fit_low$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+```
+
+If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+
+A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
+
+### Solution: learning rate scheduler
+
+A common strategy to deal with the learning rate problem is to start with a high learning rate, and if the loss does not decrease, the learning rate is reduced according to a specific plan.
+
+I favor the "reduce learning rate on plateau" scheduler. If a loss plateau isn't resolved for a certain number of epochs (patience), the learning rate will be reduced ($lr_{new} = factor * lr_{old}$):
+
+```{r}
+nn.fit_high<- dnn(Species~., data = datasets::iris, 
+                  lr = 0.2, 
+                  epochs = 60L, 
+                  loss = "softmax",
+                  lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
+                  verbose = TRUE, 
+                  plot = TRUE)
+```
+
+At the end of the training, the learning rate is 0.025
+
+Note: The learning rate scheduler is a powerful approach to improve the likeliness of convergence, BUT it cannot help with much too high learning rates!
+
+```{r}
+nn.fit_high<- dnn(Species~., data = datasets::iris, 
+                  lr = 2, 
+                  epochs = 60L, 
+                  loss = "softmax",
+                  lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
+                  verbose = TRUE, 
+                  plot = TRUE)
+```
+
+Although the learning rate ended up being 0.01562, the loss never outperformed the baseline loss. The optimizer jumped right at the beginning into a completely unrealistic solution space for the parameters of the NN, from which we could not recover.
+
+## Overfitting {#overfitting}
+
+Overfitting means that the model fits the training data well, but generalizes poorly to new observations. We can use the validation argument to detect overfitting. If the validation loss starts to increase again at a certain point, it often means that the models are starting to overfit your training data:
+
+```{r}
+library(EcoData) # can be install from github using devtools::install_github(repo = "TheoreticalEcology/EcoData", dependencies = FALSE, build_vignettes = FALSE)
+df = elephant$occurenceData
+m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "binomial", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = TRUE)
+```
+
+**Solutions**:
+
+-   Re-train with epochs = point where model started to overfit
+
+-   Early stopping, stop training when model starts to overfit, can be specified using the `⁠early_stopping=…⁠` argument
+
+-   Use regularization (dropout or elastic-net, see next section)
+
+### Early stopping and regularization
+
+Early stopping = stop training when validation loss cannot be improved for x epochs (if there is no validation split, the training loss is used).
+
+lambda = 0.001 is the regularization strength and alpha = 0.2 means that 20% L1 and 80% L2 weighting.
+
+```{r}
+m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "binomial", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = TRUE, early_stopping = 10, lambda = 0.001, alpha = 0.2)
+```
+
+The training is aborted!

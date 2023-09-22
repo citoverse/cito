@@ -2,24 +2,44 @@
 % Please edit documentation in R/continue_training.R
 \name{continue_training}
 \alias{continue_training}
-\title{Continues training of a model for additional periods}
+\alias{continue_training.citodnn}
+\alias{continue_training.citodnnBootstrap}
+\title{Continues training of a model generated with \code{\link{dnn}} for additional epochs.}
 \usage{
 continue_training(
   model,
   epochs = 32,
-  continue_from = NULL,
   data = NULL,
   device = "cpu",
   verbose = TRUE,
-  changed_params = NULL
+  changed_params = NULL,
+  parallel = FALSE
+)
+
+\method{continue_training}{citodnn}(
+  model,
+  epochs = 32,
+  data = NULL,
+  device = "cpu",
+  verbose = TRUE,
+  changed_params = NULL,
+  parallel = FALSE
+)
+
+\method{continue_training}{citodnnBootstrap}(
+  model,
+  epochs = 32,
+  data = NULL,
+  device = "cpu",
+  verbose = TRUE,
+  changed_params = NULL,
+  parallel = FALSE
 )
 }
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
 \item{epochs}{additional epochs the training should continue for}
-
-\item{continue_from}{define which epoch should be used as starting point for training, 0 if last epoch should be used}
 
 \item{data}{matrix or data.frame if not provided data from original training will be used}
 
@@ -28,12 +48,14 @@ continue_training(
 \item{verbose}{print training and validation loss of epochs}
 
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
+
+\item{parallel}{train bootstrapped model in parallel}
 }
 \value{
-a model of class cito.dnn same as created by  \code{\link{dnn}}
+a model of class citodnn or citodnnBootstrap created by  \code{\link{dnn}}
 }
 \description{
-Continues training of a model for additional periods
+If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
 }
 \examples{
 \donttest{
