@@ -11,7 +11,7 @@
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
-#' @return a model of class citodnn or citodnnBoostrap created by  \code{\link{dnn}}
+#' @return a model of class citodnn or citodnnBootstrap created by  \code{\link{dnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
 #'

@@ -63,7 +63,7 @@ dnn(
 
 \item{epochs}{epochs the training goes on for}
 
-\item{bootstrap}{bootstrap neural network or not, numeric corresond to number of bootstrap samples}
+\item{bootstrap}{bootstrap neural network or not, numeric corresponds to number of bootstrap samples}
 
 \item{bootstrap_parallel}{parallelize (CPU) bootstrapping}
 
@@ -158,7 +158,7 @@ In some cases it may be worthwhile to parallelize bootstrapping, for example if 
 \section{Custom Optimizer and Learning Rate Schedulers}{
 When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
 
-\code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
+\code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 
 Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
 }
@@ -181,25 +181,36 @@ Note: GPU training is optional, and the package can still be used for training o
 if(torch::torch_is_installed()){
 library(cito)
 
-set.seed(222)
-validation_set<- sample(c(1:nrow(datasets::iris)),25)
+# Example workflow in cito
 
-# Build and train  Network
-nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+## Build and train  Network
+### softmax is used for multi-class responses (e.g., Species)
+nn.fit<- dnn(Species~., data = datasets::iris, loss = "softmax")
+
+## The training loss is below the validation loss but at the end of the
+## traing the loss was still decreasing, so continue training for another 50
+## epochs
+nn.fit <- continue_training(nn.fit, epochs = 50L)
 
 # Sturcture of Neural Network
 print(nn.fit)
 
-# Use model on validation set
-predictions <- predict(nn.fit, iris[validation_set,])
+# Plot Neural Network
+plot(nn.fit)
+## 4 Input nodes (first layer) because of 4 features
+## 3 Output nodes (last layer) because of 3 response species (one node for each
+## level in the response variable).
+## The layers between the input and output layer are called hidden layers (two
+## of them)
 
-# Scatterplot
-plot(iris[validation_set,]$Sepal.Length,predictions)
-# MAE
-mean(abs(predictions-iris[validation_set,]$Sepal.Length))
-
-# Get variable importances
+## We now want to understand how the predictions are made, what are the
+## important features? The summary function automatically calculates feature
+## importance (the interpretation is similar to an anova) and calculates
+## average conditional effects that are similar to linear effects:
 summary(nn.fit)
+
+## To visualize the effect (response-feature effect), we can use the ALE and
+## PDP functions
 
 # Partial dependencies
 PDP(nn.fit, variable = "Petal.Length")
@@ -207,7 +218,35 @@ PDP(nn.fit, variable = "Petal.Length")
 # Accumulated local effect plots
 ALE(nn.fit, variable = "Petal.Length")
 
-# Custom loss functions and additional parameters
+
+
+# Per se, it is difficult to get confidence intervals for our xAI metrics (or
+# for the predictions). But we can use bootstrapping to obtain uncertainties
+# for all cito outputs:
+## Re-fit the neural network with bootstrapping
+nn.fit<- dnn(Species~.,
+             data = datasets::iris,
+             loss = "softmax",
+             epochs = 150L,
+             bootstrap = 20L)
+## convergence can be tested via the analyze_training function
+analyze_training(nn.fit)
+
+## Summary for xAI metrics (can take some time):
+summary(nn.fit)
+## Now with standard errors and p-values
+## Note: Take the p-values with a grain of salt! We do not know yet if they are
+## correct (e.g. if you use regularization, they are likely conservative == too
+## large)
+
+## Predictions with bootstrapping:
+dim(predict(nn.fit))
+## The first dim corresponds to the bootstrapping, if you want the average
+## predictions, you need to calculate the mean by your own:
+apply(predict(nn.fit), 2:3, mean)
+
+
+# Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
 custom_loss = function(true, pred) {
   logLik = torch::distr_normal(pred,

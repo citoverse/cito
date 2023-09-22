@@ -52,7 +52,7 @@ continue_training(
 \item{parallel}{train bootstrapped model in parallel}
 }
 \value{
-a model of class citodnn or citodnnBoostrap created by  \code{\link{dnn}}
+a model of class citodnn or citodnnBootstrap created by  \code{\link{dnn}}
 }
 \description{
 If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.

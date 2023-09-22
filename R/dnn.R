@@ -19,7 +19,7 @@
 #' @param batchsize number of samples that are used to calculate one learning rate step
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
-#' @param bootstrap bootstrap neural network or not, numeric corresond to number of bootstrap samples
+#' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
 #' @param bootstrap_parallel parallelize (CPU) bootstrapping
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param plot plot training loss
@@ -94,7 +94,7 @@
 #'
 #' When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
 #'
-#' \code{\link{config_lr_scheduler}} allows you to define a specific learning rate schedulee that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
+#' \code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 #'
 #' Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
 #'

@@ -13,13 +13,14 @@ v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org
 
 <!-- badges: end -->
 
-‘cito’ aims at helping you build and train Neural Networks with the
-standard R syntax. It allows the whole model creation process and
-training to be done with one line of code. Furthermore, all generic R
-methods such as print or plot can be used on the created object. It is
-based on the ‘torch’ machine learning framework which is available for
-R. Since it is native to R, no Python installation or any further API is
-needed for this package.
+‘cito’ simplifies the building and training of (deep) neural networks by
+relying on standard R syntax and familiar methods from statistical
+packages. Model creation and training can be done with a single line of
+code. Furthermore, all generic R methods such as print or plot can be
+used on the fitted model. At the same time, ‘cito’ is computationally
+efficient because it is based on the deep learning framework ‘torch’
+(with optional GPU support). The ‘torch’ package is native to R, so no
+Python installation or other API is required for this package.
 
 ## Installation
 
@@ -72,7 +73,7 @@ nn.fit <- dnn(Sepal.Length~., data = datasets::iris, bootstrap = 30L)
 
 ``` r
 analyze_training(nn.fit)
-# At 1st glance they are converged since their loss is lower than the baseline loss.
+# At 1st glance they are converged since the loss is lower than the baseline loss.
 ```
 
 3.  Plot model architecture
@@ -95,10 +96,10 @@ summary(nn.fit)
     ##      Feature Importance 
     ##  ##########################################################
     ##                          Importance Std.Err Z value Pr(>|z|)   
-    ## Response_1: Sepal.Width       1.782   0.688    2.59   0.0096 **
-    ## Response_1: Petal.Length     20.415   8.067    2.53   0.0114 * 
-    ## Response_1: Petal.Width       0.659   0.661    1.00   0.3188   
-    ## Response_1: Species           0.405   0.235    1.73   0.0842 . 
+    ## Response_1: Sepal.Width       1.712   0.661    2.59   0.0096 **
+    ## Response_1: Petal.Length     19.370   6.446    3.00   0.0027 **
+    ## Response_1: Petal.Width       0.694   0.502    1.38   0.1668   
+    ## Response_1: Species           0.281   0.177    1.58   0.1130   
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -107,9 +108,9 @@ summary(nn.fit)
     ##      Average Conditional Effects 
     ##  ##########################################################
     ##                              ACE Std.Err Z value Pr(>|z|)    
-    ## Response_1: Sepal.Width   0.7443  0.0534   13.93   <2e-16 ***
-    ## Response_1: Petal.Length  0.6625  0.0733    9.04   <2e-16 ***
-    ## Response_1: Petal.Width  -0.1866  0.1137   -1.64      0.1    
+    ## Response_1: Sepal.Width   0.7202  0.0666   10.82   <2e-16 ***
+    ## Response_1: Petal.Length  0.6395  0.0739    8.65   <2e-16 ***
+    ## Response_1: Petal.Width  -0.1916  0.1336   -1.43     0.15    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -118,9 +119,9 @@ summary(nn.fit)
     ##      Standard Deviation of Conditional Effects 
     ##  ##########################################################
     ##                             ACE Std.Err Z value Pr(>|z|)   
-    ## Response_1: Sepal.Width  0.1524  0.0481    3.17   0.0015 **
-    ## Response_1: Petal.Length 0.1263  0.0452    2.80   0.0052 **
-    ## Response_1: Petal.Width  0.0414  0.0215    1.93   0.0539 . 
+    ## Response_1: Sepal.Width  0.1378  0.0467    2.95   0.0032 **
+    ## Response_1: Petal.Length 0.1096  0.0437    2.51   0.0121 * 
+    ## Response_1: Petal.Width  0.0520  0.0292    1.78   0.0749 . 
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -131,3 +132,77 @@ dim(predict(nn.fit, newdata = datasets::iris))
 ```
 
     ## [1]  30 150   1
+
+## Advanced
+
+We can also pass custom loss functions to ‘cito’, and we can use
+additional parameters within the custom loss function. The only
+requirement is that all calculations must be written using the ‘torch’
+package (cito automatically converts the initial values for the custom
+parameters to ‘torch’ objects).
+
+We use a multivariate normal distribution as the likelihood function and
+we want to parameterize/fit the covariance matrix of the multivariate
+normal distribution:
+
+1.  We need one helper function, `create_cov()` that builds the
+    covariance matrix based on a LU and the diagonals
+
+2.  We need our custom likelihood function which uses the
+    `distr_multivariate_normal(…)` function from the torch package:
+
+``` r
+create_cov = function(LU, Diag) {
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+}
+
+custom_loss_MVN = function(true, pred) {
+  Sigma = create_cov(SigmaPar, SigmaDiag)
+  logLik = torch::distr_multivariate_normal(pred,
+                                            covariance_matrix = Sigma)$
+    log_prob(true)
+  return(-logLik$mean())
+}
+```
+
+3.  We use “SigmaPar” and “SigmaDiag” as parameters that we want to
+    optimize along the DNN. We will pass a named list with starting
+    values to ‘cito’ and ‘cito’ will infer automatically (based on the R
+    shape) the shape of the parameters:
+
+``` r
+nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
+             data = datasets::iris,
+             lr = 0.01,
+             epochs = 200L,
+             loss = custom_loss_MVN,
+             verbose = FALSE,
+             plot = FALSE,
+             custom_parameters =
+               list(SigmaDiag =  rep(1, 3), # Our parameters with starting values
+                    SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2)) # Our parameters with starting values
+)
+```
+
+Estimated covariance matrix:
+
+``` r
+as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
+                     nn.fit$loss$parameter$SigmaDiag))
+```
+
+    ##            [,1]       [,2]       [,3]
+    ## [1,]  1.1261417 -0.2697209  0.2071757
+    ## [2,] -0.2697209 25.7208309 -0.1872581
+    ## [3,]  0.2071757 -0.1872581  0.1996000
+
+Empirical covariance matrix:
+
+``` r
+cov(predict(nn.fit) - nn.fit$data$Y)
+```
+
+    ##              Sepal.Length Sepal.Width Petal.Length
+    ## Sepal.Length    0.2311693  0.10301748   0.12489735
+    ## Sepal.Width     0.1030175  0.42593235   0.05420866
+    ## Petal.Length    0.1248974  0.05420866   0.13383693

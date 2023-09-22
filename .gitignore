@@ -8,7 +8,6 @@ check/
 /doc/
 /Meta/
 .DS_Store
-docs
 vignettes_build/C-Example_Species_distribution_modeling_cache/
 vignettes_build/D-Advanced_custom_loss_functions_cache/
 vignettes/C-Example_Species_distribution_modeling_files/
