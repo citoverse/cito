@@ -6,6 +6,10 @@ abstract: "This vignette shows how cito can be used for advanced techniques such
 output:
  rmarkdown::html_vignette:
     toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean
 vignette: >
   %\VignetteIndexEntry{Advanced: Custom loss}
   %\VignetteEncoding{UTF-8}
@@ -28,7 +32,7 @@ options("progress_enabled" = FALSE)
 
 ## Custom loss functions
 
-We can pass custom loss functions to cito. R variables/values that are used within the loss function and that should be additionally optimized must be passed to cito via the custom_parameters function.
+We can pass custom loss functions to cito. R variables/values that are used within the loss function and that should be additionally optimized must be passed to cito via the custom_parameters argument in `dnn(...custom_parameters = list(name_of_parameter=...))`
 
 Examples:
 
@@ -154,4 +158,3 @@ mean(predict(m)[,1])
 # SD
 mean(exp(predict(m)[,2]))
 ```
-

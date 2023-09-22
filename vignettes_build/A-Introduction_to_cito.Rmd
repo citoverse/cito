@@ -6,6 +6,10 @@ abstract: "'cito' allows you to build and train neural networks using the R form
 output:
  rmarkdown::html_vignette:
     toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean    
 vignette: >
   %\VignetteIndexEntry{Introduction_to_cito}
   %\VignetteEncoding{UTF-8}
@@ -25,13 +29,7 @@ knitr::opts_chunk$set(
 options("progress_enabled" = FALSE)
 ```
 
-## Abstract
-
-'cito' allows you to build and train fully-connected neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and graphic card support.
-
-## Setup
-
-### Installing torch
+## Setup - Installing torch
 
 Before using 'cito' make sure that the current version of 'torch' is installed and running.
 

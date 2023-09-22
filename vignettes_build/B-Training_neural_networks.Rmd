@@ -2,9 +2,14 @@
 title: "Training neural networks"
 author: "Maximilian Pichler"
 date: "`r Sys.Date()`"
+abstract: "This vignette helps to address certain problems that occur when training neural networks (NN) and gives hints on how to increase the likelihood of their convergence."
 output:
  rmarkdown::html_vignette:
     toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean
 vignette: >
   %\VignetteIndexEntry{Training_neural_networks}
   %\VignetteEncoding{UTF-8}
@@ -25,9 +30,6 @@ options("progress_enabled" = FALSE)
 
 ```
 
-## Abstract
-
-This vignette helps to address certain problems that occur when training neural networks (NN) and gives hints on how to increase the likelihood of their convergence.
 
 ## Possible issues
 
