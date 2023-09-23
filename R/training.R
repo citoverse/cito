@@ -20,15 +20,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
                           data.frame(epoch=c((model$use_model_epoch+1):(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
   }
 
-  if((length(model$model_properties$hidden)+1) != length(model$training_properties$alpha)) {
-    model$training_properties$alpha <- rep(model$training_properties$alpha[1],length(model$model_properties$hidden)+1)}
-
   loss.fkt <- model$loss$loss
   if(!is.null(model$loss$parameter)) list2env(model$loss$parameter,envir = environment(fun= loss.fkt))
 
-  generalize <- FALSE
-  if((!all(model$training_properties$alpha == F)|anyNA(model$training_properties$alpha))
-     & model$training_properties$lambda>0) generalize <- TRUE
+  regularize <- TRUE
+  if(all(is.na(model$training_properties$alpha) | model$training_properties$lambda==0)) regularize <- FALSE
+
+  intercept <- FALSE
+  if(inherits(model, "citodnn")) intercept <- model$model_properties$bias[1]
 
   best_train_loss = Inf
   best_val_loss = Inf
@@ -43,20 +42,27 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       optimizer$zero_grad()
       output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
       loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
-      if(generalize){
-        loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
-                                 loss = loss, lambda = model$training_properties$lambda,
-                                 intercept = model$model_properties$bias[1])
+      if(regularize){
+        regularization_loss <- regularize_weights( parameters = model$net$parameters,
+                                   alpha = model$training_properties$alpha,
+                                   lambda = model$training_properties$lambda,
+                                   intercept = intercept)
+        total_loss = torch::torch_add(loss, regularization_loss)
 
+      } else {
+        total_loss = loss
       }
-
-      loss$backward()
+      total_loss$backward()
 
       optimizer$step()
 
+      if(is.na(loss$item())) {
+        stop("Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.")
+      }
+
       train_l <- c(train_l, loss$item())
-      model$losses$train_l[epoch] <- mean(train_l)
     })
+    model$losses$train_l[epoch] <- mean(train_l)
 
 
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){
@@ -66,13 +72,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       coro::loop(for (b in valid_dl) {
         output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
         loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
-        loss <- generalize_alpha(parameters = model$net$parameters, alpha = model$training_properties$alpha,
-                                 loss = loss, lambda = model$training_properties$lambda,
-                                 intercept= model$model_properties$bias[1])
-        valid_l <- c(valid_l, loss$item())
-        model$losses$valid_l[epoch] <- mean(valid_l)
-      })
 
+        valid_l <- c(valid_l, loss$item())
+      })
+      model$losses$valid_l[epoch] <- mean(valid_l)
     }
 
     ### learning rate scheduler ###
@@ -95,32 +98,42 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
 
-    model$weights[[epoch]] <- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+    # Save best weights
+    if(epoch > 1) {
+      if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(min(model$losses$valid_l[epoch-1]) > model$losses$valid_l[epoch]) {
+          model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        }
+      } else {
+        if(min(model$losses$train_l[epoch-1]) > model$losses$train_l[epoch]) {
+          model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        }
+      }
+    } else {
+      model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+    }
 
 
     ### create plot ###
-    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
+    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new, baseline = model$base_loss)
     plot_new <- FALSE
 
     ### early stopping ###
     if(is.numeric(model$training_properties$early_stopping)) {
       if(model$training_properties$validation != 0 & !is.null(valid_dl)){
-        if(model$losses$train_l[epoch] < best_val_loss) {
+        if(model$losses$valid_l[epoch] < best_val_loss) {
           best_val_loss = model$losses$valid_l[epoch]
-          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
           counter = 0
         }
 
       } else {
         if(model$losses$train_l[epoch] < best_train_loss) {
           best_train_loss = model$losses$train_l[epoch]
-          model$weights[[epoch]]<- lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
           counter = 0
         }
       }
 
       if(counter >= model$training_properties$early_stopping) {
-        if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new)
         break
       }
       counter = counter + 1
@@ -129,51 +142,46 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
   }
 
+  model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, as.numeric)
-  model$use_model_epoch <- epoch
-  model$loaded_model_epoch <- epoch
+  model$use_model_epoch <- 1
+  model$loaded_model_epoch <- 1
 
 
   return(model)
 }
 
+regularize_weights <- function (parameters, alpha, lambda, intercept = TRUE){
 
+  weight_layers <- names(which(sapply(parameters, function(x) length(dim(x))) > 1))
 
-generalize_alpha<- function (parameters, alpha, loss, lambda,  intercept = TRUE){
+  regularization = torch::torch_zeros(1L, dtype = parameters[[1]]$dtype, device = parameters[[1]]$device)
 
-  weight_layers<-  grepl("weight",names(parameters),fixed = TRUE)
-  counter <- 1
   if(intercept){
-    l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]])))
-    l1 <- l1$mul(1-alpha[counter])
-    l2 <- torch::torch_norm(torch::torch_cat(parameters$`0.weight`$hsplit(1)[[2]]),p=2L)
-    l2 <- l2$mul(alpha[counter])
-    regularization <- torch::torch_add(l1,l2)
-    regularization <- regularization$mul(lambda)
-    loss <-  torch::torch_add(loss,regularization)
-    counter <- counter + 1
+    l1 <- torch::torch_sum(torch::torch_abs(parameters$`0.weight`$hsplit(1)[[2]]))
+    l1 <- l1$mul(1-alpha[1])
+    l2 <- torch::torch_norm(parameters$`0.weight`$hsplit(1)[[2]],p=2L)
+    l2 <- l2$mul(alpha[1])
+    regularization_tmp <- torch::torch_add(l1,l2)
+    #regularization_tmp <- regularization_tmp$mul(lambda)
+    regularization = regularization$add(regularization_tmp)
+
+    weight_layers <- weight_layers[-1]
+    alpha <- alpha[-1]
   }
 
-  for (i in c(counter:length(parameters))){
-    if(is.na(alpha[counter])){
-      counter<- counter+1
-    }else{
-      if (weight_layers[i]){
-        l1 <- torch::torch_sum(torch::torch_abs(torch::torch_cat(parameters[i])))
-        l1 <- l1$mul(1-alpha[counter])
-        l2 <- torch::torch_norm(torch::torch_cat(parameters[i]),p=2L)
-        l2 <- l2$mul(alpha[counter])
-        regularization <- torch::torch_add(l1,l2)
-        regularization <- regularization$mul(lambda)
-        loss <-  torch::torch_add(loss, regularization)
-        counter <- counter + 1
-      }
+  for (i in 1:length(weight_layers)) {
+    if(!is.na(alpha[i])) {
+        l1 <- torch::torch_sum(torch::torch_abs(parameters[[weight_layers[i]]]))
+        l1 <- l1$mul(1-alpha[i])
+        l2 <- torch::torch_norm(parameters[[weight_layers[i]]],p=2L)
+        l2 <- l2$mul(alpha[i])
+        regularization_tmp <- torch::torch_add(l1,l2)
+        #regularization <- regularization$mul(lambda)
+        regularization = regularization$add(regularization_tmp)
     }
   }
-
-
-
-  return(loss)
+  regularization <- regularization$mul(lambda)
+  return(regularization)
 }
-
-

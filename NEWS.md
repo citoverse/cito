@@ -1,3 +1,22 @@
+# cito 1.0.2
+
+## New features
+* conditional Effects (approximate linear effects)
+* uncertainties via bootstrapping (can be forwarded to all functions)
+* summary() can return standard errors and p-values for xAI metrics
+* improved documentation / several new vignettes
+* baseline loss 
+* loss = inf/na is not captured, training is aborted and user is warned
+* mps (M1/M2 gpu) device is not supported
+ 
+## Bug fixes
+* early stopping (ignored validation loss)
+* weights are only saved for best and last epoch
+* gaussian likelihood works now properly
+* reguarlization loss is not visualized
+* reduce lr on plateau works now with validation loss
+
+
 # cito 1.0.1
 
 ## New features 

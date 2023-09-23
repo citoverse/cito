@@ -1,17 +1,26 @@
 Package: cito
 Type: Package
-Date: 2023-03-10
 Title: Building and Training Neural Networks
-Version: 1.0.1
+Version: 1.0.2
 Authors@R:
     c(person(given = "Christian",
            family = "Amesöder",
-           role = c("aut", "cre"),
+           role = c("aut"),
            email = "Christian.Amesoeder@informatik.uni-regensburg.de"),
       person(given = "Maximilian",
            family = "Pichler",
-           role = c("aut"),
-           email = "maximilian.pichler@ur.de")
+           role = c("aut", "cre"),
+           email = "maximilian.pichler@biologie.uni-regensburg.de",
+           comment = c(ORCID = "0000-0003-2252-8327")),
+      person(given = "Florian",
+             family = "Hartig",
+             role = "ctb",
+             email = "florian.hartig@biologie.uni-regensburg.de",
+             comment = c(ORCID = "0000-0002-6255-9059")),           
+      person(given = "Armin",
+             family = "Schenk",
+             role = "ctb",
+             email = "armin.schenk99@gmail.com")
            )
 Description: Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card. 
 Encoding: UTF-8
@@ -24,16 +33,20 @@ Imports:
     coro,
     checkmate,
     torch,
-    gridExtra
+    gridExtra,
+    parabar,
+    abind,
+    progress
 License: GPL (>= 3)
 Suggests:
     rmarkdown,
-    knitr,
     testthat,
     plotly,
     ggraph,
     igraph,
     stats,
-    ggplot2
-VignetteBuilder: knitr
+    ggplot2,
+    R.rsp
+VignetteBuilder: R.rsp
 BugReports: https://github.com/citoverse/cito/issues
+URL: https://citoverse.github.io/cito/

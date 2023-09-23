@@ -19,7 +19,7 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
     layers[[1]] = torch::nn_linear(input, out_features = output,bias = FALSE)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
-    if(length(hidden) != length(bias)) bias = rep(bias, (length(hidden)+1))
+    if(length(hidden)+1 != length(bias)) bias = rep(bias, (length(hidden)+1))
     if(length(hidden) != length(dropout)) dropout = rep(dropout,length(hidden))
 
     counter = 1
@@ -30,9 +30,6 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
         layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
       }
       counter = counter+1
-      if(activation[i] == "relu") layers[[counter]] = torch::nn_relu()
-      if(activation[i] == "leaky_relu") layers[[counter]] = torch::nn_leaky_relu()
-      if(activation[i] == "tanh") layers[[counter]] = torch::nn_tanh()
       layers[[counter]]<- switch(tolower(activation[i]),
              "relu" = torch::nn_relu(),
              "leaky_relu" = torch::nn_leaky_relu(),
@@ -61,7 +58,7 @@ build_model = function(input, output, hidden, activation, bias, dropout) {
         counter = counter+1
       }
     }
-    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i])
+    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i+1])
   }
   net = do.call(torch::nn_sequential, layers)
   return(net)
@@ -85,10 +82,10 @@ get_loss <- function(loss) {
 
   if(inherits(loss, "family")){
     if(loss$family == "gaussian") {
-      out$parameter <- torch::torch_tensor(0.1, requires_grad = TRUE)
+      out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE)
       out$invlink <- function(a) a
       out$loss <- function(pred, true) {
-        return(torch::distr_normal(pred, torch::torch_clamp(torch::torch_tensor(unlist(out$parameter),requires_grad = TRUE), 0.0001, 20))$log_prob(true)$negative())
+        return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
       }
     } else if(loss$family == "binomial") {
       if(loss$link == "logit") {

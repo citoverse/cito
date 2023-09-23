@@ -16,6 +16,9 @@ a 'plotly' figure
 After training a model with cito, this function helps to analyze the training process and decide on best performing model.
 Creates a 'plotly' figure which allows to zoom in and out on training graph
 }
+\details{
+The baseline loss is the most important reference. If the model was not able to achieve a better (lower) loss than the baseline (which is the loss for a intercept only model), the model probably did not converge. Possible reasons include an improper learning rate, too few epochs, or too much regularization. See the \code{?dnn} help or the \code{vignette("B-Training_neural_networks")}.
+}
 \examples{
 \donttest{
 if(torch::torch_is_installed()){
@@ -28,9 +31,6 @@ nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,],validation 
 
 # show zoomable plot of training and validation losses
 analyze_training(nn.fit)
-
-# set model which is used for predictions to model from epoch 22
-nn.fit$use_model_epoch <- 22
 
 # Use model on validation set
 predictions <- predict(nn.fit, iris[validation_set,])

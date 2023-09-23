@@ -2,6 +2,8 @@
 % Please edit documentation in R/ALE.R
 \name{ALE}
 \alias{ALE}
+\alias{ALE.citodnn}
+\alias{ALE.citodnnBootstrap}
 \title{Accumulated Local Effect Plot (ALE)}
 \usage{
 ALE(
@@ -9,8 +11,32 @@ ALE(
   variable = NULL,
   data = NULL,
   K = 10,
-  type = c("equidistant", "quantile"),
-  plot = TRUE
+  ALE_type = c("equidistant", "quantile"),
+  plot = TRUE,
+  parallel = FALSE,
+  ...
+)
+
+\method{ALE}{citodnn}(
+  model,
+  variable = NULL,
+  data = NULL,
+  K = 10,
+  ALE_type = c("equidistant", "quantile"),
+  plot = TRUE,
+  parallel = FALSE,
+  ...
+)
+
+\method{ALE}{citodnnBootstrap}(
+  model,
+  variable = NULL,
+  data = NULL,
+  K = 10,
+  ALE_type = c("equidistant", "quantile"),
+  plot = TRUE,
+  parallel = FALSE,
+  ...
 )
 }
 \arguments{
@@ -22,9 +48,13 @@ ALE(
 
 \item{K}{number of neighborhoods original feature space gets divided into}
 
-\item{type}{method on how the feature space is divided into neighborhoods.}
+\item{ALE_type}{method on how the feature space is divided into neighborhoods.}
 
 \item{plot}{plot ALE or not}
+
+\item{parallel}{parallelize over bootstrap models or not}
+
+\item{...}{arguments passed to \code{\link{predict}}}
 }
 \value{
 A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
@@ -32,7 +62,11 @@ A list of plots made with 'ggplot2' consisting of an individual plot for each de
 \description{
 Performs an ALE for one or more features.
 }
-\details{
+\section{Explanation}{
+Accumulated Local Effect plots (ALE) quantify how the predictions change when the features change. They are similar to partial dependency plots but are more robust to feature collinearity.
+}
+
+\section{Mathematical details}{
 If the defined variable is a numeric feature, the ALE is performed.
 Here, the non centered effect for feature j with k equally distant neighborhoods is defined as:
 
@@ -44,6 +78,7 @@ The last part of the equation,
 \eqn{\left[\hat{f}(z_{k,j},x^{(i)}_{\setminus{}j})-\hat{f}(z_{k-1,j},x^{(i)}_{\setminus{}j})\right]}
 represents the difference in model prediction when the value of feature j is exchanged with the upper and lower border of the current neighborhood.
 }
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){
