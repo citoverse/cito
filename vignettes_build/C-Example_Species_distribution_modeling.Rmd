@@ -11,7 +11,7 @@ output:
       toc: true
       theme: cerulean
 vignette: >
-  %\VignetteIndexEntry{Example SDM}
+  %\VignetteIndexEntry{Example: (Multi-) Species distribution models with cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 

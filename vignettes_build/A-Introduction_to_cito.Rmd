@@ -11,7 +11,7 @@ output:
       toc: true
       theme: cerulean    
 vignette: >
-  %\VignetteIndexEntry{Introduction_to_cito}
+  %\VignetteIndexEntry{Introduction to cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 

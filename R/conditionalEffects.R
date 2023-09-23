@@ -166,13 +166,7 @@ print.conditionalEffects = function(x, ...) {
   return(invisible(ACE))
 }
 
-#' Print average conditional effects
-#'
-#' @param x print ACE calculated by \code{\link{conditionalEffects}}
-#' @param ... optional arguments for compatibility with the generic function, no function implemented
-#'
-#' @return Matrix with average conditional effects
-#'
+#' @rdname print.conditionalEffects
 #' @export
 print.conditionalEffectsBootstrap = function(x, ...) {
   ACE = sapply(x$mean, function(X) diag(X))

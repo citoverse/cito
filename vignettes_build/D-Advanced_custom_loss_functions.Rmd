@@ -11,7 +11,7 @@ output:
       toc: true
       theme: cerulean
 vignette: >
-  %\VignetteIndexEntry{Advanced: Custom loss}
+  %\VignetteIndexEntry{Advanced: Custom loss functions and prediction intervals}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -46,7 +46,8 @@ Requirements: - Complex calculations have to be written in torch - All functions
 Gaussian likelihood (already implemented, but still a nice example). Custom parameters must be passed as a list to the custom_parameters function. The names must match the names of the parameters in the custom loss function. The values of the named custom parameters will be the initial values. Cito will automatically convert them to torch tensors:
 
 ```{r,eval=TRUE}
-
+library(cito)
+library(torch)
 gaussian_ll = function(pred, true, ...) {
   loss = -torch::distr_normal(pred, scale = torch::torch_exp(scale_par))$log_prob(true)
   return(loss$mean())
@@ -59,6 +60,7 @@ df = data.frame(X = X, Y = Y)
 
 m = dnn(Y~X, data = df, 
         loss = gaussian_ll, # custom function 
+        verbose = FALSE,
         custom_parameters = list(scale_par = 0.0) # custom parameter that should be addtionally optimized
         )
 ```
