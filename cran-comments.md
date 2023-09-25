@@ -12,6 +12,9 @@ Christian Amesöder, Christian.Amesoeder@informatik.uni-regensburg.de
 New maintainer:
 Maximilian Pichler, maximilian.pichler@biologie.uni-regensburg.de
 
+Due to the long build-time of the vignettes, we decided to include them as pre-built static html vignettes using the R.rsp package. 
+We hope that we included them in the right way. 
+
 ### Successfull R CMD checks under
 
 
