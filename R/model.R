@@ -84,16 +84,20 @@ get_loss <- function(loss) {
     if(loss$family == "gaussian") {
       out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE)
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred, true) {
         return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
       }
     } else if(loss$family == "binomial") {
       if(loss$link == "logit") {
         out$invlink <- function(a) torch::torch_sigmoid(a)
+        out$link <- function(a) stats::binomial("logit")$linkfun(as.matrix(a))
       } else if(loss$link == "probit")  {
         out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
+        out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
       } else {
         out$invlink <- function(a) a
+        out$link <- function(a) a
       }
       out$loss <- function(pred, true) {
         return(torch::distr_bernoulli(probs = out$invlink(pred))$log_prob(true)$negative())
@@ -101,7 +105,9 @@ get_loss <- function(loss) {
     } else if(loss$family == "poisson") {
       if(loss$link == "log") {
         out$invlink <- function(a) torch::torch_exp(a)
+        out$link <- function(a) log(a)
       } else {
+        out$invlink <- function(a) a
         out$invlink <- function(a) a
       }
       out$loss <- function(pred, true) {
@@ -114,15 +120,20 @@ get_loss <- function(loss) {
     }
     out$loss <- loss
     out$invlink <- function(a) a
+    out$link <- function(a) a
   } else {
     if(loss == "mae"){
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred, true) return(torch::nnf_l1_loss(input = pred, target = true))
     }else if(loss == "mse"){
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred,true) return(torch::nnf_mse_loss(input= pred, target = true))
     }else if(loss == "softmax" | loss == "cross-entropy") {
       out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
+      out$link <- function(a) log(a) + log(ncol(a))
+      #Y_base = log(Y_base) + log(ncol(Y_base))
       out$loss <- function(pred, true) {
         return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
       }

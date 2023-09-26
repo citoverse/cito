@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2023-09-23</h4>
+            <h4 data-toc-skip class="date">2023-09-26</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -339,22 +339,22 @@ SDCE:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width     1.296842</span></span>
-<span><span class="co">#&gt; 2 Petal.Length     2.365386</span></span>
-<span><span class="co">#&gt; 3  Petal.Width     2.577178</span></span>
-<span><span class="co">#&gt; 4      Species     1.069577</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width     1.256261</span></span>
+<span><span class="co">#&gt; 2 Petal.Length     2.697644</span></span>
+<span><span class="co">#&gt; 3  Petal.Width     2.459219</span></span>
+<span><span class="co">#&gt; 4      Species     1.059621</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width   0.1589613</span></span>
-<span><span class="co">#&gt; Petal.Length  0.3164550</span></span>
-<span><span class="co">#&gt; Petal.Width   0.3894502</span></span>
+<span><span class="co">#&gt; Sepal.Width   0.1569144</span></span>
+<span><span class="co">#&gt; Petal.Length  0.3970971</span></span>
+<span><span class="co">#&gt; Petal.Width   0.3679702</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Standard Deviation of Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.08437245</span></span>
-<span><span class="co">#&gt; Petal.Length 0.07187406</span></span>
-<span><span class="co">#&gt; Petal.Width  0.16205426</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width  0.07579688</span></span>
+<span><span class="co">#&gt; Petal.Length 0.10693245</span></span>
+<span><span class="co">#&gt; Petal.Width  0.08301755</span></span></code></pre></div>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -380,11 +380,11 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt;  ##########################################################</span></span>
 <span><span class="co">#&gt;      Feature Importance </span></span>
 <span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                          Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width      1.2186  0.4165    2.93   0.0034 **</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length     6.7415  2.2344    3.02   0.0026 **</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width      1.0607  0.6212    1.71   0.0877 . </span></span>
-<span><span class="co">#&gt; Response_1: Species          0.1783  0.0951    1.87   0.0609 . </span></span>
+<span><span class="co">#&gt;                          Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Response_1: Sepal.Width      1.1111  0.3297    3.37  0.00075 ***</span></span>
+<span><span class="co">#&gt; Response_1: Petal.Length     7.1873  2.6791    2.68  0.00730 ** </span></span>
+<span><span class="co">#&gt; Response_1: Petal.Width      1.0296  0.5751    1.79  0.07341 .  </span></span>
+<span><span class="co">#&gt; Response_1: Species          0.1735  0.0881    1.97  0.04900 *  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -393,9 +393,9 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt;      Average Conditional Effects </span></span>
 <span><span class="co">#&gt;  ##########################################################</span></span>
 <span><span class="co">#&gt;                             ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width  0.3034  0.0679    4.47  7.9e-06 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length 0.7159  0.1412    5.07  4.0e-07 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width  0.2179  0.1183    1.84    0.066 .  </span></span>
+<span><span class="co">#&gt; Response_1: Sepal.Width  0.2830  0.0520    5.44  5.4e-08 ***</span></span>
+<span><span class="co">#&gt; Response_1: Petal.Length 0.7501  0.1248    6.01  1.9e-09 ***</span></span>
+<span><span class="co">#&gt; Response_1: Petal.Width  0.2171  0.0921    2.36    0.018 *  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -404,9 +404,9 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt;      Standard Deviation of Conditional Effects </span></span>
 <span><span class="co">#&gt;  ##########################################################</span></span>
 <span><span class="co">#&gt;                             ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width  0.1160  0.0227    5.11  3.2e-07 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length 0.1926  0.0713    2.70   0.0069 ** </span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width  0.1071  0.0362    2.96   0.0031 ** </span></span>
+<span><span class="co">#&gt; Response_1: Sepal.Width  0.1076  0.0213    5.06  4.2e-07 ***</span></span>
+<span><span class="co">#&gt; Response_1: Petal.Length 0.2033  0.0659    3.08    0.002 ** </span></span>
+<span><span class="co">#&gt; Response_1: Petal.Width  0.1003  0.0338    2.96    0.003 ** </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -599,12 +599,12 @@ continue_training().</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            [,1]</span></span>
-<span><span class="co">#&gt; [1,] -1.0477190</span></span>
-<span><span class="co">#&gt; [2,] -1.2960225</span></span>
-<span><span class="co">#&gt; [3,] -1.2584968</span></span>
-<span><span class="co">#&gt; [4,] -1.2458360</span></span>
-<span><span class="co">#&gt; [5,] -0.9599305</span></span>
-<span><span class="co">#&gt; [6,] -0.5692332</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -0.9834418</span></span>
+<span><span class="co">#&gt; [2,] -1.3863597</span></span>
+<span><span class="co">#&gt; [3,] -1.2911282</span></span>
+<span><span class="co">#&gt; [4,] -1.2791622</span></span>
+<span><span class="co">#&gt; [5,] -0.8851584</span></span>
+<span><span class="co">#&gt; [6,] -0.5502642</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>

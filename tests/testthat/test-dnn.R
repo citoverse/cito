@@ -3,6 +3,7 @@ source("utils.R")
 wrap_dnn = function(pars) {
   testthat::expect_error({model = do.call(dnn, pars)}, NA)
   testthat::expect_error({predict(model, newdata=pars$X)}, NA)
+  testthat::expect_error({continue_training(model, epochs = 2L)}, NA)
   testthat::expect_error({predict(model)}, NA)
   testthat::expect_error({predict(model, type = "response")}, NA)
   testthat::expect_error({print(model)}, NA)
@@ -93,7 +94,7 @@ testthat::test_that("DNN save and reload", {
   validation_set<- sample(c(1:nrow(datasets::iris)),25)
 
   # Build and train  Network
-  nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 5L)
+  nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 5L, verbose = FALSE, plot = FALSE)
   saveRDS(nn.fit, "test_model.RDS")
   nn.fit = readRDS("test_model.RDS")
   testthat::expect_error(predict(nn.fit), NA)
@@ -177,6 +178,37 @@ testthat::test_that("DNN coef accuracy check",{
 
 })
 
+
+
+testthat::test_that("DNN baseline loss check",{
+
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y = rbinom(50, 1, 0.5)
+  X = rnorm(50)
+  m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "binomial", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal( !!m$base_loss, !!(-sum(dbinom(Y, 1, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
+
+  Y = rpois(50, 5)
+  X = rnorm(50)
+  m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "poisson", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal( !!m$base_loss, !!(-sum(dpois(Y, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
+
+  Y = rnorm(50, 5)
+  X = rnorm(50)
+  m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "mse", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal( !!m$base_loss, !!mean((Y - mean(Y))**2 ), tolerance = 0.01)
+
+  Y = rbinom(50, 2, 0.5)
+  X = rnorm(50)
+  m = dnn(Y~., data = data.frame(Y = as.factor(Y+1), X = X), loss = "softmax", epochs = 2L, verbose = FALSE, plot = FALSE)
+  pred = log(matrix(table(as.factor(Y+1))/sum(table(as.factor(Y+1))), 50, 3, byrow = TRUE)) + log(3)
+  loss = as.numeric(torch::nnf_cross_entropy(pred, torch::torch_tensor(Y+1, dtype = torch::torch_long())))
+  testthat::expect_equal( !!m$base_loss, !!loss , tolerance = 0.01)
+
+  })
 
 
 

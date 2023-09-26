@@ -1,7 +1,8 @@
 # Version 1.0.2
 ## cito submission 1 2023/22/9
-This is a major update, several functionalities such as bootstrapping for uncertainties or additional xAI methods
-were added. Moreover, several bugs were fixed, documentation was improved, and 3 vignettes were added.
+This is a major update where several features such as bootstrapping for uncertainties and additional xAI methods 
+(average conditional effects) have been added. Also, several bugs have been fixed, documentation has been improved,
+and 3 vignettes were added.
 
 We would also like to announce a change of maintainer: Maximilian Pichler, co-author of cito, 
 will take over the position of maintainer.
@@ -9,13 +10,18 @@ will take over the position of maintainer.
 Old maintainer: 
 Christian Amesöder, Christian.Amesoeder@informatik.uni-regensburg.de
 
-New maintainer:
+New Maintainer:
 Maximilian Pichler, maximilian.pichler@biologie.uni-regensburg.de
 
-Due to the long build-time of the vignettes, we decided to include them as pre-built static html vignettes using the R.rsp package. 
-We hope that we included them in the right way. 
+Due to the long creation time of the vignettes, we decided to include them as 
+pre-built static HTML vignettes using the R.rsp package. 
+We hope that we have included them in the right way. 
+
+Best,
+Max
 
 ### Successfull R CMD checks under
+
 
 
 # Version 1.0.1

@@ -6,8 +6,8 @@
 * summary() can return standard errors and p-values for xAI metrics
 * improved documentation / several new vignettes
 * baseline loss 
-* loss = inf/na is not captured, training is aborted and user is warned
-* mps (M1/M2 gpu) device is not supported
+* loss = inf/na is not captured, training is aborted and user will be warned
+* mps (M1/M2 gpu) device is now supported
  
 ## Bug fixes
 * early stopping (ignored validation loss)

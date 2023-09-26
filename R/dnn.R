@@ -224,7 +224,6 @@ dnn <- function(formula,
     if(all(loss_obj$call == "softmax")) {
       prop = as.vector(table(Y)/sum(table(Y)))
         Y_base = matrix(prop, nrow = dim(X)[1], ncol = length(prop), byrow = TRUE) #  *stats::model.matrix(~0+., data = data.frame(Y = as.factor(Y)))
-        Y_base = log(Y_base) + log(ncol(Y_base)) # inverse softmax^1 = function(x, k) log(x) + log(k) | k = number of classes, x = probabilities
         y_dtype = torch::torch_long()
       }
   }
@@ -234,7 +233,7 @@ dnn <- function(formula,
 
     loss.fkt <- loss_obj$loss
     if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-    base_loss = as.numeric(loss.fkt(torch::torch_tensor(as.matrix(Y_base)), torch::torch_tensor(as.matrix(Y), dtype = y_dtype))$mean())
+    base_loss = as.numeric(loss.fkt(loss_obj$link(torch::torch_tensor(as.matrix(Y_base))), torch::torch_tensor(as.matrix(Y), dtype = y_dtype))$mean())
 
     ### dataloader  ###
     if(validation != 0){
