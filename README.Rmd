@@ -10,7 +10,7 @@ options("progress_enabled" = FALSE)
 
 # cito
 
-[![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito) [![R-CMD-check](https://github.com/citoverse/cito/workflows/R-CMD-check/badge.svg)](https://github.com/citoverse/cito/actions)
+[![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito) [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
 
 <!-- badges: end -->
 
@@ -29,7 +29,7 @@ library('torch')
 if(!torch_is_installed()) install_torch()
 ```
 
-If you have trouble installing 'torch', please [visit their website](https://torch.mlverse.org/docs/articles/installation.html) or create an issue on [our github website](https://github.com/citoverse/cito/issues). We are happy to help.
+If you have trouble installing 'torch', please [visit the website of the 'torch' package](https://torch.mlverse.org/docs/articles/installation.html) or create an issue on [our github website](https://github.com/citoverse/cito/issues). We are happy to help you.
 
 A stable version of cito from CRAN can be installed with:
 
@@ -38,7 +38,7 @@ install.packages("cito")
 
 ```
 
-The development version from [GitHub](https://github.com/) is available with:
+The development version from [GitHub](https://github.com/) can be installed by:
 
 ```{r, eval=FALSE}
 if(!require('devtools', quietly = TRUE)) install.packages('devtools')
@@ -47,9 +47,9 @@ devtools::install_github('citoverse/cito')
 
 ## Example
 
-Once installed, the main function `dnn()` can be used. See the example below. A more in depth explanation can be found in the vignettes.
+Once installed, the main function `dnn()` can be used. See the example below. A more in depth explanation can be found in the vignettes or [here under articles](https://citoverse.github.io/cito/).
 
-1.  Fit model with bootstrapping (for uncertainties)
+1.  Fit model with bootstrapping (to obtain confidence intervals). All methods work with and without bootstrapping
 
 ```{r}
 library(cito)
@@ -60,7 +60,7 @@ nn.fit <- dnn(Sepal.Length~., data = datasets::iris, bootstrap = 30L)
 
 ```{r, eval=FALSE}
 analyze_training(nn.fit)
-# At 1st glance they are converged since the loss is lower than the baseline loss.
+# At 1st glance, the networks converged since the loss is lower than the baseline loss and the training loss is on a plateau at the end of the training.
 ```
 
 3.  Plot model architecture
@@ -69,7 +69,7 @@ analyze_training(nn.fit)
 plot(nn.fit)
 ```
 
-4.  Return xAI effects and their uncertainties:
+4.  Return xAI effects (feature importances and average conditional effects) and their uncertainties:
 
 ```{r}
 summary(nn.fit)
@@ -83,17 +83,17 @@ dim(predict(nn.fit, newdata = datasets::iris))
 
 ## Advanced
 
-We can also pass custom loss functions to 'cito', and we can use additional parameters within the custom loss function. The only requirement is that all calculations must be written using the 'torch' package (cito automatically converts the initial values for the custom parameters to 'torch' objects).
+We can pass custom loss functions to 'cito', optionally with additional parameters that should be fitted. The only requirement is that all calculations must be written using the 'torch' package (cito automatically converts the initial values of the custom parameters to 'torch' objects).
 
 We use a multivariate normal distribution as the likelihood function and we want to parameterize/fit the covariance matrix of the multivariate normal distribution:
 
-1.  We need one helper function, `create_cov()` that builds the covariance matrix based on a LU and the diagonals
+1.  We need one helper function, `create_cov()` that builds the covariance matrix based on a lower triangular matrix and the diagonals (low-rank approximation of the covariance matrix)
 
 2.  We need our custom likelihood function which uses the `distr_multivariate_normal(…)` function from the torch package:
 
 ```{r}
-create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+create_cov = function(L, Diag) {
+  return(torch::torch_matmul(L, L$t()) + torch::torch_diag(Diag+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
