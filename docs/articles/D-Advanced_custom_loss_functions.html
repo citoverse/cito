@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Maximilian
 Pichler</h4>
             
-            <h4 data-toc-skip class="date">2023-09-26</h4>
+            <h4 data-toc-skip class="date">2023-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/D-Advanced_custom_loss_functions.Rmd" class="external-link"><code>vignettes/D-Advanced_custom_loss_functions.Rmd</code></a></small>
       <div class="d-none name"><code>D-Advanced_custom_loss_functions.Rmd</code></div>
@@ -127,16 +127,119 @@ tensors:</p>
 <span><span class="va">Y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">*</span><span class="va">X</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span>, sd <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span></span>
 <span><span class="va">df</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">X</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">X</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
-<span>        loss <span class="op">=</span> <span class="va">gaussian_ll</span>, <span class="co"># custom function </span></span>
-<span>        verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">X</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
+<span>        loss <span class="op">=</span> <span class="va">gaussian_ll</span>, <span class="co"># custom function</span></span>
 <span>        custom_parameters <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>scale_par <span class="op">=</span> <span class="fl">0.0</span><span class="op">)</span> <span class="co"># custom parameter that should be addtionally optimized</span></span>
-<span>        <span class="op">)</span></span></code></pre></div>
-<p><img src="D-Advanced_custom_loss_functions_files/figure-html/unnamed-chunk-2-1.png" width="400px" style="display: block; margin: auto;"></p>
+<span>        <span class="op">)</span></span>
+<span><span class="co">#&gt; Loss at epoch 1: 1.515620, lr: 0.01000</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"><p class="caption">
+plot of chunk unnamed-chunk-2
+</p>
+</div>
+<pre><code><span><span class="co">#&gt; Loss at epoch 2: 1.395304, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 3: 1.309052, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 4: 1.258372, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 5: 1.156394, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 6: 1.133306, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 7: 1.089422, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 8: 1.049361, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 9: 1.009320, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 10: 1.023666, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 11: 0.978906, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 12: 0.963037, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 13: 0.943840, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 14: 0.939929, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 15: 0.918484, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 16: 0.949027, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 17: 0.889540, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 18: 0.868169, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 19: 0.836739, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 20: 0.821653, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 21: 0.788032, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 22: 0.789839, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 23: 0.764014, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 24: 0.752003, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 25: 0.739545, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 26: 0.716911, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 27: 0.719905, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 28: 0.679905, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 29: 0.681771, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 30: 0.653191, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 31: 0.621209, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 32: 0.634578, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 33: 0.591748, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 34: 0.585131, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 35: 0.564346, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 36: 0.587230, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 37: 0.584015, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 38: 0.544748, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 39: 0.564282, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 40: 0.601760, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 41: 0.533758, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 42: 0.541448, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 43: 0.521584, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 44: 0.537797, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 45: 0.507872, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 46: 0.557190, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 47: 0.606297, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 48: 0.604647, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 49: 0.547326, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 50: 0.531875, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 51: 0.559819, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 52: 0.541788, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 53: 0.567545, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 54: 0.524311, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 55: 0.551780, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 56: 0.560110, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 57: 0.581988, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 58: 0.560242, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 59: 0.546711, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 60: 0.534865, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 61: 0.519736, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 62: 0.544029, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 63: 0.535806, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 64: 0.527457, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 65: 0.515996, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 66: 0.560176, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 67: 0.577645, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 68: 0.529065, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 69: 0.543513, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 70: 0.516313, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 71: 0.543963, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 72: 0.554372, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 73: 0.535363, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 74: 0.520328, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 75: 0.503821, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 76: 0.537065, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 77: 0.572082, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 78: 0.528110, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 79: 0.568486, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 80: 0.539701, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 81: 0.559193, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 82: 0.491542, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 83: 0.579737, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 84: 0.548308, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 85: 0.551581, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 86: 0.558790, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 87: 0.504470, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 88: 0.547506, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 89: 0.557162, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 90: 0.577531, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 91: 0.541850, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 92: 0.560345, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 93: 0.541367, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 94: 0.547881, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 95: 0.530327, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 96: 0.563517, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 97: 0.574710, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 98: 0.523392, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 99: 0.545521, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 100: 0.533824, lr: 0.01000</span></span></code></pre>
 <p>The optimized parameters are saved in the parameter field:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="va">m</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">scale_par</span><span class="op">)</span> <span class="co"># true scale parameter: 0.4!</span></span>
-<span><span class="co">#&gt; [1] 0.4272134</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.4177748</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="example-2-quantile-regression">Example 2: Quantile regression<a class="anchor" aria-label="anchor" href="#example-2-quantile-regression"></a>
@@ -151,7 +254,7 @@ conformal prediction), which has the advantage of providing constant
 prediction intervals, which can be beneficial in certain situations
 (e.g., heteroscedasticity):</p>
 <p>Simulate data:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sim_in</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">n</span> <span class="op">=</span> <span class="fl">5</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">S</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="fl">1.</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span>  <span class="va">S</span><span class="op">[</span><span class="fl">1</span>,<span class="fl">2</span><span class="op">]</span><span class="op">=</span><span class="va">S</span><span class="op">[</span><span class="fl">2</span>,<span class="fl">1</span><span class="op">]</span><span class="op">=</span><span class="fl">0.0</span></span>
@@ -165,10 +268,14 @@ prediction intervals, which can be beneficial in certain situations
 <span></span>
 <span><span class="va">data</span> <span class="op">=</span> <span class="fu">sim_in</span><span class="op">(</span><span class="fl">500L</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">X1</span>, <span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span></code></pre></div>
-<p><img src="D-Advanced_custom_loss_functions_files/figure-html/unnamed-chunk-4-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"><p class="caption">
+plot of chunk unnamed-chunk-4
+</p>
+</div>
 <p>The variance increases with higher feature values</p>
 <p>Quantile Regression:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://torch.mlverse.org/docs" class="external-link">torch</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">q1</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_tensor.html" class="external-link">torch_tensor</a></span><span class="op">(</span><span class="fl">0.05</span><span class="op">)</span></span>
@@ -182,102 +289,108 @@ prediction intervals, which can be beneficial in certain situations
 <span><span class="op">}</span></span>
 <span></span>
 <span></span>
-<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">Y</span>, <span class="va">Y</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, </span>
+<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">Y</span>, <span class="va">Y</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,</span>
 <span>        lr <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>        loss <span class="op">=</span> <span class="va">loss_func</span>,</span>
 <span>        lambda <span class="op">=</span> <span class="fl">0.000</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>,</span>
-<span>        epochs <span class="op">=</span> <span class="fl">70L</span>, hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">30L</span>, <span class="fl">30L</span><span class="op">)</span>, </span>
+<span>        epochs <span class="op">=</span> <span class="fl">70L</span>, hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">30L</span>, <span class="fl">30L</span><span class="op">)</span>,</span>
 <span>        activation <span class="op">=</span> <span class="st">"selu"</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loss at epoch 1: 5.271382, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 2: 4.994545, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 3: 4.740418, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 4: 4.275611, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 5: 3.901660, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 6: 3.616717, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 7: 3.344618, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 8: 3.199994, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 9: 3.054611, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 10: 2.969413, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 11: 2.921340, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 12: 2.916588, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 13: 2.885472, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 14: 2.834176, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 15: 2.832779, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 16: 2.844234, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 17: 2.875691, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 18: 2.801808, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 19: 2.779784, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 20: 2.807058, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 21: 2.782664, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 22: 2.756759, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 23: 2.755162, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 24: 2.740886, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 25: 2.749535, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 26: 2.755240, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 27: 2.741033, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 28: 2.760876, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 29: 2.733894, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 30: 2.733609, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 31: 2.737270, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 32: 2.733017, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 33: 2.735549, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 34: 2.735473, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 35: 2.751014, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 36: 2.731150, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 37: 2.723879, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 38: 2.716434, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 39: 2.726275, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 40: 2.710793, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 41: 2.735267, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 42: 2.742130, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 43: 2.723750, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 44: 2.722506, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 45: 2.732910, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 46: 2.729110, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 47: 2.738021, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 48: 2.743067, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 49: 2.720707, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 50: 2.704528, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 51: 2.709313, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 52: 2.731718, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 53: 2.704233, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 54: 2.720177, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 55: 2.707666, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 56: 2.733724, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 57: 2.715642, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 58: 2.727626, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 59: 2.701437, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 60: 2.713740, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 61: 2.725515, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 62: 2.705921, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 63: 2.719956, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 64: 2.705411, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 65: 2.721525, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 66: 2.725577, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 67: 2.728728, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 68: 2.697947, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 69: 2.715803, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 70: 2.688323, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 1: 5.888834, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 2: 5.591826, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 3: 5.341350, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 4: 5.094756, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 5: 4.849181, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 6: 4.593567, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 7: 4.282295, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 8: 3.962109, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 9: 3.730334, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 10: 3.517436, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 11: 3.389656, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 12: 3.300763, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 13: 3.258910, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 14: 3.187895, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 15: 3.139322, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 16: 3.072943, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 17: 3.049862, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 18: 3.055812, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 19: 3.037665, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 20: 3.034843, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 21: 2.993039, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 22: 3.029911, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 23: 3.016335, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 24: 2.999973, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 25: 2.997170, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 26: 2.979195, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 27: 2.960698, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 28: 3.024710, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 29: 2.963467, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 30: 2.964932, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 31: 3.002780, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 32: 2.972047, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 33: 2.969632, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 34: 2.974920, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 35: 2.956212, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 36: 3.026191, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 37: 2.958736, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 38: 2.970557, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 39: 2.968193, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 40: 2.970334, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 41: 2.963888, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 42: 2.960575, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 43: 2.975962, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 44: 2.986119, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 45: 2.969117, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 46: 2.968599, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 47: 2.979469, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 48: 2.961382, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 49: 2.961033, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 50: 2.976546, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 51: 2.941517, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 52: 2.951265, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 53: 2.955796, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 54: 2.943864, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 55: 2.940066, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 56: 2.949237, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 57: 2.943916, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 58: 2.942507, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 59: 2.961354, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 60: 2.981447, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 61: 2.959459, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 62: 2.931861, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 63: 2.930637, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 64: 2.947635, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 65: 2.955172, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 66: 2.947920, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 67: 2.935133, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 68: 2.940571, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 69: 2.917623, lr: 0.01000</span></span>
+<span><span class="co">#&gt; Loss at epoch 70: 2.971692, lr: 0.01000</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">X1</span>, <span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/lines.html" class="external-link">lines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/smooth.spline.html" class="external-link">smooth.spline</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">X1</span>, <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>, spar <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>, col <span class="op">=</span> <span class="st">"blue"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/lines.html" class="external-link">lines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/smooth.spline.html" class="external-link">smooth.spline</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">X1</span>, <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>,<span class="fl">3</span><span class="op">]</span>, spar <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>, col <span class="op">=</span> <span class="st">"blue"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/lines.html" class="external-link">lines</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/smooth.spline.html" class="external-link">smooth.spline</a></span><span class="op">(</span><span class="va">data</span><span class="op">$</span><span class="va">X1</span>, <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span>, spar <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>, col <span class="op">=</span> <span class="st">"red"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="D-Advanced_custom_loss_functions_files/figure-html/unnamed-chunk-5-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5"><p class="caption">
+plot of chunk unnamed-chunk-5
+</p>
+</div>
 </div>
 <div class="section level3">
-<h3 id="example-3-using-cito-for-optimization">Example 3: Using cito for optimization<a class="anchor" aria-label="anchor" href="#example-3-using-cito-for-optimization"></a>
+<h3 id="example-3-using-cito-for-optimization-active-learning">Example 3: Using cito for optimization / active learning<a class="anchor" aria-label="anchor" href="#example-3-using-cito-for-optimization-active-learning"></a>
 </h3>
-<p>We can use neural networks in an unconventional way to optimize
-arbitrary functions - as long as we can compute the analytic derivative
-of the function using torch. We need to provide the function to be
-optimized as a series of Torch operations. Our model will predict the
-parameters (based on noise, the inputs don’t matter), in the custom loss
-function we will then use the model function (we want to optimize) to
-compute the loss and return it to the optimizer. In that way we overfit
-to the noisy inputs and the DNN will learn to predict the optimal set of
-parameters - independent of the input.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<p>Neural networks can be used in an unconventional way to optimize
+arbitrary functions (which is sometimes called active learning, it is
+related to reinforcement learning) - the only prerequiste is that the
+analytic derivative of the function using torch must be available. We
+provide the function to be optimized as a series of Torch operations.
+First, our model will predict the parameters (based on noise, the inputs
+don’t matter) which are passed to the custom loss function and then we
+will then use the model function (which we optimize) to compute the loss
+and return it to the optimizer. In that way we overfit to the noisy
+inputs and the DNN will learn to predict the optimal set of parameters -
+independent of the input.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">X</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">200</span><span class="op">)</span></span>
 <span><span class="va">Y</span> <span class="op">=</span> <span class="fl">2</span><span class="op">*</span><span class="va">X</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">200</span>, sd <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span></span>
 <span><span class="va">df</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">X</span>, Y <span class="op">=</span> <span class="va">Y</span><span class="op">)</span></span>
@@ -303,34 +416,19 @@ parameters - independent of the input.</p>
 <span><span class="va">noise_y</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">300</span><span class="op">*</span><span class="fl">2</span><span class="op">)</span>, <span class="fl">300</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="va">df</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>y1 <span class="op">=</span> <span class="va">noise_y</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>, y2 <span class="op">=</span> <span class="va">noise_y</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span>, <span class="va">noise</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">y1</span>, <span class="va">y2</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="va">custom_loss</span>, batchsize <span class="op">=</span> <span class="fl">1L</span>, epochs <span class="op">=</span> <span class="fl">20L</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loss at epoch 1: 0.797603, lr: 0.01000</span></span></code></pre></div>
-<p><img src="D-Advanced_custom_loss_functions_files/figure-html/unnamed-chunk-6-1.png" width="400px" style="display: block; margin: auto;"></p>
-<pre><code><span><span class="co">#&gt; Loss at epoch 2: 0.505026, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 3: 0.498499, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 4: 0.496815, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 5: 0.496301, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 6: 0.496155, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 7: 0.496078, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 8: 0.496035, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 9: 0.496004, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 10: 0.495980, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 11: 0.495960, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 12: 0.495944, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 13: 0.495925, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 14: 0.495915, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 15: 0.495903, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 16: 0.495892, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 17: 0.495880, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 18: 0.495868, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 19: 0.495866, lr: 0.01000</span></span>
-<span><span class="co">#&gt; Loss at epoch 20: 0.495859, lr: 0.01000</span></span>
-<span><span class="co"># Effect:</span></span>
+<span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">y1</span>, <span class="va">y2</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="va">custom_loss</span>, batchsize <span class="op">=</span> <span class="fl">1L</span>, epochs <span class="op">=</span> <span class="fl">20L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6"><p class="caption">
+plot of chunk unnamed-chunk-6
+</p>
+</div>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Effect:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.978484</span></span>
+<span><span class="co">#&gt; [1] 1.936987</span></span>
 <span><span class="co"># SD</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>,<span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.3968703</span></span></code></pre>
+<span><span class="co">#&gt; [1] 0.3652849</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

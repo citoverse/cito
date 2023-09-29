@@ -101,7 +101,7 @@ plot(nn.fit)
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-plotnn-1.png" alt="plot of chunk plotnn" width="400px" />
+<img src="A/A-plotnn-1.png" alt="plot of chunk plotnn"  />
 <p class="caption">plot of chunk plotnn</p>
 </div>
 
@@ -114,10 +114,11 @@ At the start of the training we calculate a baseline loss for an an intercept on
 
 ```r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.6, loss = "mse", verbose = FALSE) # lr too high
+#> Error in eval_bare(loop, env): Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" width="400px" />
+<img src="A/A-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"  />
 <p class="caption">plot of chunk unnamed-chunk-2</p>
 </div>
 
@@ -129,7 +130,7 @@ nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.01, loss = "mse"
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3" width="400px" />
+<img src="A/A-unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3"  />
 <p class="caption">plot of chunk unnamed-chunk-3</p>
 </div>
 
@@ -195,22 +196,22 @@ summary(nn.fit)
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width     1.359831
-#> 2 Petal.Length     2.810167
-#> 3  Petal.Width     2.092298
-#> 4      Species     1.114416
+#> 1  Sepal.Width     1.133617
+#> 2 Petal.Length     2.286806
+#> 3  Petal.Width     2.783383
+#> 4      Species     1.053672
 #> 
 #> Average Conditional Effects:
 #>              Response_1
-#> Sepal.Width   0.2048296
-#> Petal.Length  0.3574540
-#> Petal.Width   0.3116120
+#> Sepal.Width  0.06250046
+#> Petal.Length 0.35557117
+#> Petal.Width  0.39397602
 #> 
 #> Standard Deviation of Conditional Effects:
 #>              Response_1
-#> Sepal.Width  0.06628657
-#> Petal.Length 0.07351758
-#> Petal.Width  0.04813253
+#> Sepal.Width  0.08405767
+#> Petal.Length 0.08007347
+#> Petal.Width  0.06509943
 ```
 
 
@@ -241,27 +242,27 @@ summary(nn.fit)
 #> Summary of Deep Neural Network Model
 #> 
 #> ── Feature Importance
-#>                             Importance Std.Err Z value Pr(>|z|)    
-#> Sepal.Width → Sepal.Length       1.201   0.354    3.39  0.00069 ***
-#> Petal.Length → Sepal.Length      8.176   2.324    3.52  0.00043 ***
-#> Petal.Width → Sepal.Length       0.893   0.565    1.58  0.11398    
-#> Species → Sepal.Length           0.237   0.139    1.71  0.08737 .  
+#>                             Importance Std.Err Z value Pr(>|z|)   
+#> Sepal.Width → Sepal.Length       1.084   0.353    3.07   0.0022 **
+#> Petal.Length → Sepal.Length      6.778   2.649    2.56   0.0105 * 
+#> Petal.Width → Sepal.Length       1.075   0.496    2.17   0.0301 * 
+#> Species → Sepal.Length           0.209   0.119    1.76   0.0790 . 
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Average Conditional Effects
 #>                                ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width → Sepal.Length  0.2913  0.0512    5.69  1.2e-08 ***
-#> Petal.Length → Sepal.Length 0.8198  0.1281    6.40  1.6e-10 ***
-#> Petal.Width → Sepal.Length  0.1895  0.1214    1.56     0.12    
+#> Sepal.Width → Sepal.Length  0.2761  0.0578    4.77  1.8e-06 ***
+#> Petal.Length → Sepal.Length 0.7587  0.1142    6.64  3.1e-11 ***
+#> Petal.Width → Sepal.Length  0.2448  0.0857    2.86   0.0043 ** 
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Standard Deviation of Conditional Effects
 #>                                ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width → Sepal.Length  0.1086  0.0303    3.59  0.00034 ***
-#> Petal.Length → Sepal.Length 0.2166  0.0826    2.62  0.00870 ** 
-#> Petal.Width → Sepal.Length  0.1109  0.0519    2.14  0.03268 *  
+#> Sepal.Width → Sepal.Length  0.1161  0.0260    4.46  8.1e-06 ***
+#> Petal.Length → Sepal.Length 0.2134  0.0823    2.59  0.00953 ** 
+#> Petal.Width → Sepal.Length  0.1021  0.0269    3.80  0.00015 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -296,7 +297,7 @@ PDP(nn.fit)
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9" width="400px" />
+<img src="A/A-unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9"  />
 <p class="caption">plot of chunk unnamed-chunk-9</p>
 </div>
 
@@ -310,7 +311,7 @@ plot(allEffects(lm(Sepal.Length~., data = df)))
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10" width="400px" />
+<img src="A/A-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10"  />
 <p class="caption">plot of chunk unnamed-chunk-10</p>
 </div>
 
@@ -329,7 +330,7 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11" width="400px" />
+<img src="A/A-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11"  />
 <p class="caption">plot of chunk unnamed-chunk-11</p>
 </div>
 
@@ -342,7 +343,7 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-11-2.png" alt="plot of chunk unnamed-chunk-11" width="400px" />
+<img src="A/A-unnamed-chunk-11-2.png" alt="plot of chunk unnamed-chunk-11"  />
 <p class="caption">plot of chunk unnamed-chunk-11</p>
 </div>
 
@@ -417,7 +418,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler, ve
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-lr_scheduler-1.png" alt="plot of chunk lr_scheduler" width="400px" />
+<img src="A/A-lr_scheduler-1.png" alt="plot of chunk lr_scheduler"  />
 <p class="caption">plot of chunk lr_scheduler</p>
 </div>
 
@@ -437,7 +438,7 @@ nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE,
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-optim-1.png" alt="plot of chunk optim" width="400px" />
+<img src="A/A-optim-1.png" alt="plot of chunk optim"  />
 <p class="caption">plot of chunk optim</p>
 </div>
 
@@ -453,7 +454,7 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000,
 ```
 
 <div class="figure" style="text-align: center">
-<img src="A/A-early_stopping-1.png" alt="plot of chunk early_stopping" width="400px" />
+<img src="A/A-early_stopping-1.png" alt="plot of chunk early_stopping"  />
 <p class="caption">plot of chunk early_stopping</p>
 </div>
 
@@ -467,12 +468,12 @@ You can continue the training process of an existing model with continue_trainin
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>            [,1]
-#> [1,] -0.9971088
-#> [2,] -1.1379547
-#> [3,] -1.1199131
-#> [4,] -1.1205163
-#> [5,] -0.9444298
-#> [6,] -0.6484262
+#> [1,] -0.9836558
+#> [2,] -1.4395623
+#> [3,] -1.3351157
+#> [4,] -1.3388002
+#> [5,] -0.8847700
+#> [6,] -0.4809422
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().

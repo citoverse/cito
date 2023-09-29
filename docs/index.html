@@ -123,39 +123,40 @@
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="do">## Summary of Deep Neural Network Model</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a><span class="do">##      Feature Importance </span></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a><span class="do">##                          Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="do">## Response_1: Sepal.Width       1.619   0.455    3.56  0.00037 ***</span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="do">## Response_1: Petal.Length     18.459   5.657    3.26  0.00110 ** </span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="do">## Response_1: Petal.Width       0.526   0.528    1.00  0.31947    </span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="do">## Response_1: Species           0.319   0.187    1.70  0.08899 .  </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="do">##      Average Conditional Effects </span></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="do">##                              ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="do">## Response_1: Sepal.Width   0.7176  0.0588   12.20   &lt;2e-16 ***</span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="do">## Response_1: Petal.Length  0.6459  0.0617   10.46   &lt;2e-16 ***</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="do">## Response_1: Petal.Width  -0.1558  0.1323   -1.18     0.24    </span></span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="do">##      Standard Deviation of Conditional Effects </span></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="do">##  ##########################################################</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="do">##                             ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="do">## Response_1: Sepal.Width  0.1421  0.0407    3.49  0.00048 ***</span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="do">## Response_1: Petal.Length 0.1165  0.0378    3.09  0.00203 ** </span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="do">## Response_1: Petal.Width  0.0411  0.0196    2.10  0.03570 *  </span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="do">## ── Feature Importance</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="do">##                             Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length       1.755   0.570    3.08   0.0021 **</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length     18.027   8.809    2.05   0.0407 * </span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length       0.521   0.716    0.73   0.4666   </span></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="do">## Species → Sepal.Length           0.392   0.218    1.80   0.0720 . </span></span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="do">## ---</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="do">## ── Average Conditional Effects</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="do">##                                 ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length   0.7326  0.0497   14.74   &lt;2e-16 ***</span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length  0.6164  0.0901    6.84    8e-12 ***</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length  -0.1181  0.1587   -0.74     0.46    </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="do">## ---</span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="do">## </span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="do">## ── Standard Deviation of Conditional Effects</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="do">##                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length  0.1482  0.0432    3.43   0.0006 ***</span></span>
+<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length 0.1167  0.0396    2.94   0.0032 ** </span></span>
+<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length  0.0470  0.0268    1.76   0.0790 .  </span></span>
+<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="do">## ---</span></span>
+<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <ol start="5" style="list-style-type: decimal">
 <li>Predict (with confidence intervals):</li>
 </ol>
@@ -203,17 +204,17 @@
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">create_cov</span><span class="op">(</span><span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">SigmaPar</span>,</span>
 <span>                     <span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">SigmaDiag</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="do">##             [,1]        [,2]        [,3]</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="do">## [1,]  1.64407194  0.09029449 -0.16095994</span></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="do">## [2,]  0.09029449  0.11592369 -0.02366723</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="do">## [3,] -0.16095994 -0.02366723  1.78725672</span></span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="do">##            [,1]       [,2]       [,3]</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="do">## [1,] 0.24824733 0.06395083 0.13815881</span></span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="do">## [2,] 0.06395083 0.11858207 0.03379684</span></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="do">## [3,] 0.13815881 0.03379684 0.24378222</span></span></code></pre></div>
 <p>Empirical covariance matrix:</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span> <span class="op">-</span> <span class="va">nn.fit</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb16"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="do">##              Sepal.Length Sepal.Width Petal.Length</span></span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="do">## Sepal.Length   0.24147327  0.06729894   0.12180527</span></span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="do">## Sepal.Width    0.06729894  0.09605630   0.01608715</span></span>
-<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="do">## Petal.Length   0.12180527  0.01608715   0.13462193</span></span></code></pre></div>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="do">## Sepal.Length   0.25081444  0.06944643   0.15270816</span></span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="do">## Sepal.Width    0.06944643  0.09439328   0.02924789</span></span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="do">## Petal.Length   0.15270816  0.02924789   0.16690478</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

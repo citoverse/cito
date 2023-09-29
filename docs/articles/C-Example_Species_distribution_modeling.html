@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Maximilian
 Pichler</h4>
             
-            <h4 data-toc-skip class="date">2023-09-26</h4>
+            <h4 data-toc-skip class="date">2023-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/C-Example_Species_distribution_modeling.Rmd" class="external-link"><code>vignettes/C-Example_Species_distribution_modeling.Rmd</code></a></small>
       <div class="d-none name"><code>C-Example_Species_distribution_modeling.Rmd</code></div>
@@ -103,9 +103,8 @@ dataset from <a href="https://zenodo.org/record/4048271" class="external-link">A
 2020</a> can be found in the EcoData package which is only available on
 github:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TheoreticalEcology/" class="external-link">EcoData</a></span><span class="op">)</span><span class="op">)</span> <span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span>repo <span class="op">=</span> <span class="st">"TheoreticalEcology/EcoData"</span>, </span>
+<code class="sourceCode R"><span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TheoreticalEcology/" class="external-link">EcoData</a></span><span class="op">)</span><span class="op">)</span> <span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span>repo <span class="op">=</span> <span class="st">"TheoreticalEcology/EcoData"</span>,</span>
 <span>                         dependencies <span class="op">=</span> <span class="cn">FALSE</span>, build_vignettes <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loading required package: EcoData</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TheoreticalEcology/" class="external-link">EcoData</a></span><span class="op">)</span></span>
 <span><span class="va">df</span> <span class="op">=</span> <span class="fu">EcoData</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/EcoData/man/elephant.html" class="external-link">elephant</a></span><span class="op">$</span><span class="va">occurenceData</span></span>
@@ -154,39 +153,51 @@ likelihood. We use 30% of the data as validation holdout to check for
 overfitting:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://citoverse.github.io/cito/" class="external-link">cito</a></span><span class="op">)</span></span>
-<span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
-<span>            batchsize <span class="op">=</span> <span class="fl">100L</span>, </span>
+<span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
+<span>            batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>            validation <span class="op">=</span> <span class="fl">0.3</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>,</span>
 <span>            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-4-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"><p class="caption">
+plot of chunk unnamed-chunk-4
+</p>
+</div>
 <p>We see that the training and test losses were still decreasing which
 means we didn’t train the model long enough. We could now either
 increase the number of epochs or increase the learning rate so that the
 model trains faster:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>            batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>            lr <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>            validation <span class="op">=</span> <span class="fl">0.3</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>,</span>
 <span>            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-5-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5"><p class="caption">
+plot of chunk unnamed-chunk-5
+</p>
+</div>
 <p>Much better! But still now enough epochs. Also, let’s see if we can
 further decrease the loss by using a wider and deeper neural
 network:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>            batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>            hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
 <span>            lr <span class="op">=</span> <span class="fl">0.05</span>,</span>
 <span>            validation <span class="op">=</span> <span class="fl">0.3</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>,</span>
 <span>            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-6-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6"><p class="caption">
+plot of chunk unnamed-chunk-6
+</p>
+</div>
 <p>At the end of the training, the losses start to get jumpy, which can
 be a sign of potential overfitting. We can control that by adding a weak
 regularization (but we only want a L2 regularization, so we set alpha to
 1.0):</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>            batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>            epochs <span class="op">=</span> <span class="fl">150L</span>,</span>
 <span>            hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
@@ -195,7 +206,11 @@ regularization (but we only want a L2 regularization, so we set alpha to
 <span>            alpha <span class="op">=</span> <span class="fl">1.0</span>,</span>
 <span>            validation <span class="op">=</span> <span class="fl">0.3</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>,</span>
 <span>            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-7-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-7-1.png" alt="plot of chunk unnamed-chunk-7"><p class="caption">
+plot of chunk unnamed-chunk-7
+</p>
+</div>
 <p>We will turn on now advanced features that help with the convergence
 and to reduce overfitting:</p>
 <ul>
@@ -205,7 +220,7 @@ training</p></li>
 increase</p></li>
 </ul>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<code class="sourceCode R"><span><span class="va">model</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>            batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>            epochs <span class="op">=</span> <span class="fl">150L</span>,</span>
 <span>            hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
@@ -217,7 +232,11 @@ increase</p></li>
 <span>            lr_scheduler <span class="op">=</span> <span class="fu"><a href="../reference/config_lr_scheduler.html">config_lr_scheduler</a></span><span class="op">(</span><span class="st">"reduce_on_plateau"</span>, patience <span class="op">=</span> <span class="fl">7</span><span class="op">)</span>, <span class="co"># reduce learning rate each 7 epochs if the validation loss didn't decrease,</span></span>
 <span>            early_stopping <span class="op">=</span> <span class="fl">14</span> <span class="co"># stop training when validation loss didn't decrease for 10 epochs</span></span>
 <span>            <span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-8-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-8-1.png" alt="plot of chunk unnamed-chunk-8"><p class="caption">
+plot of chunk unnamed-chunk-8
+</p>
+</div>
 <p>Great! We found now a model architecture and training procedure that
 fits and trains well. Let’s proceed to our final model</p>
 </div>
@@ -229,7 +248,7 @@ the adjustment of the training procedure.</p>
 <p>Uncertainties can be obtained by using bootstrapping. Be aware that
 this can be computational expensive:</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">model_boot</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<code class="sourceCode R"><span><span class="va">model_boot</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>                 batchsize <span class="op">=</span> <span class="fl">100L</span>,</span>
 <span>                 epochs <span class="op">=</span> <span class="fl">150L</span>,</span>
 <span>                 hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100L</span>, <span class="fl">100L</span><span class="op">)</span>,</span>
@@ -255,9 +274,13 @@ this can be computational expensive:</p>
 <p>The predictions are 2/3 dimensional because of the bootstrapping.
 Calculate the AUC interval:</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu">Metrics</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Metrics/man/auc.html" class="external-link">auc</a></span><span class="op">(</span><span class="va">test</span><span class="op">$</span><span class="va">Presence</span>, <span class="va">predictions</span><span class="op">[</span><span class="va">i</span>,,<span class="op">]</span><span class="op">)</span><span class="op">)</span>, </span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/hist.html" class="external-link">hist</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">20</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu">Metrics</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Metrics/man/auc.html" class="external-link">auc</a></span><span class="op">(</span><span class="va">test</span><span class="op">$</span><span class="va">Presence</span>, <span class="va">predictions</span><span class="op">[</span><span class="va">i</span>,,<span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>     xlim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">1</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"AUC of ensemble model"</span>, xlab <span class="op">=</span> <span class="st">"AUC"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-11-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11"><p class="caption">
+plot of chunk unnamed-chunk-11
+</p>
+</div>
 <p>We can now predict the habitat suitability of the elephant (Note that
 spatial dependencies are required):</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -304,10 +327,14 @@ spatial dependencies are required):</p>
 <span>                  <span class="va">model_boot</span>,</span>
 <span>                  fun <span class="op">=</span> <span class="va">customPredictFun</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">habitat_plot</span> <span class="op">=</span> </span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/sp/man/spplot.html" class="external-link">spplot</a></span><span class="op">(</span><span class="va">predictions</span>, colorkey <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>space <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">)</span> </span>
+<span><span class="va">habitat_plot</span> <span class="op">=</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/sp/man/spplot.html" class="external-link">spplot</a></span><span class="op">(</span><span class="va">predictions</span>, colorkey <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>space <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">)</span></span>
 <span><span class="va">habitat_plot</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-12-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-12-1.png" alt="plot of chunk unnamed-chunk-12"><p class="caption">
+plot of chunk unnamed-chunk-12
+</p>
+</div>
 <p>Moreover, we can visualize the uncertainty of our model, instead of
 calculating the average occurrence probability, we calculate for each
 prediction the standard deviation and visualize it:</p>
@@ -320,10 +347,14 @@ prediction the standard deviation and visualize it:</p>
 <span>                  <span class="va">model_boot</span>,</span>
 <span>                  fun <span class="op">=</span> <span class="va">customPredictFun_sd</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">uncertain_plot</span> <span class="op">=</span> </span>
-<span>  <span class="fu"><a href="https://rdrr.io/pkg/sp/man/spplot.html" class="external-link">spplot</a></span><span class="op">(</span><span class="va">predictions</span>, colorkey <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>space <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">)</span> </span>
+<span><span class="va">uncertain_plot</span> <span class="op">=</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/pkg/sp/man/spplot.html" class="external-link">spplot</a></span><span class="op">(</span><span class="va">predictions</span>, colorkey <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>space <span class="op">=</span> <span class="st">"left"</span><span class="op">)</span> <span class="op">)</span></span>
 <span><span class="va">uncertain_plot</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-13-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-13-1.png" alt="plot of chunk unnamed-chunk-13"><p class="caption">
+plot of chunk unnamed-chunk-13
+</p>
+</div>
 </div>
 <div class="section level3">
 <h3 id="inference">Inference<a class="anchor" aria-label="anchor" href="#inference"></a>
@@ -337,83 +368,75 @@ calculation can take some time…):</p>
 <span><span class="va">results</span></span>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Feature Importance </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                   Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: bio1     0.02571 0.00986    2.61  0.00915 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio2     0.02545 0.01249    2.04  0.04154 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio3     0.02295 0.01183    1.94  0.05238 .  </span></span>
-<span><span class="co">#&gt; Response_1: bio4     0.03315 0.01611    2.06  0.03970 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio5     0.01843 0.00935    1.97  0.04875 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio6     0.02294 0.00881    2.60  0.00920 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio7     0.01787 0.01002    1.78  0.07433 .  </span></span>
-<span><span class="co">#&gt; Response_1: bio8     0.02415 0.00760    3.18  0.00148 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio9     0.04528 0.02360    1.92  0.05499 .  </span></span>
-<span><span class="co">#&gt; Response_1: bio10    0.01749 0.00688    2.54  0.01094 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio11    0.02675 0.00997    2.68  0.00729 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio12    0.02650 0.01064    2.49  0.01271 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio13    0.01789 0.00938    1.91  0.05647 .  </span></span>
-<span><span class="co">#&gt; Response_1: bio14    0.03126 0.01291    2.42  0.01549 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio15    0.04241 0.01228    3.45  0.00055 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio16    0.05366 0.02262    2.37  0.01768 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio17    0.01963 0.00996    1.97  0.04883 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio18    0.03392 0.01200    2.83  0.00471 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio19    0.00980 0.00564    1.74  0.08199 .  </span></span>
+<span><span class="co">#&gt; ── Feature Importance</span></span>
+<span><span class="co">#&gt;                  Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; bio1 → Presence     0.02530 0.00850    2.98  0.00291 ** </span></span>
+<span><span class="co">#&gt; bio2 → Presence     0.02722 0.01157    2.35  0.01866 *  </span></span>
+<span><span class="co">#&gt; bio3 → Presence     0.02689 0.01249    2.15  0.03136 *  </span></span>
+<span><span class="co">#&gt; bio4 → Presence     0.03214 0.01455    2.21  0.02722 *  </span></span>
+<span><span class="co">#&gt; bio5 → Presence     0.02100 0.01381    1.52  0.12824    </span></span>
+<span><span class="co">#&gt; bio6 → Presence     0.02427 0.01037    2.34  0.01924 *  </span></span>
+<span><span class="co">#&gt; bio7 → Presence     0.01995 0.01046    1.91  0.05642 .  </span></span>
+<span><span class="co">#&gt; bio8 → Presence     0.02497 0.00982    2.54  0.01102 *  </span></span>
+<span><span class="co">#&gt; bio9 → Presence     0.04869 0.03090    1.58  0.11503    </span></span>
+<span><span class="co">#&gt; bio10 → Presence    0.01805 0.00805    2.24  0.02487 *  </span></span>
+<span><span class="co">#&gt; bio11 → Presence    0.02436 0.00781    3.12  0.00181 ** </span></span>
+<span><span class="co">#&gt; bio12 → Presence    0.02901 0.00807    3.60  0.00032 ***</span></span>
+<span><span class="co">#&gt; bio13 → Presence    0.01742 0.01160    1.50  0.13311    </span></span>
+<span><span class="co">#&gt; bio14 → Presence    0.02921 0.01279    2.28  0.02236 *  </span></span>
+<span><span class="co">#&gt; bio15 → Presence    0.04018 0.01196    3.36  0.00078 ***</span></span>
+<span><span class="co">#&gt; bio16 → Presence    0.06313 0.03240    1.95  0.05137 .  </span></span>
+<span><span class="co">#&gt; bio17 → Presence    0.01699 0.00867    1.96  0.04996 *  </span></span>
+<span><span class="co">#&gt; bio18 → Presence    0.03345 0.01384    2.42  0.01570 *  </span></span>
+<span><span class="co">#&gt; bio19 → Presence    0.00882 0.00695    1.27  0.20437    </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Average Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                        ACE  Std.Err Z value Pr(&gt;|z|)   </span></span>
-<span><span class="co">#&gt; Response_1: bio1   0.39714  0.36732    1.08   0.2796   </span></span>
-<span><span class="co">#&gt; Response_1: bio2  -0.55741  0.37494   -1.49   0.1371   </span></span>
-<span><span class="co">#&gt; Response_1: bio3  -0.41903  0.29660   -1.41   0.1577   </span></span>
-<span><span class="co">#&gt; Response_1: bio4   0.75320  0.50457    1.49   0.1355   </span></span>
-<span><span class="co">#&gt; Response_1: bio5   0.50496  0.41550    1.22   0.2242   </span></span>
-<span><span class="co">#&gt; Response_1: bio6   0.42111  0.44722    0.94   0.3464   </span></span>
-<span><span class="co">#&gt; Response_1: bio7  -0.07273  0.56025   -0.13   0.8967   </span></span>
-<span><span class="co">#&gt; Response_1: bio8  -0.24829  0.37416   -0.66   0.5070   </span></span>
-<span><span class="co">#&gt; Response_1: bio9  -1.26800  0.50172   -2.53   0.0115 * </span></span>
-<span><span class="co">#&gt; Response_1: bio10  0.00609  0.52415    0.01   0.9907   </span></span>
-<span><span class="co">#&gt; Response_1: bio11 -0.18428  0.37988   -0.49   0.6276   </span></span>
-<span><span class="co">#&gt; Response_1: bio12 -0.93818  0.35473   -2.64   0.0082 **</span></span>
-<span><span class="co">#&gt; Response_1: bio13  0.48576  0.60311    0.81   0.4206   </span></span>
-<span><span class="co">#&gt; Response_1: bio14  1.11496  0.44352    2.51   0.0119 * </span></span>
-<span><span class="co">#&gt; Response_1: bio15 -0.50238  0.24975   -2.01   0.0443 * </span></span>
-<span><span class="co">#&gt; Response_1: bio16 -1.45631  0.47855   -3.04   0.0023 **</span></span>
-<span><span class="co">#&gt; Response_1: bio17  0.74237  0.38137    1.95   0.0516 . </span></span>
-<span><span class="co">#&gt; Response_1: bio18 -0.12180  0.27183   -0.45   0.6541   </span></span>
-<span><span class="co">#&gt; Response_1: bio19 -0.47010  0.46044   -1.02   0.3073   </span></span>
+<span><span class="co">#&gt; ── Average Conditional Effects</span></span>
+<span><span class="co">#&gt;                      ACE Std.Err Z value Pr(&gt;|z|)  </span></span>
+<span><span class="co">#&gt; bio1 → Presence   0.2514  0.5640    0.45    0.656  </span></span>
+<span><span class="co">#&gt; bio2 → Presence  -0.4704  0.2565   -1.83    0.067 .</span></span>
+<span><span class="co">#&gt; bio3 → Presence  -0.4713  0.3628   -1.30    0.194  </span></span>
+<span><span class="co">#&gt; bio4 → Presence   0.6032  0.5129    1.18    0.240  </span></span>
+<span><span class="co">#&gt; bio5 → Presence   0.5851  0.6851    0.85    0.393  </span></span>
+<span><span class="co">#&gt; bio6 → Presence   0.5052  0.4479    1.13    0.259  </span></span>
+<span><span class="co">#&gt; bio7 → Presence  -0.2617  0.5095   -0.51    0.607  </span></span>
+<span><span class="co">#&gt; bio8 → Presence  -0.0811  0.4857   -0.17    0.867  </span></span>
+<span><span class="co">#&gt; bio9 → Presence  -1.2476  0.6434   -1.94    0.053 .</span></span>
+<span><span class="co">#&gt; bio10 → Presence -0.0884  0.3857   -0.23    0.819  </span></span>
+<span><span class="co">#&gt; bio11 → Presence -0.2403  0.4292   -0.56    0.576  </span></span>
+<span><span class="co">#&gt; bio12 → Presence -0.9255  0.5171   -1.79    0.073 .</span></span>
+<span><span class="co">#&gt; bio13 → Presence  0.4083  0.5382    0.76    0.448  </span></span>
+<span><span class="co">#&gt; bio14 → Presence  1.0270  0.4229    2.43    0.015 *</span></span>
+<span><span class="co">#&gt; bio15 → Presence -0.3658  0.2945   -1.24    0.214  </span></span>
+<span><span class="co">#&gt; bio16 → Presence -1.6111  0.7566   -2.13    0.033 *</span></span>
+<span><span class="co">#&gt; bio17 → Presence  0.5998  0.3611    1.66    0.097 .</span></span>
+<span><span class="co">#&gt; bio18 → Presence -0.0806  0.3505   -0.23    0.818  </span></span>
+<span><span class="co">#&gt; bio19 → Presence -0.4002  0.5061   -0.79    0.429  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Standard Deviation of Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: bio1  0.827   0.221    3.74  0.00018 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio2  0.676   0.235    2.87  0.00408 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio3  0.746   0.300    2.49  0.01283 *  </span></span>
-<span><span class="co">#&gt; Response_1: bio4  0.944   0.360    2.62  0.00881 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio5  0.672   0.256    2.63  0.00857 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio6  0.665   0.201    3.30  0.00097 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio7  0.557   0.174    3.20  0.00138 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio8  1.020   0.264    3.87  0.00011 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio9  0.631   0.216    2.92  0.00349 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio10 0.624   0.176    3.55  0.00039 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio11 0.833   0.240    3.47  0.00052 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio12 0.819   0.216    3.79  0.00015 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio13 0.641   0.236    2.71  0.00664 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio14 0.920   0.328    2.81  0.00498 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio15 0.784   0.207    3.79  0.00015 ***</span></span>
-<span><span class="co">#&gt; Response_1: bio16 0.861   0.317    2.72  0.00654 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio17 0.709   0.270    2.63  0.00849 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio18 1.746   0.602    2.90  0.00374 ** </span></span>
-<span><span class="co">#&gt; Response_1: bio19 0.560   0.230    2.43  0.01497 *  </span></span>
+<span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
+<span><span class="co">#&gt;                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; bio1 → Presence  0.776   0.139    5.58  2.4e-08 ***</span></span>
+<span><span class="co">#&gt; bio2 → Presence  0.692   0.275    2.51  0.01194 *  </span></span>
+<span><span class="co">#&gt; bio3 → Presence  0.776   0.245    3.17  0.00153 ** </span></span>
+<span><span class="co">#&gt; bio4 → Presence  0.954   0.351    2.72  0.00651 ** </span></span>
+<span><span class="co">#&gt; bio5 → Presence  0.668   0.228    2.93  0.00341 ** </span></span>
+<span><span class="co">#&gt; bio6 → Presence  0.644   0.195    3.31  0.00093 ***</span></span>
+<span><span class="co">#&gt; bio7 → Presence  0.633   0.228    2.77  0.00560 ** </span></span>
+<span><span class="co">#&gt; bio8 → Presence  1.025   0.294    3.49  0.00049 ***</span></span>
+<span><span class="co">#&gt; bio9 → Presence  0.630   0.249    2.53  0.01129 *  </span></span>
+<span><span class="co">#&gt; bio10 → Presence 0.626   0.198    3.16  0.00159 ** </span></span>
+<span><span class="co">#&gt; bio11 → Presence 0.779   0.222    3.51  0.00045 ***</span></span>
+<span><span class="co">#&gt; bio12 → Presence 0.871   0.300    2.90  0.00371 ** </span></span>
+<span><span class="co">#&gt; bio13 → Presence 0.656   0.258    2.55  0.01091 *  </span></span>
+<span><span class="co">#&gt; bio14 → Presence 0.891   0.298    3.00  0.00274 ** </span></span>
+<span><span class="co">#&gt; bio15 → Presence 0.808   0.225    3.60  0.00032 ***</span></span>
+<span><span class="co">#&gt; bio16 → Presence 1.024   0.348    2.94  0.00324 ** </span></span>
+<span><span class="co">#&gt; bio17 → Presence 0.625   0.213    2.93  0.00335 ** </span></span>
+<span><span class="co">#&gt; bio18 → Presence 1.661   0.617    2.69  0.00707 ** </span></span>
+<span><span class="co">#&gt; bio19 → Presence 0.559   0.185    3.02  0.00256 ** </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>Bioclim9, 12, 14, and 16 have large significant average conditional
@@ -422,16 +445,32 @@ accumulated local effect plots:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/ALE.html">ALE</a></span><span class="op">(</span><span class="va">model_boot</span>, variable <span class="op">=</span> <span class="st">"bio9"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-15-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-15-1.png" alt="plot of chunk unnamed-chunk-15"><p class="caption">
+plot of chunk unnamed-chunk-15
+</p>
+</div>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ALE.html">ALE</a></span><span class="op">(</span><span class="va">model_boot</span>, variable <span class="op">=</span> <span class="st">"bio12"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-15-2.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-15-2.png" alt="plot of chunk unnamed-chunk-15"><p class="caption">
+plot of chunk unnamed-chunk-15
+</p>
+</div>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ALE.html">ALE</a></span><span class="op">(</span><span class="va">model_boot</span>, variable <span class="op">=</span> <span class="st">"bio14"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-15-3.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-15-3.png" alt="plot of chunk unnamed-chunk-15"><p class="caption">
+plot of chunk unnamed-chunk-15
+</p>
+</div>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/ALE.html">ALE</a></span><span class="op">(</span><span class="va">model_boot</span>, variable <span class="op">=</span> <span class="st">"bio16"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-15-4.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-15-4.png" alt="plot of chunk unnamed-chunk-15"><p class="caption">
+plot of chunk unnamed-chunk-15
+</p>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -489,28 +528,36 @@ will be modeled by a binomial likelihood. Build simple model:</p>
 <span>            data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>            verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>            loss <span class="op">=</span> <span class="st">"binomial"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-18-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-18-1.png" alt="plot of chunk unnamed-chunk-18"><p class="caption">
+plot of chunk unnamed-chunk-18
+</p>
+</div>
 <p>Plot model:</p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-19-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-19-1.png" alt="plot of chunk unnamed-chunk-19"><p class="caption">
+plot of chunk unnamed-chunk-19
+</p>
+</div>
 <p>Our NN has now 12 output nodes, one for each species.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">model</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           [,1]      [,2]      [,3]      [,4]      [,5]      [,6]      [,7]</span></span>
-<span><span class="co">#&gt; [1,] 0.1380712 0.1433790 0.3874322 0.1811384 0.1885549 0.1731750 0.3270744</span></span>
-<span><span class="co">#&gt; [2,] 0.1304386 0.1374352 0.3850024 0.1714236 0.1835373 0.1629252 0.3169209</span></span>
-<span><span class="co">#&gt; [3,] 0.1323597 0.1389171 0.3730161 0.1703933 0.1841872 0.1611271 0.3120809</span></span>
-<span><span class="co">#&gt; [4,] 0.1521377 0.1522439 0.3761050 0.1886885 0.1972129 0.1811772 0.3343695</span></span>
-<span><span class="co">#&gt; [5,] 0.1564340 0.1508278 0.3798529 0.1933989 0.1934519 0.1866434 0.3476450</span></span>
-<span><span class="co">#&gt; [6,] 0.1272203 0.1362045 0.3809703 0.1688544 0.1805923 0.1597819 0.3112354</span></span>
+<span><span class="co">#&gt; [1,] 0.1331459 0.1506837 0.3712408 0.1266095 0.1636752 0.1577358 0.2777096</span></span>
+<span><span class="co">#&gt; [2,] 0.1354124 0.1515498 0.3678423 0.1258328 0.1674965 0.1612029 0.2709867</span></span>
+<span><span class="co">#&gt; [3,] 0.1430002 0.1586185 0.3705418 0.1354483 0.1708843 0.1699892 0.2854469</span></span>
+<span><span class="co">#&gt; [4,] 0.1441380 0.1626469 0.3770491 0.1422959 0.1663663 0.1707869 0.3097974</span></span>
+<span><span class="co">#&gt; [5,] 0.1316050 0.1536373 0.3720362 0.1367511 0.1493681 0.1604599 0.3158411</span></span>
+<span><span class="co">#&gt; [6,] 0.1474470 0.1606866 0.3695196 0.1303609 0.1647370 0.1688034 0.2734783</span></span>
 <span><span class="co">#&gt;           [,8]      [,9]     [,10]     [,11]     [,12]</span></span>
-<span><span class="co">#&gt; [1,] 0.1701221 0.2353295 0.2060334 0.1574209 0.2544691</span></span>
-<span><span class="co">#&gt; [2,] 0.1668288 0.2266827 0.2010003 0.1487767 0.2494722</span></span>
-<span><span class="co">#&gt; [3,] 0.1697178 0.2277023 0.1973395 0.1457221 0.2536976</span></span>
-<span><span class="co">#&gt; [4,] 0.1804695 0.2475819 0.2052137 0.1659662 0.2696343</span></span>
-<span><span class="co">#&gt; [5,] 0.1770472 0.2507514 0.1966217 0.1749339 0.2772577</span></span>
-<span><span class="co">#&gt; [6,] 0.1660440 0.2221837 0.1986248 0.1407216 0.2459026</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] 0.1400767 0.2210456 0.1548240 0.1384140 0.2359208</span></span>
+<span><span class="co">#&gt; [2,] 0.1430252 0.2149082 0.1569257 0.1350499 0.2325463</span></span>
+<span><span class="co">#&gt; [3,] 0.1500368 0.2293961 0.1684729 0.1498935 0.2446437</span></span>
+<span><span class="co">#&gt; [4,] 0.1489279 0.2433298 0.1748164 0.1617819 0.2582853</span></span>
+<span><span class="co">#&gt; [5,] 0.1359103 0.2368087 0.1676515 0.1605706 0.2583595</span></span>
+<span><span class="co">#&gt; [6,] 0.1479348 0.2197429 0.1721352 0.1455670 0.2426738</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="train-model-with-bootstrapping">Train model with bootstrapping<a class="anchor" aria-label="anchor" href="#train-model-with-bootstrapping"></a>
 </h3>
@@ -543,278 +590,304 @@ convergence first:</p>
 <span><span class="va">results</span></span>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Feature Importance </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                           Importance   Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Rockiness       3.79e-03  1.80e-03    2.10  0.03550 *  </span></span>
-<span><span class="co">#&gt; Response_1: Sandiness       5.94e-04  5.63e-04    1.06  0.29120    </span></span>
-<span><span class="co">#&gt; Response_1: VallyBotFlat    1.33e-03  8.38e-04    1.59  0.11137    </span></span>
-<span><span class="co">#&gt; Response_1: PPTann          2.65e-03  1.74e-03    1.53  0.12673    </span></span>
-<span><span class="co">#&gt; Response_1: Loaminess       1.61e-04  3.83e-04    0.42  0.67380    </span></span>
-<span><span class="co">#&gt; Response_1: cvTemp          3.19e-03  1.20e-03    2.66  0.00784 ** </span></span>
-<span><span class="co">#&gt; Response_1: T0              5.70e-04  1.10e-03    0.52  0.60476    </span></span>
-<span><span class="co">#&gt; Response_2: Rockiness       4.52e-03  3.04e-03    1.49  0.13684    </span></span>
-<span><span class="co">#&gt; Response_2: Sandiness       1.18e-03  1.19e-03    0.99  0.32356    </span></span>
-<span><span class="co">#&gt; Response_2: VallyBotFlat    1.27e-03  1.04e-03    1.22  0.22383    </span></span>
-<span><span class="co">#&gt; Response_2: PPTann          7.04e-03  3.03e-03    2.33  0.01998 *  </span></span>
-<span><span class="co">#&gt; Response_2: Loaminess       4.49e-04  3.65e-04    1.23  0.21972    </span></span>
-<span><span class="co">#&gt; Response_2: cvTemp          2.47e-02  7.46e-03    3.30  0.00095 ***</span></span>
-<span><span class="co">#&gt; Response_2: T0              1.43e-03  1.11e-03    1.29  0.19736    </span></span>
-<span><span class="co">#&gt; Response_3: Rockiness       1.14e-02  3.89e-03    2.92  0.00346 ** </span></span>
-<span><span class="co">#&gt; Response_3: Sandiness       1.32e-02  5.38e-03    2.45  0.01445 *  </span></span>
-<span><span class="co">#&gt; Response_3: VallyBotFlat    2.26e-02  6.70e-03    3.38  0.00074 ***</span></span>
-<span><span class="co">#&gt; Response_3: PPTann          6.18e-03  2.59e-03    2.38  0.01714 *  </span></span>
-<span><span class="co">#&gt; Response_3: Loaminess       7.34e-04  8.06e-04    0.91  0.36252    </span></span>
-<span><span class="co">#&gt; Response_3: cvTemp          2.66e-02  7.69e-03    3.46  0.00053 ***</span></span>
-<span><span class="co">#&gt; Response_3: T0              1.39e-03  1.04e-03    1.33  0.18218    </span></span>
-<span><span class="co">#&gt; Response_4: Rockiness      -2.12e-03  1.42e-03   -1.49  0.13654    </span></span>
-<span><span class="co">#&gt; Response_4: Sandiness       2.29e-03  1.25e-03    1.83  0.06695 .  </span></span>
-<span><span class="co">#&gt; Response_4: VallyBotFlat    3.38e-03  2.41e-03    1.40  0.16067    </span></span>
-<span><span class="co">#&gt; Response_4: PPTann         -1.44e-03  6.69e-04   -2.15  0.03189 *  </span></span>
-<span><span class="co">#&gt; Response_4: Loaminess       1.56e-03  9.06e-04    1.72  0.08533 .  </span></span>
-<span><span class="co">#&gt; Response_4: cvTemp          5.08e-05  9.60e-04    0.05  0.95784    </span></span>
-<span><span class="co">#&gt; Response_4: T0              3.55e-04  5.64e-04    0.63  0.52892    </span></span>
-<span><span class="co">#&gt; Response_5: Rockiness       1.31e-02  4.83e-03    2.70  0.00688 ** </span></span>
-<span><span class="co">#&gt; Response_5: Sandiness       1.30e-03  1.39e-03    0.94  0.34937    </span></span>
-<span><span class="co">#&gt; Response_5: VallyBotFlat    2.82e-03  1.51e-03    1.87  0.06101 .  </span></span>
-<span><span class="co">#&gt; Response_5: PPTann          1.43e-02  4.50e-03    3.18  0.00150 ** </span></span>
-<span><span class="co">#&gt; Response_5: Loaminess       7.71e-04  4.73e-04    1.63  0.10285    </span></span>
-<span><span class="co">#&gt; Response_5: cvTemp          4.42e-02  8.71e-03    5.07    4e-07 ***</span></span>
-<span><span class="co">#&gt; Response_5: T0              2.42e-03  1.46e-03    1.65  0.09836 .  </span></span>
-<span><span class="co">#&gt; Response_6: Rockiness       1.39e-03  8.71e-04    1.60  0.11010    </span></span>
-<span><span class="co">#&gt; Response_6: Sandiness       1.69e-03  1.31e-03    1.29  0.19743    </span></span>
-<span><span class="co">#&gt; Response_6: VallyBotFlat    2.68e-03  9.14e-04    2.93  0.00338 ** </span></span>
-<span><span class="co">#&gt; Response_6: PPTann          1.18e-03  9.47e-04    1.25  0.21197    </span></span>
-<span><span class="co">#&gt; Response_6: Loaminess       1.27e-03  4.95e-04    2.57  0.01022 *  </span></span>
-<span><span class="co">#&gt; Response_6: cvTemp          2.03e-03  1.05e-03    1.93  0.05422 .  </span></span>
-<span><span class="co">#&gt; Response_6: T0              1.93e-04  5.34e-04    0.36  0.71862    </span></span>
-<span><span class="co">#&gt; Response_7: Rockiness       8.52e-03  3.27e-03    2.61  0.00911 ** </span></span>
-<span><span class="co">#&gt; Response_7: Sandiness       4.00e-03  1.75e-03    2.29  0.02230 *  </span></span>
-<span><span class="co">#&gt; Response_7: VallyBotFlat    1.03e-02  3.84e-03    2.69  0.00709 ** </span></span>
-<span><span class="co">#&gt; Response_7: PPTann          3.62e-03  1.71e-03    2.12  0.03391 *  </span></span>
-<span><span class="co">#&gt; Response_7: Loaminess       2.40e-03  2.47e-03    0.97  0.33153    </span></span>
-<span><span class="co">#&gt; Response_7: cvTemp          1.60e-02  5.52e-03    2.91  0.00366 ** </span></span>
-<span><span class="co">#&gt; Response_7: T0              7.15e-04  1.10e-03    0.65  0.51684    </span></span>
-<span><span class="co">#&gt; Response_8: Rockiness      -8.40e-04  1.10e-03   -0.77  0.44317    </span></span>
-<span><span class="co">#&gt; Response_8: Sandiness       2.12e-03  1.06e-03    2.00  0.04534 *  </span></span>
-<span><span class="co">#&gt; Response_8: VallyBotFlat    1.28e-03  1.10e-03    1.16  0.24507    </span></span>
-<span><span class="co">#&gt; Response_8: PPTann         -6.35e-04  9.18e-04   -0.69  0.48894    </span></span>
-<span><span class="co">#&gt; Response_8: Loaminess       1.56e-03  7.51e-04    2.07  0.03844 *  </span></span>
-<span><span class="co">#&gt; Response_8: cvTemp          1.65e-05  9.72e-04    0.02  0.98644    </span></span>
-<span><span class="co">#&gt; Response_8: T0              3.16e-04  4.78e-04    0.66  0.50779    </span></span>
-<span><span class="co">#&gt; Response_9: Rockiness       1.58e-03  2.16e-03    0.73  0.46500    </span></span>
-<span><span class="co">#&gt; Response_9: Sandiness       3.84e-03  2.42e-03    1.59  0.11165    </span></span>
-<span><span class="co">#&gt; Response_9: VallyBotFlat    8.01e-03  2.28e-03    3.51  0.00045 ***</span></span>
-<span><span class="co">#&gt; Response_9: PPTann          1.99e-03  1.70e-03    1.17  0.24162    </span></span>
-<span><span class="co">#&gt; Response_9: Loaminess       2.33e-04  8.32e-04    0.28  0.77969    </span></span>
-<span><span class="co">#&gt; Response_9: cvTemp          2.29e-02  7.92e-03    2.90  0.00376 ** </span></span>
-<span><span class="co">#&gt; Response_9: T0              9.36e-05  8.45e-04    0.11  0.91184    </span></span>
-<span><span class="co">#&gt; Response_10: Rockiness      2.84e-02  8.70e-03    3.26  0.00112 ** </span></span>
-<span><span class="co">#&gt; Response_10: Sandiness      1.90e-04  7.65e-04    0.25  0.80328    </span></span>
-<span><span class="co">#&gt; Response_10: VallyBotFlat  -5.89e-04  8.27e-04   -0.71  0.47587    </span></span>
-<span><span class="co">#&gt; Response_10: PPTann         1.73e-02  6.71e-03    2.58  0.00989 ** </span></span>
-<span><span class="co">#&gt; Response_10: Loaminess      1.25e-04  4.90e-04    0.26  0.79769    </span></span>
-<span><span class="co">#&gt; Response_10: cvTemp         2.23e-03  1.85e-03    1.20  0.22831    </span></span>
-<span><span class="co">#&gt; Response_10: T0             1.34e-03  1.11e-03    1.21  0.22604    </span></span>
-<span><span class="co">#&gt; Response_11: Rockiness     -7.79e-04  9.70e-04   -0.80  0.42201    </span></span>
-<span><span class="co">#&gt; Response_11: Sandiness      2.43e-03  1.35e-03    1.80  0.07155 .  </span></span>
-<span><span class="co">#&gt; Response_11: VallyBotFlat   1.01e-03  1.00e-03    1.00  0.31600    </span></span>
-<span><span class="co">#&gt; Response_11: PPTann        -5.39e-04  7.19e-04   -0.75  0.45289    </span></span>
-<span><span class="co">#&gt; Response_11: Loaminess      1.82e-03  6.46e-04    2.82  0.00476 ** </span></span>
-<span><span class="co">#&gt; Response_11: cvTemp         1.40e-04  7.38e-04    0.19  0.84920    </span></span>
-<span><span class="co">#&gt; Response_11: T0             5.30e-04  5.93e-04    0.89  0.37179    </span></span>
-<span><span class="co">#&gt; Response_12: Rockiness      7.12e-03  3.44e-03    2.07  0.03864 *  </span></span>
-<span><span class="co">#&gt; Response_12: Sandiness      2.49e-03  1.80e-03    1.38  0.16720    </span></span>
-<span><span class="co">#&gt; Response_12: VallyBotFlat   1.28e-02  5.99e-03    2.14  0.03196 *  </span></span>
-<span><span class="co">#&gt; Response_12: PPTann         3.07e-03  2.13e-03    1.44  0.15000    </span></span>
-<span><span class="co">#&gt; Response_12: Loaminess      1.77e-03  1.56e-03    1.14  0.25544    </span></span>
-<span><span class="co">#&gt; Response_12: cvTemp         1.15e-02  3.44e-03    3.33  0.00087 ***</span></span>
-<span><span class="co">#&gt; Response_12: T0             9.25e-04  1.33e-03    0.70  0.48662    </span></span>
+<span><span class="co">#&gt; ── Feature Importance</span></span>
+<span><span class="co">#&gt;                        Importance   Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Rockiness → ALA          0.003619  0.001864    1.94  0.05219 .  </span></span>
+<span><span class="co">#&gt; Sandiness → ALA          0.000783  0.000766    1.02  0.30618    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALA       0.001516  0.000916    1.65  0.09800 .  </span></span>
+<span><span class="co">#&gt; PPTann → ALA             0.001894  0.001368    1.38  0.16607    </span></span>
+<span><span class="co">#&gt; Loaminess → ALA          0.000211  0.000401    0.53  0.59855    </span></span>
+<span><span class="co">#&gt; cvTemp → ALA             0.002762  0.001103    2.50  0.01231 *  </span></span>
+<span><span class="co">#&gt; T0 → ALA                 0.000810  0.000785    1.03  0.30159    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → ARE          0.004982  0.002978    1.67  0.09433 .  </span></span>
+<span><span class="co">#&gt; Sandiness → ARE          0.001133  0.000678    1.67  0.09436 .  </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARE       0.001549  0.000885    1.75  0.07987 .  </span></span>
+<span><span class="co">#&gt; PPTann → ARE             0.005463  0.003451    1.58  0.11340    </span></span>
+<span><span class="co">#&gt; Loaminess → ARE          0.000352  0.000390    0.90  0.36618    </span></span>
+<span><span class="co">#&gt; cvTemp → ARE             0.019921  0.009393    2.12  0.03394 *  </span></span>
+<span><span class="co">#&gt; T0 → ARE                 0.001177  0.000759    1.55  0.12125    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → BAX          0.011825  0.004278    2.76  0.00571 ** </span></span>
+<span><span class="co">#&gt; Sandiness → BAX          0.015052  0.005054    2.98  0.00290 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → BAX       0.025689  0.007082    3.63  0.00029 ***</span></span>
+<span><span class="co">#&gt; PPTann → BAX             0.006204  0.003091    2.01  0.04472 *  </span></span>
+<span><span class="co">#&gt; Loaminess → BAX          0.000652  0.001189    0.55  0.58347    </span></span>
+<span><span class="co">#&gt; cvTemp → BAX             0.027672  0.007689    3.60  0.00032 ***</span></span>
+<span><span class="co">#&gt; T0 → BAX                 0.002229  0.001673    1.33  0.18278    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → CAM         -0.001998  0.001371   -1.46  0.14498    </span></span>
+<span><span class="co">#&gt; Sandiness → CAM          0.002721  0.002152    1.26  0.20614    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → CAM       0.004053  0.003475    1.17  0.24346    </span></span>
+<span><span class="co">#&gt; PPTann → CAM            -0.001229  0.000830   -1.48  0.13855    </span></span>
+<span><span class="co">#&gt; Loaminess → CAM          0.002104  0.001142    1.84  0.06552 .  </span></span>
+<span><span class="co">#&gt; cvTemp → CAM             0.000206  0.000746    0.28  0.78255    </span></span>
+<span><span class="co">#&gt; T0 → CAM                 0.000326  0.000753    0.43  0.66494    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → GON          0.013798  0.005080    2.72  0.00661 ** </span></span>
+<span><span class="co">#&gt; Sandiness → GON          0.001339  0.001137    1.18  0.23884    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → GON       0.002640  0.001211    2.18  0.02931 *  </span></span>
+<span><span class="co">#&gt; PPTann → GON             0.011291  0.006641    1.70  0.08912 .  </span></span>
+<span><span class="co">#&gt; Loaminess → GON          0.000878  0.000699    1.26  0.20897    </span></span>
+<span><span class="co">#&gt; cvTemp → GON             0.036310  0.012691    2.86  0.00422 ** </span></span>
+<span><span class="co">#&gt; T0 → GON                 0.002950  0.002164    1.36  0.17277    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → MEL          0.001422  0.000954    1.49  0.13594    </span></span>
+<span><span class="co">#&gt; Sandiness → MEL          0.001356  0.001177    1.15  0.24901    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → MEL       0.002419  0.000890    2.72  0.00659 ** </span></span>
+<span><span class="co">#&gt; PPTann → MEL             0.000984  0.000716    1.37  0.16965    </span></span>
+<span><span class="co">#&gt; Loaminess → MEL          0.001687  0.000878    1.92  0.05475 .  </span></span>
+<span><span class="co">#&gt; cvTemp → MEL             0.002220  0.000887    2.50  0.01233 *  </span></span>
+<span><span class="co">#&gt; T0 → MEL                 0.000193  0.000720    0.27  0.78851    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → OBL          0.007478  0.002261    3.31  0.00094 ***</span></span>
+<span><span class="co">#&gt; Sandiness → OBL          0.003251  0.002462    1.32  0.18667    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → OBL       0.008817  0.003884    2.27  0.02322 *  </span></span>
+<span><span class="co">#&gt; PPTann → OBL             0.003030  0.001498    2.02  0.04308 *  </span></span>
+<span><span class="co">#&gt; Loaminess → OBL          0.004310  0.002999    1.44  0.15067    </span></span>
+<span><span class="co">#&gt; cvTemp → OBL             0.014570  0.004999    2.91  0.00356 ** </span></span>
+<span><span class="co">#&gt; T0 → OBL                 0.000683  0.000642    1.06  0.28745    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → OVA         -0.001070  0.001132   -0.95  0.34453    </span></span>
+<span><span class="co">#&gt; Sandiness → OVA          0.002370  0.002074    1.14  0.25324    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → OVA       0.001578  0.002091    0.75  0.45044    </span></span>
+<span><span class="co">#&gt; PPTann → OVA            -0.000866  0.000519   -1.67  0.09554 .  </span></span>
+<span><span class="co">#&gt; Loaminess → OVA          0.001965  0.001245    1.58  0.11460    </span></span>
+<span><span class="co">#&gt; cvTemp → OVA            -0.000151  0.000933   -0.16  0.87176    </span></span>
+<span><span class="co">#&gt; T0 → OVA                 0.000650  0.000637    1.02  0.30741    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → WIL          0.001518  0.001762    0.86  0.38907    </span></span>
+<span><span class="co">#&gt; Sandiness → WIL          0.003695  0.002689    1.37  0.16947    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → WIL       0.007568  0.002785    2.72  0.00658 ** </span></span>
+<span><span class="co">#&gt; PPTann → WIL             0.002300  0.002199    1.05  0.29573    </span></span>
+<span><span class="co">#&gt; Loaminess → WIL          0.000987  0.001455    0.68  0.49791    </span></span>
+<span><span class="co">#&gt; cvTemp → WIL             0.021637  0.007195    3.01  0.00263 ** </span></span>
+<span><span class="co">#&gt; T0 → WIL                 0.000568  0.000851    0.67  0.50482    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → ALP          0.028668  0.007622    3.76  0.00017 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ALP          0.000369  0.000630    0.59  0.55806    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALP      -0.000421  0.000753   -0.56  0.57628    </span></span>
+<span><span class="co">#&gt; PPTann → ALP             0.018420  0.007969    2.31  0.02080 *  </span></span>
+<span><span class="co">#&gt; Loaminess → ALP          0.000206  0.000641    0.32  0.74759    </span></span>
+<span><span class="co">#&gt; cvTemp → ALP             0.002647  0.003227    0.82  0.41219    </span></span>
+<span><span class="co">#&gt; T0 → ALP                 0.001402  0.001034    1.36  0.17507    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → VIM         -0.001094  0.000919   -1.19  0.23403    </span></span>
+<span><span class="co">#&gt; Sandiness → VIM          0.002926  0.001768    1.65  0.09807 .  </span></span>
+<span><span class="co">#&gt; VallyBotFlat → VIM       0.001402  0.001558    0.90  0.36798    </span></span>
+<span><span class="co">#&gt; PPTann → VIM            -0.000565  0.000989   -0.57  0.56794    </span></span>
+<span><span class="co">#&gt; Loaminess → VIM          0.002348  0.001059    2.22  0.02658 *  </span></span>
+<span><span class="co">#&gt; cvTemp → VIM             0.000153  0.001089    0.14  0.88850    </span></span>
+<span><span class="co">#&gt; T0 → VIM                 0.000839  0.000771    1.09  0.27614    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
+<span><span class="co">#&gt; Rockiness → ARO.SAB      0.004659  0.003103    1.50  0.13319    </span></span>
+<span><span class="co">#&gt; Sandiness → ARO.SAB      0.001202  0.001698    0.71  0.47906    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARO.SAB   0.013144  0.005211    2.52  0.01165 *  </span></span>
+<span><span class="co">#&gt; PPTann → ARO.SAB         0.002885  0.002019    1.43  0.15307    </span></span>
+<span><span class="co">#&gt; Loaminess → ARO.SAB      0.001234  0.001446    0.85  0.39371    </span></span>
+<span><span class="co">#&gt; cvTemp → ARO.SAB         0.008730  0.005054    1.73  0.08410 .  </span></span>
+<span><span class="co">#&gt; T0 → ARO.SAB             0.000671  0.000757    0.89  0.37524    </span></span>
+<span><span class="co">#&gt;                                                                 </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Average Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                                ACE  Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Rockiness      0.40093  0.15554    2.58  0.00995 ** </span></span>
-<span><span class="co">#&gt; Response_1: Sandiness     -0.07183  0.08583   -0.84  0.40264    </span></span>
-<span><span class="co">#&gt; Response_1: VallyBotFlat  -0.14793  0.12662   -1.17  0.24265    </span></span>
-<span><span class="co">#&gt; Response_1: PPTann         0.17519  0.14457    1.21  0.22559    </span></span>
-<span><span class="co">#&gt; Response_1: Loaminess      0.05080  0.10993    0.46  0.64397    </span></span>
-<span><span class="co">#&gt; Response_1: cvTemp         0.29431  0.11457    2.57  0.01021 *  </span></span>
-<span><span class="co">#&gt; Response_1: T0             0.11991  0.10466    1.15  0.25189    </span></span>
-<span><span class="co">#&gt; Response_2: Rockiness      0.47152  0.18066    2.61  0.00905 ** </span></span>
-<span><span class="co">#&gt; Response_2: Sandiness     -0.16261  0.13957   -1.17  0.24400    </span></span>
-<span><span class="co">#&gt; Response_2: VallyBotFlat  -0.04163  0.18234   -0.23  0.81942    </span></span>
-<span><span class="co">#&gt; Response_2: PPTann        -0.04363  0.12903   -0.34  0.73529    </span></span>
-<span><span class="co">#&gt; Response_2: Loaminess      0.03374  0.14918    0.23  0.82105    </span></span>
-<span><span class="co">#&gt; Response_2: cvTemp         0.99583  0.14886    6.69  2.2e-11 ***</span></span>
-<span><span class="co">#&gt; Response_2: T0             0.00709  0.12279    0.06  0.95398    </span></span>
-<span><span class="co">#&gt; Response_3: Rockiness     -0.19856  0.08247   -2.41  0.01606 *  </span></span>
-<span><span class="co">#&gt; Response_3: Sandiness      0.25946  0.11796    2.20  0.02784 *  </span></span>
-<span><span class="co">#&gt; Response_3: VallyBotFlat  -0.30799  0.11847   -2.60  0.00933 ** </span></span>
-<span><span class="co">#&gt; Response_3: PPTann         0.05065  0.12453    0.41  0.68419    </span></span>
-<span><span class="co">#&gt; Response_3: Loaminess     -0.00528  0.09134   -0.06  0.95392    </span></span>
-<span><span class="co">#&gt; Response_3: cvTemp        -0.56649  0.14228   -3.98  6.8e-05 ***</span></span>
-<span><span class="co">#&gt; Response_3: T0             0.04650  0.06550    0.71  0.47772    </span></span>
-<span><span class="co">#&gt; Response_4: Rockiness     -0.27059  0.16481   -1.64  0.10061    </span></span>
-<span><span class="co">#&gt; Response_4: Sandiness     -0.55343  0.13998   -3.95  7.7e-05 ***</span></span>
-<span><span class="co">#&gt; Response_4: VallyBotFlat   0.66154  0.15240    4.34  1.4e-05 ***</span></span>
-<span><span class="co">#&gt; Response_4: PPTann        -0.35655  0.13041   -2.73  0.00626 ** </span></span>
-<span><span class="co">#&gt; Response_4: Loaminess      0.15229  0.14866    1.02  0.30564    </span></span>
-<span><span class="co">#&gt; Response_4: cvTemp         0.07449  0.17827    0.42  0.67606    </span></span>
-<span><span class="co">#&gt; Response_4: T0             0.05830  0.09785    0.60  0.55130    </span></span>
-<span><span class="co">#&gt; Response_5: Rockiness      0.60834  0.18447    3.30  0.00097 ***</span></span>
-<span><span class="co">#&gt; Response_5: Sandiness     -0.18075  0.14809   -1.22  0.22228    </span></span>
-<span><span class="co">#&gt; Response_5: VallyBotFlat  -0.08444  0.16696   -0.51  0.61305    </span></span>
-<span><span class="co">#&gt; Response_5: PPTann        -0.09038  0.14018   -0.64  0.51907    </span></span>
-<span><span class="co">#&gt; Response_5: Loaminess      0.03873  0.18183    0.21  0.83132    </span></span>
-<span><span class="co">#&gt; Response_5: cvTemp         1.19459  0.16639    7.18  7.0e-13 ***</span></span>
-<span><span class="co">#&gt; Response_5: T0            -0.03397  0.12328   -0.28  0.78291    </span></span>
-<span><span class="co">#&gt; Response_6: Rockiness     -0.19219  0.11706   -1.64  0.10063    </span></span>
-<span><span class="co">#&gt; Response_6: Sandiness     -0.21436  0.08762   -2.45  0.01442 *  </span></span>
-<span><span class="co">#&gt; Response_6: VallyBotFlat   0.25290  0.11413    2.22  0.02669 *  </span></span>
-<span><span class="co">#&gt; Response_6: PPTann        -0.23936  0.09691   -2.47  0.01352 *  </span></span>
-<span><span class="co">#&gt; Response_6: Loaminess      0.06910  0.08800    0.79  0.43230    </span></span>
-<span><span class="co">#&gt; Response_6: cvTemp         0.06016  0.10297    0.58  0.55906    </span></span>
-<span><span class="co">#&gt; Response_6: T0             0.08993  0.08046    1.12  0.26371    </span></span>
-<span><span class="co">#&gt; Response_7: Rockiness     -0.36262  0.09152   -3.96  7.4e-05 ***</span></span>
-<span><span class="co">#&gt; Response_7: Sandiness     -0.07616  0.08873   -0.86  0.39071    </span></span>
-<span><span class="co">#&gt; Response_7: VallyBotFlat  -0.00419  0.08820   -0.05  0.96212    </span></span>
-<span><span class="co">#&gt; Response_7: PPTann        -0.16505  0.11099   -1.49  0.13698    </span></span>
-<span><span class="co">#&gt; Response_7: Loaminess      0.17443  0.10683    1.63  0.10254    </span></span>
-<span><span class="co">#&gt; Response_7: cvTemp        -0.57023  0.15277   -3.73  0.00019 ***</span></span>
-<span><span class="co">#&gt; Response_7: T0             0.05950  0.08507    0.70  0.48424    </span></span>
-<span><span class="co">#&gt; Response_8: Rockiness     -0.23785  0.14340   -1.66  0.09720 .  </span></span>
-<span><span class="co">#&gt; Response_8: Sandiness     -0.44125  0.12017   -3.67  0.00024 ***</span></span>
-<span><span class="co">#&gt; Response_8: VallyBotFlat   0.46206  0.10837    4.26  2.0e-05 ***</span></span>
-<span><span class="co">#&gt; Response_8: PPTann        -0.28691  0.10812   -2.65  0.00796 ** </span></span>
-<span><span class="co">#&gt; Response_8: Loaminess      0.13029  0.12506    1.04  0.29750    </span></span>
-<span><span class="co">#&gt; Response_8: cvTemp         0.05776  0.16875    0.34  0.73215    </span></span>
-<span><span class="co">#&gt; Response_8: T0             0.06137  0.08575    0.72  0.47423    </span></span>
-<span><span class="co">#&gt; Response_9: Rockiness     -0.24438  0.10507   -2.33  0.02003 *  </span></span>
-<span><span class="co">#&gt; Response_9: Sandiness      0.04043  0.12033    0.34  0.73690    </span></span>
-<span><span class="co">#&gt; Response_9: VallyBotFlat  -0.04585  0.12023   -0.38  0.70297    </span></span>
-<span><span class="co">#&gt; Response_9: PPTann        -0.06220  0.13740   -0.45  0.65076    </span></span>
-<span><span class="co">#&gt; Response_9: Loaminess      0.13688  0.14975    0.91  0.36071    </span></span>
-<span><span class="co">#&gt; Response_9: cvTemp        -0.79065  0.18647   -4.24  2.2e-05 ***</span></span>
-<span><span class="co">#&gt; Response_9: T0             0.05809  0.08060    0.72  0.47108    </span></span>
-<span><span class="co">#&gt; Response_10: Rockiness     0.85501  0.15899    5.38  7.5e-08 ***</span></span>
-<span><span class="co">#&gt; Response_10: Sandiness     0.12503  0.13494    0.93  0.35418    </span></span>
-<span><span class="co">#&gt; Response_10: VallyBotFlat -0.33627  0.15795   -2.13  0.03325 *  </span></span>
-<span><span class="co">#&gt; Response_10: PPTann        0.67493  0.16157    4.18  3.0e-05 ***</span></span>
-<span><span class="co">#&gt; Response_10: Loaminess     0.03803  0.18215    0.21  0.83461    </span></span>
-<span><span class="co">#&gt; Response_10: cvTemp        0.11979  0.16453    0.73  0.46657    </span></span>
-<span><span class="co">#&gt; Response_10: T0            0.05050  0.14623    0.35  0.72983    </span></span>
-<span><span class="co">#&gt; Response_11: Rockiness    -0.25221  0.11959   -2.11  0.03495 *  </span></span>
-<span><span class="co">#&gt; Response_11: Sandiness    -0.36842  0.10933   -3.37  0.00075 ***</span></span>
-<span><span class="co">#&gt; Response_11: VallyBotFlat  0.38595  0.09549    4.04  5.3e-05 ***</span></span>
-<span><span class="co">#&gt; Response_11: PPTann       -0.25613  0.10809   -2.37  0.01781 *  </span></span>
-<span><span class="co">#&gt; Response_11: Loaminess     0.09827  0.11453    0.86  0.39090    </span></span>
-<span><span class="co">#&gt; Response_11: cvTemp       -0.06725  0.11038   -0.61  0.54235    </span></span>
-<span><span class="co">#&gt; Response_11: T0            0.09210  0.06959    1.32  0.18568    </span></span>
-<span><span class="co">#&gt; Response_12: Rockiness    -0.65444  0.11609   -5.64  1.7e-08 ***</span></span>
-<span><span class="co">#&gt; Response_12: Sandiness    -0.23896  0.11674   -2.05  0.04066 *  </span></span>
-<span><span class="co">#&gt; Response_12: VallyBotFlat  0.56510  0.12888    4.38  1.2e-05 ***</span></span>
-<span><span class="co">#&gt; Response_12: PPTann       -0.42471  0.14337   -2.96  0.00305 ** </span></span>
-<span><span class="co">#&gt; Response_12: Loaminess     0.08725  0.11867    0.74  0.46218    </span></span>
-<span><span class="co">#&gt; Response_12: cvTemp       -0.61522  0.12835   -4.79  1.6e-06 ***</span></span>
-<span><span class="co">#&gt; Response_12: T0            0.03455  0.12438    0.28  0.78116    </span></span>
+<span><span class="co">#&gt; ── Average Conditional Effects</span></span>
+<span><span class="co">#&gt;                             ACE  Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Rockiness → ALA         0.38638  0.10044    3.85  0.00012 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ALA        -0.08534  0.09429   -0.91  0.36545    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALA     -0.13216  0.09987   -1.32  0.18571    </span></span>
+<span><span class="co">#&gt; PPTann → ALA            0.14897  0.10955    1.36  0.17388    </span></span>
+<span><span class="co">#&gt; Loaminess → ALA         0.05421  0.10671    0.51  0.61142    </span></span>
+<span><span class="co">#&gt; cvTemp → ALA            0.27413  0.12731    2.15  0.03131 *  </span></span>
+<span><span class="co">#&gt; T0 → ALA                0.12298  0.07418    1.66  0.09736 .  </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → ARE         0.45591  0.17718    2.57  0.01008 *  </span></span>
+<span><span class="co">#&gt; Sandiness → ARE        -0.14356  0.12858   -1.12  0.26422    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARE     -0.00463  0.13143   -0.04  0.97191    </span></span>
+<span><span class="co">#&gt; PPTann → ARE            0.01961  0.14749    0.13  0.89423    </span></span>
+<span><span class="co">#&gt; Loaminess → ARE        -0.00684  0.15290   -0.04  0.96430    </span></span>
+<span><span class="co">#&gt; cvTemp → ARE            0.90055  0.21830    4.13  3.7e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → ARE                0.02699  0.15583    0.17  0.86249    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → BAX        -0.17266  0.11303   -1.53  0.12664    </span></span>
+<span><span class="co">#&gt; Sandiness → BAX         0.28455  0.09702    2.93  0.00336 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → BAX     -0.39036  0.12228   -3.19  0.00141 ** </span></span>
+<span><span class="co">#&gt; PPTann → BAX           -0.00415  0.11407   -0.04  0.97100    </span></span>
+<span><span class="co">#&gt; Loaminess → BAX         0.04300  0.12944    0.33  0.73972    </span></span>
+<span><span class="co">#&gt; cvTemp → BAX           -0.55664  0.13789   -4.04  5.4e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → BAX                0.03305  0.11299    0.29  0.76988    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → CAM        -0.23775  0.15568   -1.53  0.12671    </span></span>
+<span><span class="co">#&gt; Sandiness → CAM        -0.54049  0.13872   -3.90  9.8e-05 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → CAM      0.68820  0.17726    3.88  0.00010 ***</span></span>
+<span><span class="co">#&gt; PPTann → CAM           -0.29762  0.10691   -2.78  0.00537 ** </span></span>
+<span><span class="co">#&gt; Loaminess → CAM         0.11166  0.16578    0.67  0.50058    </span></span>
+<span><span class="co">#&gt; cvTemp → CAM            0.15978  0.16710    0.96  0.33900    </span></span>
+<span><span class="co">#&gt; T0 → CAM                0.08186  0.09762    0.84  0.40168    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → GON         0.62604  0.16255    3.85  0.00012 ***</span></span>
+<span><span class="co">#&gt; Sandiness → GON        -0.17588  0.14148   -1.24  0.21381    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → GON     -0.00874  0.16145   -0.05  0.95680    </span></span>
+<span><span class="co">#&gt; PPTann → GON           -0.00840  0.16277   -0.05  0.95886    </span></span>
+<span><span class="co">#&gt; Loaminess → GON        -0.02323  0.17957   -0.13  0.89707    </span></span>
+<span><span class="co">#&gt; cvTemp → GON            1.07381  0.23793    4.51  6.4e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → GON               -0.02984  0.18643   -0.16  0.87283    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → MEL        -0.19363  0.13314   -1.45  0.14585    </span></span>
+<span><span class="co">#&gt; Sandiness → MEL        -0.20730  0.11308   -1.83  0.06677 .  </span></span>
+<span><span class="co">#&gt; VallyBotFlat → MEL      0.25939  0.13021    1.99  0.04636 *  </span></span>
+<span><span class="co">#&gt; PPTann → MEL           -0.22225  0.09893   -2.25  0.02466 *  </span></span>
+<span><span class="co">#&gt; Loaminess → MEL         0.03434  0.08568    0.40  0.68854    </span></span>
+<span><span class="co">#&gt; cvTemp → MEL            0.13216  0.08233    1.61  0.10846    </span></span>
+<span><span class="co">#&gt; T0 → MEL                0.10923  0.07008    1.56  0.11906    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → OBL        -0.34064  0.11636   -2.93  0.00342 ** </span></span>
+<span><span class="co">#&gt; Sandiness → OBL        -0.08633  0.07827   -1.10  0.27002    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → OBL     -0.02867  0.09324   -0.31  0.75851    </span></span>
+<span><span class="co">#&gt; PPTann → OBL           -0.16181  0.10644   -1.52  0.12846    </span></span>
+<span><span class="co">#&gt; Loaminess → OBL         0.23325  0.11389    2.05  0.04055 *  </span></span>
+<span><span class="co">#&gt; cvTemp → OBL           -0.53143  0.16479   -3.22  0.00126 ** </span></span>
+<span><span class="co">#&gt; T0 → OBL                0.07144  0.07886    0.91  0.36497    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → OVA        -0.21563  0.14260   -1.51  0.13050    </span></span>
+<span><span class="co">#&gt; Sandiness → OVA        -0.47427  0.13609   -3.49  0.00049 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → OVA      0.54488  0.14111    3.86  0.00011 ***</span></span>
+<span><span class="co">#&gt; PPTann → OVA           -0.27086  0.09505   -2.85  0.00438 ** </span></span>
+<span><span class="co">#&gt; Loaminess → OVA         0.10945  0.17567    0.62  0.53325    </span></span>
+<span><span class="co">#&gt; cvTemp → OVA            0.13613  0.17215    0.79  0.42907    </span></span>
+<span><span class="co">#&gt; T0 → OVA                0.09831  0.08440    1.16  0.24409    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → WIL        -0.18174  0.14504   -1.25  0.21017    </span></span>
+<span><span class="co">#&gt; Sandiness → WIL         0.05609  0.12743    0.44  0.65979    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → WIL     -0.11775  0.11770   -1.00  0.31708    </span></span>
+<span><span class="co">#&gt; PPTann → WIL           -0.11010  0.14359   -0.77  0.44321    </span></span>
+<span><span class="co">#&gt; Loaminess → WIL         0.22262  0.16279    1.37  0.17146    </span></span>
+<span><span class="co">#&gt; cvTemp → WIL           -0.71307  0.18312   -3.89  9.9e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → WIL                0.06393  0.10309    0.62  0.53512    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → ALP         0.89909  0.14044    6.40  1.5e-10 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ALP         0.04449  0.12666    0.35  0.72539    </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALP     -0.35504  0.19491   -1.82  0.06852 .  </span></span>
+<span><span class="co">#&gt; PPTann → ALP            0.65946  0.18839    3.50  0.00046 ***</span></span>
+<span><span class="co">#&gt; Loaminess → ALP         0.07186  0.15288    0.47  0.63831    </span></span>
+<span><span class="co">#&gt; cvTemp → ALP            0.15023  0.21738    0.69  0.48949    </span></span>
+<span><span class="co">#&gt; T0 → ALP                0.05299  0.09508    0.56  0.57727    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → VIM        -0.23640  0.15185   -1.56  0.11951    </span></span>
+<span><span class="co">#&gt; Sandiness → VIM        -0.37271  0.11827   -3.15  0.00162 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → VIM      0.41611  0.15003    2.77  0.00554 ** </span></span>
+<span><span class="co">#&gt; PPTann → VIM           -0.22563  0.10018   -2.25  0.02431 *  </span></span>
+<span><span class="co">#&gt; Loaminess → VIM         0.08151  0.12587    0.65  0.51726    </span></span>
+<span><span class="co">#&gt; cvTemp → VIM           -0.01863  0.16759   -0.11  0.91148    </span></span>
+<span><span class="co">#&gt; T0 → VIM                0.10771  0.08118    1.33  0.18455    </span></span>
+<span><span class="co">#&gt;                                                              </span></span>
+<span><span class="co">#&gt; Rockiness → ARO.SAB    -0.57967  0.17028   -3.40  0.00066 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ARO.SAB    -0.24130  0.08623   -2.80  0.00514 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARO.SAB  0.54026  0.14142    3.82  0.00013 ***</span></span>
+<span><span class="co">#&gt; PPTann → ARO.SAB       -0.40656  0.10941   -3.72  0.00020 ***</span></span>
+<span><span class="co">#&gt; Loaminess → ARO.SAB     0.14092  0.12096    1.17  0.24401    </span></span>
+<span><span class="co">#&gt; cvTemp → ARO.SAB       -0.44971  0.18324   -2.45  0.01412 *  </span></span>
+<span><span class="co">#&gt; T0 → ARO.SAB            0.05481  0.10188    0.54  0.59054    </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Standard Deviation of Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                              ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Rockiness     0.2370  0.0399    5.94  2.8e-09 ***</span></span>
-<span><span class="co">#&gt; Response_1: Sandiness     0.1822  0.0515    3.54  0.00040 ***</span></span>
-<span><span class="co">#&gt; Response_1: VallyBotFlat  0.2091  0.0336    6.22  4.8e-10 ***</span></span>
-<span><span class="co">#&gt; Response_1: PPTann        0.1940  0.0461    4.21  2.6e-05 ***</span></span>
-<span><span class="co">#&gt; Response_1: Loaminess     0.1149  0.0356    3.23  0.00126 ** </span></span>
-<span><span class="co">#&gt; Response_1: cvTemp        0.2523  0.0348    7.24  4.5e-13 ***</span></span>
-<span><span class="co">#&gt; Response_1: T0            0.1500  0.0317    4.73  2.2e-06 ***</span></span>
-<span><span class="co">#&gt; Response_2: Rockiness     0.2885  0.0597    4.83  1.3e-06 ***</span></span>
-<span><span class="co">#&gt; Response_2: Sandiness     0.2290  0.0696    3.29  0.00100 ***</span></span>
-<span><span class="co">#&gt; Response_2: VallyBotFlat  0.2325  0.0445    5.22  1.8e-07 ***</span></span>
-<span><span class="co">#&gt; Response_2: PPTann        0.2519  0.0647    3.90  9.8e-05 ***</span></span>
-<span><span class="co">#&gt; Response_2: Loaminess     0.1556  0.0439    3.54  0.00039 ***</span></span>
-<span><span class="co">#&gt; Response_2: cvTemp        0.3169  0.0588    5.39  7.1e-08 ***</span></span>
-<span><span class="co">#&gt; Response_2: T0            0.1666  0.0270    6.18  6.5e-10 ***</span></span>
-<span><span class="co">#&gt; Response_3: Rockiness     0.1679  0.0387    4.34  1.4e-05 ***</span></span>
-<span><span class="co">#&gt; Response_3: Sandiness     0.1308  0.0287    4.56  5.1e-06 ***</span></span>
-<span><span class="co">#&gt; Response_3: VallyBotFlat  0.1914  0.0450    4.26  2.1e-05 ***</span></span>
-<span><span class="co">#&gt; Response_3: PPTann        0.1577  0.0497    3.17  0.00153 ** </span></span>
-<span><span class="co">#&gt; Response_3: Loaminess     0.0943  0.0345    2.74  0.00622 ** </span></span>
-<span><span class="co">#&gt; Response_3: cvTemp        0.1793  0.0394    4.55  5.3e-06 ***</span></span>
-<span><span class="co">#&gt; Response_3: T0            0.1065  0.0246    4.33  1.5e-05 ***</span></span>
-<span><span class="co">#&gt; Response_4: Rockiness     0.2930  0.0682    4.29  1.8e-05 ***</span></span>
-<span><span class="co">#&gt; Response_4: Sandiness     0.2711  0.0695    3.90  9.6e-05 ***</span></span>
-<span><span class="co">#&gt; Response_4: VallyBotFlat  0.2689  0.0607    4.43  9.3e-06 ***</span></span>
-<span><span class="co">#&gt; Response_4: PPTann        0.2649  0.0579    4.57  4.8e-06 ***</span></span>
-<span><span class="co">#&gt; Response_4: Loaminess     0.1582  0.0450    3.51  0.00044 ***</span></span>
-<span><span class="co">#&gt; Response_4: cvTemp        0.3070  0.0435    7.06  1.7e-12 ***</span></span>
-<span><span class="co">#&gt; Response_4: T0            0.1804  0.0385    4.68  2.8e-06 ***</span></span>
-<span><span class="co">#&gt; Response_5: Rockiness     0.3187  0.0635    5.02  5.3e-07 ***</span></span>
-<span><span class="co">#&gt; Response_5: Sandiness     0.2509  0.0847    2.96  0.00307 ** </span></span>
-<span><span class="co">#&gt; Response_5: VallyBotFlat  0.2608  0.0531    4.91  8.9e-07 ***</span></span>
-<span><span class="co">#&gt; Response_5: PPTann        0.2909  0.0786    3.70  0.00022 ***</span></span>
-<span><span class="co">#&gt; Response_5: Loaminess     0.1781  0.0627    2.84  0.00450 ** </span></span>
-<span><span class="co">#&gt; Response_5: cvTemp        0.3435  0.0610    5.63  1.8e-08 ***</span></span>
-<span><span class="co">#&gt; Response_5: T0            0.1853  0.0306    6.06  1.4e-09 ***</span></span>
-<span><span class="co">#&gt; Response_6: Rockiness     0.2608  0.0595    4.38  1.2e-05 ***</span></span>
-<span><span class="co">#&gt; Response_6: Sandiness     0.2222  0.0522    4.26  2.1e-05 ***</span></span>
-<span><span class="co">#&gt; Response_6: VallyBotFlat  0.2436  0.0368    6.61  3.8e-11 ***</span></span>
-<span><span class="co">#&gt; Response_6: PPTann        0.2367  0.0477    4.97  6.8e-07 ***</span></span>
-<span><span class="co">#&gt; Response_6: Loaminess     0.1209  0.0278    4.36  1.3e-05 ***</span></span>
-<span><span class="co">#&gt; Response_6: cvTemp        0.2474  0.0423    5.84  5.1e-09 ***</span></span>
-<span><span class="co">#&gt; Response_6: T0            0.1484  0.0274    5.42  5.9e-08 ***</span></span>
-<span><span class="co">#&gt; Response_7: Rockiness     0.2059  0.0372    5.53  3.1e-08 ***</span></span>
-<span><span class="co">#&gt; Response_7: Sandiness     0.1385  0.0284    4.88  1.0e-06 ***</span></span>
-<span><span class="co">#&gt; Response_7: VallyBotFlat  0.2148  0.0408    5.26  1.4e-07 ***</span></span>
-<span><span class="co">#&gt; Response_7: PPTann        0.1827  0.0376    4.86  1.1e-06 ***</span></span>
-<span><span class="co">#&gt; Response_7: Loaminess     0.0977  0.0357    2.73  0.00624 ** </span></span>
-<span><span class="co">#&gt; Response_7: cvTemp        0.1819  0.0467    3.90  9.7e-05 ***</span></span>
-<span><span class="co">#&gt; Response_7: T0            0.1123  0.0196    5.73  1.0e-08 ***</span></span>
-<span><span class="co">#&gt; Response_8: Rockiness     0.3030  0.0619    4.90  9.8e-07 ***</span></span>
-<span><span class="co">#&gt; Response_8: Sandiness     0.2563  0.0645    3.97  7.0e-05 ***</span></span>
-<span><span class="co">#&gt; Response_8: VallyBotFlat  0.2763  0.0562    4.92  8.7e-07 ***</span></span>
-<span><span class="co">#&gt; Response_8: PPTann        0.2654  0.0516    5.14  2.7e-07 ***</span></span>
-<span><span class="co">#&gt; Response_8: Loaminess     0.1452  0.0379    3.83  0.00013 ***</span></span>
-<span><span class="co">#&gt; Response_8: cvTemp        0.2915  0.0350    8.34  &lt; 2e-16 ***</span></span>
-<span><span class="co">#&gt; Response_8: T0            0.1736  0.0369    4.71  2.5e-06 ***</span></span>
-<span><span class="co">#&gt; Response_9: Rockiness     0.2387  0.0377    6.32  2.5e-10 ***</span></span>
-<span><span class="co">#&gt; Response_9: Sandiness     0.1801  0.0418    4.30  1.7e-05 ***</span></span>
-<span><span class="co">#&gt; Response_9: VallyBotFlat  0.2610  0.0523    4.99  6.1e-07 ***</span></span>
-<span><span class="co">#&gt; Response_9: PPTann        0.2087  0.0533    3.92  8.9e-05 ***</span></span>
-<span><span class="co">#&gt; Response_9: Loaminess     0.1179  0.0443    2.66  0.00774 ** </span></span>
-<span><span class="co">#&gt; Response_9: cvTemp        0.2604  0.0461    5.65  1.6e-08 ***</span></span>
-<span><span class="co">#&gt; Response_9: T0            0.1531  0.0344    4.45  8.6e-06 ***</span></span>
-<span><span class="co">#&gt; Response_10: Rockiness    0.2920  0.0461    6.33  2.4e-10 ***</span></span>
-<span><span class="co">#&gt; Response_10: Sandiness    0.2014  0.0503    4.00  6.3e-05 ***</span></span>
-<span><span class="co">#&gt; Response_10: VallyBotFlat 0.2192  0.0459    4.77  1.8e-06 ***</span></span>
-<span><span class="co">#&gt; Response_10: PPTann       0.2072  0.0481    4.31  1.7e-05 ***</span></span>
-<span><span class="co">#&gt; Response_10: Loaminess    0.1478  0.0374    3.95  7.9e-05 ***</span></span>
-<span><span class="co">#&gt; Response_10: cvTemp       0.3161  0.0624    5.07  4.0e-07 ***</span></span>
-<span><span class="co">#&gt; Response_10: T0           0.1953  0.0409    4.77  1.8e-06 ***</span></span>
-<span><span class="co">#&gt; Response_11: Rockiness    0.2780  0.0621    4.48  7.5e-06 ***</span></span>
-<span><span class="co">#&gt; Response_11: Sandiness    0.2374  0.0633    3.75  0.00017 ***</span></span>
-<span><span class="co">#&gt; Response_11: VallyBotFlat 0.2548  0.0514    4.96  7.1e-07 ***</span></span>
-<span><span class="co">#&gt; Response_11: PPTann       0.2469  0.0508    4.86  1.2e-06 ***</span></span>
-<span><span class="co">#&gt; Response_11: Loaminess    0.1327  0.0331    4.01  6.1e-05 ***</span></span>
-<span><span class="co">#&gt; Response_11: cvTemp       0.2654  0.0309    8.58  &lt; 2e-16 ***</span></span>
-<span><span class="co">#&gt; Response_11: T0           0.1631  0.0318    5.13  3.0e-07 ***</span></span>
-<span><span class="co">#&gt; Response_12: Rockiness    0.2708  0.0674    4.02  5.9e-05 ***</span></span>
-<span><span class="co">#&gt; Response_12: Sandiness    0.2174  0.0611    3.56  0.00038 ***</span></span>
-<span><span class="co">#&gt; Response_12: VallyBotFlat 0.2453  0.0575    4.27  2.0e-05 ***</span></span>
-<span><span class="co">#&gt; Response_12: PPTann       0.2455  0.0578    4.25  2.1e-05 ***</span></span>
-<span><span class="co">#&gt; Response_12: Loaminess    0.1326  0.0463    2.87  0.00415 ** </span></span>
-<span><span class="co">#&gt; Response_12: cvTemp       0.2602  0.0323    8.06  7.7e-16 ***</span></span>
-<span><span class="co">#&gt; Response_12: T0           0.1559  0.0403    3.87  0.00011 ***</span></span>
+<span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
+<span><span class="co">#&gt;                           ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Rockiness → ALA        0.2591  0.0527    4.92  8.7e-07 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ALA        0.1939  0.0282    6.87  6.5e-12 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALA     0.2105  0.0503    4.18  2.9e-05 ***</span></span>
+<span><span class="co">#&gt; PPTann → ALA           0.1774  0.0557    3.18  0.00146 ** </span></span>
+<span><span class="co">#&gt; Loaminess → ALA        0.1306  0.0253    5.17  2.4e-07 ***</span></span>
+<span><span class="co">#&gt; cvTemp → ALA           0.2478  0.0545    4.55  5.5e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → ALA               0.1373  0.0276    4.98  6.5e-07 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → ARE        0.3091  0.0911    3.39  0.00069 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ARE        0.2321  0.0571    4.06  4.9e-05 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARE     0.2467  0.0527    4.68  2.9e-06 ***</span></span>
+<span><span class="co">#&gt; PPTann → ARE           0.2356  0.0791    2.98  0.00291 ** </span></span>
+<span><span class="co">#&gt; Loaminess → ARE        0.1581  0.0316    5.01  5.4e-07 ***</span></span>
+<span><span class="co">#&gt; cvTemp → ARE           0.3095  0.0734    4.21  2.5e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → ARE               0.1639  0.0378    4.33  1.5e-05 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → BAX        0.1885  0.0449    4.20  2.7e-05 ***</span></span>
+<span><span class="co">#&gt; Sandiness → BAX        0.1373  0.0308    4.46  8.1e-06 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → BAX     0.1842  0.0350    5.26  1.5e-07 ***</span></span>
+<span><span class="co">#&gt; PPTann → BAX           0.1547  0.0320    4.84  1.3e-06 ***</span></span>
+<span><span class="co">#&gt; Loaminess → BAX        0.0994  0.0269    3.70  0.00022 ***</span></span>
+<span><span class="co">#&gt; cvTemp → BAX           0.1794  0.0445    4.03  5.7e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → BAX               0.1212  0.0287    4.23  2.4e-05 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → CAM        0.2785  0.0566    4.92  8.5e-07 ***</span></span>
+<span><span class="co">#&gt; Sandiness → CAM        0.2672  0.0728    3.67  0.00024 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → CAM     0.2845  0.0612    4.65  3.3e-06 ***</span></span>
+<span><span class="co">#&gt; PPTann → CAM           0.2413  0.0592    4.07  4.6e-05 ***</span></span>
+<span><span class="co">#&gt; Loaminess → CAM        0.1696  0.0376    4.51  6.4e-06 ***</span></span>
+<span><span class="co">#&gt; cvTemp → CAM           0.2805  0.0574    4.88  1.0e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → CAM               0.1725  0.0357    4.84  1.3e-06 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → GON        0.3301  0.0888    3.72  0.00020 ***</span></span>
+<span><span class="co">#&gt; Sandiness → GON        0.2487  0.0701    3.54  0.00039 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → GON     0.2627  0.0600    4.38  1.2e-05 ***</span></span>
+<span><span class="co">#&gt; PPTann → GON           0.2578  0.1033    2.50  0.01257 *  </span></span>
+<span><span class="co">#&gt; Loaminess → GON        0.1720  0.0439    3.92  9.0e-05 ***</span></span>
+<span><span class="co">#&gt; cvTemp → GON           0.3359  0.0807    4.16  3.1e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → GON               0.1843  0.0357    5.17  2.4e-07 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → MEL        0.2488  0.0537    4.64  3.6e-06 ***</span></span>
+<span><span class="co">#&gt; Sandiness → MEL        0.2100  0.0557    3.77  0.00016 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → MEL     0.2384  0.0472    5.05  4.4e-07 ***</span></span>
+<span><span class="co">#&gt; PPTann → MEL           0.2106  0.0633    3.33  0.00088 ***</span></span>
+<span><span class="co">#&gt; Loaminess → MEL        0.1264  0.0298    4.24  2.3e-05 ***</span></span>
+<span><span class="co">#&gt; cvTemp → MEL           0.2219  0.0468    4.74  2.1e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → MEL               0.1340  0.0329    4.07  4.6e-05 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → OBL        0.1841  0.0349    5.27  1.4e-07 ***</span></span>
+<span><span class="co">#&gt; Sandiness → OBL        0.1358  0.0466    2.91  0.00358 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → OBL     0.1825  0.0517    3.53  0.00041 ***</span></span>
+<span><span class="co">#&gt; PPTann → OBL           0.1611  0.0452    3.56  0.00037 ***</span></span>
+<span><span class="co">#&gt; Loaminess → OBL        0.0944  0.0246    3.84  0.00013 ***</span></span>
+<span><span class="co">#&gt; cvTemp → OBL           0.1714  0.0356    4.82  1.4e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → OBL               0.1167  0.0403    2.90  0.00377 ** </span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → OVA        0.2865  0.0539    5.31  1.1e-07 ***</span></span>
+<span><span class="co">#&gt; Sandiness → OVA        0.2672  0.0677    3.95  7.9e-05 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → OVA     0.2880  0.0615    4.68  2.8e-06 ***</span></span>
+<span><span class="co">#&gt; PPTann → OVA           0.2413  0.0553    4.36  1.3e-05 ***</span></span>
+<span><span class="co">#&gt; Loaminess → OVA        0.1682  0.0374    4.49  7.0e-06 ***</span></span>
+<span><span class="co">#&gt; cvTemp → OVA           0.2725  0.0609    4.47  7.7e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → OVA               0.1761  0.0396    4.45  8.5e-06 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → WIL        0.2321  0.0607    3.82  0.00013 ***</span></span>
+<span><span class="co">#&gt; Sandiness → WIL        0.1848  0.0579    3.19  0.00142 ** </span></span>
+<span><span class="co">#&gt; VallyBotFlat → WIL     0.2332  0.0602    3.87  0.00011 ***</span></span>
+<span><span class="co">#&gt; PPTann → WIL           0.2043  0.0466    4.38  1.2e-05 ***</span></span>
+<span><span class="co">#&gt; Loaminess → WIL        0.1321  0.0358    3.69  0.00022 ***</span></span>
+<span><span class="co">#&gt; cvTemp → WIL           0.2350  0.0557    4.22  2.5e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → WIL               0.1653  0.0454    3.64  0.00027 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → ALP        0.3128  0.0757    4.13  3.6e-05 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ALP        0.2113  0.0385    5.48  4.2e-08 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → ALP     0.2174  0.0565    3.84  0.00012 ***</span></span>
+<span><span class="co">#&gt; PPTann → ALP           0.2034  0.0521    3.91  9.4e-05 ***</span></span>
+<span><span class="co">#&gt; Loaminess → ALP        0.1687  0.0392    4.31  1.7e-05 ***</span></span>
+<span><span class="co">#&gt; cvTemp → ALP           0.3183  0.0851    3.74  0.00018 ***</span></span>
+<span><span class="co">#&gt; T0 → ALP               0.1829  0.0344    5.31  1.1e-07 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → VIM        0.2592  0.0505    5.14  2.8e-07 ***</span></span>
+<span><span class="co">#&gt; Sandiness → VIM        0.2428  0.0570    4.26  2.1e-05 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → VIM     0.2631  0.0586    4.49  7.3e-06 ***</span></span>
+<span><span class="co">#&gt; PPTann → VIM           0.2307  0.0487    4.74  2.2e-06 ***</span></span>
+<span><span class="co">#&gt; Loaminess → VIM        0.1522  0.0326    4.67  3.0e-06 ***</span></span>
+<span><span class="co">#&gt; cvTemp → VIM           0.2486  0.0584    4.26  2.0e-05 ***</span></span>
+<span><span class="co">#&gt; T0 → VIM               0.1638  0.0408    4.01  6.0e-05 ***</span></span>
+<span><span class="co">#&gt;                                                           </span></span>
+<span><span class="co">#&gt; Rockiness → ARO.SAB    0.2265  0.0581    3.90  9.6e-05 ***</span></span>
+<span><span class="co">#&gt; Sandiness → ARO.SAB    0.2040  0.0598    3.41  0.00065 ***</span></span>
+<span><span class="co">#&gt; VallyBotFlat → ARO.SAB 0.2382  0.0672    3.55  0.00039 ***</span></span>
+<span><span class="co">#&gt; PPTann → ARO.SAB       0.2217  0.0605    3.66  0.00025 ***</span></span>
+<span><span class="co">#&gt; Loaminess → ARO.SAB    0.1396  0.0481    2.90  0.00374 ** </span></span>
+<span><span class="co">#&gt; cvTemp → ARO.SAB       0.2077  0.0464    4.48  7.6e-06 ***</span></span>
+<span><span class="co">#&gt; T0 → ARO.SAB           0.1514  0.0305    4.97  6.7e-07 ***</span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>cvTemp is significant for many species. Visualization of the
@@ -822,7 +895,11 @@ effect:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ale_plots</span> <span class="op">=</span> <span class="fu"><a href="../reference/ALE.html">ALE</a></span><span class="op">(</span><span class="va">model_boot</span>, variable <span class="op">=</span> <span class="st">"cvTemp"</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/do.call.html" class="external-link">do.call</a></span><span class="op">(</span><span class="fu">gridExtra</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/pkg/gridExtra/man/arrangeGrob.html" class="external-link">grid.arrange</a></span>, <span class="va">ale_plots</span><span class="op">)</span></span></code></pre></div>
-<p><img src="C-Example_Species_distribution_modeling_files/figure-html/unnamed-chunk-24-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="C/C-unnamed-chunk-24-1.png" alt="plot of chunk unnamed-chunk-24"><p class="caption">
+plot of chunk unnamed-chunk-24
+</p>
+</div>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>

@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2023-09-26</h4>
+            <h4 data-toc-skip class="date">2023-09-29</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -198,7 +198,7 @@ regression model.</p>
 <span><span class="co">#&gt; 5          5.0         3.6          1.4         0.2  setosa</span></span>
 <span><span class="co">#&gt; 6          5.4         3.9          1.7         0.4  setosa</span></span>
 <span></span>
-<span><span class="co">#scale dataset </span></span>
+<span><span class="co">#scale dataset</span></span>
 <span><span class="va">data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">data</span><span class="op">[</span>,<span class="op">-</span><span class="fl">5</span><span class="op">]</span><span class="op">)</span>,Species <span class="op">=</span> <span class="va">data</span><span class="op">[</span>,<span class="fl">5</span><span class="op">]</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -219,7 +219,11 @@ the created object. e aware that this may take some time for large
 networks.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/plotnn-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-plotnn-1.png" alt="plot of chunk plotnn"><p class="caption">
+plot of chunk plotnn
+</p>
+</div>
 <p>The neural network 5 input nodes (3 continoues features, Sepal.Width,
 Petal.Length, Petal.Width and the contrasts for the Species variable
 (n_classes - 1)) and 1 output node for the response (Sepal.Length).</p>
@@ -232,12 +236,21 @@ intercept only model. It allows us to control the training because the
 goal is to beat the baseline loss. If we don’t, we need to adjust the
 optimization parameters (epochs and lr (learning rate)):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-2-1.png" width="400px" style="display: block; margin: auto;"></p>
+<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span>
+<span><span class="co">#&gt; Error in eval_bare(loop, env): Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.</span></span></code></pre></div>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"><p class="caption">
+plot of chunk unnamed-chunk-2
+</p>
+</div>
 <p>vs</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.01</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-3-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3"><p class="caption">
+plot of chunk unnamed-chunk-3
+</p>
+</div>
 <p>See <code>vignette("B-Training_neural_networks"</code>) for more
 details on how to adjust the optimization procedure and increase the
 probability of convergence.</p>
@@ -339,22 +352,22 @@ SDCE:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width     1.256261</span></span>
-<span><span class="co">#&gt; 2 Petal.Length     2.697644</span></span>
-<span><span class="co">#&gt; 3  Petal.Width     2.459219</span></span>
-<span><span class="co">#&gt; 4      Species     1.059621</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width     1.133617</span></span>
+<span><span class="co">#&gt; 2 Petal.Length     2.286806</span></span>
+<span><span class="co">#&gt; 3  Petal.Width     2.783383</span></span>
+<span><span class="co">#&gt; 4      Species     1.053672</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width   0.1569144</span></span>
-<span><span class="co">#&gt; Petal.Length  0.3970971</span></span>
-<span><span class="co">#&gt; Petal.Width   0.3679702</span></span>
+<span><span class="co">#&gt; Sepal.Width  0.06250046</span></span>
+<span><span class="co">#&gt; Petal.Length 0.35557117</span></span>
+<span><span class="co">#&gt; Petal.Width  0.39397602</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Standard Deviation of Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.07579688</span></span>
-<span><span class="co">#&gt; Petal.Length 0.10693245</span></span>
-<span><span class="co">#&gt; Petal.Width  0.08301755</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width  0.08405767</span></span>
+<span><span class="co">#&gt; Petal.Length 0.08007347</span></span>
+<span><span class="co">#&gt; Petal.Width  0.06509943</span></span></code></pre></div>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -367,46 +380,38 @@ with enabled bootstrapping:</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">=</span> <span class="va">data</span></span>
 <span><span class="va">df</span><span class="op">[</span>,<span class="fl">2</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/scale.html" class="external-link">scale</a></span><span class="op">(</span><span class="va">df</span><span class="op">[</span>,<span class="fl">2</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span><span class="op">)</span> <span class="co"># scaling can help the NN to convergence faster</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, </span>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>,</span>
 <span>              epochs <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>              verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>              loss<span class="op">=</span> <span class="st">"mse"</span>, </span>
+<span>              loss<span class="op">=</span> <span class="st">"mse"</span>,</span>
 <span>              bootstrap <span class="op">=</span> <span class="fl">30L</span></span>
 <span>              <span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Feature Importance </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                          Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width      1.1111  0.3297    3.37  0.00075 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length     7.1873  2.6791    2.68  0.00730 ** </span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width      1.0296  0.5751    1.79  0.07341 .  </span></span>
-<span><span class="co">#&gt; Response_1: Species          0.1735  0.0881    1.97  0.04900 *  </span></span>
+<span><span class="co">#&gt; ── Feature Importance</span></span>
+<span><span class="co">#&gt;                             Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
+<span><span class="co">#&gt; Sepal.Width → Sepal.Length       1.084   0.353    3.07   0.0022 **</span></span>
+<span><span class="co">#&gt; Petal.Length → Sepal.Length      6.778   2.649    2.56   0.0105 * </span></span>
+<span><span class="co">#&gt; Petal.Width → Sepal.Length       1.075   0.496    2.17   0.0301 * </span></span>
+<span><span class="co">#&gt; Species → Sepal.Length           0.209   0.119    1.76   0.0790 . </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Average Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                             ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width  0.2830  0.0520    5.44  5.4e-08 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length 0.7501  0.1248    6.01  1.9e-09 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width  0.2171  0.0921    2.36    0.018 *  </span></span>
+<span><span class="co">#&gt; ── Average Conditional Effects</span></span>
+<span><span class="co">#&gt;                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width → Sepal.Length  0.2761  0.0578    4.77  1.8e-06 ***</span></span>
+<span><span class="co">#&gt; Petal.Length → Sepal.Length 0.7587  0.1142    6.64  3.1e-11 ***</span></span>
+<span><span class="co">#&gt; Petal.Width → Sepal.Length  0.2448  0.0857    2.86   0.0043 ** </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;      Standard Deviation of Conditional Effects </span></span>
-<span><span class="co">#&gt;  ##########################################################</span></span>
-<span><span class="co">#&gt;                             ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Response_1: Sepal.Width  0.1076  0.0213    5.06  4.2e-07 ***</span></span>
-<span><span class="co">#&gt; Response_1: Petal.Length 0.2033  0.0659    3.08    0.002 ** </span></span>
-<span><span class="co">#&gt; Response_1: Petal.Width  0.1003  0.0338    2.96    0.003 ** </span></span>
+<span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
+<span><span class="co">#&gt;                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width → Sepal.Length  0.1161  0.0260    4.46  8.1e-06 ***</span></span>
+<span><span class="co">#&gt; Petal.Length → Sepal.Length 0.2134  0.0823    2.59  0.00953 ** </span></span>
+<span><span class="co">#&gt; Petal.Width → Sepal.Length  0.1021  0.0269    3.80  0.00015 ***</span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -431,14 +436,22 @@ important feature.</p>
 <p>Visualization of the effects:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/PDP.html">PDP</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-9-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9"><p class="caption">
+plot of chunk unnamed-chunk-9
+</p>
+</div>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://www.r-project.org" class="external-link">effects</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: carData</span></span>
 <span><span class="co">#&gt; lattice theme set by effectsTheme()</span></span>
 <span><span class="co">#&gt; See ?effectsTheme for details.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/effects/man/effect.html" class="external-link">allEffects</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-10-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10"><p class="caption">
+plot of chunk unnamed-chunk-10
+</p>
+</div>
 <p>There are some differences between the statistical model and the NN -
 which is to be expected because the NN can fit the data more flexible.
 But at the same time the differences have large confidence intervals
@@ -457,14 +470,22 @@ adding layers and/or making them wider:</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>              loss<span class="op">=</span> <span class="st">"mse"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,</span>
 <span>              hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-11-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11"><p class="caption">
+plot of chunk unnamed-chunk-11
+</p>
+</div>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># "large NN" - high complexity</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>              loss<span class="op">=</span> <span class="st">"mse"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,</span>
 <span>              hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/unnamed-chunk-11-2.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-11-2.png" alt="plot of chunk unnamed-chunk-11"><p class="caption">
+plot of chunk unnamed-chunk-11
+</p>
+</div>
 <p>There is no definitive guide to choosing the right architecture for
 the right task. However, there are some general rules/recommendations:
 In general, wider, and deeper neural networks can improve generalization
@@ -493,10 +514,10 @@ have to provide a vector the same length as there are hidden layers. The
 activation function of the output layer is chosen with the loss argument
 and does not have to be provided.</p>
 <div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#selu as activation function for all layers: </span></span>
+<code class="sourceCode R"><span><span class="co">#selu as activation function for all layers:</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>,<span class="fl">10</span>,<span class="fl">10</span>,<span class="fl">10</span><span class="op">)</span>, activation<span class="op">=</span> <span class="st">"relu"</span><span class="op">)</span></span>
-<span><span class="co">#layer specific activation functions: </span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, </span>
+<span><span class="co">#layer specific activation functions:</span></span>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,</span>
 <span>              hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">10</span>,<span class="fl">10</span>,<span class="fl">10</span>,<span class="fl">10</span><span class="op">)</span>, activation<span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"relu"</span>,<span class="st">"selu"</span>,<span class="st">"tanh"</span>,<span class="st">"sigmoid"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>Note: The default activation function should be adequate for most
 tasks. We don’t recommend tuning it.</p>
@@ -518,7 +539,7 @@ alpha and lambda.</p>
 loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
 \]</span></p>
 <div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#elastic net penalty in all layers: </span></span>
+<code class="sourceCode R"><span><span class="co">#elastic net penalty in all layers:</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, lambda <span class="op">=</span> <span class="fl">0.01</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"softmax"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level4">
@@ -529,9 +550,9 @@ et al.</a> can be controlled similar to elastic net regularization. In
 this approach, a percentage of different nodes gets left during each
 epoch.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co">#dropout of 35% on all layers: </span></span>
+<code class="sourceCode R"><span><span class="co">#dropout of 35% on all layers:</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fl">0.35</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#dropout of 35% only on last 2 layers: </span></span>
+<span><span class="co">#dropout of 35% only on last 2 layers:</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0.35</span>, <span class="fl">0.35</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
@@ -552,10 +573,14 @@ See ?config_lr_scheduler() for more information</p>
 <code class="sourceCode R"><span><span class="co"># Step Learning rate scheduler that reduces learning rate every 16 steps by a factor of 0.5</span></span>
 <span><span class="va">scheduler</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/config_lr_scheduler.html">config_lr_scheduler</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"step"</span>,</span>
 <span>                                 step_size <span class="op">=</span> <span class="fl">16</span>,</span>
-<span>                                 gamma <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span> </span>
+<span>                                 gamma <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,lr <span class="op">=</span> <span class="fl">0.01</span>, lr_scheduler<span class="op">=</span> <span class="va">scheduler</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/lr_scheduler-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-lr_scheduler-1.png" alt="plot of chunk lr_scheduler"><p class="caption">
+plot of chunk lr_scheduler
+</p>
+</div>
 </div>
 <div class="section level3">
 <h3 id="optimizer">Optimizer<a class="anchor" aria-label="anchor" href="#optimizer"></a>
@@ -572,7 +597,11 @@ See <code>?config_optimizer()</code> for more information.</p>
 <span>  type <span class="op">=</span> <span class="st">"sgd"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,  optimizer <span class="op">=</span> <span class="va">opt</span>, lr<span class="op">=</span><span class="fl">0.002</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"softmax"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/optim-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-optim-1.png" alt="plot of chunk optim"><p class="caption">
+plot of chunk optim
+</p>
+</div>
 </div>
 <div class="section level3">
 <h3 id="early-stopping">Early Stopping<a class="anchor" aria-label="anchor" href="#early-stopping"></a>
@@ -583,10 +612,14 @@ bigger than the validation loss n epochs early. The n can be defined by
 the early_stopping argument. It is required to set validation &gt;
 0.</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># Stops training if validation loss at current epoch is bigger than that 15 epochs earlier  </span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">1000</span>, </span>
+<code class="sourceCode R"><span><span class="co"># Stops training if validation loss at current epoch is bigger than that 15 epochs earlier</span></span>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>              validation <span class="op">=</span> <span class="fl">0.2</span>, early_stopping <span class="op">=</span> <span class="fl">15</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<p><img src="A-Introduction_to_cito_files/figure-html/early_stopping-1.png" width="400px" style="display: block; margin: auto;"></p>
+<div class="figure" style="text-align: center">
+<img src="A/A-early_stopping-1.png" alt="plot of chunk early_stopping"><p class="caption">
+plot of chunk early_stopping
+</p>
+</div>
 </div>
 </div>
 <div class="section level2">
@@ -595,25 +628,25 @@ the early_stopping argument. It is required to set validation &gt;
 <p>You can continue the training process of an existing model with
 continue_training().</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># simple example, simply adding another 12 epochs to the training process   </span></span>
+<code class="sourceCode R"><span><span class="co"># simple example, simply adding another 12 epochs to the training process</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            [,1]</span></span>
-<span><span class="co">#&gt; [1,] -0.9834418</span></span>
-<span><span class="co">#&gt; [2,] -1.3863597</span></span>
-<span><span class="co">#&gt; [3,] -1.2911282</span></span>
-<span><span class="co">#&gt; [4,] -1.2791622</span></span>
-<span><span class="co">#&gt; [5,] -0.8851584</span></span>
-<span><span class="co">#&gt; [6,] -0.5502642</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -0.9836558</span></span>
+<span><span class="co">#&gt; [2,] -1.4395623</span></span>
+<span><span class="co">#&gt; [3,] -1.3351157</span></span>
+<span><span class="co">#&gt; [4,] -1.3388002</span></span>
+<span><span class="co">#&gt; [5,] -0.8847700</span></span>
+<span><span class="co">#&gt; [6,] -0.4809422</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
-<span><span class="co"># picking the model with the smalles validation loss </span></span>
+<span><span class="co"># picking the model with the smalles validation loss</span></span>
 <span><span class="co"># with changed parameters, in this case a smaller learning rate and a smaller batchsize</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, </span>
-<span>                            epochs <span class="op">=</span> <span class="fl">32</span>, </span>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>,</span>
+<span>                            epochs <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>                            changed_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lr <span class="op">=</span> <span class="fl">0.001</span>, batchsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
 <span>                            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>

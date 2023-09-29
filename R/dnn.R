@@ -476,27 +476,30 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
   out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device))
   out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
 
+  if(!is.null(out$importance[[1]])){
+    res_imps = list()
+    for(i in 2:ncol(out$importance[[1]])) {
+      tmp = sapply(out$importance, function(X) X[,i])
+      imps = apply(tmp, 1, mean) - 1
+      imps_se = apply(tmp, 1, stats::sd)
 
-  res_imps = list()
-  for(i in 2:ncol(out$importance[[1]])) {
-    tmp = sapply(out$importance, function(X) X[,i])
-    imps = apply(tmp, 1, mean) - 1
-    imps_se = apply(tmp, 1, stats::sd)
-
-    coefmat = cbind(
-      as.vector(as.matrix(imps)),
-      as.vector(as.matrix(imps_se)),
-      as.vector(as.matrix(imps/imps_se)),
-      as.vector(as.matrix(stats::pnorm(abs(imps/imps_se), lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
-    if(object$loss == "softmax") resp = object$response_column
-    else resp = object$responses[i-1]
-    rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
-    if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
-    res_imps[[i-1]] = coefmat
+      coefmat = cbind(
+        as.vector(as.matrix(imps)),
+        as.vector(as.matrix(imps_se)),
+        as.vector(as.matrix(imps/imps_se)),
+        as.vector(as.matrix(stats::pnorm(abs(imps/imps_se), lower.tail = FALSE)*2))
+      )
+      colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
+      resp = object$responses[i-1]
+      if(inherits(object$loss, "character")) { if(object$loss == "softmax") resp = object$response_column }
+      rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
+      if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
+      res_imps[[i-1]] = coefmat
+    }
+    out$importance_coefmat = do.call(rbind, res_imps)
+  } else {
+    out$importance_coefmat = NULL
   }
-  out$importance_coefmat = do.call(rbind, res_imps)
 
 
   res_ACE = list()
@@ -554,7 +557,7 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   #cat("\t##########################################################\n")
   #cat("\nFeature Importance:\n")
 
-  stats::printCoefmat(x$importance_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
+  if(!is.null(x$importance_coefmat)) stats::printCoefmat(x$importance_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
 
 
   #cat("\n\n\t##########################################################\n")

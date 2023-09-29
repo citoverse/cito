@@ -49,7 +49,9 @@ data = data.frame(Y = Y, X = X)
 scenarios =
   list(
     list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "softmax", epochs = 1L),
-    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L)
+    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L),
+    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "softmax", epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, bootstrap = 2L)
   )
 testthat::test_that("DNN softmax/binomial", {
   testthat::skip_on_cran()
@@ -70,9 +72,35 @@ scenarios =
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L),
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L)
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L),
+
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L)
   )
 testthat::test_that("DNN rnorm/poisson", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  for(i in 1:length(scenarios)) {
+    wrap_dnn(scenarios[[i]])
+  }
+})
+
+
+X = matrix(runif(3*50), 50, 3)
+Y = matrix(rpois(50*3,lambda = 2), 50, 3)
+data = data.frame(Y = Y, X = X)
+scenarios =
+  list(
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L, bootstrap = 2L)
+  )
+testthat::test_that("DNN mae", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()

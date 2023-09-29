@@ -10,7 +10,7 @@ bibentry(
                           family = "Pichler")),
   journal  = "arXiv preprint arXiv:2303.09599",
   year     = "2023",
-  doi      = "https://doi.org/10.48550/arXiv.2303.09599",
+  doi      = "arXiv.2303.09599",
   header   = "To cite cito in publications use:",
-  textVersion = "Amesoeder, C., Hartig, F., and Pichler, M. (2023) cito: An R package for training neural networks using torch. arXiv preprint arXiv:2303.09599  https://doi.org/10.48550/arXiv.2303.09599."
+  textVersion = "Amesoeder, C., Hartig, F., and Pichler, M. (2023) cito: An R package for training neural networks using torch. arXiv preprint arXiv:2303.09599  DOI:10.48550/arXiv.2303.09599."
 )

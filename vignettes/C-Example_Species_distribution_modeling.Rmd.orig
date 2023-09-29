@@ -22,8 +22,8 @@ editor_options:
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  dpi=32,
-  out.width="400px",
+  #dpi=32,
+  #out.width="400px",
   fig.align="center",
   fig.path = 'C/C-'
 

@@ -4,12 +4,12 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu"){
   model<- check_model(model)
   softmax = FALSE
   if(inherits(model$loss$call, "character")) {
-    if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(0)}
+    if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(NULL)}
     if(model$loss$call  == "softmax") {
       softmax = TRUE
     }
   } else {
-    if(!any(model$loss$call$family == c("binomial")  )){ return(0)}
+    if(!any(model$loss$call$family == c("binomial")  )){ return(NULL)}
   }
   loss<- model$loss$loss
 

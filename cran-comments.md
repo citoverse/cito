@@ -1,4 +1,26 @@
 # Version 1.0.2
+## cito submission 3 2023/29/9
+Issues:
+
+Found the following (possibly) invalid DOIs:
+DOI: https://doi.org/10.48550/arXiv.2303.09599
+From: inst/CITATION
+Status: 404
+Message: Not Found
+
+This is an URL, please onlky use the DOI, i.e. 10.48550/arXiv.2303.09599
+within the DOI markup.
+
+
+Size of tarball: 12294996 bytes
+
+Both issues were addressed. The package should have now a size of less than 5MB.
+
+Best,
+Maximilian Pichler
+
+
+
 ## cito submission 2 2023/29/9
 This is a major update where several features such as bootstrapping for uncertainties and additional xAI methods 
 (average conditional effects) have been added. Also, several bugs have been fixed, documentation has been improved,
@@ -31,8 +53,6 @@ Win-builder
 * R-release, R-development, and R-oldrelease
 
 
-
-# Version 1.0.2
 ## cito submission 1 2023/22/9
 This is a major update where several features such as bootstrapping for uncertainties and additional xAI methods 
 (average conditional effects) have been added. Also, several bugs have been fixed, documentation has been improved,
