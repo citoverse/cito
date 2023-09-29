@@ -1,4 +1,27 @@
 # Version 1.0.2
+## cito submission 4 2023/29/9
+Issues:
+Found the following (possibly) invalid DOIs:
+DOI: arXiv.2303.09599
+From: inst/CITATION
+Message: Invalid DOI
+
+Last time I wrote
+
+"... please onlk use the DOI, i.e.
+10.48550/arXiv.2303.09599
+within the DOI markup."
+
+Please fix and resubmit.
+
+
+Fixed, thanks.
+
+Best,
+Maximilian Pichler
+
+
+
 ## cito submission 3 2023/29/9
 Issues:
 
