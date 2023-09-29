@@ -1,0 +1,355 @@
+---
+title: "Advanced: Custom loss functions and prediction intervals"
+author: "Maximilian Pichler"
+date: "2023-09-29"
+abstract: "This vignette shows how cito can be used for advanced techniques such as custom loss functions."
+output:
+ rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean
+vignette: >
+  %\VignetteIndexEntry{Advanced: Custom loss functions and prediction intervals}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  chunk_output_type: console
+---
+
+
+
+## Custom loss functions
+
+We can pass custom loss functions to cito. R variables/values that are used within the loss function and that should be additionally optimized must be passed to cito via the custom_parameters argument in `dnn(...custom_parameters = list(name_of_parameter=...))`
+
+Examples:
+
+-   (Complex) likelihood functions
+-   Advanced: Quantile regression
+
+Requirements: - Complex calculations have to be written in torch - All functions/calls must have derivatives.
+
+### Example 1: Custom (likelihood/loss) functions
+
+Gaussian likelihood (already implemented, but still a nice example). Custom parameters must be passed as a list to the custom_parameters function. The names must match the names of the parameters in the custom loss function. The values of the named custom parameters will be the initial values. Cito will automatically convert them to torch tensors:
+
+
+```r
+library(cito)
+library(torch)
+gaussian_ll = function(pred, true, ...) {
+  loss = -torch::distr_normal(pred, scale = torch::torch_exp(scale_par))$log_prob(true)
+  return(loss$mean())
+}
+
+# Simulate some data
+X = runif(200)
+Y = 2*X + rnorm(200, sd = 0.4)
+df = data.frame(X = X, Y = Y)
+
+m = dnn(Y~X, data = df,
+        loss = gaussian_ll, # custom function
+        custom_parameters = list(scale_par = 0.0) # custom parameter that should be addtionally optimized
+        )
+#> Loss at epoch 1: 1.669151, lr: 0.01000
+```
+
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-2</p>
+</div>
+
+```
+#> Loss at epoch 2: 1.504121, lr: 0.01000
+#> Loss at epoch 3: 1.423879, lr: 0.01000
+#> Loss at epoch 4: 1.314712, lr: 0.01000
+#> Loss at epoch 5: 1.242840, lr: 0.01000
+#> Loss at epoch 6: 1.188519, lr: 0.01000
+#> Loss at epoch 7: 1.150110, lr: 0.01000
+#> Loss at epoch 8: 1.124761, lr: 0.01000
+#> Loss at epoch 9: 1.124141, lr: 0.01000
+#> Loss at epoch 10: 1.113516, lr: 0.01000
+#> Loss at epoch 11: 1.071532, lr: 0.01000
+#> Loss at epoch 12: 1.038780, lr: 0.01000
+#> Loss at epoch 13: 1.038457, lr: 0.01000
+#> Loss at epoch 14: 1.036181, lr: 0.01000
+#> Loss at epoch 15: 1.011537, lr: 0.01000
+#> Loss at epoch 16: 0.970084, lr: 0.01000
+#> Loss at epoch 17: 0.975240, lr: 0.01000
+#> Loss at epoch 18: 0.945150, lr: 0.01000
+#> Loss at epoch 19: 0.954284, lr: 0.01000
+#> Loss at epoch 20: 0.954011, lr: 0.01000
+#> Loss at epoch 21: 0.952408, lr: 0.01000
+#> Loss at epoch 22: 0.958651, lr: 0.01000
+#> Loss at epoch 23: 0.860190, lr: 0.01000
+#> Loss at epoch 24: 0.879676, lr: 0.01000
+#> Loss at epoch 25: 0.876349, lr: 0.01000
+#> Loss at epoch 26: 0.831044, lr: 0.01000
+#> Loss at epoch 27: 0.791466, lr: 0.01000
+#> Loss at epoch 28: 0.767249, lr: 0.01000
+#> Loss at epoch 29: 0.773460, lr: 0.01000
+#> Loss at epoch 30: 0.727706, lr: 0.01000
+#> Loss at epoch 31: 0.749850, lr: 0.01000
+#> Loss at epoch 32: 0.658332, lr: 0.01000
+#> Loss at epoch 33: 0.635833, lr: 0.01000
+#> Loss at epoch 34: 0.610087, lr: 0.01000
+#> Loss at epoch 35: 0.631957, lr: 0.01000
+#> Loss at epoch 36: 0.590275, lr: 0.01000
+#> Loss at epoch 37: 0.536814, lr: 0.01000
+#> Loss at epoch 38: 0.535410, lr: 0.01000
+#> Loss at epoch 39: 0.492682, lr: 0.01000
+#> Loss at epoch 40: 0.518803, lr: 0.01000
+#> Loss at epoch 41: 0.500447, lr: 0.01000
+#> Loss at epoch 42: 0.493083, lr: 0.01000
+#> Loss at epoch 43: 0.461173, lr: 0.01000
+#> Loss at epoch 44: 0.512429, lr: 0.01000
+#> Loss at epoch 45: 0.526354, lr: 0.01000
+#> Loss at epoch 46: 0.490424, lr: 0.01000
+#> Loss at epoch 47: 0.448385, lr: 0.01000
+#> Loss at epoch 48: 0.477516, lr: 0.01000
+#> Loss at epoch 49: 0.467603, lr: 0.01000
+#> Loss at epoch 50: 0.486872, lr: 0.01000
+#> Loss at epoch 51: 0.514071, lr: 0.01000
+#> Loss at epoch 52: 0.476858, lr: 0.01000
+#> Loss at epoch 53: 0.479074, lr: 0.01000
+#> Loss at epoch 54: 0.484063, lr: 0.01000
+#> Loss at epoch 55: 0.461287, lr: 0.01000
+#> Loss at epoch 56: 0.456807, lr: 0.01000
+#> Loss at epoch 57: 0.430906, lr: 0.01000
+#> Loss at epoch 58: 0.471624, lr: 0.01000
+#> Loss at epoch 59: 0.452308, lr: 0.01000
+#> Loss at epoch 60: 0.426248, lr: 0.01000
+#> Loss at epoch 61: 0.501966, lr: 0.01000
+#> Loss at epoch 62: 0.503362, lr: 0.01000
+#> Loss at epoch 63: 0.475547, lr: 0.01000
+#> Loss at epoch 64: 0.504085, lr: 0.01000
+#> Loss at epoch 65: 0.458357, lr: 0.01000
+#> Loss at epoch 66: 0.462372, lr: 0.01000
+#> Loss at epoch 67: 0.493424, lr: 0.01000
+#> Loss at epoch 68: 0.444617, lr: 0.01000
+#> Loss at epoch 69: 0.453957, lr: 0.01000
+#> Loss at epoch 70: 0.446126, lr: 0.01000
+#> Loss at epoch 71: 0.455298, lr: 0.01000
+#> Loss at epoch 72: 0.436067, lr: 0.01000
+#> Loss at epoch 73: 0.477303, lr: 0.01000
+#> Loss at epoch 74: 0.456661, lr: 0.01000
+#> Loss at epoch 75: 0.510867, lr: 0.01000
+#> Loss at epoch 76: 0.432884, lr: 0.01000
+#> Loss at epoch 77: 0.428653, lr: 0.01000
+#> Loss at epoch 78: 0.461717, lr: 0.01000
+#> Loss at epoch 79: 0.448087, lr: 0.01000
+#> Loss at epoch 80: 0.545640, lr: 0.01000
+#> Loss at epoch 81: 0.478248, lr: 0.01000
+#> Loss at epoch 82: 0.460026, lr: 0.01000
+#> Loss at epoch 83: 0.456826, lr: 0.01000
+#> Loss at epoch 84: 0.460045, lr: 0.01000
+#> Loss at epoch 85: 0.517412, lr: 0.01000
+#> Loss at epoch 86: 0.436823, lr: 0.01000
+#> Loss at epoch 87: 0.470510, lr: 0.01000
+#> Loss at epoch 88: 0.444887, lr: 0.01000
+#> Loss at epoch 89: 0.476167, lr: 0.01000
+#> Loss at epoch 90: 0.457018, lr: 0.01000
+#> Loss at epoch 91: 0.495919, lr: 0.01000
+#> Loss at epoch 92: 0.564794, lr: 0.01000
+#> Loss at epoch 93: 0.522383, lr: 0.01000
+#> Loss at epoch 94: 0.468512, lr: 0.01000
+#> Loss at epoch 95: 0.475780, lr: 0.01000
+#> Loss at epoch 96: 0.468109, lr: 0.01000
+#> Loss at epoch 97: 0.502194, lr: 0.01000
+#> Loss at epoch 98: 0.477102, lr: 0.01000
+#> Loss at epoch 99: 0.475539, lr: 0.01000
+#> Loss at epoch 100: 0.455398, lr: 0.01000
+```
+
+The optimized parameters are saved in the parameter field:
+
+
+```r
+exp(m$parameter$scale_par) # true scale parameter: 0.4!
+#> [1] 0.3906517
+```
+
+### Example 2: Quantile regression
+
+The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression (a form of conformal prediction), which has the advantage of providing constant prediction intervals, which can be beneficial in certain situations (e.g., heteroscedasticity):
+
+Simulate data:
+
+
+```r
+sim_in = function(n = 5) {
+  S = diag(1., 3)
+  S[1,2]=S[2,1]=0.0
+  X = mvtnorm::rmvnorm(n, sigma = S)
+  X1 = X[,1]
+  C = X[,2]
+  X2 = X[,3]
+  Y = 1*X1 + 0.1*X2 + 0.0*C + rnorm(n, sd = 0.3+2*1.8^(X1+1))
+  return(data.frame(Y = Y, X1 = X1, X2 = X2, C = C))
+}
+
+data = sim_in(500L)
+plot(data$X1, data$Y)
+```
+
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-4</p>
+</div>
+
+The variance increases with higher feature values
+
+Quantile Regression:
+
+
+```r
+library(torch)
+
+q1 = torch_tensor(0.05)
+q2 = torch_tensor(0.5)
+q3 = torch_tensor(0.95)
+loss_func = function(pred, true,...) {
+  l1 = torch_max(q1*(true[,1,drop=FALSE]-pred[,1,drop=FALSE]), other = (1.0-q1)*(pred[,1,drop=FALSE]-true[,1,drop=FALSE]))
+  l2 = torch_max(q2*(true[,2,drop=FALSE]-pred[,2,drop=FALSE]), other = (1.0-q2)*(pred[,2,drop=FALSE]-true[,2,drop=FALSE]))
+  l3 = torch_max(q3*(true[,3,drop=FALSE]-pred[,3,drop=FALSE]), other = (1.0-q3)*(pred[,3,drop=FALSE]-true[,3,drop=FALSE]))
+  return(l1+l2+l3)
+}
+
+
+m = dnn(cbind(Y, Y, Y)~., data = data,
+        lr = 0.01,
+        loss = loss_func,
+        lambda = 0.000, alpha = 0.5,
+        epochs = 70L, hidden = c(30L, 30L),
+        activation = "selu", verbose = TRUE, plot = FALSE)
+#> Loss at epoch 1: 5.552001, lr: 0.01000
+#> Loss at epoch 2: 5.341953, lr: 0.01000
+#> Loss at epoch 3: 5.016964, lr: 0.01000
+#> Loss at epoch 4: 4.691513, lr: 0.01000
+#> Loss at epoch 5: 4.376599, lr: 0.01000
+#> Loss at epoch 6: 4.094624, lr: 0.01000
+#> Loss at epoch 7: 3.830789, lr: 0.01000
+#> Loss at epoch 8: 3.584770, lr: 0.01000
+#> Loss at epoch 9: 3.422028, lr: 0.01000
+#> Loss at epoch 10: 3.315760, lr: 0.01000
+#> Loss at epoch 11: 3.217684, lr: 0.01000
+#> Loss at epoch 12: 3.130735, lr: 0.01000
+#> Loss at epoch 13: 3.122442, lr: 0.01000
+#> Loss at epoch 14: 3.085380, lr: 0.01000
+#> Loss at epoch 15: 3.082084, lr: 0.01000
+#> Loss at epoch 16: 3.050499, lr: 0.01000
+#> Loss at epoch 17: 3.045815, lr: 0.01000
+#> Loss at epoch 18: 3.060745, lr: 0.01000
+#> Loss at epoch 19: 3.044864, lr: 0.01000
+#> Loss at epoch 20: 2.998237, lr: 0.01000
+#> Loss at epoch 21: 3.024460, lr: 0.01000
+#> Loss at epoch 22: 3.040583, lr: 0.01000
+#> Loss at epoch 23: 2.999511, lr: 0.01000
+#> Loss at epoch 24: 2.980844, lr: 0.01000
+#> Loss at epoch 25: 3.007409, lr: 0.01000
+#> Loss at epoch 26: 3.008624, lr: 0.01000
+#> Loss at epoch 27: 3.006878, lr: 0.01000
+#> Loss at epoch 28: 3.005915, lr: 0.01000
+#> Loss at epoch 29: 2.987745, lr: 0.01000
+#> Loss at epoch 30: 2.966082, lr: 0.01000
+#> Loss at epoch 31: 2.972738, lr: 0.01000
+#> Loss at epoch 32: 3.045744, lr: 0.01000
+#> Loss at epoch 33: 3.003897, lr: 0.01000
+#> Loss at epoch 34: 2.967543, lr: 0.01000
+#> Loss at epoch 35: 2.946097, lr: 0.01000
+#> Loss at epoch 36: 2.945403, lr: 0.01000
+#> Loss at epoch 37: 2.950108, lr: 0.01000
+#> Loss at epoch 38: 2.971510, lr: 0.01000
+#> Loss at epoch 39: 3.003825, lr: 0.01000
+#> Loss at epoch 40: 2.947096, lr: 0.01000
+#> Loss at epoch 41: 2.955862, lr: 0.01000
+#> Loss at epoch 42: 2.947620, lr: 0.01000
+#> Loss at epoch 43: 2.946097, lr: 0.01000
+#> Loss at epoch 44: 2.948589, lr: 0.01000
+#> Loss at epoch 45: 2.944184, lr: 0.01000
+#> Loss at epoch 46: 2.938549, lr: 0.01000
+#> Loss at epoch 47: 2.955519, lr: 0.01000
+#> Loss at epoch 48: 2.934863, lr: 0.01000
+#> Loss at epoch 49: 2.962625, lr: 0.01000
+#> Loss at epoch 50: 2.959112, lr: 0.01000
+#> Loss at epoch 51: 2.949428, lr: 0.01000
+#> Loss at epoch 52: 2.940335, lr: 0.01000
+#> Loss at epoch 53: 2.950997, lr: 0.01000
+#> Loss at epoch 54: 2.940417, lr: 0.01000
+#> Loss at epoch 55: 2.938631, lr: 0.01000
+#> Loss at epoch 56: 2.952895, lr: 0.01000
+#> Loss at epoch 57: 2.938682, lr: 0.01000
+#> Loss at epoch 58: 2.979037, lr: 0.01000
+#> Loss at epoch 59: 2.952637, lr: 0.01000
+#> Loss at epoch 60: 2.963621, lr: 0.01000
+#> Loss at epoch 61: 2.946962, lr: 0.01000
+#> Loss at epoch 62: 2.947898, lr: 0.01000
+#> Loss at epoch 63: 2.968755, lr: 0.01000
+#> Loss at epoch 64: 2.917151, lr: 0.01000
+#> Loss at epoch 65: 2.945379, lr: 0.01000
+#> Loss at epoch 66: 2.922248, lr: 0.01000
+#> Loss at epoch 67: 2.926532, lr: 0.01000
+#> Loss at epoch 68: 2.921383, lr: 0.01000
+#> Loss at epoch 69: 2.911582, lr: 0.01000
+#> Loss at epoch 70: 2.913785, lr: 0.01000
+
+plot(data$X1, data$Y)
+lines(smooth.spline(data$X1, predict(m)[,1], spar = 0.01), col = "blue")
+lines(smooth.spline(data$X1, predict(m)[,3], spar = 0.01), col = "blue")
+lines(smooth.spline(data$X1, predict(m)[,2], spar = 0.01), col = "red")
+```
+
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-5</p>
+</div>
+
+### Example 3: Using cito for optimization / active learning
+
+Neural networks can be used in an unconventional way to optimize arbitrary functions (which is sometimes called active learning, it is related to reinforcement learning) - the only prerequiste is that the analytic derivative of the function using torch must be available. We provide the function to be optimized as a series of Torch operations. First, our model will predict the parameters (based on noise, the inputs don't matter) which are passed to the custom loss function and then we will then use the model function (which we optimize) to compute the loss and return it to the optimizer. In that way we overfit to the noisy inputs and the DNN will learn to predict the optimal set of parameters - independent of the input.
+
+
+```r
+X = runif(200)
+Y = 2*X + rnorm(200, sd = 0.4)
+df = data.frame(X = X, Y = Y)
+
+# Function we want to optimize (linear model)
+Xt = torch_tensor(matrix(X))
+Yt = torch_tensor(matrix(Y))
+
+model_lm = function(par) {
+  pred = Xt$matmul(par[,1,drop=FALSE])
+  loss = -torch::distr_normal(pred, scale = torch::torch_exp(par[,2,drop=FALSE]))$log_prob(Yt)
+  return(loss$mean())
+}
+
+custom_loss = function(pred, true, ...) {
+  if(nrow(pred) > 1) return(torch_zeros(1L)) # disable loss calculation
+  loss = model_lm(pred)
+  return(loss)
+}
+
+# X and Y values don't matter, number of columns in Y has to match the number of parameters we want to optimize
+noise = matrix(runif(300*5), 300, 5)
+noise_y = matrix(runif(300*2), 300, 2)
+df = data.frame(y1 = noise_y[,1], y2 = noise_y[,2], noise)
+
+m = dnn(cbind(y1, y2)~., data = df, loss = custom_loss, batchsize = 1L, epochs = 20L, verbose = FALSE)
+```
+
+<div class="figure" style="text-align: center">
+<img src="D/D-unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-6</p>
+</div>
+
+```r
+# Effect:
+mean(predict(m)[,1])
+#> [1] 2.019594
+# SD
+mean(exp(predict(m)[,2]))
+#> [1] 0.3654056
+```

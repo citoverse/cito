@@ -14,7 +14,7 @@ vignette: >
   %\VignetteIndexEntry{Training neural networks}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -24,7 +24,8 @@ knitr::opts_chunk$set(
   comment = "#>",
   dpi=32,
   out.width="400px",
-  fig.align="center"
+  fig.align="center",
+  fig.path = 'B/B-'
 )
 options("progress_enabled" = FALSE)
 
@@ -106,12 +107,12 @@ A common strategy to deal with the learning rate problem is to start with a high
 I favor the "reduce learning rate on plateau" scheduler. If a loss plateau isn't resolved for a certain number of epochs (patience), the learning rate will be reduced ($lr_{new} = factor * lr_{old}$):
 
 ```{r}
-nn.fit_high<- dnn(Species~., data = datasets::iris, 
-                  lr = 0.2, 
-                  epochs = 60L, 
+nn.fit_high<- dnn(Species~., data = datasets::iris,
+                  lr = 0.2,
+                  epochs = 60L,
                   loss = "softmax",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
-                  verbose = TRUE, 
+                  verbose = TRUE,
                   plot = TRUE)
 ```
 
@@ -120,12 +121,12 @@ At the end of the training, the learning rate is 0.025
 Note: The learning rate scheduler is a powerful approach to improve the likeliness of convergence, BUT it cannot help with much too high learning rates!
 
 ```{r}
-nn.fit_high<- dnn(Species~., data = datasets::iris, 
-                  lr = 2, 
-                  epochs = 60L, 
+nn.fit_high<- dnn(Species~., data = datasets::iris,
+                  lr = 2,
+                  epochs = 60L,
                   loss = "softmax",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
-                  verbose = TRUE, 
+                  verbose = TRUE,
                   plot = TRUE)
 ```
 

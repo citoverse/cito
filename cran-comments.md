@@ -1,4 +1,38 @@
 # Version 1.0.2
+## cito submission 2 2023/29/9
+This is a major update where several features such as bootstrapping for uncertainties and additional xAI methods 
+(average conditional effects) have been added. Also, several bugs have been fixed, documentation has been improved,
+and 3 vignettes were added.
+
+We would also like to announce a change of maintainer: Maximilian Pichler, co-author of cito, 
+will take over the position of maintainer.
+
+Old maintainer: 
+Christian Amesöder, Christian.Amesoeder@informatik.uni-regensburg.de
+
+New Maintainer:
+Maximilian Pichler, maximilian.pichler@biologie.uni-regensburg.de
+
+In the first submission we had problems passing the rcmdcheck. We changed the vignettes back to .rmd files.
+
+Best,
+Maximilian Pichler
+
+### Successfull R CMD checks under
+
+Locally: MacOS Monterey 13.4.1 (R aarch64-apple-darwin20)
+
+Github actions:
+* macOS-latest (release)
+* Ubuntu 20.04 R-release, and R-development
+* Windows-latest R-release
+
+Win-builder 
+* R-release, R-development, and R-oldrelease
+
+
+
+# Version 1.0.2
 ## cito submission 1 2023/22/9
 This is a major update where several features such as bootstrapping for uncertainties and additional xAI methods 
 (average conditional effects) have been added. Also, several bugs have been fixed, documentation has been improved,
@@ -21,6 +55,24 @@ Best,
 Max
 
 ### Successfull R CMD checks under
+
+Locally: MacOS Monterey 13.4.1 (R aarch64-apple-darwin20)
+
+Github actions:
+* macOS-latest (release)
+* Ubuntu 20.04 R-release, and R-development
+* Windows-latest R-release
+
+Win-builder 
+* R-release, R-development, and R-oldrelease
+
+Notes from win-builder:
+Found the following hidden files and directories:
+  vignettes/.html
+These were most likely included in error. See section 'Package
+structure' in the 'Writing R Extensions' manual.
+
+
 
 
 

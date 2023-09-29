@@ -14,7 +14,7 @@ vignette: >
   %\VignetteIndexEntry{Advanced: Custom loss functions and prediction intervals}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -24,7 +24,8 @@ knitr::opts_chunk$set(
   comment = "#>",
   dpi=32,
   out.width="400px",
-  fig.align="center"
+  fig.align="center",
+  fig.path = 'D/D-'
 )
 options("progress_enabled" = FALSE)
 
@@ -58,9 +59,8 @@ X = runif(200)
 Y = 2*X + rnorm(200, sd = 0.4)
 df = data.frame(X = X, Y = Y)
 
-m = dnn(Y~X, data = df, 
-        loss = gaussian_ll, # custom function 
-        verbose = FALSE,
+m = dnn(Y~X, data = df,
+        loss = gaussian_ll, # custom function
         custom_parameters = list(scale_par = 0.0) # custom parameter that should be addtionally optimized
         )
 ```
@@ -111,11 +111,11 @@ loss_func = function(pred, true,...) {
 }
 
 
-m = dnn(cbind(Y, Y, Y)~., data = data, 
+m = dnn(cbind(Y, Y, Y)~., data = data,
         lr = 0.01,
         loss = loss_func,
         lambda = 0.000, alpha = 0.5,
-        epochs = 70L, hidden = c(30L, 30L), 
+        epochs = 70L, hidden = c(30L, 30L),
         activation = "selu", verbose = TRUE, plot = FALSE)
 
 plot(data$X1, data$Y)
@@ -124,9 +124,9 @@ lines(smooth.spline(data$X1, predict(m)[,3], spar = 0.01), col = "blue")
 lines(smooth.spline(data$X1, predict(m)[,2], spar = 0.01), col = "red")
 ```
 
-### Example 3: Using cito for optimization
+### Example 3: Using cito for optimization / active learning
 
-We can use neural networks in an unconventional way to optimize arbitrary functions - as long as we can compute the analytic derivative of the function using torch. We need to provide the function to be optimized as a series of Torch operations. Our model will predict the parameters (based on noise, the inputs don't matter), in the custom loss function we will then use the model function (we want to optimize) to compute the loss and return it to the optimizer. In that way we overfit to the noisy inputs and the DNN will learn to predict the optimal set of parameters - independent of the input.
+Neural networks can be used in an unconventional way to optimize arbitrary functions (which is sometimes called active learning, it is related to reinforcement learning) - the only prerequiste is that the analytic derivative of the function using torch must be available. We provide the function to be optimized as a series of Torch operations. First, our model will predict the parameters (based on noise, the inputs don't matter) which are passed to the custom loss function and then we will then use the model function (which we optimize) to compute the loss and return it to the optimizer. In that way we overfit to the noisy inputs and the DNN will learn to predict the optimal set of parameters - independent of the input.
 
 ```{r}
 X = runif(200)
@@ -154,7 +154,7 @@ noise = matrix(runif(300*5), 300, 5)
 noise_y = matrix(runif(300*2), 300, 2)
 df = data.frame(y1 = noise_y[,1], y2 = noise_y[,2], noise)
 
-m = dnn(cbind(y1, y2)~., data = df, loss = custom_loss, batchsize = 1L, epochs = 20L)
+m = dnn(cbind(y1, y2)~., data = df, loss = custom_loss, batchsize = 1L, epochs = 20L, verbose = FALSE)
 # Effect:
 mean(predict(m)[,1])
 # SD

@@ -14,7 +14,7 @@ vignette: >
   %\VignetteIndexEntry{Example: (Multi-) Species distribution models with cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
@@ -24,7 +24,9 @@ knitr::opts_chunk$set(
   comment = "#>",
   dpi=32,
   out.width="400px",
-  fig.align="center"
+  fig.align="center",
+  fig.path = 'C/C-'
+
 )
 options("progress_enabled" = FALSE)
 
@@ -35,7 +37,7 @@ options("progress_enabled" = FALSE)
 The goal is to build a SDM for the African elephant. A pre-processed dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be found in the EcoData package which is only available on github:
 
 ```{r}
-if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData", 
+if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData",
                          dependencies = FALSE, build_vignettes = FALSE)
 
 library(EcoData)
@@ -59,8 +61,8 @@ We will first try a simple DNN with default values and the binomial likelihood. 
 
 ```{r}
 library(cito)
-model = dnn(Presence~., data = df, 
-            batchsize = 100L, 
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
             validation = 0.3, loss = "binomial",
             verbose = FALSE)
 ```
@@ -68,7 +70,7 @@ model = dnn(Presence~., data = df,
 We see that the training and test losses were still decreasing which means we didn't train the model long enough. We could now either increase the number of epochs or increase the learning rate so that the model trains faster:
 
 ```{r}
-model = dnn(Presence~., data = df, 
+model = dnn(Presence~., data = df,
             batchsize = 100L,
             lr = 0.05,
             validation = 0.3, loss = "binomial",
@@ -78,7 +80,7 @@ model = dnn(Presence~., data = df,
 Much better! But still now enough epochs. Also, let's see if we can further decrease the loss by using a wider and deeper neural network:
 
 ```{r}
-model = dnn(Presence~., data = df, 
+model = dnn(Presence~., data = df,
             batchsize = 100L,
             hidden = c(100L, 100L, 100L),
             lr = 0.05,
@@ -89,7 +91,7 @@ model = dnn(Presence~., data = df,
 At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by adding a weak regularization (but we only want a L2 regularization, so we set alpha to 1.0):
 
 ```{r}
-model = dnn(Presence~., data = df, 
+model = dnn(Presence~., data = df,
             batchsize = 100L,
             epochs = 150L,
             hidden = c(100L, 100L, 100L),
@@ -107,7 +109,7 @@ We will turn on now advanced features that help with the convergence and to redu
 -   early stopping - stop training when validation loss starts to increase
 
 ```{r}
-model = dnn(Presence~., data = df, 
+model = dnn(Presence~., data = df,
             batchsize = 100L,
             epochs = 150L,
             hidden = c(100L, 100L, 100L),
@@ -130,7 +132,7 @@ We haven't directly started with bootstrapping because it complicates the adjust
 Uncertainties can be obtained by using bootstrapping. Be aware that this can be computational expensive:
 
 ```{r}
-model_boot = dnn(Presence~., data = df, 
+model_boot = dnn(Presence~., data = df,
                  batchsize = 100L,
                  epochs = 150L,
                  hidden = c(100L, 100L, 100L),
@@ -158,7 +160,7 @@ dim(predictions)
 The predictions are 2/3 dimensional because of the bootstrapping. Calculate the AUC interval:
 
 ```{r}
-hist(sapply(1:20, function(i) Metrics::auc(test$Presence, predictions[i,,])), 
+hist(sapply(1:20, function(i) Metrics::auc(test$Presence, predictions[i,,])),
      xlim = c(0, 1), main = "AUC of ensemble model", xlab = "AUC")
 ```
 
@@ -183,8 +185,8 @@ predictions =
                   model_boot,
                   fun = customPredictFun)
 
-habitat_plot = 
-  spplot(predictions, colorkey = list(space = "left") ) 
+habitat_plot =
+  spplot(predictions, colorkey = list(space = "left") )
 habitat_plot
 ```
 
@@ -199,8 +201,8 @@ predictions =
                   model_boot,
                   fun = customPredictFun_sd)
 
-uncertain_plot = 
-  spplot(predictions, colorkey = list(space = "left") ) 
+uncertain_plot =
+  spplot(predictions, colorkey = list(space = "left") )
 uncertain_plot
 ```
 

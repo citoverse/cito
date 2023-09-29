@@ -1,7 +1,5 @@
 #' DNN
 #'
-#' @description
-#'
 #' fits a custom deep neural network using the Multilayer Perceptron architecture. `dnn()` supports the formula syntax and allows to customize the neural network to a maximal degree.
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
@@ -193,7 +191,16 @@ dnn <- function(formula,
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
 
+
   loss_obj <- get_loss(loss)
+
+  responses = NULL
+  response_column = NULL
+  responses = ylvls
+  if(is.null(responses)) responses = as.character(LHSForm(formula))
+  if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
+  if(ncol(Y) > 1) responses = colnames(Y)
+
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
@@ -289,6 +296,7 @@ dnn <- function(formula,
     out$model_properties <- model_properties
     out$training_properties <- training_properties
     out$device = device_old
+    out$responses = responses
 
     ### training loop ###
     out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
@@ -345,6 +353,9 @@ dnn <- function(formula,
     out$models <- models
     out$data <- list(X = X, Y = Y, data = data)
     out$device = device_old
+    out$responses = responses
+    out$loss = loss_obj$call
+    out$response_column = response_column
   }
   return(out)
 }
@@ -479,7 +490,10 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
       as.vector(as.matrix(stats::pnorm(abs(imps/imps_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i-1, ": ", out$importance[[1]]$variable)
+    if(object$loss == "softmax") resp = object$response_column
+    else resp = object$responses[i-1]
+    rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
+    if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
     res_imps[[i-1]] = coefmat
   }
   out$importance_coefmat = do.call(rbind, res_imps)
@@ -499,7 +513,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
       as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
+    rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$responses[i])
+    if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
     res_ACE[[i]] = coefmat
   }
   out$ACE_coefmat = do.call(rbind, res_ACE)
@@ -519,7 +534,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
       as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0("Response_", i, ": ", rownames(out$conditionalEffects[[1]][[1]]$mean))
+    rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$responses[i])
+    if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
     res_ASCE[[i]] = coefmat
   }
   out$ASCE_coefmat = do.call(rbind, res_ASCE)
@@ -533,29 +549,31 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 print.summary.citodnnBootstrap <- function(x, ... ){
   out = list()
   cat("Summary of Deep Neural Network Model\n\n")
-  cat("\t##########################################################\n")
-  cat("\t \tFeature Importance \n")
-  cat("\t##########################################################\n")
+  #cat("\t##########################################################\n")
+  cli::cli_h3(cli::style_bold("Feature Importance \n"))
+  #cat("\t##########################################################\n")
   #cat("\nFeature Importance:\n")
 
-  stats::printCoefmat(x$importance_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$importance_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
 
 
-  cat("\n\n\t##########################################################\n")
-  cat("\t \tAverage Conditional Effects \n")
-  cat("\t##########################################################\n")
+  #cat("\n\n\t##########################################################\n")
+  cat("\n\n")
+  cli::cli_h3(cli::style_bold("Average Conditional Effects"))
+  #cat("\t##########################################################\n")
 
   #cat("\nAverage Conditional Effects:\n")
-  stats::printCoefmat(x$ACE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$ACE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
 
-  cat("\n\n\t##########################################################\n")
-  cat("\t \tStandard Deviation of Conditional Effects \n")
-  cat("\t##########################################################\n")
+  #cat("\n\n\t##########################################################\n")
+  cat("\n\n")
+  cli::cli_h3(cli::style_bold("Standard Deviation of Conditional Effects \n"))
+  #cat("\t##########################################################\n")
   #cat("\nAbsolute sum of Conditional Effects:\n")
 
   res_ASCE = list()
 
-  stats::printCoefmat(x$ASCE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3)
+  stats::printCoefmat(x$ASCE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
 
 
   out$importance = x$res_imps

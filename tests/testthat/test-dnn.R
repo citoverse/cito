@@ -2,17 +2,16 @@ source("utils.R")
 
 wrap_dnn = function(pars) {
   testthat::expect_error({model = do.call(dnn, pars)}, NA)
-  testthat::expect_error({predict(model, newdata=pars$X)}, NA)
-  testthat::expect_error({continue_training(model, epochs = 2L)}, NA)
-  testthat::expect_error({predict(model)}, NA)
-  testthat::expect_error({predict(model, type = "response")}, NA)
-  testthat::expect_error({print(model)}, NA)
-  testthat::expect_error({coef(model)}, NA)
-  testthat::expect_error({plot(model)}, NA)
-  testthat::expect_error({residuals(model)}, NA)
-  testthat::expect_error({summary(model)}, NA)
-  testthat::expect_error({PDP(model, variable = "X.1")}, NA)
-  testthat::expect_error({ALE(model, variable = "X.1")}, NA)
+  testthat::expect_error({.n = predict(model, newdata=pars$X)}, NA)
+  testthat::expect_error({.n = continue_training(model, epochs = 2L, verbose = FALSE)}, NA)
+  testthat::expect_error({.n = predict(model)}, NA)
+  testthat::expect_error({.n = predict(model, type = "response")}, NA)
+  testthat::expect_error({.n = coef(model)}, NA)
+  testthat::expect_error({.n = plot(model)}, NA)
+  testthat::expect_error({.n = residuals(model)}, NA)
+  testthat::expect_error({.n = summary(model)}, NA)
+  suppressWarnings(testthat::expect_error({.n = PDP(model, variable = "X.1")}, NA))
+  suppressWarnings(testthat::expect_error({.n = ALE(model, variable = "X.1")}, NA))
 }
 
 
@@ -39,7 +38,7 @@ testthat::test_that("DNN architecture", {
   skip_if_no_torch()
 
   for(i in 1:length(scenarios)) {
-    wrap_dnn(scenarios[[i]])
+    .n = wrap_dnn(scenarios[[i]])
   }
 })
 
@@ -97,9 +96,9 @@ testthat::test_that("DNN save and reload", {
   nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,], epochs = 5L, verbose = FALSE, plot = FALSE)
   saveRDS(nn.fit, "test_model.RDS")
   nn.fit = readRDS("test_model.RDS")
-  testthat::expect_error(predict(nn.fit), NA)
-  testthat::expect_error(predict(nn.fit, newdata = datasets::iris[validation_set,]), NA)
-  testthat::expect_error(continue_training(nn.fit,epochs = 5), NA)
+  testthat::expect_error({.n = predict(nn.fit)}, NA)
+  testthat::expect_error({.n = predict(nn.fit, newdata = datasets::iris[validation_set,])}, NA)
+  testthat::expect_error({.n = continue_training(nn.fit,epochs = 5)}, NA)
   file.remove("test_model.RDS")
 })
 
@@ -126,6 +125,8 @@ testthat::expect_error({
                data = datasets::iris[],
                loss = custom_loss,
                epochs = 2L,
+               verbose = FALSE,
+               plot = FALSE,
                custom_parameters = list(scale = 1.0)
   )
   }, NA)
@@ -152,6 +153,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              lr = 0.01,
              epochs = 200L,
              loss = custom_loss_MVN,
+             verbose = FALSE,
+             plot = FALSE,
              custom_parameters =
                list(SigmaDiag =  rep(1., 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
@@ -172,7 +175,7 @@ testthat::test_that("DNN coef accuracy check",{
   coefs <- runif(n=10)
   data$Y <- apply(data,1,function(x) sum(x*coefs))
 
-  nn.fit<- dnn(Y~., data=data, hidden= NULL,epochs=200)
+  nn.fit<- dnn(Y~., data=data, hidden= NULL,epochs=200, verbose = FALSE, plot = FALSE)
 
   testthat::expect_lt(max(abs((unlist(coef(nn.fit))[-1] - coefs))), 1e02)
 

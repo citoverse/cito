@@ -297,11 +297,12 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, ...) {
       df$y[i]<- df$y[i-1]+df$y[i]
     }
     df$y <- df$y - mean(df$y)
-    if(!is.null(model$data$ylvls)) {
-      label = paste0("ALE - ", model$data$ylvls[n_output])
-    } else {
-      label = "ALE"
-    }
+    #if(!is.null(model$data$ylvls)) {
+    label = paste0(v," \U2192 ", model$responses[n_output])
+      # TODO model$data$responses[n_output]
+    #} else {
+    #  label = "ALE"
+    #}
     return(list(df = df, label = label, data = data[,v], v = v))
   }))
 }

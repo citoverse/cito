@@ -101,3 +101,13 @@ check_device = function(device) {
   }
   return(device)
 }
+
+
+# taken and adopted from lme4:::RHSForm
+LHSForm = function (form, as.form = FALSE)
+{
+  rhsf <- form[[2]]
+  if (as.form)
+    stats::reformulate(deparse(rhsf))
+  else rhsf
+}

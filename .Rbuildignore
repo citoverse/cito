@@ -13,7 +13,3 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
-vignettes/A-Introduction_to_cito.Rmd
-vignettes/B-Training_neural_networks.Rmd
-vignettes/C-Example_Species_distribution_modeling.Rmd
-vignettes/D-Advanced_custom_loss_functions.Rmd

@@ -36,7 +36,8 @@ Imports:
     gridExtra,
     parabar,
     abind,
-    progress
+    progress,
+    cli
 License: GPL (>= 3)
 Suggests:
     rmarkdown,
@@ -46,7 +47,7 @@ Suggests:
     igraph,
     stats,
     ggplot2,
-    R.rsp
-VignetteBuilder: R.rsp
+    knitr
+VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues
 URL: https://citoverse.github.io/cito/

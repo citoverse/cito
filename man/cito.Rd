@@ -91,6 +91,7 @@ nn.fit<- dnn(Species~.,
              data = datasets::iris,
              loss = "softmax",
              epochs = 150L,
+             verbose = FALSE,
              bootstrap = 20L)
 ## convergence can be tested via the analyze_training function
 analyze_training(nn.fit)
@@ -121,6 +122,7 @@ custom_loss = function(true, pred) {
 nn.fit<- dnn(Sepal.Length~.,
              data = datasets::iris,
              loss = custom_loss,
+             verbose = FALSE,
              custom_parameters = list(scale = 1.0)
 )
 nn.fit$parameter$scale
@@ -144,6 +146,7 @@ custom_loss_MVN = function(true, pred) {
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              data = datasets::iris,
              lr = 0.01,
+             verbose = FALSE,
              loss = custom_loss_MVN,
              custom_parameters =
                list(SigmaDiag =  rep(1, 3),

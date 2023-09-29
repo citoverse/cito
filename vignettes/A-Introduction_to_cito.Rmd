@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "`r Sys.Date()`"
+date: "2023-09-29"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -9,37 +9,29 @@ output:
     toc_depth: 4
     html_document:
       toc: true
-      theme: cerulean    
+      theme: cerulean
 vignette: >
   %\VignetteIndexEntry{Introduction to cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
+editor_options:
   chunk_output_type: console
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  dpi=32,
-  out.width="400px",
-  fig.align="center"
-)
-options("progress_enabled" = FALSE)
-```
+
 
 ## Setup - Installing torch
 
 Before using 'cito' make sure that the current version of 'torch' is installed and running.
 
-```{r setuptorch, eval = TRUE}
+
+```r
 if(!require(torch)) install.packages("torch")
+#> Loading required package: torch
 library(torch)
 if(!torch_is_installed()) install_torch()
 
 library (cito)
-
 ```
 
 If you have problems installing Torch, check out the [installation help from the torch developer](https://torch.mlverse.org/docs/articles/installation.html).
@@ -73,11 +65,19 @@ The likelihoods (Gaussian, Binomial, and Poisson) can be also passed as their st
 
 In this vignette, we will work with the irirs dataset and build a regression model.
 
-```{r data}
+
+```r
 data <- datasets::iris
 head(data)
+#>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#> 1          5.1         3.5          1.4         0.2  setosa
+#> 2          4.9         3.0          1.4         0.2  setosa
+#> 3          4.7         3.2          1.3         0.2  setosa
+#> 4          4.6         3.1          1.5         0.2  setosa
+#> 5          5.0         3.6          1.4         0.2  setosa
+#> 6          5.4         3.9          1.7         0.4  setosa
 
-#scale dataset 
+#scale dataset
 data <- data.frame(scale(data[,-5]),Species = data[,5])
 ```
 
@@ -85,19 +85,25 @@ data <- data.frame(scale(data[,-5]),Species = data[,5])
 
 In 'cito', neural networks are specified and fitted with the `dnn()` function. Models can also be trained on the GPU by setting `device = "cuda"`(but only if you have installed the CUDA dependencies). This is suggested if you are working with large data sets or networks.
 
-```{r simp_models, fig.show='hide',out.lines = 3,eval=TRUE}
+
+```r
 library(cito)
 
 #fitting a regression model to predict Sepal.Length
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 12, loss = "mse", verbose=FALSE)
-
 ```
 
 You can plot the network structure to give you a visual feedback of the created object. e aware that this may take some time for large networks.
 
-```{r plotnn, eval=TRUE}
+
+```r
 plot(nn.fit)
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-plotnn-1.png" alt="plot of chunk plotnn" width="400px" />
+<p class="caption">plot of chunk plotnn</p>
+</div>
 
 The neural network 5 input nodes (3 continoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
@@ -105,15 +111,27 @@ The neural network 5 input nodes (3 continoues features, Sepal.Width, Petal.Leng
 
 At the start of the training we calculate a baseline loss for an an intercept only model. It allows us to control the training because the goal is to beat the baseline loss. If we don't, we need to adjust the optimization parameters (epochs and lr (learning rate)):
 
-```{r}
+
+```r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.6, loss = "mse", verbose = FALSE) # lr too high
 ```
 
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-2</p>
+</div>
+
 vs
 
-```{r}
+
+```r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.01, loss = "mse", verbose = FALSE)
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-3</p>
+</div>
 
 See `vignette("B-Training_neural_networks"`) for more details on how to adjust the optimization procedure and increase the probability of convergence.
 
@@ -121,7 +139,8 @@ See `vignette("B-Training_neural_networks"`) for more details on how to adjust t
 
 In order to see where your model might suffer from overfitting the addition of a validation set can be useful. With `dnn()` you can put `validation = 0.x` and define a percentage that will not be used for training and only for validation after each epoch. During training, a loss plot will show you how the two losses behave (see `vignette("B-Training_neural_networks"`) for details on training NN and guaranteeing their convergence).
 
-```{r validation, results = "hide", eval=TRUE, out.lines=3, fig.show='hide'}
+
+```r
 #20% of data set is used as validation set
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
               loss= "mse", validation = 0.2)
@@ -129,13 +148,16 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
 
 Weights oft the last and the epoch with the lowest validation loss are saved:
 
-```{r epoch1,eval=TRUE}
+
+```r
 length(nn.fit$weights)
+#> [1] 2
 ```
 
 The default is to use the weights of the last epoch. But we can also tell the model to use the weights with the lowest validation loss:
 
-```{r}
+
+```r
 nn.fit$use_model_epoch = 1 # Default, use last epoch
 nn.fit$use_model_epoch = 2 # Use weights from epoch with lowest validation loss
 ```
@@ -144,7 +166,8 @@ nn.fit$use_model_epoch = 2 # Use weights from epoch with lowest validation loss
 
 cito supports many of the well-known methods from other statistical packages:
 
-```{r,eval=FALSE}
+
+```r
 predict(nn.fit)
 coef(nn.fit)
 print(nn.fit)
@@ -164,12 +187,34 @@ xAI can produce outputs that are similar to known outputs from statistical model
 
 The `summary()` returns feature importance, ACE and SDCE:
 
-```{r summary,eval=TRUE}
+
+```r
 # Calculate and return feature importance
 summary(nn.fit)
+#> Summary of Deep Neural Network Model
+#> 
+#> Feature Importance:
+#>       variable importance_1
+#> 1  Sepal.Width     1.359831
+#> 2 Petal.Length     2.810167
+#> 3  Petal.Width     2.092298
+#> 4      Species     1.114416
+#> 
+#> Average Conditional Effects:
+#>              Response_1
+#> Sepal.Width   0.2048296
+#> Petal.Length  0.3574540
+#> Petal.Width   0.3116120
+#> 
+#> Standard Deviation of Conditional Effects:
+#>              Response_1
+#> Sepal.Width  0.06628657
+#> Petal.Length 0.07351758
+#> Petal.Width  0.04813253
 ```
 
-```{r coef, eval=FALSE}
+
+```r
 #returns weights of neural network
 coef(nn.fit)
 ```
@@ -178,41 +223,96 @@ coef(nn.fit)
 
 We can use bootstrapping to obtain uncertainties for the xAI metrics (and also for the predictions). For that we have to retrain our model with enabled bootstrapping:
 
-```{r}
+
+```r
 df = data
 df[,2:4] = scale(df[,2:4]) # scaling can help the NN to convergence faster
-nn.fit <- dnn(Sepal.Length~., data = df, 
+nn.fit <- dnn(Sepal.Length~., data = df,
               epochs = 100,
               verbose = FALSE,
-              loss= "mse", 
+              loss= "mse",
               bootstrap = 30L
               )
 ```
 
-```{r}
+
+```r
 summary(nn.fit)
+#> Summary of Deep Neural Network Model
+#> 
+#> ── Feature Importance
+#>                             Importance Std.Err Z value Pr(>|z|)    
+#> Sepal.Width → Sepal.Length       1.201   0.354    3.39  0.00069 ***
+#> Petal.Length → Sepal.Length      8.176   2.324    3.52  0.00043 ***
+#> Petal.Width → Sepal.Length       0.893   0.565    1.58  0.11398    
+#> Species → Sepal.Length           0.237   0.139    1.71  0.08737 .  
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> 
+#> ── Average Conditional Effects
+#>                                ACE Std.Err Z value Pr(>|z|)    
+#> Sepal.Width → Sepal.Length  0.2913  0.0512    5.69  1.2e-08 ***
+#> Petal.Length → Sepal.Length 0.8198  0.1281    6.40  1.6e-10 ***
+#> Petal.Width → Sepal.Length  0.1895  0.1214    1.56     0.12    
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> 
+#> ── Standard Deviation of Conditional Effects
+#>                                ACE Std.Err Z value Pr(>|z|)    
+#> Sepal.Width → Sepal.Length  0.1086  0.0303    3.59  0.00034 ***
+#> Petal.Length → Sepal.Length 0.2166  0.0826    2.62  0.00870 ** 
+#> Petal.Width → Sepal.Length  0.1109  0.0519    2.14  0.03268 *  
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 We find that Petal.Length and Sepal.Width are significant (categorical features are not supported yet for average conditional effects).
 
 Let's compare the output to statistical outputs:
 
-```{r}
+
+```r
 anova(lm(Sepal.Length~., data = df))
+#> Analysis of Variance Table
+#> 
+#> Response: Sepal.Length
+#>               Df  Sum Sq Mean Sq  F value    Pr(>F)    
+#> Sepal.Width    1   2.060   2.060  15.0011 0.0001625 ***
+#> Petal.Length   1 123.127 123.127 896.8059 < 2.2e-16 ***
+#> Petal.Width    1   2.747   2.747  20.0055 1.556e-05 ***
+#> Species        2   1.296   0.648   4.7212 0.0103288 *  
+#> Residuals    144  19.770   0.137                       
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
 
 Feature importance and the anova report Petal.Length as the most important feature.
 
 Visualization of the effects:
 
-```{r}
+
+```r
 PDP(nn.fit)
 ```
 
-```{r}
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-9</p>
+</div>
+
+
+```r
 library(effects)
+#> Loading required package: carData
+#> lattice theme set by effectsTheme()
+#> See ?effectsTheme for details.
 plot(allEffects(lm(Sepal.Length~., data = df)))
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-10</p>
+</div>
 
 There are some differences between the statistical model and the NN - which is to be expected because the NN can fit the data more flexible. But at the same time the differences have large confidence intervals (e.g. the effect of Petal.Width)
 
@@ -220,17 +320,31 @@ There are some differences between the statistical model and the NN - which is t
 
 The architecture in NN usually refers to the width and depth of the hidden layers (the layers between the input and the output layer) and their activation functions. You can increase the complexity of the NN by adding layers and/or making them wider:
 
-```{r}
+
+```r
 # "simple NN" - low complexity
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
               loss= "mse", validation = 0.2,
               hidden = c(5L), verbose=FALSE)
+```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-11</p>
+</div>
+
+```r
 
 # "large NN" - high complexity
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
               loss= "mse", validation = 0.2,
               hidden = c(100L, 100), verbose=FALSE)
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-unnamed-chunk-11-2.png" alt="plot of chunk unnamed-chunk-11" width="400px" />
+<p class="caption">plot of chunk unnamed-chunk-11</p>
+</div>
 
 There is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in [Pichler & Hartig, 2023](https://arxiv.org/abs/2306.10551), we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the `selu` activation function outperforms `relu` for small data sizes (\<100 observations).
 
@@ -242,11 +356,12 @@ By default, all layers are fitted with SeLU as activation function. $$
 relu(x) = max (0,x)
 $$You can also adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function of the output layer is chosen with the loss argument and does not have to be provided.
 
-```{r activation, results ="hide",fig.show='hide' ,eval=TRUE}
-#selu as activation function for all layers: 
+
+```r
+#selu as activation function for all layers:
 nn.fit <- dnn(Sepal.Length~., data = data, hidden = c(10,10,10,10), activation= "relu")
-#layer specific activation functions: 
-nn.fit <- dnn(Sepal.Length~., data = data, 
+#layer specific activation functions:
+nn.fit <- dnn(Sepal.Length~., data = data,
               hidden = c(10,10,10,10), activation= c("relu","selu","tanh","sigmoid"))
 ```
 
@@ -265,8 +380,9 @@ $$
 $$
 
 
-```{r alpha, results ="hide",fig.show='hide',eval=TRUE }
-#elastic net penalty in all layers: 
+
+```r
+#elastic net penalty in all layers:
 nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "softmax")
 ```
 
@@ -274,10 +390,11 @@ nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE,
 
 Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf?utm_content=buffer79b43&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer,) can be controlled similar to elastic net regularization. In this approach, a percentage of different nodes gets left during each epoch.
 
-```{r dropout, results ="hide",fig.show='hide' ,eval=TRUE}
-#dropout of 35% on all layers: 
+
+```r
+#dropout of 35% on all layers:
 nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = 0.35, verbose=FALSE)
-#dropout of 35% only on last 2 layers: 
+#dropout of 35% only on last 2 layers:
 nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = c(0, 0, 0.35, 0.35), verbose=FALSE)
 ```
 
@@ -289,59 +406,84 @@ Learning rate scheduler allow you to start with a high learning rate and decreas
 
 The function config_lr_scheduler() helps you setup such a scheduler. See ?config_lr_scheduler() for more information
 
-```{r lr_scheduler,eval=TRUE}
+
+```r
 # Step Learning rate scheduler that reduces learning rate every 16 steps by a factor of 0.5
 scheduler <- config_lr_scheduler(type = "step",
                                  step_size = 16,
-                                 gamma = 0.5) 
+                                 gamma = 0.5)
 
 nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler, verbose = FALSE)
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-lr_scheduler-1.png" alt="plot of chunk lr_scheduler" width="400px" />
+<p class="caption">plot of chunk lr_scheduler</p>
+</div>
 
 ### Optimizer
 
 Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom optimizers can be used with `config_optimizer()`.\
 See `?config_optimizer()` for more information.
 
-```{r optim,eval=TRUE}
+
+```r
 
 # adam optimizer with learning rate 0.002, betas to 0.95, 0.999 and eps to 1.5e-08
 opt <- config_optimizer(
   type = "sgd")
 
 nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "softmax")
-
-
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-optim-1.png" alt="plot of chunk optim" width="400px" />
+<p class="caption">plot of chunk optim</p>
+</div>
 
 ### Early Stopping
 
 Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation \> 0.
 
-```{r early_stopping,eval=TRUE}
-# Stops training if validation loss at current epoch is bigger than that 15 epochs earlier  
-nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000, 
+
+```r
+# Stops training if validation loss at current epoch is bigger than that 15 epochs earlier
+nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000,
               validation = 0.2, early_stopping = 15, verbose=FALSE)
 ```
+
+<div class="figure" style="text-align: center">
+<img src="A/A-early_stopping-1.png" alt="plot of chunk early_stopping" width="400px" />
+<p class="caption">plot of chunk early_stopping</p>
+</div>
 
 ## Continue training process
 
 You can continue the training process of an existing model with continue_training().
 
-```{r continue_training,eval=TRUE, fig.show='hide',out.lines = 3}
-# simple example, simply adding another 12 epochs to the training process   
+
+```r
+# simple example, simply adding another 12 epochs to the training process
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
+#>            [,1]
+#> [1,] -0.9971088
+#> [2,] -1.1379547
+#> [3,] -1.1199131
+#> [4,] -1.1205163
+#> [5,] -0.9444298
+#> [6,] -0.6484262
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().
 
-```{r continue_training2,eval=TRUE, fig.show='hide', out.lines = 3}
 
-# picking the model with the smalles validation loss 
+```r
+
+# picking the model with the smalles validation loss
 # with changed parameters, in this case a smaller learning rate and a smaller batchsize
-nn.fit <- continue_training(nn.fit, 
-                            epochs = 32, 
+nn.fit <- continue_training(nn.fit,
+                            epochs = 32,
                             changed_params = list(lr = 0.001, batchsize = 16),
                             verbose = FALSE)
 ```
