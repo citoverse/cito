@@ -1,4 +1,27 @@
 # Version 1.0.2
+## cito submission 5 2023/01/10
+Issue:
+Unfortunately, the manual cannot be built on the CRAN ,aster with its
+older LaTeX installtion and hence this never got published.
+Reason:
+LaTeX Warning: File `learning\_rates.jpg' not found on input line 881.
+! Package pdftex.def Error: File `learning\T1\textunderscorerates.jpg'
+not found
+d: using draft setting.
+See the pdftex.def package documentation for explanation.
+Type H for immediate help.
+...
+l.881 \Figure{learning\_rates.jpg}{}
+Can you please rename the file and omit the underscore? ALso in the Rd
+files that refer to it.
+
+Done. Thank you.
+
+Best,
+Maximilian Pichler
+
+
+
 ## cito submission 4 2023/29/9
 Issues:
 Found the following (possibly) invalid DOIs:
