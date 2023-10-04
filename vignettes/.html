@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Introduction_to_cito</title>
+<style type="text/css">
+/**
+ * Prism.s theme ported from highlight.js's xcode style
+ */
+pre code {
+  padding: 1em;
+}
+.token.comment {
+  color: #007400;
+}
+.token.punctuation {
+  color: #999;
+}
+.token.tag,
+.token.selector {
+  color: #aa0d91;
+}
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol {
+  color: #1c00cf;
+}
+.token.property,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin {
+  color: #c41a16;
+}
+.token.inserted {
+  background-color: #ccffd8;
+}
+.token.deleted {
+  background-color: #ffebe9;
+}
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #9a6e3a;
+}
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #836c28;
+}
+.token.function,
+.token.class-name {
+  color: #DD4A68;
+}
+.token.regex,
+.token.important,
+.token.variable {
+  color: #5c2699;
+}
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+.token.italic {
+  font-style: italic;
+}
+</style>
+<style type="text/css">
+body {
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: auto;
+  padding: 1em;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+body, .footnotes, code { font-size: .9em; }
+li li { font-size: .95em; }
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+pre, img { max-width: 100%; }
+pre, pre:hover {
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+pre code {
+  display: block;
+  overflow-x: auto;
+}
+code { font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace; }
+:not(pre) > code, code[class] { background-color: #F8F8F8; }
+code.language-undefined, pre > code:not([class]) {
+  background-color: inherit;
+  border: 1px solid #eee;
+}
+table {
+  margin: auto;
+  border-top: 1px solid #666;
+}
+table thead th { border-bottom: 1px solid #ddd; }
+th, td { padding: 5px; }
+thead, tfoot, tr:nth-child(even) { background: #eee; }
+blockquote {
+  color: #666;
+  margin: 0;
+  padding-left: 1em;
+  border-left: 0.5em solid #eee;
+}
+hr, .footnotes::before { border: 1px dashed #ddd; }
+.frontmatter { text-align: center; }
+#TOC .numbered li { list-style: none; }
+#TOC .numbered { padding-left: 0; }
+#TOC .numbered ul { padding-left: 1em; }
+table, .body h2 { border-bottom: 1px solid #666; }
+.body .appendix, .appendix ~ h2 { border-bottom-style: dashed; }
+.footnote-ref a::before { content: "["; }
+.footnote-ref a::after { content: "]"; }
+.footnotes::before {
+  content: "";
+  display: block;
+  max-width: 20em;
+}
+
+@media print {
+  body {
+    font-size: 12pt;
+    max-width: 100%;
+  }
+  tr, img { page-break-inside: avoid; }
+}
+@media only screen and (min-width: 992px) {
+  pre { white-space: pre; }
+}
+</style>
+</head>
+<body>
+<div class="include-before">
+</div>
+<div class="frontmatter">
+<div class="title"><h1>Introduction_to_cito</h1></div>
+<div class="author"><h2>Christian Amesoeder</h2></div>
+<div class="date"><h3>2023-09-19</h3></div>
+</div>
+<div class="body">
+<h2 id="abstract">Abstract</h2>
+<p>‘cito’ allows you to build and train fully-connected neural networks using the R formula syntax. It relies on the ‘torch’ package for numerical computations and graphic card support.</p>
+<h2 id="setup">Setup</h2>
+<h3 id="installing-torch">Installing torch</h3>
+<p>Before using ‘cito’ make sure that the current version of ‘torch’ is installed and running.</p>
+<pre><code class="language-r">if(!require(torch)) install.packages(&quot;torch&quot;)
+library(torch)
+if(!torch_is_installed()) install_torch()
+
+library (cito)
+
+</code></pre>
+<h3 id="data">Data</h3>
+<p>In this vignette, we will work with the irirs dataset and build a regression model.</p>
+<pre><code class="language-r">data &lt;- datasets::iris
+head(data)
+#&gt;   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+#&gt; 1          5.1         3.5          1.4         0.2  setosa
+#&gt; 2          4.9         3.0          1.4         0.2  setosa
+#&gt; 3          4.7         3.2          1.3         0.2  setosa
+#&gt; 4          4.6         3.1          1.5         0.2  setosa
+#&gt; 5          5.0         3.6          1.4         0.2  setosa
+#&gt; 6          5.4         3.9          1.7         0.4  setosa
+
+#scale dataset 
+data &lt;- data.frame(scale(data[,-5]),Species = data[,5])
+</code></pre>
+<h2 id="introduction-to-models-and-model-structures">Introduction to models and model structures</h2>
+<p>In ‘cito’, neural networks are specified and fitted with the dnn function. Models can also be trained on the GPU by setting device = “cuda”. This is suggested if you are working with large data sets or networks.</p>
+<pre><code class="language-r">library(cito)
+
+#fitting a regression model to predict Sepal.Length
+nn.fit &lt;- dnn(Sepal.Length~. , data = data, hidden = c(10,10,10,10), epochs = 12, device = &quot;cpu&quot;)
+
+</code></pre>
+<pre><code>#&gt; Loss at epoch 1: 0.906718, lr: 0.01000 
+#&gt; Loss at epoch 2: 0.863654, lr: 0.01000 
+#&gt; Loss at epoch 3: 0.843066, lr: 0.01000 
+#&gt; Loss at epoch 4: 0.825574, lr: 0.01000 
+#&gt; 
+#&gt; ....  
+#&gt; 
+#&gt; Loss at epoch 11: 0.408130, lr: 0.01000 
+#&gt; Loss at epoch 12: 0.403822, lr: 0.01000
+</code></pre>
+<p>You can plot the network structure to give you a visual feedback of the created object. Be aware that this may take some time for large networks.</p>
+<pre><code class="language-r">plot(nn.fit)
+</code></pre>
+<p><img src="structure_nn.png" alt="Structure plot of the generate network" width=70% /></p>
+<h3 id="activation-functions">Activation functions</h3>
+<p>By default,  all layers are fitted with ReLU as activation function.
+$$
+relu(x) = max (0,x)
+$$
+You can also adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function of the output layer  is chosen with the loss argument and does not have to be provided.</p>
+<pre><code class="language-r">#selu as activation function for all layers: 
+nn.fit &lt;- dnn(Sepal.Length~., data = data, hidden = c(10,10,10,10), activation= &quot;selu&quot;)
+#layer specific activation functions: 
+nn.fit &lt;- dnn(Sepal.Length~., data = data, 
+              hidden = c(10,10,10,10), activation= c(&quot;relu&quot;,&quot;selu&quot;,&quot;tanh&quot;,&quot;sigmoid&quot;))
+</code></pre>
+<h3 id="adding-a-validation-set-to-the-training-process">Adding a validation set to the training process</h3>
+<p>In order to see where your model might start overfitting the addition of a validation set can be useful. With dnn() you can put validation = 0.x and  define a percentage that will not be used for training and only for validation after each epoch. During training, a loss plot will show you how the two losses behave.</p>
+<pre><code class="language-r">#20% of data set is used as validation set
+nn.fit &lt;- dnn(Sepal.Length~., data = data, epochs = 32,
+              loss= &quot;mae&quot;, hidden = c(10,10,10,10), validation = 0.2)
+</code></pre>
+<pre><code>#&gt; Loss at epoch 1: training: 5.868, validation: 5.621, lr: 0.01000
+#&gt; Loss at epoch 2: training: 5.464, validation: 4.970, lr: 0.01000
+#&gt; Loss at epoch 3: training: 4.471, validation: 3.430, lr: 0.01000
+#&gt; Loss at epoch 4: training: 2.220, validation: 0.665, lr: 0.01000
+#&gt; 
+#&gt; ... 
+#&gt; 
+#&gt; 
+#&gt; Loss at epoch 31: training: 0.267, validation: 0.277, lr: 0.01000
+#&gt; Loss at epoch 32: training: 0.265, validation: 0.275, lr: 0.01000
+</code></pre>
+<p><img src="trainingsloss.png" alt="Training loss" width=70% /></p>
+<p>We can choose the model with minimal validation loss with the  nn.fit$use_model_epoch argument.</p>
+<pre><code class="language-r">nn.fit$use_model_epoch &lt;- which.min(nn.fit$losses$valid_l)
+</code></pre>
+<h3 id="interpreting-model-output">Interpreting model output</h3>
+<p>The standard generic R functions can be used to interpret the model:</p>
+<pre><code class="language-r">#utilize model on new data 
+predict(nn.fit,data[1:3,])
+</code></pre>
+<pre><code>#&gt;          [,1]
+#&gt; [1,] 5.046695
+#&gt; [2,] 4.694821
+#&gt; [3,] 4.788142
+</code></pre>
+<pre><code class="language-r">#returns weights of neural network
+coef(nn.fit)
+</code></pre>
+<pre><code>#&gt; [[1]] 
+#&gt; [[1]]$`0.weight` 
+#&gt;             [,1]        [,2]        [,3]        [,4]        [,5]        [,6] 
+#&gt; [1,]  0.21469544  0.17144544  0.06233330  0.05737647 -0.56643492  0.30539653 
+#&gt; [2,]  0.02309913  0.32601142 -0.04106455 -0.05251846  0.06156364 -0.16903549 
+#&gt; [3,]  0.02779424 -0.39305094  0.22446594 -0.11260942  0.40277928 -0.14661779 
+#&gt; [4,] -0.17715086 -0.34669805  0.41711944 -0.07970788  0.28087401 -0.32001352 
+#&gt; [5,]  0.10428729  0.46002910  0.12490098 -0.25849682 -0.49987957 -0.19863304 
+#&gt; [6,]  0.08653354  0.02208819 -0.18835779 -0.18991815 -0.19675359 -0.37495106 
+#&gt; [7,]  0.28858119  0.02029459 -0.40138969 -0.39148667 -0.29556298  0.17978610 
+#&gt; [8,]  0.34569272 -0.04052169  0.76198137  0.31320053 -0.06051779  0.34071702 
+#&gt; [9,]  0.34511277 -0.42506409 -0.50092584 -0.22993636  0.05683114  0.38136607 
+#&gt; [10,] -0.13597916  0.25648212 -0.08427665 -0.46611786  0.14236088  0.04671739 
+#&gt; 
+#&gt; ... 
+#&gt;  
+#&gt; [[1]]$`8.bias` 
+#&gt; [1] 0.2862495
+</code></pre>
+<p>With summary(), the feature Importance based on <a href="https://arxiv.org/abs/1801.01489">Fisher, Rudin, and Dominici (2018)</a> gets calculated for all variables.</p>
+<pre><code class="language-r"># Calculate and return feature importance
+summary(nn.fit)
+</code></pre>
+<pre><code>#&gt; Deep Neural Network Model summary
+#&gt; Feature Importance:
+#&gt;      variable importance
+#&gt; 1  Sepal.Width   3.373757
+#&gt; 2 Petal.Length   3.090394
+#&gt; 3  Petal.Width   2.992742
+#&gt; 4      Species   3.278064
+</code></pre>
+<h2 id="training-hyperparameters">Training hyperparameters</h2>
+<h3 id="regularization">Regularization</h3>
+<h4 id="elastic-net-regularization">Elastic net regularization</h4>
+<p>If elastic net is used, ‘cito’ will produce a sparse, generalized neural network. The L1/L2 loss can be  controlled with the arguments alpha and lambda.</p>
+<p>$$
+loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+$$</p>
+<p>If a single alpha value is provided each layer will get regularized with the same elastic net regularization. However, you can also regularize each layer individually by providing a vector of alpha values the same length as there are hidden layers + 1. With NA you can turn off generalization for specific layers.</p>
+<pre><code class="language-r">#elastic net penalty in all layers: 
+nn.fit &lt;- dnn(Species~., data = data, hidden = c(10,10,10,10), alpha = 0.5, lambda = 0.01)
+#L1 generalization in the first layer no penalty on the other layers: 
+nn.fit &lt;- dnn(Species~., data = data, hidden = c(10,10,10,10), 
+              alpha = c(0,NA,NA,NA,NA), lambda = 0.01)
+</code></pre>
+<h4 id="dropout-regularization">Dropout Regularization</h4>
+<p>Dropout regularization as proposed in <a href="https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf?utm_content=buffer79b43&amp;utm_medium=social&amp;utm_source=twitter.com&amp;utm_campaign=buffer,">Srivastava et al.</a> can be controlled similar to elastic net regularization. In this approach, a percentage of different nodes gets left during each epoch.</p>
+<pre><code class="language-r">#dropout of 35% on all layers: 
+nn.fit &lt;- dnn(Species~., data = data, hidden = c(10,10,10,10), dropout = 0.35)
+#dropout of 35% only on last 2 layers: 
+nn.fit &lt;- dnn(Species~., data = data, 
+              hidden = c(10,10,10,10), dropout = c(0, 0, 0.35, 0.35))
+</code></pre>
+<h3 id="learning-rate">Learning rate</h3>
+<h3 id="learning-rate-scheduler">Learning rate scheduler</h3>
+<p>Learning rate scheduler allow you to start with a high learning rate and decrease it during the training process. This leads to an overall faster training.
+You can choose between different types of schedulers. Namely, lambda, multiplicative, one_cycle and step.</p>
+<p>The function config_lr_scheduler() helps you setup such a scheduler. See ?config_lr_scheduler() for more information</p>
+<pre><code class="language-r"># Step Learning rate scheduler that reduces learning rate every 16 steps by a factor of 0.5
+scheduler &lt;- config_lr_scheduler(type = &quot;step&quot;,
+                                 step_size = 16,
+                                 0.5) 
+
+nn.fit &lt;- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler)
+</code></pre>
+<h3 id="optimizer">Optimizer</h3>
+<p>Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom optimizers can be used  with config_optimizer().<br />
+See ?config_optimizer() for more information.</p>
+<pre><code class="language-r">
+# adam optimizer with learning rate 0.002, betas to 0.95, 0.999 and eps to 1.5e-08
+opt &lt;- config_optimizer(
+  type = &quot;adam&quot;, 
+  betas = c(0.95, 0.999), 
+  eps = 1.5e-08)
+
+nn.fit &lt;- dnn(Species~., data = data, optimizer = opt, lr=0.002)
+</code></pre>
+<h3 id="loss-functions">Loss functions</h3>
+<p>Loss function measure how good the network performs.
+Standard Loss functions  are implemented along with some probability distributions.</p>
+<pre><code class="language-r"># Real Mean squared error
+nn.fit &lt;- dnn(Sepal.Length~. data = data, loss = &quot;rmse&quot;) 
+
+# normal distribution 
+nn.fit &lt;- dnn(Sepal.Length~. data = data, loss = stats::gaussian()) 
+</code></pre>
+<h3 id="early-stopping">Early Stopping</h3>
+<p>Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation &gt; 0.</p>
+<pre><code class="language-r"># Stops training if validation loss at current epoch is bigger than that 15 epochs earlier  
+nn.fit &lt;- dnn(Sepal.Length~., data = data, epochs = 1000, 
+              validation = 0.2, early_stopping = 15)
+</code></pre>
+<h2 id="continue-training-process">Continue training process</h2>
+<p>You can continue the training process of an existing model with continue_training().</p>
+<pre><code class="language-r"># simple example, simply adding another 12 epochs to the training process   
+nn.fit &lt;- continue_training(nn.fit, epochs = 12)
+</code></pre>
+<p>It also allows you to change any training parameters, for example the learning rate. You can also define which epoch the training should continue from. You can analyze the training process with analyze_training() and pick an epoch from which on the training should be continued from.</p>
+<pre><code class="language-r">
+# picking the model with the smalles validation loss 
+# with changed parameters, in this case a smaller learning rate and a smaller batchsize
+nn.fit &lt;- continue_training(nn.fit, 
+                            continue_from = which.min(nn.fit$losses$valid_l), 
+                            epochs = 32, 
+                            changed_params = list(lr = 0.001, batchsize = 16))
+</code></pre>
+</div>
+<div class="include-after">
+</div>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js" defer></script>
+</body>
+</html>

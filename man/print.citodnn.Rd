@@ -2,9 +2,12 @@
 % Please edit documentation in R/dnn.R
 \name{print.citodnn}
 \alias{print.citodnn}
+\alias{print.citodnnBootstrap}
 \title{Print class citodnn}
 \usage{
 \method{print}{citodnn}(x, ...)
+
+\method{print}{citodnnBootstrap}(x, ...)
 }
 \arguments{
 \item{x}{a model created by \code{\link{dnn}}}

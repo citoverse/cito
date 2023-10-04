@@ -2,25 +2,36 @@
 if(torch::torch_is_installed()){
 library(cito)
 
-set.seed(222)
-validation_set<- sample(c(1:nrow(datasets::iris)),25)
+# Example workflow in cito
 
-# Build and train  Network
-nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
+## Build and train  Network
+### softmax is used for multi-class responses (e.g., Species)
+nn.fit<- dnn(Species~., data = datasets::iris, loss = "softmax")
+
+## The training loss is below the baseline loss but at the end of the
+## training the loss was still decreasing, so continue training for another 50
+## epochs
+nn.fit <- continue_training(nn.fit, epochs = 50L)
 
 # Sturcture of Neural Network
 print(nn.fit)
 
-# Use model on validation set
-predictions <- predict(nn.fit, iris[validation_set,])
+# Plot Neural Network
+plot(nn.fit)
+## 4 Input nodes (first layer) because of 4 features
+## 3 Output nodes (last layer) because of 3 response species (one node for each
+## level in the response variable).
+## The layers between the input and output layer are called hidden layers (two
+## of them)
 
-# Scatterplot
-plot(iris[validation_set,]$Sepal.Length,predictions)
-# MAE
-mean(abs(predictions-iris[validation_set,]$Sepal.Length))
-
-# Get variable importances
+## We now want to understand how the predictions are made, what are the
+## important features? The summary function automatically calculates feature
+## importance (the interpretation is similar to an anova) and calculates
+## average conditional effects that are similar to linear effects:
 summary(nn.fit)
+
+## To visualize the effect (response-feature effect), we can use the ALE and
+## PDP functions
 
 # Partial dependencies
 PDP(nn.fit, variable = "Petal.Length")
@@ -28,7 +39,35 @@ PDP(nn.fit, variable = "Petal.Length")
 # Accumulated local effect plots
 ALE(nn.fit, variable = "Petal.Length")
 
-# Custom loss functions and additional parameters
+
+
+# Per se, it is difficult to get confidence intervals for our xAI metrics (or
+# for the predictions). But we can use bootstrapping to obtain uncertainties
+# for all cito outputs:
+## Re-fit the neural network with bootstrapping
+nn.fit<- dnn(Species~.,
+             data = datasets::iris,
+             loss = "softmax",
+             epochs = 150L,
+             bootstrap = 20L)
+## convergence can be tested via the analyze_training function
+analyze_training(nn.fit)
+
+## Summary for xAI metrics (can take some time):
+summary(nn.fit)
+## Now with standard errors and p-values
+## Note: Take the p-values with a grain of salt! We do not know yet if they are
+## correct (e.g. if you use regularization, they are likely conservative == too
+## large)
+
+## Predictions with bootstrapping:
+dim(predict(nn.fit))
+## The first dim corresponds to the bootstrapping, if you want the average
+## predictions, you need to calculate the mean by your own:
+apply(predict(nn.fit), 2:3, mean)
+
+
+# Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
 custom_loss = function(true, pred) {
   logLik = torch::distr_normal(pred,
@@ -38,7 +77,7 @@ custom_loss = function(true, pred) {
 }
 
 nn.fit<- dnn(Sepal.Length~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              loss = custom_loss,
              custom_parameters = list(scale = 1.0)
 )
@@ -61,7 +100,7 @@ custom_loss_MVN = function(true, pred) {
 
 
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              lr = 0.01,
              loss = custom_loss_MVN,
              custom_parameters =
