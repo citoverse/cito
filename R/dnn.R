@@ -203,35 +203,34 @@ dnn <- function(formula,
 
   targets <- format_targets(Y, loss_obj)
   Y <- targets$Y
+  Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
-  
-  Y_base = matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE)
 
-  X <- torch::torch_tensor(as.matrix(X))
+  X_torch <- torch::torch_tensor(as.matrix(X))
 
   if(is.null(bootstrap)) {
 
     loss.fkt <- loss_obj$loss
     if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-    base_loss = as.numeric(loss.fkt(torch::torch_tensor(as.matrix(Y_base)), torch::torch_tensor(as.matrix(Y), dtype = y_dtype))$mean())
+    base_loss = as.numeric(loss.fkt(Y_base, Y)$mean())
 
     ### dataloader  ###
     if(validation != 0) {
       n_samples <- nrow(X)
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
-      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
+      valid_dl <- get_data_loader(X_torch[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
     } else {
-      train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch, Y, batch_size = batchsize, shuffle = shuffle)
       valid_dl <- NULL
     }
-    
+
     if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
     if((length(hidden)+1) != length(lambda)) lambda <- rep(lambda,length(hidden)+1)
 
-    net <- build_model(input = ncol(X), output = y_dim,
+    net <- build_dnn(input = ncol(X), output = y_dim,
                       hidden = hidden, activation = activation,
                       bias = bias, dropout = dropout)
     model_properties <- list(input = ncol(X),
@@ -258,7 +257,7 @@ dnn <- function(formula,
     out$call <- match.call()
     out$call$formula <- stats::terms.formula(formula,data = data)
     out$loss <- loss_obj
-    out$data <- list(X = as.matrix(X), Y = as.matrix(Y), data = data)
+    out$data <- list(X = X, Y = as.matrix(Y), data = data)
     out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
     out$base_loss = base_loss
     if(!is.null(ylvls))  {
@@ -325,7 +324,7 @@ dnn <- function(formula,
     }
 
     out$models <- models
-    out$data <- list(X = X, Y = Y, data = data)
+    out$data <- list(X = X, Y = as.matrix(Y), data = data)
     out$device = device_old
   }
   return(out)

@@ -1,25 +1,47 @@
 format_targets <- function(Y, loss_obj) {
-  y_dtype <- torch::torch_float32()
-  if(!is.function(loss_obj$call) && all(loss_obj$call == "softmax")) y_dtype <- torch::torch_long()
+
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
-  if(is.character(Y)) {
-    Y <- as.factor(Y[,1])
-    ylvls <- levels(Y)
-    y_dim <- length(ylvls)
+  if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
+    ylvls <- NULL
+    if(all(Y %in% c(0,1))) {
+      Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
 
-    if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
-      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y)), torch::torch_float32())
+    } else if(is.character(Y)) {
+      Y <- as.factor(Y[,1])
+      ylvls <- levels(Y)
+      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
+
     } else {
-      Y <- torch::torch_tensor(matrix(as.integer(Y), ncol = 1L), dtype = y_dtype)
+      Y <- as.integer(Y[,1])
+      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
     }
+    y_dim <- ncol(Y)
+    Y_base <- torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
+
+  } else if(!is.function(loss_obj$call) && all(loss_obj$call == "softmax")) {
+    if (is.character(Y)) {
+      Y <- as.factor(Y[,1])
+      ylvls <- levels(Y)
+      Y <- as.matrix(as.integer(Y), ncol=1L)
+    } else {
+      ylvls <- NULL
+      Y <- as.matrix(as.integer(Y[,1]), ncol=1L)
+    }
+    y_dim <- length(unique(Y))
+    prop <- as.vector(table(Y)/sum(table(Y)))
+    Y_base <- matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE)
+    Y_base <- torch::torch_tensor(log(Y_base) + log(ncol(Y_base)))
+    Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
+
   } else {
     ylvls <- NULL
     y_dim <- ncol(Y)
-    Y <- torch::torch_tensor(Y, dtype = y_dtype)
+    Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
+    Y_base = torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
   }
 
-  return(list(Y=Y, y_dim=y_dim, ylvls=ylvls))
+  return(list(Y=Y, Y_base=Y_base, y_dim=y_dim, ylvls=ylvls))
 }
 
 
