@@ -2,9 +2,12 @@
 % Please edit documentation in R/dnn.R
 \name{summary.citodnn}
 \alias{summary.citodnn}
+\alias{summary.citodnnBootstrap}
 \title{Summarize Neural Network of class citodnn}
 \usage{
 \method{summary}{citodnn}(object, n_permute = NULL, device = NULL, ...)
+
+\method{summary}{citodnnBootstrap}(object, n_permute = NULL, device = NULL, ...)
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}

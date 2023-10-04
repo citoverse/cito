@@ -2,9 +2,12 @@
 % Please edit documentation in R/conditionalEffects.R
 \name{print.conditionalEffects}
 \alias{print.conditionalEffects}
+\alias{print.conditionalEffectsBootstrap}
 \title{Print average conditional effects}
 \usage{
 \method{print}{conditionalEffects}(x, ...)
+
+\method{print}{conditionalEffectsBootstrap}(x, ...)
 }
 \arguments{
 \item{x}{print ACE calculated by \code{\link{conditionalEffects}}}

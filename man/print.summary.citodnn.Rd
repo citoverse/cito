@@ -2,9 +2,12 @@
 % Please edit documentation in R/dnn.R
 \name{print.summary.citodnn}
 \alias{print.summary.citodnn}
+\alias{print.summary.citodnnBootstrap}
 \title{Print method for class summary.citodnn}
 \usage{
 \method{print}{summary.citodnn}(x, ...)
+
+\method{print}{summary.citodnnBootstrap}(x, ...)
 }
 \arguments{
 \item{x}{a summary object created by \code{\link{summary.citodnn}}}

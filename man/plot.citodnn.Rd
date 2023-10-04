@@ -2,9 +2,12 @@
 % Please edit documentation in R/dnn.R
 \name{plot.citodnn}
 \alias{plot.citodnn}
+\alias{plot.citodnnBootstrap}
 \title{Creates graph plot which gives an overview of the network architecture.}
 \usage{
 \method{plot}{citodnn}(x, node_size = 1, scale_edges = FALSE, ...)
+
+\method{plot}{citodnnBootstrap}(x, node_size = 1, scale_edges = FALSE, which_model = 1, ...)
 }
 \arguments{
 \item{x}{a model created by \code{\link{dnn}}}
@@ -14,6 +17,8 @@
 \item{scale_edges}{edge weight gets scaled according to other weights (layer specific)}
 
 \item{...}{no further functionality implemented yet}
+
+\item{which_model}{which model from the ensemble should be plotted}
 }
 \value{
 A plot made with 'ggraph' + 'igraph' that represents the neural network

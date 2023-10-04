@@ -187,8 +187,8 @@ library(cito)
 ### softmax is used for multi-class responses (e.g., Species)
 nn.fit<- dnn(Species~., data = datasets::iris, loss = "softmax")
 
-## The training loss is below the validation loss but at the end of the
-## traing the loss was still decreasing, so continue training for another 50
+## The training loss is below the baseline loss but at the end of the
+## training the loss was still decreasing, so continue training for another 50
 ## epochs
 nn.fit <- continue_training(nn.fit, epochs = 50L)
 
@@ -256,7 +256,7 @@ custom_loss = function(true, pred) {
 }
 
 nn.fit<- dnn(Sepal.Length~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              loss = custom_loss,
              custom_parameters = list(scale = 1.0)
 )
@@ -279,7 +279,7 @@ custom_loss_MVN = function(true, pred) {
 
 
 nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
-             data = datasets::iris[-validation_set,],
+             data = datasets::iris,
              lr = 0.01,
              loss = custom_loss_MVN,
              custom_parameters =

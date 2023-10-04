@@ -2,9 +2,18 @@
 % Please edit documentation in R/dnn.R
 \name{predict.citodnn}
 \alias{predict.citodnn}
+\alias{predict.citodnnBootstrap}
 \title{Predict from a fitted dnn model}
 \usage{
 \method{predict}{citodnn}(
+  object,
+  newdata = NULL,
+  type = c("link", "response", "class"),
+  device = c("cpu", "cuda", "mps"),
+  ...
+)
+
+\method{predict}{citodnnBootstrap}(
   object,
   newdata = NULL,
   type = c("link", "response", "class"),

@@ -2,9 +2,12 @@
 % Please edit documentation in R/dnn.R
 \name{coef.citodnn}
 \alias{coef.citodnn}
+\alias{coef.citodnnBootstrap}
 \title{Returns list of parameters the neural network model currently has in use}
 \usage{
 \method{coef}{citodnn}(object, ...)
+
+\method{coef}{citodnnBootstrap}(object, ...)
 }
 \arguments{
 \item{object}{a model created by \code{\link{dnn}}}

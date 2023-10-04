@@ -95,11 +95,11 @@ summary(nn.fit)
     ##  ##########################################################
     ##      Feature Importance 
     ##  ##########################################################
-    ##                          Importance Std.Err Z value Pr(>|z|)   
-    ## Response_1: Sepal.Width       1.712   0.661    2.59   0.0096 **
-    ## Response_1: Petal.Length     19.370   6.446    3.00   0.0027 **
-    ## Response_1: Petal.Width       0.694   0.502    1.38   0.1668   
-    ## Response_1: Species           0.281   0.177    1.58   0.1130   
+    ##                          Importance Std.Err Z value Pr(>|z|)    
+    ## Response_1: Sepal.Width       1.815   0.557    3.26  0.00113 ** 
+    ## Response_1: Petal.Length     19.211   5.563    3.45  0.00055 ***
+    ## Response_1: Petal.Width       0.485   0.475    1.02  0.30690    
+    ## Response_1: Species           0.459   0.277    1.65  0.09826 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -108,9 +108,9 @@ summary(nn.fit)
     ##      Average Conditional Effects 
     ##  ##########################################################
     ##                              ACE Std.Err Z value Pr(>|z|)    
-    ## Response_1: Sepal.Width   0.7202  0.0666   10.82   <2e-16 ***
-    ## Response_1: Petal.Length  0.6395  0.0739    8.65   <2e-16 ***
-    ## Response_1: Petal.Width  -0.1916  0.1336   -1.43     0.15    
+    ## Response_1: Sepal.Width   0.7125  0.0791    9.01   <2e-16 ***
+    ## Response_1: Petal.Length  0.6436  0.0664    9.70   <2e-16 ***
+    ## Response_1: Petal.Width  -0.1560  0.1360   -1.15     0.25    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -118,10 +118,10 @@ summary(nn.fit)
     ##  ##########################################################
     ##      Standard Deviation of Conditional Effects 
     ##  ##########################################################
-    ##                             ACE Std.Err Z value Pr(>|z|)   
-    ## Response_1: Sepal.Width  0.1378  0.0467    2.95   0.0032 **
-    ## Response_1: Petal.Length 0.1096  0.0437    2.51   0.0121 * 
-    ## Response_1: Petal.Width  0.0520  0.0292    1.78   0.0749 . 
+    ##                             ACE Std.Err Z value Pr(>|z|)    
+    ## Response_1: Sepal.Width  0.1466  0.0430    3.41  0.00064 ***
+    ## Response_1: Petal.Length 0.1271  0.0411    3.09  0.00200 ** 
+    ## Response_1: Petal.Width  0.0487  0.0282    1.72  0.08482 .  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -192,9 +192,9 @@ as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
 ```
 
     ##            [,1]       [,2]       [,3]
-    ## [1,]  1.1261417 -0.2697209  0.2071757
-    ## [2,] -0.2697209 25.7208309 -0.1872581
-    ## [3,]  0.2071757 -0.1872581  0.1996000
+    ## [1,] 0.23374167 0.07131696 0.13503927
+    ## [2,] 0.07131696 0.09627343 0.03110428
+    ## [3,] 0.13503927 0.03110428 0.19582744
 
 Empirical covariance matrix:
 
@@ -203,6 +203,6 @@ cov(predict(nn.fit) - nn.fit$data$Y)
 ```
 
     ##              Sepal.Length Sepal.Width Petal.Length
-    ## Sepal.Length    0.2311693  0.10301748   0.12489735
-    ## Sepal.Width     0.1030175  0.42593235   0.05420866
-    ## Petal.Length    0.1248974  0.05420866   0.13383693
+    ## Sepal.Length   0.22601251  0.05944633   0.12786447
+    ## Sepal.Width    0.05944633  0.09067426   0.01754041
+    ## Petal.Length   0.12786447  0.01754041   0.14744435

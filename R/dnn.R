@@ -201,6 +201,7 @@ dnn <- function(formula,
       }
   }
 
+
   targets <- format_targets(Y, loss_obj)
   Y <- targets$Y
   Y_base <- targets$Y_base
@@ -344,13 +345,7 @@ print.citodnn <- function(x,...){
   return(invisible(x))
 }
 
-#' Print class citodnnBootstrap
-#'
-#' @param x a model created by \code{\link{dnn}}
-#' @param ... additional arguments
-#' @return prediction matrix
-#' @example /inst/examples/print.citodnn-example.R
-#' @return original object x gets returned
+#' @rdname print.citodnn
 #' @export
 print.citodnnBootstrap <- function(x,...){
   x$models <- lapply(x$models, check_model)
@@ -441,26 +436,7 @@ print.summary.citodnn <- function(x, ... ){
 
 
 
-#' Summarize Neural Network of class citodnnBootstrap
-#'
-#' Performs a Feature Importance calculation based on Permutations
-#'
-#' @details
-#'
-#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
-#'
-#' Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
-#'
-#' Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
-#'
-#' The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
-#'
-#'
-#' @param object a model of class citodnn created by \code{\link{dnn}} with bootstrapping
-#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
-#' @param device for calculating variable importance and conditional effects
-#' @param ... additional arguments
-#' @return summary.citodnnBootstrap returns an object of class "summary.citodnn", a list with components
+#' @rdname summary.citodnn
 #' @export
 summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ...){
   object$models <- lapply(object$models, check_model)
@@ -533,12 +509,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 }
 
 
-
-#' Print method for class summary.citodnnBootstrap
-#'
-#' @param x a summary object created by \code{\link{summary.citodnnBootstrap}}
-#' @param ... additional arguments
-#' @return List with Matrices for importance, average CE, absolute sum of CE, and standard deviation of the CE
+#' @rdname print.summary.citodnn
 #' @export
 print.summary.citodnnBootstrap <- function(x, ... ){
   out = list()
@@ -585,6 +556,12 @@ print.summary.citodnnBootstrap <- function(x, ... ){
 #' @export
 coef.citodnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
+}
+
+#' @rdname coef.citodnn
+#' @export
+coef.citodnnBootstrap <- function(object, ...) {
+  return(lapply(object$models, stats::coef))
 }
 
 
@@ -647,16 +624,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
 
 
 
-#' Predict from a fitted dnn model
-#'
-#' @param object a model created by \code{\link{dnn}} with bootstrapping
-#' @param newdata new data for predictions
-#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
-#' @param device device on which network should be trained on.
-#' @param ... additional arguments
-#' @return prediction array
-#'
-#' @example /inst/examples/predict.citodnn-example.R
+#' @rdname predict.citodnn
 #' @export
 predict.citodnnBootstrap <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"),...) {
 
@@ -731,18 +699,11 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 }
 
 
-
-#' Creates graph plot which gives an overview of the network architecture.
-#'
-#' @param x a model created by \code{\link{dnn}} with bootstrapping
-#' @param node_size size of node in plot
-#' @param scale_edges edge weight gets scaled according to other weights (layer specific)
-#' @param ... no further functionality implemented yet
-#' @return A plot made with 'ggraph' + 'igraph' that represents the neural network
-#' @example /inst/examples/plot.citodnn-example.R
+#' @rdname plot.citodnn
+#' @param which_model which model from the ensemble should be plotted
 #' @export
-plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,...){
- plot(x$models[[1]], node_size = node_size, scale_edges = scale_edges)
+plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,which_model = 1,...){
+ plot(x$models[[which_model]], node_size = node_size, scale_edges = scale_edges)
 }
 
 

@@ -1,13 +1,17 @@
 ---
 title: "Example: (Multi-) Species distribution models with cito"
 author: "Maximilian Pichler"
-abstract: "This vignette shows working examples of how to fit (multi-) species distribution models with cito"
+abstract: "This vignette shows working examples of how to fit (multi-) species distribution models with cito. Training neural networks is tricky compared to other ML algorithms that converge more easily (due to various reasons). The purpose of this vignette is to provide an example workflow and to point out common caveats when training a neural network"
 date: "`r Sys.Date()`"
 output:
  rmarkdown::html_vignette:
     toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean
 vignette: >
-  %\VignetteIndexEntry{Example SDM}
+  %\VignetteIndexEntry{Example: (Multi-) Species distribution models with cito}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options: 
@@ -25,10 +29,6 @@ knitr::opts_chunk$set(
 options("progress_enabled" = FALSE)
 
 ```
-
-## Purpose
-
-Training neural networks is tricky compared to other ML algorithms that converge more easily (due to various reasons). The purpose of this vignette is to provide an example workflow and to point out common caveats when training a neural network
 
 ## Species distribution model - African elephant
 
