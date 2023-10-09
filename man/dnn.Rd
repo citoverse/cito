@@ -5,9 +5,10 @@
 \title{DNN}
 \usage{
 dnn(
-  formula,
+  formula = NULL,
   data = NULL,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
+    "mvp"),
   hidden = c(50L, 50L),
   activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
     "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
@@ -29,7 +30,9 @@ dnn(
   lr_scheduler = NULL,
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
-  early_stopping = FALSE
+  early_stopping = FALSE,
+  x = NULL,
+  y = NULL
 )
 }
 \arguments{
@@ -78,6 +81,10 @@ dnn(
 \item{device}{device on which network should be trained on. mps correspond to M1/M2 GPU devices.}
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+
+\item{x}{Feature matrix, alternative data interface}
+
+\item{y}{Response matrix, alternative data interface (must be a matrix)}
 }
 \value{
 an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.

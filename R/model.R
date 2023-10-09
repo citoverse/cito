@@ -137,6 +137,23 @@ get_loss <- function(loss) {
       out$loss <- function(pred, true) {
         return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
       }
+    } else if(loss == "mvp") {
+      df = floor(ncol(Y)/2)
+      out$parameter <- torch::torch_tensor(matrix(runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE)
+      out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
+      out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
+      out$loss <- function(pred, true) {
+        sigma = out$parameter
+        Ys = true
+        df = ncol(sigma)
+        noise = torch::torch_randn(list(100L, nrow(pred), df))
+        E = plogisT((torch::torch_einsum("ijk, lk -> ijl", list(noise, sigma))+pred)*1.702)*0.999999+0.0000005
+        logprob = -(log(E)*Ys + log(1.0-E)*(1.0-Ys))
+        logprob = - logprob$sum(3)
+        maxlogprob = torch::torch_amax(logprob, dim = 1)
+        Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
+        return((-log(Eprob) - maxlogprob)$mean())
+      }
     }
     else{
       cat( "unidentified loss \n")

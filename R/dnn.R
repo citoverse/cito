@@ -25,6 +25,8 @@
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
+#' @param x Feature matrix, alternative data interface
+#' @param y Response matrix, alternative data interface (must be a matrix)
 #'
 #' @details
 #'
@@ -126,9 +128,9 @@
 #' @author Christian Amesoeder, Maximilian Pichler
 #' @seealso \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
 #' @export
-dnn <- function(formula,
+dnn <- function(formula = NULL,
                 data = NULL,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp"),
                 hidden = c(50L, 50L),
                 activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                                "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
@@ -150,7 +152,9 @@ dnn <- function(formula,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda", "mps"),
-                early_stopping = FALSE) {
+                early_stopping = FALSE,
+                x = NULL,
+                y = NULL) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
@@ -174,18 +178,24 @@ dnn <- function(formula,
   device = check_device(device)
 
   ### Generate X & Y data ###
-  if(!is.data.frame(data)) data <- data.frame(data)
-  old_formula = formula
-  if(!is.null(formula)){
-    fct_call <- match.call()
-    m <- match("formula", names(fct_call))
-    if(inherits(fct_call[3]$formula, "name")) fct_call[3]$formula <- eval(fct_call[3]$formula, envir = parent.env(environment()))
-    formula <- stats::as.formula(fct_call[m]$formula)
+  if(!is.null(formula)) {
+    if(!is.data.frame(data)) data <- data.frame(data)
+    old_formula = formula
+    if(!is.null(formula)){
+      fct_call <- match.call()
+      m <- match("formula", names(fct_call))
+      if(inherits(fct_call[3]$formula, "name")) fct_call[3]$formula <- eval(fct_call[3]$formula, envir = parent.env(environment()))
+      formula <- stats::as.formula(fct_call[m]$formula)
+    } else {
+      formula <- stats::as.formula("~.")
+    }
+    X <- stats::model.matrix(formula, data)
+    Y <- stats::model.response(stats::model.frame(formula, data))
   } else {
-    formula <- stats::as.formula("~.")
+    X = x
+    Y = y
+    data = data.frame(cbind(X, Y))
   }
-  X <- stats::model.matrix(formula, data)
-  Y <- stats::model.response(stats::model.frame(formula, data))
   ylvls <- NULL
   if(is.factor(Y)) ylvls <- levels(Y)
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
@@ -197,11 +207,14 @@ dnn <- function(formula,
   responses = NULL
   response_column = NULL
   responses = ylvls
-  if(is.null(responses)) responses = as.character(LHSForm(formula))
-  if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
+  if(!is.null(formula)) {
+    if(is.null(responses)) responses = as.character(LHSForm(formula))
+    if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
+  }
   if(ncol(Y) > 1) responses = colnames(Y)
 
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
+
+  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")
@@ -280,7 +293,7 @@ dnn <- function(formula,
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula,data = data)
+    if(!is.null(formula)) out$call$formula <- stats::terms.formula(formula,data = data)
     out$loss <- loss_obj
     out$data <- list(X = X, Y = Y, data = data)
     out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
@@ -318,7 +331,7 @@ dnn <- function(formula,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
+          bootstrap_parallel = FALSE, x = x, y = y
         ))
         pb$tick()
         models[[b]] = m
@@ -342,7 +355,7 @@ dnn <- function(formula,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
+          bootstrap_parallel = FALSE, x = x, y = y
         ))
         m
       })
@@ -479,7 +492,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
   if(!is.null(out$importance[[1]])){
     res_imps = list()
     for(i in 2:ncol(out$importance[[1]])) {
-      tmp = sapply(out$importance, function(X) X[,i])
+      tmp = sapply(out$importance, function(X) X[,i, drop=FALSE])
+      if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
       imps = apply(tmp, 1, mean) - 1
       imps_se = apply(tmp, 1, stats::sd)
 
@@ -506,6 +520,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
+    if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
+    if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
     eff = apply(tmp, 1, mean)
     eff_se = apply(tmp, 1, stats::sd)
 
@@ -527,6 +543,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
 
   for(i in 1:length(out$conditionalEffects[[1]])) {
     tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
+    if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
+    if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
     eff = apply(tmp, 1, mean)
     eff_se = apply(tmp, 1, stats::sd)
 

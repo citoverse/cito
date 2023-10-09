@@ -1,4 +1,15 @@
 # Version 1.0.2
+## cito submission 5 2023/06/10
+Dear CRAN Team,
+
+I apologize for the inconvenience (several submission attempts), but it seems that
+that something went wrong with my last attempt? 
+
+All issues were addressed. 
+
+Best,
+Maximilian Pichler
+
 ## cito submission 5 2023/01/10
 Issue:
 Unfortunately, the manual cannot be built on the CRAN ,aster with its

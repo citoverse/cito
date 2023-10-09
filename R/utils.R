@@ -111,3 +111,10 @@ LHSForm = function (form, as.form = FALSE)
     stats::reformulate(deparse(rhsf))
   else rhsf
 }
+
+
+cast_to_r_keep_dim = function(x) {
+  d = dim(x)
+  if(length(d) == 1) return(as.numeric(x))
+  else return(as.matrix(x))
+}
