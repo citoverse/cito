@@ -1,11 +1,13 @@
-#' Continues training of a model generated with \code{\link{dnn}} for additional epochs.
+#' Continues training of a model generated with \code{\link{dnn}} or \code{\link{cnn}} for additional epochs.
 #'
 #' @description
 #' If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
 #'
 #'
-#' @param model a model created by \code{\link{dnn}}
-#' @param data matrix or data.frame if not provided data from original training will be used
+#' @param model a model created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @param data matrix or data.frame. If not provided data from original training will be used
+#' @param X array. If not provided X from original training will be used
+#' @param Y vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used
 #' @param epochs additional epochs the training should continue for
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param verbose print training and validation loss of epochs
@@ -21,7 +23,9 @@
 continue_training <- function(model,
                               epochs = 32,
                               data=NULL,
-                              device= "cpu",
+                              X=NULL,
+                              Y=NULL,
+                              device= c("cpu","cuda", "mps"),
                               verbose = TRUE,
                               changed_params=NULL,
                               parallel = FALSE){UseMethod("continue_training")}
@@ -31,26 +35,14 @@ continue_training <- function(model,
 continue_training.citodnn <- function(model,
                               epochs = 32,
                               data=NULL,
-                              device= "cpu",
+                              device= c("cpu","cuda", "mps"),
                               verbose = TRUE,
                               changed_params=NULL,
                               parallel = FALSE){
 
   checkmate::qassert(device, "S+[3,)")
-
-  ### Training device ###
-  if(device== "cuda"){
-    if (torch::cuda_is_available()) {
-      device<- torch::torch_device("cuda")}
-    else{
-      warning("No Cuda device detected, device is set to cpu")
-      device<- torch::torch_device("cpu")
-    }
-
-  }else {
-    if(device!= "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
-    device<- torch::torch_device("cpu")
-  }
+  device <- match.arg(device)
+  device <- check_device(device)
 
   model<- check_model(model)
 
@@ -70,7 +62,7 @@ continue_training.citodnn <- function(model,
   X = stats::model.matrix(fm, data)
   Y = stats::model.response(stats::model.frame(fm, data))
 
-  targets <- format_targets(Y, model$loss)
+  targets <- format_targets(Y, model$loss, model$data$ylvls)
   Y <- targets$Y
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
@@ -102,7 +94,7 @@ continue_training.citodnn <- function(model,
 continue_training.citodnnBootstrap <- function(model,
                                       epochs = 32,
                                       data=NULL,
-                                      device= "cpu",
+                                      device= c("cpu","cuda", "mps"),
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       parallel = FALSE){
@@ -136,7 +128,67 @@ continue_training.citodnnBootstrap <- function(model,
   return(model)
 }
 
+#' @rdname continue_training
+#' @export
+continue_training.citocnn <- function(model,
+                                      epochs = 32,
+                                      X=NULL,
+                                      Y=NULL,
+                                      device= c("cpu", "cuda"),
+                                      verbose = TRUE,
+                                      changed_params=NULL){
 
+  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::qassert(device, "S+[3,)")
+  device <- match.arg(device)
+  device <- check_device(device)
+
+  if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL")
+  if(!is.null(X) && !all(dim(X)[-1] == dim(model$data$X)[-1])) stop(paste0("Wrong dimensions of X [",paste0(dim(X), collapse = ","),"]. Correct dimensions: [N,",paste0(dim(model$data$X)[-1]), "]"))
+  if(!is.null(Y) && is.matrix(Y) && ncol(Y) != ncol(model$data$Y)) stop(paste0("Wrong dimensions of Y [",paste0(dim(Y), collapse = ","),"]. Correct dimensions: [N,",ncol(model$data$Y), "]"))
+  if(!is.null(Y) && is.matrix(Y) && nrow(Y) != dim(X)[1]) stop(paste0("nrow(Y)=", nrow(Y), " has to be equal to dim(X)[1]=", dim(X)[1]))
+  if(!is.null(Y) && !is.matrix(Y) && length(Y) != dim(X)[1]) stop(paste0("length(Y)=", length(Y), " has to be equal to dim(X)[1]=", dim(X)[1]))
+
+  model<- check_model(model)
+
+
+  ### set training environment ###
+  if(!is.null(changed_params)){
+    for (i in 1:length(changed_params)){
+      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
+      eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+    }
+  }
+
+  ### set dataloader  ###
+  if(is.null(X)) X <- model$data$X
+  if(is.null(Y)) Y <- model$data$Y
+
+  targets <- format_targets(Y, model$loss, model$data$ylvls)
+  Y <- targets$Y
+  y_dim <- targets$y_dim
+  ylvls <- targets$ylvls
+
+  X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+
+
+  ### dataloader  ###
+  if(model$training_properties$validation != 0) {
+    n_samples <- dim(X)[1]
+    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+    train <- c(1:n_samples)[-valid]
+    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+  } else {
+    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    valid_dl <- NULL
+  }
+
+
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+
+  return(model)
+}
 
 
 
