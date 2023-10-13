@@ -2,7 +2,7 @@ visualize.training <- function(losses,epoch,new = FALSE, baseline = NULL){
   if (epoch==1|new){
 
     graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l,losses$valid_l,baseline,na.rm=T)),
-                   main= "Training of DNN",
+                   main= "Training of NN",
                    xlab= "epoch",
                    ylab= "loss",
                    las = 1)
@@ -43,7 +43,7 @@ visualize.training <- function(losses,epoch,new = FALSE, baseline = NULL){
 #' The baseline loss is the most important reference. If the model was not able to achieve a better (lower) loss than the baseline (which is the loss for a intercept only model), the model probably did not converge. Possible reasons include an improper learning rate, too few epochs, or too much regularization. See the `?dnn` help or the `vignette("B-Training_neural_networks")`.
 #'
 #'
-#' @param object a model created by \code{\link{dnn}}
+#' @param object a model created by \code{\link{dnn}} or \code{\link{cnn}}
 #' @return a 'plotly' figure
 #' @example /inst/examples/analyze_training-example.R
 #' @export
@@ -56,10 +56,10 @@ analyze_training<- function(object){
       call. = FALSE
     )
   }
-  if(!inherits(object, c("citodnn", "citodnnBootstrap"))) stop("Function requires an object of class citodnn")
+  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn"))) stop("Function requires an object of class citodnn, citodnnBootstrap or citocnn")
 
 
-  if(inherits(object, "citodnn")) {
+  if(inherits(object, c("citodnn", "citocnn"))) {
     fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                            width = 900)
 
