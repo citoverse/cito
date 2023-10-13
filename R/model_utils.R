@@ -1,15 +1,18 @@
-format_targets <- function(Y, loss_obj) {
+format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
 
   if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
-    ylvls <- NULL
     if(all(Y %in% c(0,1))) {
       Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
 
     } else if(is.character(Y)) {
-      Y <- as.factor(Y[,1])
-      ylvls <- levels(Y)
+      if (is.null(ylvls)) {
+        Y <- factor(Y[,1])
+        ylvls <- levels(Y)
+      } else {
+        Y <- factor(Y[,1], levels = ylvls)
+      }
       Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
 
     } else {
@@ -21,11 +24,14 @@ format_targets <- function(Y, loss_obj) {
 
   } else if(!is.function(loss_obj$call) && all(loss_obj$call == "softmax")) {
     if (is.character(Y)) {
-      Y <- as.factor(Y[,1])
-      ylvls <- levels(Y)
+      if (is.null(ylvls)) {
+        Y <- factor(Y[,1])
+        ylvls <- levels(Y)
+      } else {
+        Y <- factor(Y[,1], levels = ylvls)
+      }
       Y <- as.matrix(as.integer(Y), ncol=1L)
     } else {
-      ylvls <- NULL
       Y <- as.matrix(as.integer(Y[,1]), ncol=1L)
     }
     y_dim <- length(unique(Y))
@@ -35,7 +41,6 @@ format_targets <- function(Y, loss_obj) {
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
 
   } else {
-    ylvls <- NULL
     y_dim <- ncol(Y)
     Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
     Y_base = torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
@@ -150,92 +155,23 @@ get_activation_layer <- function(activation) {
   ))
 }
 
+get_var_names <- function(formula, data){
+  X_helper <- stats::model.matrix(formula,data[1,])
+  var_names <- c()
+  for(i in seq_len(ncol(data))){
+    if(colnames(data)[i]%in%colnames(X_helper)){
+      var_names<- append(var_names, colnames(data)[i])
 
-fill_layer_parameters <- function(layers, input_dim, n_kernels, kernel_size, stride, padding, dilation,
-                                  n_neurons, bias, activation, normalization, dropout, lambda, alpha) {
+    }else if (is.factor(data[,i])){
+      count <- startsWith(colnames(X_helper),colnames(data)[i])
+      count <- sum(count, na.rm = TRUE) + 1
+      if(count >= nlevels(data[,i])){
+        var_names<- append(var_names, colnames(data)[i])
 
-  default_conv_layer <- list(n_kernels=n_kernels,
-                             kernel_size=get_default_parameter(kernel_size, "conv", 3, input_dim),
-                             stride=get_default_parameter(stride, "conv", 1, input_dim),
-                             padding=get_default_parameter(padding, "conv", 0, input_dim),
-                             dilation=get_default_parameter(dilation, "conv", 1, input_dim),
-                             bias=get_default_parameter(bias, "conv", TRUE),
-                             normalization=get_default_parameter(normalization, "conv", FALSE),
-                             activation=get_default_parameter(activation, "conv", "relu"),
-                             dropout=get_default_parameter(dropout, "conv", 0.0),
-                             lambda=get_default_parameter(lambda, "conv", 0.0),
-                             alpha=get_default_parameter(alpha, "conv", 0.5))
-
-  default_linear_layer <- list(n_neurons=n_neurons,
-                               bias=get_default_parameter(bias, "linear", TRUE),
-                               normalization=get_default_parameter(normalization, "linear", FALSE),
-                               activation=get_default_parameter(activation, "linear", "relu"),
-                               dropout=get_default_parameter(dropout, "linear", 0.0),
-                               lambda=get_default_parameter(lambda, "linear", 0.0),
-                               alpha=get_default_parameter(alpha, "linear", 0.5))
-
-  default_pool_layer <- list(kernel_size=get_default_parameter(kernel_size, "pool", 2, input_dim),
-                             stride=get_default_parameter(stride, "pool", get_default_parameter(kernel_size, "pool", 2, input_dim), input_dim),
-                             padding=get_default_parameter(padding, "pool", 0, input_dim),
-                             dilation=get_default_parameter(dilation, "pool", 1, input_dim))
-
-  filled_layers <- list()
-  counter <- 1
-  for(layer in layers) {
-    layer_type <- layer[[1]]
-    if(layer_type == "conv") {
-      filled_layers[[counter]] <- fill_with_defaults(layer, default_conv_layer)
-    } else if(layer_type == "linear") {
-      filled_layers[[counter]] <- fill_with_defaults(layer, default_linear_layer)
-    } else if(layer_type == "maxPool" || layer_type == "avgPool") {
-      filled_layers[[counter]] <- fill_with_defaults(layer, default_pool_layer)
-    } else {
-      stop(paste0("Unsupported layer type: ", layer_type))
-    }
-    counter <- counter+1
-  }
-  return(filled_layers)
-}
-
-
-get_default_parameter <- function(parameter, key, default, input_dim = NA) {
-  if(inherits(parameter, "list")) {
-    out <- ifelse(is.null(parameter[[key]]), default, parameter[[key]])
-  } else {
-    out <- parameter
-  }
-  if(!is.na(input_dim)) {
-    if(length(out) == input_dim) {
-      return(out)
-    } else if(length(out) == 1) {
-      return(rep(out, input_dim))
-    } else {
-      stop(paste0("Parameter length (", length(out), ") must be either 1 or equal to input dimension (", input_dim, ")"))
+      }
     }
   }
-  return(out)
-}
-
-fill_with_defaults <- function(layer, default_layer) {
-  for (parameter in names(default_layer)) {
-    if(is.null(layer[[parameter]])) {
-      layer[[parameter]] <- default_layer[[parameter]]
-    }
-  }
-  return(layer)
-}
-
-
-get_regularization_parameters <- function(layers) {
-  lambda <- c()
-  alpha <- c()
-  for(layer in layers) {
-    if(layer[[1]] %in% c("conv", "linear")) {
-      lambda <- c(lambda, layer[["lambda"]])
-      alpha <- c(alpha, layer[["alpha"]])
-    }
-  }
-  return(list(lambda=lambda, alpha=alpha))
+  return(var_names)
 }
 
 get_output_shape <- function(input_shape, n_kernels, kernel_size, stride, padding, dilation) {
@@ -249,4 +185,29 @@ get_output_shape <- function(input_shape, n_kernels, kernel_size, stride, paddin
   return(input_shape)
 }
 
+
+adjust_architecture <- function(architecture, input_dim) {
+
+  adjusted_architecture <- list()
+  for(layer in architecture) {
+    if(class(layer)[1] %in% c("avgPool", "maxPool")) {
+      if(is.null(layer$stride)) layer$stride <- layer$kernel_size
+    }
+
+    if(input_dim != 1) {
+      if(class(layer)[1] %in% c("conv", "avgPool", "maxPool")) {
+        if(length(layer$kernel_size) == 1) layer$kernel_size <- rep(layer$kernel_size, input_dim)
+        if(length(layer$stride) == 1) layer$stride <- rep(layer$stride, input_dim)
+        if(length(layer$padding) == 1) layer$padding <- rep(layer$padding, input_dim)
+      }
+
+      if(class(layer)[1] %in% c("conv", "maxPool")) {
+        if(length(layer$dilation) == 1) layer$dilation <- rep(layer$dilation, input_dim)
+      }
+    }
+    adjusted_architecture <- append(adjusted_architecture, list(layer))
+  }
+  class(adjusted_architecture) <- "citoarchitecture"
+  return(adjusted_architecture)
+}
 
