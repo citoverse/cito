@@ -16,8 +16,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   if(is.null(model$losses)){
     model$losses <- data.frame(epoch=c(1:epochs),train_l=NA,valid_l= NA)
   }else{
-    model$losses <- rbind(model$losses[1:model$use_model_epoch,],
-                          data.frame(epoch=c((model$use_model_epoch+1):(model$use_model_epoch+epochs)),train_l=NA,valid_l= NA))
+    model$losses <- rbind(model$losses,
+                          data.frame(epoch=c((max(model$losses$epoch)+1):(max(model$losses$epoch)+epochs)),train_l=NA,valid_l= NA))
   }
 
   loss.fkt <- model$loss$loss
