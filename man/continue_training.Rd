@@ -46,28 +46,7 @@ continue_training(
   Y = NULL,
   device = c("cpu", "cuda"),
   verbose = TRUE,
-  changed_params = NULL,
-  parallel = FALSE
-)
-
-\method{continue_training}{citodnn}(
-  model,
-  epochs = 32,
-  data = NULL,
-  device = "cpu",
-  verbose = TRUE,
-  changed_params = NULL,
-  parallel = FALSE
-)
-
-\method{continue_training}{citodnnBootstrap}(
-  model,
-  epochs = 32,
-  data = NULL,
-  device = "cpu",
-  verbose = TRUE,
-  changed_params = NULL,
-  parallel = FALSE
+  changed_params = NULL
 )
 }
 \arguments{

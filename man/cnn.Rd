@@ -172,12 +172,12 @@ Note: GPU training is optional, and the package can still be used for training o
 
     ## Build and train network
     ### softmax is used for classification
-    cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, device = "cuda")
+    cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50)
 
     ## The training loss is below the baseline loss but at the end of the
     ## training the loss was still decreasing, so continue training for another 50
     ## epochs
-    cnn.fit <- continue_training(cnn.fit, epochs = 50, device = "cuda")
+    cnn.fit <- continue_training(cnn.fit, epochs = 50)
 
     # Structure of Neural Network
     print(cnn.fit)
