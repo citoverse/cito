@@ -38,7 +38,6 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     y_dim <- length(unique(Y))
     prop <- as.vector(table(Y)/sum(table(Y)))
     Y_base <- matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE)
-    Y_base <- torch::torch_tensor(log(Y_base) + log(ncol(Y_base)))
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
   } else {
     y_dim <- ncol(Y)
@@ -67,7 +66,7 @@ get_loss <- function(loss) {
   out$parameter <- NULL
 
   if(is.character(loss)) loss <- tolower(loss)
-  if(!inherits(loss, "family")& is.character(loss)) {
+  if(!inherits(loss, "family")& is.character(loss)){
     loss <- switch(loss,
                    "gaussian" = stats::gaussian(),
                    "binomial" = stats::binomial(),
@@ -76,20 +75,24 @@ get_loss <- function(loss) {
     )
   }
 
-  if(inherits(loss, "family")) {
+  if(inherits(loss, "family")){
     if(loss$family == "gaussian") {
-      out$parameter <- torch::torch_tensor(0.1, requires_grad = TRUE)
+      out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE)
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred, true) {
-        return(torch::distr_normal(pred, torch::torch_clamp(torch::torch_tensor(unlist(out$parameter),requires_grad = TRUE), 0.0001, 20))$log_prob(true)$negative())
+        return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
       }
     } else if(loss$family == "binomial") {
       if(loss$link == "logit") {
         out$invlink <- function(a) torch::torch_sigmoid(a)
+        out$link <- function(a) stats::binomial("logit")$linkfun(as.matrix(a))
       } else if(loss$link == "probit")  {
         out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
+        out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
       } else {
         out$invlink <- function(a) a
+        out$link <- function(a) a
       }
       out$loss <- function(pred, true) {
         return(torch::distr_bernoulli(probs = out$invlink(pred))$log_prob(true)$negative())
@@ -97,8 +100,10 @@ get_loss <- function(loss) {
     } else if(loss$family == "poisson") {
       if(loss$link == "log") {
         out$invlink <- function(a) torch::torch_exp(a)
+        out$link <- function(a) log(a)
       } else {
         out$invlink <- function(a) a
+        out$link <- function(a) a
       }
       out$loss <- function(pred, true) {
         return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
@@ -110,17 +115,38 @@ get_loss <- function(loss) {
     }
     out$loss <- loss
     out$invlink <- function(a) a
+    out$link <- function(a) a
   } else {
     if(loss == "mae"){
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred, true) return(torch::nnf_l1_loss(input = pred, target = true))
     }else if(loss == "mse"){
       out$invlink <- function(a) a
+      out$link <- function(a) a
       out$loss <- function(pred,true) return(torch::nnf_mse_loss(input= pred, target = true))
     }else if(loss == "softmax" | loss == "cross-entropy") {
       out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
+      out$link <- function(a) log(a) + log(ncol(a))
       out$loss <- function(pred, true) {
         return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
+      }
+    } else if(loss == "mvp") {
+      df = floor(ncol(Y)/2)
+      out$parameter <- torch::torch_tensor(matrix(runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE)
+      out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
+      out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
+      out$loss <- function(pred, true) {
+        sigma = out$parameter
+        Ys = true
+        df = ncol(sigma)
+        noise = torch::torch_randn(list(100L, nrow(pred), df))
+        E = plogisT((torch::torch_einsum("ijk, lk -> ijl", list(noise, sigma))+pred)*1.702)*0.999999+0.0000005
+        logprob = -(log(E)*Ys + log(1.0-E)*(1.0-Ys))
+        logprob = - logprob$sum(3)
+        maxlogprob = torch::torch_amax(logprob, dim = 1)
+        Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
+        return((-log(Eprob) - maxlogprob)$mean())
       }
     }
     else{

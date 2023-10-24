@@ -185,7 +185,7 @@ cnn <- function(X,
 
   loss.fkt <- loss_obj$loss
   if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(Y_base, Y)$mean())
+  base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
 
   if(validation != 0) {
     n_samples <- dim(X)[1]
