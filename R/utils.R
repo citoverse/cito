@@ -61,26 +61,6 @@ check_listable_parameter <- function(parameter, check, vname = checkmate::vname(
   }
 }
 
-
-get_var_names <- function(formula, data){
-  X_helper <- stats::model.matrix(formula,data[1,])
-  var_names <- c()
-  for(i in seq_len(ncol(data))){
-    if(colnames(data)[i]%in%colnames(X_helper)){
-      var_names<- append(var_names, colnames(data)[i])
-
-    }else if (is.factor(data[,i])){
-      count <- startsWith(colnames(X_helper),colnames(data)[i])
-      count <- sum(count, na.rm = TRUE) + 1
-      if(count >= nlevels(data[,i])){
-        var_names<- append(var_names, colnames(data)[i])
-
-      }
-    }
-  }
-  return(var_names)
-}
-
 check_device = function(device) {
   if(device == "cuda"){
     if (torch::cuda_is_available()) {

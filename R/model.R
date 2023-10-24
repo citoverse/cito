@@ -9,7 +9,7 @@ build_model <- function(object) {
   } else if(inherits(object, "citocnn")) {
     net <- build_cnn(input_shape = object$model_properties$input,
                      output_shape = object$model_properties$output,
-                     layers = object$model_properties$layers)
+                     architecture = object$model_properties$architecture)
   } else {
     stop("model not of class citodnn or citocnn")
   }
@@ -49,14 +49,14 @@ build_dnn = function(input, output, hidden, activation, bias, dropout) {
 }
 
 
-build_cnn <- function(input_shape, output_shape, layers) {
+build_cnn <- function(input_shape, output_shape, architecture) {
 
   input_dim <- length(input_shape) - 1
   net_layers = list()
   counter <- 1
   flattened <- F
-  for(layer in layers) {
-    layer_type <- layer[[1]]
+  for(layer in architecture) {
+    layer_type <- class(layer)[1]
     if(layer_type == "conv") {
       if(flattened) stop("Using a convolutional layer after a linear layer is not allowed")
 
@@ -85,7 +85,10 @@ build_cnn <- function(input_shape, output_shape, layers) {
       counter <- counter+1
 
       if(layer[["dropout"]] > 0) {
-        net_layers[[counter]] <- torch::nn_dropout(layer[["dropout"]])
+        net_layers[[counter]] <- switch(input_dim,
+                                        torch::nn_dropout(layer[["dropout"]]),
+                                        torch::nn_dropout2d(layer[["dropout"]]),
+                                        torch::nn_dropout3d(layer[["dropout"]]))
         counter <- counter+1
       }
 
@@ -128,6 +131,12 @@ build_cnn <- function(input_shape, output_shape, layers) {
       net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = layer[["n_neurons"]], bias = layer[["bias"]])
       input_shape <- layer[["n_neurons"]]
       counter <- counter+1
+
+      if(layer[["normalization"]]) {
+        net_layers[[counter]] <- torch::nn_batch_norm1d(layer[["n_neurons"]])
+
+        counter <- counter+1
+      }
 
       net_layers[[counter]] <- get_activation_layer(layer[["activation"]])
       counter <- counter+1

@@ -11,7 +11,7 @@
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
-#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
+#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
@@ -157,6 +157,7 @@ dnn <- function(formula,
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(alpha, "R1[0,1]")
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(dropout, "R+[0,1)")
   checkmate::qassert(lr, "R+[0,)")
@@ -227,9 +228,6 @@ dnn <- function(formula,
       train_dl <- get_data_loader(X_torch, Y, batch_size = batchsize, shuffle = shuffle)
       valid_dl <- NULL
     }
-
-    if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
-    if((length(hidden)+1) != length(lambda)) lambda <- rep(lambda,length(hidden)+1)
 
     net <- build_dnn(input = ncol(X), output = y_dim,
                       hidden = hidden, activation = activation,

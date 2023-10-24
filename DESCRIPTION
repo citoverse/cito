@@ -46,7 +46,8 @@ Suggests:
     igraph,
     stats,
     ggplot2,
-    R.rsp
-VignetteBuilder: R.rsp
+    R.rsp,
+    knitr
+VignetteBuilder: R.rsp, knitr
 BugReports: https://github.com/citoverse/cito/issues
 URL: https://citoverse.github.io/cito/

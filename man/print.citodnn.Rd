@@ -15,8 +15,6 @@
 \item{...}{additional arguments}
 }
 \value{
-prediction matrix
-
 original object x gets returned
 }
 \description{
