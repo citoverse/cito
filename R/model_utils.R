@@ -38,7 +38,6 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     y_dim <- length(unique(Y))
     prop <- as.vector(table(Y)/sum(table(Y)))
     Y_base <- matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE)
-    Y_base <- torch::torch_tensor(log(Y_base) + log(ncol(Y_base)))
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
   } else {
     y_dim <- ncol(Y)
