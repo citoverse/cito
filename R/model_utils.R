@@ -1,6 +1,7 @@
 format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
+  responses <- colnames(Y)
 
   if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
     if(all(Y %in% c(0,1))) {
@@ -39,14 +40,15 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     Y_base <- matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE)
     Y_base <- torch::torch_tensor(log(Y_base) + log(ncol(Y_base)))
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
-
   } else {
     y_dim <- ncol(Y)
     Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
     Y_base = torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
   }
 
-  return(list(Y=Y, Y_base=Y_base, y_dim=y_dim, ylvls=ylvls))
+  if(!is.null(ylvls)) responses <- ylvls
+
+  return(list(Y=Y, Y_base=Y_base, y_dim=y_dim, ylvls=ylvls, responses=responses))
 }
 
 
