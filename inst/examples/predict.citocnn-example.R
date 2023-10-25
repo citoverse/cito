@@ -17,7 +17,7 @@
 
     ## Get predictions of the validation set
     valid <- cnn.fit$data$validation
-    predictions <- predict(cnn.fit, newdata = X[valid,,,,drop=F], type="class")
+    predictions <- predict(cnn.fit, newdata = X[valid,,,,drop=FALSE], type="class")
 
     ## Classification accuracy
     accuracy <- sum(predictions == Y[valid])/length(valid)
