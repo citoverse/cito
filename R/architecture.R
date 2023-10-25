@@ -309,7 +309,7 @@ print.avgPool <- function(layer, input_shape, ...) {
                                    kernel_size = layer[["kernel_size"]],
                                    stride = layer[["stride"]],
                                    padding = layer[["padding"]],
-                                   dilation = 1)
+                                   dilation = rep(1,length(input_shape)-1))
 
   kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
   stride <- paste(layer[["stride"]], collapse = "x")

@@ -339,7 +339,7 @@ plot.citocnn <- function(x, ...) {
   ytop <- 1
   graphics::plot.new()
   for(module in net$modules[-1]) {
-    if(inherits(module, c("nn_conv_nd", "nn_linear", "nn_max_pool_nd", "nn_avg_pool_nd"))) {
+    if(inherits(module, c("nn_conv_nd", "nn_linear", "nn_max_pool_nd", "nn_avg_pool1d", "nn_avg_pool2d", "nn_avg_pool3d"))) {
       if(inherits(module, "nn_conv_nd")) {
         color <- "lightblue"
         kernel_size <- paste(module$kernel_size, collapse = "x")
@@ -358,7 +358,7 @@ plot.citocnn <- function(x, ...) {
         padding <- paste(module$padding, collapse = "x")
         dilation <- paste(module$dilation, collapse = "x")
         text <- paste0("MaxPool with ", kernel_size, " kernel (stride=", stride, ", padding=", padding, ", dilation=", dilation, ")")
-      } else if(inherits(module, "nn_avg_pool_nd")) {
+      } else if(inherits(module, c("nn_avg_pool1d", "nn_avg_pool2d", "nn_avg_pool3d"))) {
         color <- "pink"
         kernel_size <- paste(module$kernel_size, collapse = "x")
         stride <- paste(module$stride, collapse = "x")
