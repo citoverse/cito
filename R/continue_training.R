@@ -5,30 +5,23 @@
 #'
 #'
 #' @param model a model created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @param ... class-specific arguments
+#' @param epochs additional epochs the training should continue for
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X array. If not provided X from original training will be used
 #' @param Y vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used
-#' @param epochs additional epochs the training should continue for
 #' @param device device on which network should be trained on, either "cpu" or "cuda"
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
-#' @return a model of class citodnn or citodnnBootstrap created by  \code{\link{dnn}}
+#' @return a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
 #'
 #' @import checkmate
 #'
 #' @export
-continue_training <- function(model,
-                              epochs = 32,
-                              data=NULL,
-                              X=NULL,
-                              Y=NULL,
-                              device= c("cpu","cuda", "mps"),
-                              verbose = TRUE,
-                              changed_params=NULL,
-                              parallel = FALSE){UseMethod("continue_training")}
+continue_training <- function(model, ...){UseMethod("continue_training")}
 
 #' @rdname continue_training
 #' @export
@@ -38,7 +31,7 @@ continue_training.citodnn <- function(model,
                               device= c("cpu","cuda", "mps"),
                               verbose = TRUE,
                               changed_params=NULL,
-                              parallel = FALSE){
+                              ...){
 
   checkmate::qassert(device, "S+[3,)")
   device <- match.arg(device)
@@ -97,7 +90,8 @@ continue_training.citodnnBootstrap <- function(model,
                                       device= c("cpu","cuda", "mps"),
                                       verbose = TRUE,
                                       changed_params=NULL,
-                                      parallel = FALSE){
+                                      parallel = FALSE,
+                                      ...){
 
   if(parallel == FALSE) {
     pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
@@ -136,7 +130,8 @@ continue_training.citocnn <- function(model,
                                       Y=NULL,
                                       device= c("cpu", "cuda"),
                                       verbose = TRUE,
-                                      changed_params=NULL){
+                                      changed_params=NULL,
+                                      ...){
 
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(device, "S+[3,)")
