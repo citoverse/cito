@@ -313,6 +313,20 @@ print.citocnn <- function(x, ...){
   return(invisible(x))
 }
 
+#' Summary citocnn
+#' @description
+#'
+#' currently the same as the print.citocnn method.
+#'
+#' @param x a model created by \code{\link{cnn}}
+#' @param ... additional arguments
+#' @return original object x
+#'
+#' @export
+summary.citocnn <- function(x, ...){
+  return(print(x))
+}
+
 #' Creates plot which gives an overview of the network architecture.
 #'
 #' @param x a model created by \code{\link{cnn}}
