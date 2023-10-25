@@ -6,19 +6,19 @@ library(cito)
 
 ## Data
 ### We generate our own data:
-### 1000 images (size 100x100) of either a rectangle or ellipsoid
-shapes <- simulate_shapes(1000, 100)
+### 320 images (size 50x50) of either a rectangle or ellipsoid
+shapes <- simulate_shapes(320, 50)
 X <- shapes$data
 Y <- shapes$labels
 
 ## Architecture
 ### Declare the architecture of the CNN
 ### Note that the output layer is added automatically by cnn()
-architecture <- create_architecture(conv(4), conv(8), maxPool(), linear(10))
+architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
 ### softmax is used for classification
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50)
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
 
 ## The training loss is below the baseline loss but at the end of the
 ## training the loss was still decreasing, so continue training for another 50
