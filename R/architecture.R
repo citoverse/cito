@@ -67,7 +67,7 @@ create_architecture <- function(...,
     type <- class(layer)[1]
     for(parameter in names(layer)) {
       if(is.null(layer[[parameter]])) {
-        eval(parse(text=paste0("layer[[parameter]] <- default_", parameter, "[[type]]")))
+        eval(parse(text=paste0("if(!is.null(default_", parameter,"[[type]])) layer[[parameter]] <- default_", parameter, "[[type]]")))
       }
     }
     return(layer)
