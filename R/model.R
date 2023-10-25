@@ -118,7 +118,7 @@ build_cnn <- function(input_shape, output_shape, architecture) {
                                       kernel_size = layer[["kernel_size"]],
                                       stride = layer[["stride"]],
                                       padding = layer[["padding"]],
-                                      dilation = 1)
+                                      dilation = rep(1, input_dim))
 
     } else if(layer_type == "linear") {
       if(!flattened) {
