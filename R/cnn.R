@@ -128,7 +128,7 @@ cnn <- function(X,
                 early_stopping = NULL,
                 lr_scheduler = NULL,
                 custom_parameters = NULL,
-                device = c("cpu", "cuda"),
+                device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE) {
 
@@ -258,7 +258,7 @@ cnn <- function(X,
 #'
 #' @example /inst/examples/predict.citocnn-example.R
 #' @export
-predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda"), ...) {
+predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"), ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
