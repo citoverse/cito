@@ -387,5 +387,15 @@ plot.citocnn <- function(x, ...) {
   }
 }
 
-
+#' Returns list of parameters the neural network model currently has in use
+#'
+#' @param object a model created by \code{\link{cnn}}
+#' @param ... nothing implemented yet
+#' @return list of weights of neural network
+#'
+#' @example /inst/examples/coef.citocnn-example.R
+#' @export
+coef.citocnn <- function(object,...){
+  return(object$weights[object$use_model_epoch])
+}
 
