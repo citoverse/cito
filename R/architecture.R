@@ -89,7 +89,7 @@ fill_defaults <- function(passed_defaults, default_defaults) {
   if(inherits(passed_defaults, "list")) {
     for(entry in names(default_defaults)) {
       if(!entry %in% names(passed_defaults)) {
-        passed_defaults <- append(passed_defaults, default_defaults[[entry]])
+        passed_defaults[[entry]] <- default_defaults[[entry]]
       }
     }
     return(passed_defaults)
@@ -254,6 +254,27 @@ maxPool <- function(kernel_size = NULL,
   return(layer)
 }
 
+#' Print class citoarchitecture
+#'
+#' @param architecture an object created by \code{\link{create_architecture}}
+#' @param input_shape a vector with the dimensions of a single sample (e.g. c(3,28,28))
+#' @param output_shape the number of nodes in the output layer
+#' @param ... additional arguments
+#' @return original object
+#'
+#' @example /inst/examples/print.citoarchitecture-example.R
+#' @export
+print.citoarchitecture <- function(architecture, input_shape, output_shape, ...) {
+  architecture <- adjust_architecture(architecture, length(input_shape)-1)
+
+  for(layer in architecture) {
+    input_shape <- print(layer, input_shape)
+  }
+  output_layer <- linear(n_neurons=output_shape, bias = TRUE,
+                         activation="Depends on loss", normalization=FALSE, dropout=0)
+  print(output_layer, input_shape)
+  cat("-------------------------------------------------------------------------------\n")
+}
 
 print.linear <- function(layer, input_shape, ...) {
 

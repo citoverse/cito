@@ -309,14 +309,7 @@ predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "
 print.citocnn <- function(x, ...){
   x <- check_model(x)
   print(x$call)
-  input_shape <- x$model_properties$input
-  for(layer in x$model_properties$architecture) {
-    input_shape <- print(layer, input_shape)
-  }
-  output_layer <- linear(n_neurons=x$model_properties$output, bias = TRUE,
-                         activation="", normalization=FALSE, dropout=0)
-  print(output_layer, input_shape)
-  cat("-------------------------------------------------------------------------------\n")
+  print(x$model_properties$architecture, x$model_properties$input, x$model_properties$output)
   return(invisible(x))
 }
 
