@@ -56,8 +56,7 @@ build_cnn <- function(input_shape, output_shape, architecture) {
   counter <- 1
   flattened <- F
   for(layer in architecture) {
-    layer_type <- class(layer)[1]
-    if(layer_type == "conv") {
+    if(inherits(layer, "conv")) {
       if(flattened) stop("Using a convolutional layer after a linear layer is not allowed")
 
       net_layers[[counter]] <- switch(input_dim,
@@ -92,7 +91,7 @@ build_cnn <- function(input_shape, output_shape, architecture) {
         counter <- counter+1
       }
 
-    } else if(layer_type == "maxPool") {
+    } else if(inherits(layer, "maxPool")) {
       net_layers[[counter]] <- switch(input_dim,
                                       torch::nn_max_pool1d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]]),
                                       torch::nn_max_pool2d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]]),
@@ -106,7 +105,7 @@ build_cnn <- function(input_shape, output_shape, architecture) {
                                       padding = layer[["padding"]],
                                       dilation = layer[["dilation"]])
 
-    } else if(layer_type == "avgPool") {
+    } else if(inherits(layer, "avgPool")) {
       net_layers[[counter]] <- switch(input_dim,
                                       torch::nn_avg_pool1d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]]),
                                       torch::nn_avg_pool2d(layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]]),
@@ -120,7 +119,7 @@ build_cnn <- function(input_shape, output_shape, architecture) {
                                       padding = layer[["padding"]],
                                       dilation = rep(1, input_dim))
 
-    } else if(layer_type == "linear") {
+    } else if(inherits(layer, "linear")) {
       if(!flattened) {
         net_layers[[counter]] <- torch::nn_flatten()
         counter <- counter+1
