@@ -4,44 +4,51 @@
 \alias{continue_training}
 \alias{continue_training.citodnn}
 \alias{continue_training.citodnnBootstrap}
-\title{Continues training of a model generated with \code{\link{dnn}} for additional epochs.}
+\alias{continue_training.citocnn}
+\title{Continues training of a model generated with \code{\link{dnn}} or \code{\link{cnn}} for additional epochs.}
 \usage{
-continue_training(
-  model,
-  epochs = 32,
-  data = NULL,
-  device = "cpu",
-  verbose = TRUE,
-  changed_params = NULL,
-  parallel = FALSE
-)
+continue_training(model, ...)
 
 \method{continue_training}{citodnn}(
   model,
   epochs = 32,
   data = NULL,
-  device = "cpu",
+  device = c("cpu", "cuda", "mps"),
   verbose = TRUE,
   changed_params = NULL,
-  parallel = FALSE
+  ...
 )
 
 \method{continue_training}{citodnnBootstrap}(
   model,
   epochs = 32,
   data = NULL,
-  device = "cpu",
+  device = c("cpu", "cuda", "mps"),
   verbose = TRUE,
   changed_params = NULL,
-  parallel = FALSE
+  parallel = FALSE,
+  ...
+)
+
+\method{continue_training}{citocnn}(
+  model,
+  epochs = 32,
+  X = NULL,
+  Y = NULL,
+  device = c("cpu", "cuda", "mps"),
+  verbose = TRUE,
+  changed_params = NULL,
+  ...
 )
 }
 \arguments{
-\item{model}{a model created by \code{\link{dnn}}}
+\item{model}{a model created by \code{\link{dnn}} or \code{\link{cnn}}}
+
+\item{...}{class-specific arguments}
 
 \item{epochs}{additional epochs the training should continue for}
 
-\item{data}{matrix or data.frame if not provided data from original training will be used}
+\item{data}{matrix or data.frame. If not provided data from original training will be used}
 
 \item{device}{device on which network should be trained on, either "cpu" or "cuda"}
 
@@ -50,9 +57,13 @@ continue_training(
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
 
 \item{parallel}{train bootstrapped model in parallel}
+
+\item{X}{array. If not provided X from original training will be used}
+
+\item{Y}{vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used}
 }
 \value{
-a model of class citodnn or citodnnBootstrap created by  \code{\link{dnn}}
+a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
 }
 \description{
 If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.

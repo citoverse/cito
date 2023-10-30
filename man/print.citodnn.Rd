@@ -15,8 +15,6 @@
 \item{...}{additional arguments}
 }
 \value{
-prediction matrix
-
 original object x gets returned
 }
 \description{
@@ -33,7 +31,7 @@ validation_set<- sample(c(1:nrow(datasets::iris)),25)
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
 
-# Sturcture of Neural Network
+# Structure of Neural Network
 print(nn.fit)
 }
 }

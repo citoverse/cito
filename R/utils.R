@@ -1,17 +1,12 @@
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
-  if(!inherits(object, c("citodnn"))) stop("model not of class citodnn")
+  if(!inherits(object, c("citodnn", "citocnn"))) stop("model not of class citodnn or citocnn")
 
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
-    object$net<- build_model(input =object$model_properties$input,
-                    output = object$model_properties$output,
-                    hidden = object$model_properties$hidden,
-                    activation = object$model_properties$activation,
-                    bias = object$model_properties$bias,
-                    dropout = object$model_properties$dropout)
-    object$loaded_model_epoch<- 0
+    object$net <- build_model(object)
+    object$loaded_model_epoch <- 0
     object$loss<- get_loss(object$loss$call)
     }
 
@@ -36,9 +31,6 @@ check_model <- function(object) {
   return(object)
 }
 
-
-
-
 check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALSE, verbose = FALSE){
   value <- NULL
   if(variable %in% names(mc)){
@@ -60,23 +52,13 @@ check_call_config <- function(mc, variable ,standards, dim = 1, check_var = FALS
 }
 
 
-get_var_names <- function(formula, data){
-  X_helper <- stats::model.matrix(formula,data[1,])
-  var_names <- c()
-  for(i in seq_len(ncol(data))){
-    if(colnames(data)[i]%in%colnames(X_helper)){
-      var_names<- append(var_names, colnames(data)[i])
-
-    }else if (is.factor(data[,i])){
-      count <- startsWith(colnames(X_helper),colnames(data)[i])
-      count <- sum(count, na.rm = TRUE) + 1
-      if(count >= nlevels(data[,i])){
-        var_names<- append(var_names, colnames(data)[i])
-
-      }
+check_listable_parameter <- function(parameter, check, vname = checkmate::vname(parameter)) {
+  checkmate::qassert(parameter, c(check, "l+"), vname)
+  if(inherits(parameter, "list")) {
+    for (i in names(parameter)) {
+      checkmate::qassert(parameter[[i]], check, paste0(vname, "$", i))
     }
   }
-  return(var_names)
 }
 
 check_device = function(device) {

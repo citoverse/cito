@@ -7,7 +7,7 @@
 analyze_training(object)
 }
 \arguments{
-\item{object}{a model created by \code{\link{dnn}}}
+\item{object}{a model created by \code{\link{dnn}} or \code{\link{cnn}}}
 }
 \value{
 a 'plotly' figure

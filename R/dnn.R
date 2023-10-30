@@ -9,7 +9,7 @@
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
-#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Can be single integer between 0 and 1 or vector of alpha values if layers should be regularized differently.
+#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
@@ -159,6 +159,7 @@ dnn <- function(formula = NULL,
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(alpha, "R1[0,1]")
   checkmate::qassert(validation, "R1[0,1)")
   checkmate::qassert(dropout, "R+[0,1)")
   checkmate::qassert(lr, "R+[0,)")
@@ -196,24 +197,8 @@ dnn <- function(formula = NULL,
     Y = y
     data = data.frame(cbind(X, Y))
   }
-  ylvls <- NULL
-  if(is.factor(Y)) ylvls <- levels(Y)
-  if(!inherits(Y, "matrix")) Y = as.matrix(Y)
-
-
 
   loss_obj <- get_loss(loss)
-
-  responses = NULL
-  response_column = NULL
-  responses = ylvls
-  if(!is.null(formula)) {
-    if(is.null(responses)) responses = as.character(LHSForm(formula))
-    if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
-  }
-  if(ncol(Y) > 1) responses = colnames(Y)
-
-
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
@@ -221,54 +206,43 @@ dnn <- function(formula = NULL,
     }else{
       custom_parameters<- lapply(custom_parameters,function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
       loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
-
-      }
+    }
   }
 
-  y_dim <- ncol(Y)
-  y_dtype <- torch::torch_float32()
-  if(is.character(Y)) {
-    y_dim <- length(unique(as.integer(as.factor(Y[,1]))))
-    Y <- matrix(as.integer(as.factor(Y[,1])), ncol = 1L)
-    if(inherits(loss_obj$call, "family")){
-      if(loss_obj$call$family == "binomial") {
-        Y <- torch::as_array(torch::nnf_one_hot(torch::torch_tensor(Y, dtype=torch::torch_long() ))$squeeze())
-        Y_base = matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE)
-
-      }}
+  response_column <- NULL
+  if(!is.null(formula)) {
+    if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
   }
+  
+  targets <- format_targets(Y, loss_obj)
+  Y <- targets$Y
+  Y_base <- targets$Y_base
+  y_dim <- targets$y_dim
+  ylvls <- targets$ylvls
+  responses <- targets$responses
 
-  Y_base = matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE)
-
-  if(!is.function(loss_obj$call)){
-    if(all(loss_obj$call == "softmax")) {
-      prop = as.vector(table(Y)/sum(table(Y)))
-        Y_base = matrix(prop, nrow = dim(X)[1], ncol = length(prop), byrow = TRUE) #  *stats::model.matrix(~0+., data = data.frame(Y = as.factor(Y)))
-        y_dtype = torch::torch_long()
-      }
-  }
-
+  X_torch <- torch::torch_tensor(as.matrix(X))
 
   if(is.null(bootstrap)) {
 
     loss.fkt <- loss_obj$loss
     if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-    base_loss = as.numeric(loss.fkt(loss_obj$link(torch::torch_tensor(as.matrix(Y_base))), torch::torch_tensor(as.matrix(Y), dtype = y_dtype))$mean())
+    
+    base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
 
     ### dataloader  ###
-    if(validation != 0){
-      valid <- sort(sample(c(1:nrow(X)),replace=FALSE,size = round(validation*nrow(X))))
-      train <- c(1:nrow(X))[-valid]
-      train_dl <- get_data_loader(X[train,],Y[train,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-      valid_dl <- get_data_loader(X[valid,],Y[valid,], batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
-
-    }else{
-      train_dl <- get_data_loader(X,Y, batch_size = batchsize, shuffle = shuffle, y_dtype=y_dtype)
+    if(validation != 0) {
+      n_samples <- nrow(X)
+      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+      train <- c(1:n_samples)[-valid]
+      train_dl <- get_data_loader(X_torch[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
+      valid_dl <- get_data_loader(X_torch[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
+    } else {
+      train_dl <- get_data_loader(X_torch, Y, batch_size = batchsize, shuffle = shuffle)
       valid_dl <- NULL
     }
-    if((length(hidden)+1) != length(alpha)) alpha <- rep(alpha,length(hidden)+1)
 
-    net <- build_model(input = ncol(X), output = y_dim,
+    net <- build_dnn(input = ncol(X), output = y_dim,
                       hidden = hidden, activation = activation,
                       bias = bias, dropout = dropout)
     model_properties <- list(input = ncol(X),
@@ -295,7 +269,7 @@ dnn <- function(formula = NULL,
     out$call <- match.call()
     if(!is.null(formula)) out$call$formula <- stats::terms.formula(formula,data = data)
     out$loss <- loss_obj
-    out$data <- list(X = X, Y = Y, data = data)
+    out$data <- list(X = X, Y = as.matrix(Y), data = data)
     out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
     out$base_loss = base_loss
     if(!is.null(ylvls))  {
@@ -318,7 +292,6 @@ dnn <- function(formula = NULL,
   } else {
     out <- list()
     class(out) <- "citodnnBootstrap"
-
 
     if(bootstrap_parallel == FALSE) {
       pb = progress::progress_bar$new(total = bootstrap, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
@@ -364,7 +337,7 @@ dnn <- function(formula = NULL,
     }
 
     out$models <- models
-    out$data <- list(X = X, Y = Y, data = data)
+    out$data <- list(X = X, Y = as.matrix(Y), data = data)
     out$device = device_old
     out$responses = responses
     out$loss = loss_obj$call
@@ -377,7 +350,6 @@ dnn <- function(formula = NULL,
 #'
 #' @param x a model created by \code{\link{dnn}}
 #' @param ... additional arguments
-#' @return prediction matrix
 #' @example /inst/examples/print.citodnn-example.R
 #' @return original object x gets returned
 #' @export
