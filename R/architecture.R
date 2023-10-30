@@ -256,7 +256,7 @@ maxPool <- function(kernel_size = NULL,
 
 #' Print class citoarchitecture
 #'
-#' @param architecture an object created by \code{\link{create_architecture}}
+#' @param x an object created by \code{\link{create_architecture}}
 #' @param input_shape a vector with the dimensions of a single sample (e.g. c(3,28,28))
 #' @param output_shape the number of nodes in the output layer
 #' @param ... additional arguments
@@ -264,10 +264,10 @@ maxPool <- function(kernel_size = NULL,
 #'
 #' @example /inst/examples/print.citoarchitecture-example.R
 #' @export
-print.citoarchitecture <- function(architecture, input_shape, output_shape, ...) {
-  architecture <- adjust_architecture(architecture, length(input_shape)-1)
+print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
+  x <- adjust_architecture(x, length(input_shape)-1)
 
-  for(layer in architecture) {
+  for(layer in x) {
     input_shape <- print(layer, input_shape)
   }
   output_layer <- linear(n_neurons=output_shape, bias = TRUE,
