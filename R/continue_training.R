@@ -35,9 +35,9 @@ continue_training.citodnn <- function(model,
 
   checkmate::qassert(device, "S+[3,)")
   device <- match.arg(device)
+  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
   device <- check_device(device)
 
-  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
 
   model<- check_model(model)
 
@@ -138,6 +138,7 @@ continue_training.citocnn <- function(model,
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(device, "S+[3,)")
   device <- match.arg(device)
+  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
   device <- check_device(device)
 
   if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL")
