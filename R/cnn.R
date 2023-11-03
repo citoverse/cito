@@ -282,9 +282,9 @@ predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "
 
   ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
-    newdata = torch::torch_tensor(object$data$X, device = device)
+    newdata = torch::torch_tensor(object$data$X, device = device, dtype = torch::torch_float32())
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
-    newdata <- torch::torch_tensor(newdata, device = device)
+    newdata <- torch::torch_tensor(newdata, device = device, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
@@ -327,71 +327,18 @@ summary.citocnn <- function(object, ...){
   return(print(object))
 }
 
-#' Creates plot which gives an overview of the network architecture.
+#' Plot the CNN architecture
 #'
 #' @param x a model created by \code{\link{cnn}}
 #' @param ... additional arguments
-#' @return nothing
+#' @return original object x
 #'
 #' @example /inst/examples/plot.citocnn-example.R
 #' @export
-plot.citocnn <- function(x, ...) {
-  object <- check_model(x)
-  net <- x$net
-
-  n_modules <- length(net$modules[-1])
-
-  height <- 1/n_modules
-  ybottom <- 1-height
-  ytop <- 1
-  graphics::plot.new()
-  for(module in net$modules[-1]) {
-    if(inherits(module, c("nn_conv_nd", "nn_linear", "nn_max_pool_nd", "nn_avg_pool1d", "nn_avg_pool2d", "nn_avg_pool3d"))) {
-      if(inherits(module, "nn_conv_nd")) {
-        color <- "lightblue"
-        kernel_size <- paste(module$kernel_size, collapse = "x")
-        stride <- paste(module$stride, collapse = "x")
-        padding <- paste(module$padding, collapse = "x")
-        dilation <- paste(module$dilation, collapse = "x")
-        text <- paste0("Convolution layer with ", kernel_size, " kernel (stride=", stride, ", padding=", padding, ", dilation=", dilation, ")")
-      } else if(inherits(module, "nn_linear")) {
-        color <- "lightgreen"
-        neurons <- dim(module$weight)[1]
-        text <- paste0("Linear layer with ", neurons, " neurons")
-      } else if(inherits(module, "nn_max_pool_nd")) {
-        color <- "pink"
-        kernel_size <- paste(module$kernel_size, collapse = "x")
-        stride <- paste(module$stride, collapse = "x")
-        padding <- paste(module$padding, collapse = "x")
-        dilation <- paste(module$dilation, collapse = "x")
-        text <- paste0("MaxPool with ", kernel_size, " kernel (stride=", stride, ", padding=", padding, ", dilation=", dilation, ")")
-      } else if(inherits(module, c("nn_avg_pool1d", "nn_avg_pool2d", "nn_avg_pool3d"))) {
-        color <- "pink"
-        kernel_size <- paste(module$kernel_size, collapse = "x")
-        stride <- paste(module$stride, collapse = "x")
-        padding <- paste(module$padding, collapse = "x")
-        text <- paste0("AvgPool with ", kernel_size, " kernel (stride=", stride, ", padding=", padding, ")")
-      }
-      graphics::rect(0, ybottom, 1, ytop, col = color)
-      graphics::text(0.5, ytop-height/2, text)
-    } else {
-      if(inherits(module,c("nn_relu","nn_leaky_relu","nn_tanh","nn_elu","nn_rrelu","nn_prelu","nn_softplus","nn_celu","nn_selu","nn_gelu",
-                     "nn_relu6","nn_sigmoid","nn_softsign","nn_hardtanh","nn_tanhshrink","nn_softshrink","nn_hardshrink","nn_log_sigmoid"))) {
-        text <- paste0("Activation: ", gsub("nn_","", class(module)[1]))
-      } else if(inherits(module, "nn_batch_norm_")) {
-        text <- "Batch normalization"
-      } else if(inherits(module, "nn_dropout_nd")) {
-        text <- paste0("Dropout layer (p=", module$p, ")")
-      } else if(inherits(module, "nn_flatten")) {
-        text <- "Flatten output"
-      }
-      graphics::arrows(0.5, ytop, 0.5, ybottom, length = 0.5*graphics::par("pin")[2]/(2*n_modules-1))
-      graphics::text(0.5, ytop-height/2, text, pos = 4)
-    }
-
-    ybottom <- ybottom-height
-    ytop <- ytop-height
-  }
+plot.citocnn <- function(x, ...){
+  x <- check_model(x)
+  plot(x$model_properties$architecture, x$model_properties$input, x$model_properties$output)
+  return(invisible(x))
 }
 
 #' Returns list of parameters the neural network model currently has in use

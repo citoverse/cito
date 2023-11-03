@@ -54,11 +54,22 @@ build_cnn <- function(input_shape, output_shape, architecture) {
   input_dim <- length(input_shape) - 1
   net_layers = list()
   counter <- 1
-  flattened <- F
+  flattened <- FALSE
+  transfer <- FALSE
   for(layer in architecture) {
-    if(inherits(layer, "conv")) {
-      if(flattened) stop("Using a convolutional layer after a linear layer is not allowed")
+    if(inherits(layer, "transfer")) {
+      if(!(input_dim == 2 && input_shape[1] == 3)) stop("The pretrained models only work on RGB images: [n, 3, x, y]")
+      transfer_model <- get_pretrained_model(layer$name, layer$pretrained)
 
+      if(layer$freeze) transfer_model <- freeze_weights(transfer_model)
+
+      if(!layer$replace_classifier) {
+        transfer_model <- replace_output_layer(transfer_model, output_shape)
+        return(transfer_model)
+      }
+      transfer <- TRUE
+      input_shape <- get_transfer_output_shape(layer$name)
+    } else if(inherits(layer, "conv")) {
       net_layers[[counter]] <- switch(input_dim,
                                       torch::nn_conv1d(input_shape[1], layer[["n_kernels"]], layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]], bias = layer[["bias"]]),
                                       torch::nn_conv2d(input_shape[1], layer[["n_kernels"]], layer[["kernel_size"]], padding = layer[["padding"]], stride = layer[["stride"]], dilation = layer[["dilation"]], bias = layer[["bias"]]),
@@ -154,7 +165,12 @@ build_cnn <- function(input_shape, output_shape, architecture) {
   }
   net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
 
-  net = do.call(torch::nn_sequential, net_layers)
+  net <- do.call(torch::nn_sequential, net_layers)
+
+  if(transfer) {
+    net <- replace_classifier(transfer_model, net)
+  }
+
   return(net)
 }
 

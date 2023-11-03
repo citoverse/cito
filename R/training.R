@@ -130,12 +130,13 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
   }
 
+  model$net$to(device = "cpu")
+
   model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
 
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, cast_to_r_keep_dim)
   model$use_model_epoch <- 1
   model$loaded_model_epoch <- 1
-
 
   return(model)
 }
@@ -169,6 +170,6 @@ regularize_weights <- function (parameters, alpha, lambda, intercept = TRUE){
       regularization_tmp <- regularization_tmp$mul(lambda)
       regularization = regularization$add(regularization_tmp)
   }
-  
+
   return(regularization)
 }

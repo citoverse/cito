@@ -1,5 +1,6 @@
 format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
+  if(is.null(ylvls) && is.factor(Y)) ylvls <- levels(Y)
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
   responses <- colnames(Y)
 
@@ -238,4 +239,118 @@ adjust_architecture <- function(architecture, input_dim) {
   class(adjusted_architecture) <- "citoarchitecture"
   return(adjusted_architecture)
 }
+
+#Output shapes of the avgpool layers right before the classifier
+get_transfer_output_shape <- function(name) {
+  return(switch(name,
+         "alexnet" = c(256, 6, 6),
+         "inception_v3" = c(2048, 1, 1),
+         "mobilenet_v2" = c(1280, 1, 1),
+         "resnet101" = c(2048, 1, 1),
+         "resnet152" = c(2048, 1, 1),
+         "resnet18" = c(512, 1, 1),
+         "resnet34" = c(512, 1, 1),
+         "resnet50" = c(2048, 1, 1),
+         "resnext101_32x8d" = c(2048, 1, 1),
+         "resnext50_32x4d" = c(2048, 1, 1),
+         "vgg11" = c(512, 7, 7),
+         "vgg11_bn" = c(512, 7, 7),
+         "vgg13" = c(512, 7, 7),
+         "vgg13_bn" = c(512, 7, 7),
+         "vgg16" = c(512, 7, 7),
+         "vgg16_bn" = c(512, 7, 7),
+         "vgg19" = c(512, 7, 7),
+         "vgg19_bn" = c(512, 7, 7),
+         "wide_resnet101_2" = c(2048, 1, 1),
+         "wide_resnet50_2" = c(2048, 1, 1),
+         stop(paste0(name, " not supported."))))
+}
+
+# Load the pretrained models.
+# In inception_v3 the auxiliary part is omitted since we don't use it, and the input transformation is moved to the forward function since we always use pretrained weights.
+# In mobilenet_v2 the global average pool is moved from the forward function to a module, so the last 2 modules of all models are avgpool and classifier, respectively.
+get_pretrained_model <- function(transfer, pretrained) {
+  if(transfer == "inception_v3") {
+    inception_v3 <- torchvision::model_inception_v3(pretrained = pretrained)
+
+    forward <- c(sub("        ", "    ", deparse(inception_v3$.transform_input)[c(1,2,4:9)]),
+                 "    x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)",
+                 deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
+
+    torch_model <- torch::nn_module(
+      classname = "inception_v3",
+      initialize = function(inception_v3) {
+        for (child in names(inception_v3$children)) {
+          if(child != "AuxLogits") {
+            eval(parse(text=paste0("self$", child, " <- inception_v3$", child)))
+          }
+        }
+      },
+      forward = eval(parse(text=forward))
+    )(inception_v3)
+
+  } else if(transfer == "mobilenet_v2") {
+    mobilenet_v2 <- torchvision::model_mobilenet_v2(pretrained = pretrained)
+
+    forward <- deparse(mobilenet_v2$forward)
+    forward[4] <- "    x <- self$avgpool(x)"
+
+    torch_model <- torch::nn_module(
+      classname = "mobilenet_v2",
+      initialize = function(mobilenet_v2) {
+        self$features <- mobilenet_v2$features
+        self$avgpool <- torch::nn_adaptive_avg_pool2d(c(1, 1))
+        self$classifier <- mobilenet_v2$classifier
+      },
+      forward = eval(parse(text=forward))
+    )(mobilenet_v2)
+
+  } else {
+    eval(parse(text = paste0("torch_model <- torchvision::model_", transfer, "(pretrained = pretrained)")))
+  }
+  return(torch_model)
+}
+
+replace_output_layer <- function(transfer_model, output_shape) {
+  n <- length(transfer_model$children)
+  if(names(transfer_model$children)[n] == "fc") {
+    transfer_model$fc <- torch::nn_linear(transfer_model$fc$in_features, output_shape)
+  } else if(names(transfer_model$children)[n] == "classifier") {
+    classifier <- transfer_model$classifier
+    k <- length(classifier$children)
+    classifier[[names(classifier$children)[k]]] <- torch::nn_linear(classifier[[names(classifier$children)[k]]]$in_features, output_shape)
+    transfer_model$classifier <- classifier
+  } else {
+    stop("Error in replacing output layer of pretrained model")
+  }
+  return(transfer_model)
+}
+
+replace_classifier <- function(transfer_model, cito_model) {
+
+  forward <- deparse(transfer_model$forward)
+  forward <- c(forward[1:(which(grepl("flatten", forward))-1)], "    x <- self$cito(x)", "    x", "}")
+
+  net <- torch::nn_module(
+    initialize = function(transfer_model, cito_model) {
+      for (child in names(transfer_model$children)[-length(transfer_model$children)]) {
+        eval(parse(text=paste0("self$", child, " <- transfer_model$", child)))
+      }
+      self$cito <- cito_model
+    },
+    forward = eval(parse(text=forward))
+  )
+
+  return(net(transfer_model, cito_model))
+}
+
+ freeze_weights <- function(transfer_model) {
+   for(child in transfer_model$children[-length(transfer_model$children)]) {
+     for(parameter in child$parameters) {
+       parameter$requires_grad_(FALSE)
+     }
+   }
+   return(transfer_model)
+ }
+
 

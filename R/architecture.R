@@ -75,9 +75,24 @@ create_architecture <- function(...,
 
   architecture <- list()
 
+  transfer <- FALSE
+  flattened <- FALSE
   for(layer in list(...)) {
     if(!inherits(layer, "citolayer")) stop("Objects must be of class citolayer")
-    architecture <- append(architecture, list(fill_layer(layer)))
+    if(inherits(layer, "transfer")) {
+      if(length(architecture) != 0) stop("There mustn't be any layers before a transfer layer")
+      layer$replace_classifier <- length(list(...)) > 1
+      architecture <- append(architecture, list(layer))
+      transfer <- TRUE
+    } else {
+      if(transfer && inherits(layer, c("conv", "maxPool", "avgPool"))) stop("Only linear layers are allowed after a transfer layer")
+      if(inherits(layer, "linear")) {
+        flattened <- TRUE
+      } else {
+        if(flattened) stop("Only linear layers are allowed after a linear layer")
+      }
+      architecture <- append(architecture, list(fill_layer(layer)))
+    }
   }
 
   class(architecture) <- "citoarchitecture"
@@ -254,6 +269,47 @@ maxPool <- function(kernel_size = NULL,
   return(layer)
 }
 
+#' Transfer learning
+#'
+#' @description
+#'
+#' creates a 'transfer' 'citolayer' object that is used by \code{\link{create_architecture}}.
+#'
+#' @param name The name of the pretrained model
+#' @param pretrained if FALSE, random weights are used instead of the pretrained weigths
+#' @param freeze if TRUE, the weights of the pretrained model (except the "classifier" part at the end) aren't changed in the training anymore. Only works if pretrained=TRUE
+#'
+#' @details
+#' This function creates a 'transfer' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
+#' With this object the pretrained models that are available in the 'torchvision' package can be used in cito.
+#' When 'freeze' is set to TRUE, only the weights of the last part of the network (consisting of one or more linear layers) are adjusted in the training.
+#' There mustn't be any other citolayers before the transfer citolayer object when calling \code{\link{create_architecture}}.
+#' If there are any citolayers after the transfer citolayer, the linear classifier part of the pretrained model is replaced with the specified citolayers.
+
+#' @return S3 object of class \code{"transfer" "citolayer"}
+#' @import checkmate
+#' @example /inst/examples/transfer-example.R
+#' @author Armin Schenk
+#' @seealso \code{\link{create_architecture}}
+#' @export
+transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"),
+                     pretrained = TRUE,
+                     freeze = TRUE) {
+
+  if(identical(name, c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"))) {
+    name <- "alexnet"
+  }
+
+  name <- match.arg(name)
+
+  layer <- list(name = name,
+                pretrained = pretrained,
+                freeze = pretrained & freeze,
+                replace_classifier = FALSE)
+  class(layer) <- c("transfer", "citolayer")
+  return(layer)
+}
+
 #' Print class citoarchitecture
 #'
 #' @param x an object created by \code{\link{create_architecture}}
@@ -266,13 +322,18 @@ maxPool <- function(kernel_size = NULL,
 #' @export
 print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
   x <- adjust_architecture(x, length(input_shape)-1)
+  need_output_layer <- TRUE
 
   for(layer in x) {
-    input_shape <- print(layer, input_shape)
+    if(inherits(layer, "transfer")) need_output_layer <- layer$replace_classifier
+    input_shape <- print(layer, input_shape, output_shape)
   }
-  output_layer <- linear(n_neurons=output_shape, bias = TRUE,
-                         activation="Depends on loss", normalization=FALSE, dropout=0)
-  print(output_layer, input_shape)
+
+  if(need_output_layer) {
+    output_layer <- linear(n_neurons=output_shape, bias = TRUE,
+                           activation="Depends on loss", normalization=FALSE, dropout=0)
+    print(output_layer, input_shape)
+  }
   cat("-------------------------------------------------------------------------------\n")
 }
 
@@ -364,4 +425,160 @@ print.maxPool <- function(layer, input_shape, ...) {
   cat(paste0("           |Kernel: ", kernel_size, " (stride=", stride, ", padding=", padding, ", dilation=", dilation, ")\n"))
 
   return(invisible(output_shape))
+}
+
+print.transfer <- function(layer, input_shape, output_shape, ...) {
+
+  if(layer$replace_classifier) {
+    output_shape <- get_transfer_output_shape(layer$name)
+  }
+
+  cat("-------------------------------------------------------------------------------\n")
+  cat(paste0("Transfer   |Input: ", paste(input_shape, collapse = "x"), "\n"))
+  cat(paste0("           |Output: ", paste(output_shape, collapse = "x"), "\n"))
+  cat(paste0("           |Network: ", layer[["name"]] , "\n"))
+  cat(paste0("           |Pretrained: ", layer[["pretrained"]] , "\n"))
+  if(layer[["pretrained"]]) cat(paste0("           |Weights frozen: ", layer[["freeze"]] , "\n"))
+
+  return(invisible(output_shape))
+}
+
+
+#' Plot the CNN architecture
+#'
+#' @param x an object of class citoarchitecture created by \code{\link{create_architecture}}
+#' @param input_shape a vector with the dimensions of a single sample (e.g. c(3,28,28))
+#' @param output_shape the number of nodes in the output layer
+#' @param ... additional arguments
+#' @return nothing
+#'
+#' @example /inst/examples/plot.citoarchitecture-example.R
+#' @export
+plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
+  x <- adjust_architecture(x, length(input_shape)-1)
+
+  transfer_only <- length(x) == 1 && inherits(x[[1]], "transfer")
+
+  text <- c(paste0("Input size: ", paste(input_shape, collapse = "x")), "")
+  type <- c("data", "arrow")
+
+  for(layer in x) {
+    if(inherits(layer, "transfer")) {
+      tmp <- paste0("Transfer network: ", layer[["name"]], " (pretrained weights: ", layer[["pretrained"]])
+      if(layer[["pretrained"]]) {
+        tmp <- paste0(tmp, ", frozen weights: ", layer[["freeze"]], ")")
+      } else {
+        tmp <- paste0(tmp, ")")
+      }
+      text <- c(text, tmp)
+      type <- c(type, "transfer")
+      if(!transfer_only) {
+        input_shape <- get_transfer_output_shape(layer[["name"]])
+        text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+        type <- c(type, "arrow")
+      } else {
+        text <- c(text, "")
+        type <- c(type, "arrow")
+      }
+    } else if(inherits(layer, "linear")) {
+      text <- c(text, paste0("Linear layer with ", layer[["n_neurons"]], " neurons"))
+      type <- c(type, "linear")
+      if(layer[["normalization"]]) {
+        text <- c(text, "Batch normalization")
+        type <- c(type, "arrow")
+      }
+      text <- c(text, paste0("Activation: ", layer[["activation"]]))
+      type <- c(type, "arrow")
+      if(layer[["dropout"]] > 0) {
+        text <- c(text, paste0("Dropout rate: ", layer[["dropout"]]))
+        type <- c(type, "arrow")
+      }
+    } else if(inherits(layer, "conv")) {
+      kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+      stride <- paste(layer[["stride"]], collapse = "x")
+      padding <- paste(layer[["padding"]], collapse = "x")
+      dilation <- paste(layer[["dilation"]], collapse = "x")
+      text <- c(text, paste0("Convolutional layer with ", layer[["n_kernels"]], " kernels (size=", kernel_size, ", stride=", stride, ", padding=", padding, ", dilation=", dilation, ")"))
+      type <- c(type, "conv")
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                       n_kernels = layer[["n_kernels"]],
+                                       kernel_size = layer[["kernel_size"]],
+                                       stride = layer[["stride"]],
+                                       padding = layer[["padding"]],
+                                       dilation = layer[["dilation"]])
+      text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+      type <- c(type, "arrow")
+      if(layer[["normalization"]]) {
+        text <- c(text, "Batch normalization")
+        type <- c(type, "arrow")
+      }
+      text <- c(text, paste0("Activation: ", layer[["activation"]]))
+      type <- c(type, "arrow")
+      if(layer[["dropout"]] > 0) {
+        text <- c(text, paste0("Dropout rate: ", layer[["dropout"]]))
+        type <- c(type, "arrow")
+      }
+    } else if(inherits(layer, "maxPool")) {
+      kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+      stride <- paste(layer[["stride"]], collapse = "x")
+      padding <- paste(layer[["padding"]], collapse = "x")
+      dilation <- paste(layer[["dilation"]], collapse = "x")
+      text <- c(text, paste0("Maximum pooling layer (kernel size=", kernel_size, ", stride=", stride, ", padding=", padding, ", dilation=", dilation, ")"))
+      type <- c(type, "pool")
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                      n_kernels = input_shape[1],
+                                      kernel_size = layer[["kernel_size"]],
+                                      stride = layer[["stride"]],
+                                      padding = layer[["padding"]],
+                                      dilation = layer[["dilation"]])
+      text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+      type <- c(type, "arrow")
+    } else if(inherits(layer, "avgPool")) {
+      kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+      stride <- paste(layer[["stride"]], collapse = "x")
+      padding <- paste(layer[["padding"]], collapse = "x")
+      text <- c(text, paste0("Average pooling layer (kernel size=", kernel_size, ", stride=", stride, ", padding=", padding, ")"))
+      type <- c(type, "pool")
+      input_shape <- get_output_shape(input_shape = input_shape,
+                                      n_kernels = input_shape[1],
+                                      kernel_size = layer[["kernel_size"]],
+                                      stride = layer[["stride"]],
+                                      padding = layer[["padding"]],
+                                      dilation = rep(1,length(input_shape)-1))
+      text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+      type <- c(type, "arrow")
+    }
+  }
+
+  if(!transfer_only) {
+    text <- c(text, paste0("Linear layer with ", output_shape, " neurons"), "")
+    type <- c(type, "linear", "arrow")
+  }
+
+  text <- c(text, paste0("Output size: ", paste(output_shape, collapse = "x")))
+  type <- c(type, "data")
+
+
+  n <- length(text)
+  height <- 1/n
+  ybottom <- 1-height
+  ytop <- 1
+  graphics::plot.new()
+  for(i in 1:n) {
+    if(type[i] == "arrow") {
+      graphics::arrows(0.5, ytop, 0.5, ybottom, length = 0.5*graphics::par("pin")[2]/(2*n-1))
+      graphics::text(0.5, ytop-height/2, text[i], pos = 4)
+    } else {
+      color <- switch(type[i],
+                      "transfer" = "lightyellow",
+                      "conv" = "lightblue",
+                      "linear" = "lightgreen",
+                      "pool" = "pink",
+                      "data" = "orange")
+      graphics::rect(0, ybottom, 1, ytop, col = color)
+      graphics::text(0.5, ytop-height/2, text[i])
+    }
+    ybottom <- ybottom-height
+    ytop <- ytop-height
+  }
 }

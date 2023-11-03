@@ -2,7 +2,7 @@
 % Please edit documentation in R/cnn.R
 \name{plot.citocnn}
 \alias{plot.citocnn}
-\title{Creates plot which gives an overview of the network architecture.}
+\title{Plot the CNN architecture}
 \usage{
 \method{plot}{citocnn}(x, ...)
 }
@@ -12,10 +12,10 @@
 \item{...}{additional arguments}
 }
 \value{
-nothing
+original object x
 }
 \description{
-Creates plot which gives an overview of the network architecture.
+Plot the CNN architecture
 }
 \examples{
 \donttest{

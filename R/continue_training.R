@@ -37,6 +37,8 @@ continue_training.citodnn <- function(model,
   device <- match.arg(device)
   device <- check_device(device)
 
+  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
+
   model<- check_model(model)
 
 

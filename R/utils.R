@@ -13,12 +13,20 @@ check_model <- function(object) {
   if(object$loaded_model_epoch!= object$use_model_epoch){
 
     module_params<- names(object$weights[[object$use_model_epoch]])
-    module_number<- sapply(module_params, function(x) substr(x,1,which(strsplit(x,"")[[1]]==".")-1))
-    module_type<-sapply(module_params, function(x) substring(x,which(strsplit(x,"")[[1]]==".")+1))
+    module_name<- sapply(module_params, function(x) {
+      period_indices <- which(strsplit(x,"")[[1]]==".")
+      last_period_index <- period_indices[length(period_indices)]
+      substr(x,1,last_period_index-1)
+    })
+    module_type<- sapply(module_params, function(x) {
+      period_indices <- which(strsplit(x,"")[[1]]==".")
+      last_period_index <- period_indices[length(period_indices)]
+      substring(x,last_period_index+1)
+    })
 
     for ( i in names(object$net$modules)){
-      if(i %in% module_number){
-          k<- which(i == module_number)
+      if(i %in% module_name){
+          k<- which(i == module_name)
           sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$parameters$",module_type[k],"$set_data(object$weights[[object$use_model_epoch]]$`",module_params[k],"`)"))))
 
       }

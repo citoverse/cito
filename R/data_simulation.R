@@ -18,7 +18,6 @@
 simulate_shapes <- function(n, size, p=0.5) {
 
   data <- array(0, dim = c(n,1,size,size))
-  labels <- character(n)
 
   width <- sample(round(size/2):size, n, replace = TRUE)
   height <- sample(round(size/2):size, n, replace = TRUE)
@@ -26,13 +25,13 @@ simulate_shapes <- function(n, size, p=0.5) {
   center_y <- sample(floor(0.25*size):ceiling(0.75*size), n, replace = TRUE)
   center_x <- sample(floor(0.25*size):ceiling(0.75*size), n, replace = TRUE)
 
+  labels <- sample(c("rectangle", "ellipsoid"), n, replace=TRUE, prob = c(p, 1-p))
+
   for(i in 1:n) {
-    if(stats::rbinom(1,1,p)) {
+    if(labels[i] == "rectangle") {
       data[i,1,,] <- create_rectangle_matrix(size, width[i], height[i], center_y[i], center_x[i])
-      labels[i] <- "rectangle"
     } else {
       data[i,1,,] <- create_ellipsoid_matrix(size, width[i], height[i], center_y[i], center_x[i])
-      labels[i] <- "ellipsoid"
     }
   }
 
