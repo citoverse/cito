@@ -4,7 +4,7 @@
 #'
 #' creates a 'citoarchitecture' object that is used by \code{\link{cnn}}.
 #'
-#' @param ... objects of class 'citolayer' created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}} or \code{\link{avgPool}}
+#' @param ... objects of class 'citolayer' created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}} or \code{\link{transfer}}
 #' @param default_n_neurons (int) default value: amount of neurons in a linear layer
 #' @param default_n_kernels (int) default value: amount of kernels in a convolutional layer
 #' @param default_kernel_size (int or tuple) default value: size of the kernels in convolutional and pooling layers. Use a tuple if the kernel size isn't equal in all dimensions
@@ -27,7 +27,7 @@
 #' @import checkmate
 #' @example /inst/examples/cnnarchitecture-example.R
 #' @author Armin Schenk
-#' @seealso \code{\link{cnn}}, \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}
+#' @seealso \code{\link{cnn}}, \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, \code{\link{transfer}}, \code{\link{print.citoarchitecture}}, \code{\link{plot.citoarchitecture}}
 #' @export
 create_architecture <- function(...,
                                 default_n_neurons = 10,
@@ -325,7 +325,10 @@ print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
   need_output_layer <- TRUE
 
   for(layer in x) {
-    if(inherits(layer, "transfer")) need_output_layer <- layer$replace_classifier
+    if(inherits(layer, "transfer")) {
+      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+      need_output_layer <- layer$replace_classifier
+    }
     input_shape <- print(layer, input_shape, output_shape)
   }
 
@@ -464,6 +467,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
 
   for(layer in x) {
     if(inherits(layer, "transfer")) {
+      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
       tmp <- paste0("Transfer network: ", layer[["name"]], " (pretrained weights: ", layer[["pretrained"]])
       if(layer[["pretrained"]]) {
         tmp <- paste0(tmp, ", frozen weights: ", layer[["freeze"]], ")")
