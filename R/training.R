@@ -102,7 +102,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     }
 
     ### create plot ###
-    if(model$training_properties$plot) visualize.training(model$losses,epoch, new = plot_new, baseline = model$base_loss)
+    main <- ifelse(inherits(model, "citocnn"), "Training of CNN", "Training of DNN")
+    if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$base_loss)
     plot_new <- FALSE
 
     # Save best weights
