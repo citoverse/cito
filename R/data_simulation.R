@@ -6,7 +6,7 @@
 #'
 #' @param n number of images
 #' @param size size of the (quadratic) images
-#' @param p probability of generating a rectangle (1-p for ellipsoids)
+#' @param channels number of channels the generated data has (in each channel a new rectangle/ellipsoid is created)
 #'
 #' @details
 #' This function generates simple data to demonstrate the usage of cnn().

@@ -33,6 +33,24 @@ When 'freeze' is set to TRUE, only the weights of the last part of the network (
 There mustn't be any other citolayers before the transfer citolayer object when calling \code{\link{create_architecture}}.
 If there are any citolayers after the transfer citolayer, the linear classifier part of the pretrained model is replaced with the specified citolayers.
 }
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+# Creates a "transfer" "citolayer" object that later tells the cnn() function that
+# the alexnet architecture and its pretrained weights should be used, but none
+# of the weights are frozen
+alexnet <- transfer(name="alexnet", pretrained=TRUE, freeze=FALSE)
+
+# Creates a "transfer" "citolayer" object that later tells the cnn() function that
+# the resnet18 architecture and its pretrained weights should be used.
+# Also all weights except from the linear layer at the end are frozen (and
+# therefore not changed during training)
+resnet18 <- transfer(name="resnet18", pretrained=TRUE, freeze=TRUE)
+}
+}
+}
 \seealso{
 \code{\link{create_architecture}}
 }
