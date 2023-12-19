@@ -156,8 +156,8 @@ dnn <- function(formula = NULL,
                 X = NULL,
                 Y = NULL) {
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data), checkmate::checkNull(data))
-  checkmate::assert(checkmate::checkMatrix(X), checkmate::checkDataFrame(data), checkmate::checkNull(X))
-  checkmate::assert(checkmate::checkFactor(X), checkmate::checkNumeric(X), checkmate::checkMatrix(Y), checkmate::checkDataFrame(data), checkmate::checkNull(Y))
+  checkmate::assert(checkmate::checkMatrix(X), checkmate::checkDataFrame(X), checkmate::checkNull(X))
+  checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y), checkmate::checkMatrix(Y), checkmate::checkDataFrame(Y), checkmate::checkNull(Y))
   checkmate::qassert(activation, "S+[1,)")
   checkmate::qassert(bias, "B+")
   checkmate::qassert(lambda, "R1[0,)")
@@ -700,7 +700,7 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
   checkmate::qassert(scale_edges, "B1")
 
   weights <- coef.citodnn(x)
-  input <- ncol(weights[[1]][1][[1]])-1
+  input <- ncol(weights[[1]][1][[1]])
   structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
                                       to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
                           value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))

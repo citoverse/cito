@@ -20,7 +20,7 @@ build_model <- function(object) {
 build_dnn = function(input, output, hidden, activation, bias, dropout) {
   layers = list()
   if(is.null(hidden)) {
-    layers[[1]] = torch::nn_linear(input, out_features = output,bias = FALSE)
+    layers[[1]] = torch::nn_linear(input, out_features = output, bias = bias)
   } else {
     if(length(hidden) != length(activation)) activation = rep(activation, length(hidden))
     if(length(hidden)+1 != length(bias)) bias = rep(bias, (length(hidden)+1))
@@ -29,9 +29,9 @@ build_dnn = function(input, output, hidden, activation, bias, dropout) {
     counter = 1
     for(i in 1:length(hidden)) {
       if(counter == 1) {
-        layers[[1]] = torch::nn_linear(input, out_features = hidden[1], bias = FALSE)
+        layers[[1]] = torch::nn_linear(input, out_features = hidden[1], bias = bias[1])
       } else {
-        layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i-1])
+        layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i])
       }
       counter = counter+1
       layers[[counter]]<- get_activation_layer(activation[i])
