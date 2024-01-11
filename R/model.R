@@ -42,7 +42,8 @@ build_dnn = function(input, output, hidden, activation, bias, dropout) {
         counter = counter+1
       }
     }
-    layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i+1])
+
+    if(!is.null(output)) layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i+1])
   }
   net = do.call(torch::nn_sequential, layers)
   return(net)
@@ -163,7 +164,8 @@ build_cnn <- function(input_shape, output_shape, architecture) {
     counter <- counter+1
     input_shape <- prod(input_shape)
   }
-  net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
+
+  if(!is.null(output_shape)) net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
 
   net <- do.call(torch::nn_sequential, net_layers)
 
