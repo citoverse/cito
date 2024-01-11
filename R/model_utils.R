@@ -314,11 +314,19 @@ get_pretrained_model <- function(transfer, pretrained) {
 replace_output_layer <- function(transfer_model, output_shape) {
   n <- length(transfer_model$children)
   if(names(transfer_model$children)[n] == "fc") {
-    transfer_model$fc <- torch::nn_linear(transfer_model$fc$in_features, output_shape)
+    if(is.null(output_shape)) {
+      transfer_model$fc <- torch::nn_identity()
+    } else {
+      transfer_model$fc <- torch::nn_linear(transfer_model$fc$in_features, output_shape)
+    }
   } else if(names(transfer_model$children)[n] == "classifier") {
     classifier <- transfer_model$classifier
     k <- length(classifier$children)
-    classifier[[names(classifier$children)[k]]] <- torch::nn_linear(classifier[[names(classifier$children)[k]]]$in_features, output_shape)
+    if(is.null(output_shape)) {
+      classifier[[names(classifier$children)[k]]] <- torch::nn_identity()
+    } else {
+      classifier[[names(classifier$children)[k]]] <- torch::nn_linear(classifier[[names(classifier$children)[k]]]$in_features, output_shape)
+    }
     transfer_model$classifier <- classifier
   } else {
     stop("Error in replacing output layer of pretrained model")
