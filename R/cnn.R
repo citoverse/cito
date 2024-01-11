@@ -121,7 +121,7 @@
 #' @seealso \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #' @export
 cnn <- function(X,
-                Y,
+                Y = NULL,
                 architecture,
                 loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
                 optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
@@ -142,7 +142,8 @@ cnn <- function(X,
   #Data
   checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5))
   checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
-                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"))
+                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"),
+                    checkmate::checkNull(Y))
 
   if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
 
@@ -160,6 +161,30 @@ cnn <- function(X,
   checkmate::qassert(verbose, "B1")
   checkmate::qassert(device, "S+[3,)")
 
+
+  # No training if no Y specified (E.g. used in mmn())
+  if(is.null(Y)) {
+
+    input_shape <- dim(X)[-1]
+
+    architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
+
+    net <- build_cnn(input_shape = input_shape,
+                     output_shape = NULL,
+                     architecture = architecture)
+
+    model_properties <- list(input = input_shape,
+                             output = NULL,
+                             architecture = architecture)
+
+    out <- list()
+    class(out) <- "citocnn"
+    out$net <- net
+    out$call <- match.call()
+    out$data <- list(X = X, Y = NULL)
+    out$model_properties <- model_properties
+    return(out)
+  }
 
   device <- match.arg(device)
   device_old <- device
