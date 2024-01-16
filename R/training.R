@@ -1,5 +1,6 @@
 train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE){
   model$net$to(device = device)
+  model$net$train()
 
   ### Optimizer ###
   optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
@@ -134,6 +135,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   model$use_model_epoch <- 1
   model$loaded_model_epoch <- 1
 
+  model$net$eval()
   return(model)
 }
 

@@ -488,3 +488,31 @@ nn.fit <- continue_training(nn.fit,
                             changed_params = list(lr = 0.001, batchsize = 16),
                             verbose = FALSE)
 ```
+
+## Details about the internal implementation of ‘cito’
+
+
+### Internal Data Representation
+
+Tabular data are typically supplied to cito as a data.frame in the usual encoding via the data argument. Categorical data are processed internally using the model.matrix functions from the R 'stats' package. Categorical features are automatically one-hot encoded (no reference level). The data are then split into a feature matrix (variables) and a response matrix. 
+
+The training of the neural networks is based on stochastic gradient descent, which involves sampling random batches of data at each optimization step. To optimize the sampling and subsetting of the data, 'torch' provides optimized data loader objects that create data iterators (objects that iterate once over the data set corresponding to an epoch). The feature and response matrices are passed to 'torch' data loaders that reside on the CPU (to avoid memory overflows on the GPU, if available).
+
+### Construction of the neural networks
+
+Neural networks (NN) are built using the 'nn_sequential' object from the 'torch' package. nn_sequential' expects a list of layers and then returns a fully functional neural network object. It also initializes all weights of the layers. The list of layers is built based on user input, in particular the hidden argument for the number and size of hidden layers, and the activation argument for the corresponding activation layers.
+
+### Training and Evaluation
+
+Once the NN structure and data are prepared, the actual training starts (the baseline loss is also calculated before the training starts). The training consists of two loops. An outer loop for the number of epochs (one epoch means that the data has been used once to update the weights). And an inner loop for the stochastic gradient descent, i.e. for n = 100 observations and batch size = 20, it takes 5 batches of data to traverse the dataset once. 
+
+At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the backpropagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
+
+If validation is turned on, after each epoch the model is evaluated on the validation holdout (which was separated from the data at the beginning).
+
+### Transferability
+
+To make the model portable (e.g. save and reload the model), the weights are stored as R matrices in the final object of the 'dnn' function. This is necessary because the 'torch' objects are just pointers to the corresponding data structures. Naively, storing these pointers is pointless, because after the R session ends, the memory is freed and the pointers are meaningless.
+
+
+
