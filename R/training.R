@@ -1,6 +1,7 @@
 train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE){
   model$net$to(device = device)
   model$net$train()
+  model$successfull = 1
 
   ### Optimizer ###
   optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
@@ -57,13 +58,24 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
       optimizer$step()
 
-      if(is.na(loss$item())) {
-        stop("Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.")
-      }
-
       train_l <- c(train_l, loss$item())
     })
+
+    if(is.na(loss$item())) {
+      cat("Loss is NA. Bad training, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
+      model$successfull = 0
+      break
+    }
+
     model$losses$train_l[epoch] <- mean(train_l)
+
+    if(epoch >= model$burnin) {
+      if(model$losses$train_l[epoch] > model$base_loss) {
+        cat("Cancel training because loss is still above baseline, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
+        model$successfull = 0
+        break
+      }
+    }
 
 
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){

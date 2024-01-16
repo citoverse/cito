@@ -14,7 +14,8 @@
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
 #' @param lr learning rate given to optimizer
-#' @param batchsize number of samples that are used to calculate one learning rate step
+#' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
+#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
 #' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
@@ -142,7 +143,8 @@ dnn <- function(formula = NULL,
                 dropout = 0.0,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
-                batchsize = 32L,
+                batchsize = NULL,
+                burnin = 5,
                 shuffle = TRUE,
                 epochs = 100,
                 bootstrap = NULL,
@@ -155,21 +157,22 @@ dnn <- function(formula = NULL,
                 early_stopping = FALSE,
                 x = NULL,
                 y = NULL) {
+
   checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
-  checkmate::qassert(activation, "S+[1,)")
-  checkmate::qassert(bias, "B+")
-  checkmate::qassert(lambda, "R1[0,)")
-  checkmate::qassert(alpha, "R1[0,1]")
-  checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(dropout, "R+[0,1)")
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(plot,"B1")
-  checkmate::qassert(verbose,"B1")
-  checkmate::qassert(early_stopping,c("R1[1,)","B1"))
-  checkmate::qassert(device, "S+[3,)")
+  #checkmate::qassert(activation, "S+[1,)")
+  #checkmate::qassert(bias, "B+")
+  #checkmate::qassert(lambda, "R1[0,)")
+  #checkmate::qassert(alpha, "R1[0,1]")
+  #checkmate::qassert(validation, "R1[0,1)")
+  #checkmate::qassert(dropout, "R+[0,1)")
+  #checkmate::qassert(lr, "R+[0,)")
+  #checkmate::qassert(plot,"B1")
+  #checkmate::qassert(verbose,"B1")
+  #checkmate::qassert(early_stopping,c("R1[1,)","B1"))
+  #checkmate::qassert(device, "S+[3,)")
 
   device <- match.arg(device)
-  if(identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+  if(!identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
   if(!is.function(loss) & !inherits(loss,"family")){
@@ -198,6 +201,8 @@ dnn <- function(formula = NULL,
     data = data.frame(cbind(X, Y))
   }
 
+  if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
+
   loss_obj <- get_loss(loss)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
@@ -213,7 +218,7 @@ dnn <- function(formula = NULL,
   if(!is.null(formula)) {
     if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
   }
-  
+
   targets <- format_targets(Y, loss_obj)
   Y <- targets$Y
   Y_base <- targets$Y_base
@@ -227,7 +232,7 @@ dnn <- function(formula = NULL,
 
     loss.fkt <- loss_obj$loss
     if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-    
+
     base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
 
     ### dataloader  ###
@@ -270,7 +275,9 @@ dnn <- function(formula = NULL,
     if(!is.null(formula)) out$call$formula <- stats::terms.formula(formula,data = data)
     out$loss <- loss_obj
     out$data <- list(X = X, Y = as.matrix(Y), data = data)
-    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j) )
+    # levels should be only saved for features in the model, otherwise we get warnings from the predict function
+    data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
+    out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
     out$base_loss = base_loss
     if(!is.null(ylvls))  {
       out$data$ylvls <- ylvls
@@ -284,6 +291,7 @@ dnn <- function(formula = NULL,
     out$training_properties <- training_properties
     out$device = device_old
     out$responses = responses
+    out$burnin = burnin
 
     ### training loop ###
     out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
@@ -419,8 +427,10 @@ summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
   out$importance <- get_importance(object, n_permute, device)
   out$conditionalEffects = conditionalEffects(object, device = device)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
+  if(!is.matrix(out$ACE )) out$ACE= matrix(out$ACE , ncol = 1L)
   colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
   out$ASCE = sapply(out$conditionalEffects, function(R) diag(R$sd))
+  if(!is.matrix(out$ASCE )) out$ASCE = matrix(out$ASCE , ncol = 1L)
   colnames(out$ASCE) = paste0("Response_", 1:ncol(out$ASCE))
   rownames(out$ASCE) = rownames(out$ACE)
   return(out)
@@ -618,7 +628,7 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
 
   device <- match.arg(device)
 
-  if(type %in% c("link","class")) {
+  if(type %in% c("response","class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
@@ -735,5 +745,8 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,which_model = 1,...){
  plot(x$models[[which_model]], node_size = node_size, scale_edges = scale_edges)
 }
+
+
+
 
 

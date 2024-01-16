@@ -20,7 +20,8 @@ dnn(
   dropout = 0,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
-  batchsize = 32L,
+  batchsize = NULL,
+  burnin = 5,
   shuffle = TRUE,
   epochs = 100,
   bootstrap = NULL,
@@ -60,7 +61,9 @@ dnn(
 
 \item{lr}{learning rate given to optimizer}
 
-\item{batchsize}{number of samples that are used to calculate one learning rate step}
+\item{batchsize}{number of samples that are used to calculate one learning rate step, default is 10\% of the training data}
+
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
 
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
