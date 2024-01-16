@@ -6,8 +6,8 @@ library(cito)
 
 ## Data
 ### We generate our own data:
-### 320 images (size 50x50) of either a rectangle or ellipsoid
-shapes <- simulate_shapes(320, 50)
+### 320 images (3x50x50) of either rectangles or ellipsoids
+shapes <- simulate_shapes(n=320, size=50, channels=3)
 X <- shapes$data
 Y <- shapes$labels
 
@@ -33,5 +33,13 @@ plot(cnn.fit)
 
 ## Convergence can be tested via the analyze_training function
 analyze_training(cnn.fit)
+
+## Transfer learning
+### With the transfer() function we can use predefined architectures with pretrained weights
+transfer_architecture <- create_architecture(transfer("resnet18"))
+resnet <- cnn(X, Y, transfer_architecture, loss = "softmax",
+              epochs = 10, validation = 0.1, lr = 0.05)
+print(resnet)
+plot(resnet)
 }
 }

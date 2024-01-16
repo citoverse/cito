@@ -6,7 +6,7 @@
 #'
 #' @param n number of images
 #' @param size size of the (quadratic) images
-#' @param p probability of generating a rectangle (1-p for ellipsoids)
+#' @param channels number of channels the generated data has (in each channel a new rectangle/ellipsoid is created)
 #'
 #' @details
 #' This function generates simple data to demonstrate the usage of cnn().
@@ -15,10 +15,9 @@
 #' @return array of dimension (n, 1, size, size)
 #' @author Armin Schenk
 #' @export
-simulate_shapes <- function(n, size, p=0.5) {
+simulate_shapes <- function(n, size, channels=1) {
 
-  data <- array(0, dim = c(n,1,size,size))
-  labels <- character(n)
+  data <- array(0, dim = c(n,channels,size,size))
 
   width <- sample(round(size/2):size, n, replace = TRUE)
   height <- sample(round(size/2):size, n, replace = TRUE)
@@ -26,13 +25,15 @@ simulate_shapes <- function(n, size, p=0.5) {
   center_y <- sample(floor(0.25*size):ceiling(0.75*size), n, replace = TRUE)
   center_x <- sample(floor(0.25*size):ceiling(0.75*size), n, replace = TRUE)
 
+  labels <- sample(c("rectangle", "ellipsoid"), n, replace=TRUE, prob = c(0.5, 0.5))
+
   for(i in 1:n) {
-    if(stats::rbinom(1,1,p)) {
-      data[i,1,,] <- create_rectangle_matrix(size, width[i], height[i], center_y[i], center_x[i])
-      labels[i] <- "rectangle"
-    } else {
-      data[i,1,,] <- create_ellipsoid_matrix(size, width[i], height[i], center_y[i], center_x[i])
-      labels[i] <- "ellipsoid"
+    for(j in 1:channels) {
+      if(labels[i] == "rectangle") {
+        data[i,j,,] <- create_rectangle_matrix(size, width[i], height[i], center_y[i], center_x[i])
+      } else {
+        data[i,j,,] <- create_ellipsoid_matrix(size, width[i], height[i], center_y[i], center_x[i])
+      }
     }
   }
 

@@ -26,8 +26,8 @@
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
-#' @param x Feature matrix, alternative data interface
-#' @param y Response matrix, alternative data interface (must be a matrix)
+#' @param X Feature matrix or data.frame, alternative data interface
+#' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
 #' @details
 #'
@@ -155,21 +155,22 @@ dnn <- function(formula = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda", "mps"),
                 early_stopping = FALSE,
-                x = NULL,
-                y = NULL) {
-
-  checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data))
-  #checkmate::qassert(activation, "S+[1,)")
-  #checkmate::qassert(bias, "B+")
-  #checkmate::qassert(lambda, "R1[0,)")
-  #checkmate::qassert(alpha, "R1[0,1]")
-  #checkmate::qassert(validation, "R1[0,1)")
-  #checkmate::qassert(dropout, "R+[0,1)")
-  #checkmate::qassert(lr, "R+[0,)")
-  #checkmate::qassert(plot,"B1")
-  #checkmate::qassert(verbose,"B1")
-  #checkmate::qassert(early_stopping,c("R1[1,)","B1"))
-  #checkmate::qassert(device, "S+[3,)")
+                X = NULL,
+                Y = NULL) {
+  checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data), checkmate::checkNull(data))
+  checkmate::assert(checkmate::checkMatrix(X), checkmate::checkDataFrame(X), checkmate::checkNull(X))
+  checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y), checkmate::checkMatrix(Y), checkmate::checkDataFrame(Y), checkmate::checkNull(Y))
+  checkmate::qassert(activation, "S+[1,)")
+  checkmate::qassert(bias, "B+")
+  checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(alpha, "R1[0,1]")
+  checkmate::qassert(validation, "R1[0,1)")
+  checkmate::qassert(dropout, "R+[0,1)")
+  checkmate::qassert(lr, "R+[0,)")
+  checkmate::qassert(plot,"B1")
+  checkmate::qassert(verbose,"B1")
+  checkmate::qassert(early_stopping,c("R1[1,)","B1"))
+  checkmate::qassert(device, "S+[3,)")
 
   device <- match.arg(device)
   if(!identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
@@ -181,27 +182,63 @@ dnn <- function(formula = NULL,
   device_old = device
   device = check_device(device)
 
-  ### Generate X & Y data ###
-  if(!is.null(formula)) {
-    if(!is.data.frame(data)) data <- data.frame(data)
-    old_formula = formula
-    if(!is.null(formula)){
-      fct_call <- match.call()
-      m <- match("formula", names(fct_call))
-      if(inherits(fct_call[3]$formula, "name")) fct_call[3]$formula <- eval(fct_call[3]$formula, envir = parent.env(environment()))
-      formula <- stats::as.formula(fct_call[m]$formula)
+  if(!is.null(X)) {
+    if(!is.null(Y)) {
+      if(!is.matrix(Y)) Y <- data.frame(Y)
+      if(ncol(Y) == 1) {
+        if(is.null(colnames(Y))) colnames(Y) <- "Y"
+        formula <- stats::as.formula(paste0(colnames(Y), " ~ . - 1"))
+      } else {
+        if(is.null(colnames(Y))) colnames(Y) <- paste0("Y", 1:ncol(Y))
+        formula <- stats::as.formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ . - 1"))
+      }
+      data <- cbind(data.frame(Y), data.frame(X))
     } else {
-      formula <- stats::as.formula("~.")
+      formula <- stats::as.formula("~ . - 1")
+      data <- data.frame(X)
     }
-    X <- stats::model.matrix(formula, data)
-    Y <- stats::model.response(stats::model.frame(formula, data))
+    formula <- formula(stats::terms.formula(formula, data = data))
+  } else if(!is.null(formula)) {
+    if(!is.null(data)) {
+      data <- data.frame(data)
+    }
+    formula <- formula(stats::terms.formula(formula, data = data))
+    formula <- stats::update.formula(formula, ~ . - 1)
   } else {
-    X = x
-    Y = y
-    data = data.frame(cbind(X, Y))
+    stop("Either formula (and data) or X (and Y) have to be specified.")
   }
 
   if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
+  if(!is.null(data)) {
+    char_cols <- sapply(data, is.character)
+    data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
+  }
+
+  X <- stats::model.matrix(formula, data)
+  Y <- stats::model.response(stats::model.frame(formula, data))
+
+  # No training if no Y specified (E.g. used in mmn())
+  if(is.null(Y)) {
+    net <- build_dnn(input = ncol(X), output = NULL,
+                     hidden = hidden, activation = activation,
+                     bias = bias, dropout = dropout)
+    model_properties <- list(input = ncol(X),
+                             output = NULL,
+                             hidden = hidden,
+                             activation = activation,
+                             bias = bias,
+                             dropout = dropout)
+    out <- list()
+    class(out) <- "citodnn"
+    out$net <- net
+    out$call <- match.call()
+    out$call$formula <- stats::terms.formula(formula, data=data)
+    out$data <- list(X = X, Y = NULL, data = data)
+    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j))
+    out$model_properties <- model_properties
+    return(out)
+  }
+
 
   loss_obj <- get_loss(loss)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
@@ -215,35 +252,34 @@ dnn <- function(formula = NULL,
   }
 
   response_column <- NULL
-  if(!is.null(formula)) {
-    if(inherits(loss_obj$call, "character")) { if(loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) }
-  }
+  if(inherits(loss_obj$call, "character") && loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) #Gibt die RHS aus, falls keine LHS vorhanden. Relevant?
+
 
   targets <- format_targets(Y, loss_obj)
-  Y <- targets$Y
+  Y_torch <- targets$Y
   Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
   responses <- targets$responses
 
-  X_torch <- torch::torch_tensor(as.matrix(X))
+  X_torch <- torch::torch_tensor(X)
 
   if(is.null(bootstrap)) {
 
     loss.fkt <- loss_obj$loss
     if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
 
-    base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
+    base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y_torch)$mean())
 
     ### dataloader  ###
     if(validation != 0) {
       n_samples <- nrow(X)
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
-      train_dl <- get_data_loader(X_torch[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
-      valid_dl <- get_data_loader(X_torch[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
+      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
     } else {
-      train_dl <- get_data_loader(X_torch, Y, batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
       valid_dl <- NULL
     }
 
@@ -272,7 +308,7 @@ dnn <- function(formula = NULL,
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
-    if(!is.null(formula)) out$call$formula <- stats::terms.formula(formula,data = data)
+    out$call$formula <- stats::terms.formula(formula, data=data)
     out$loss <- loss_obj
     out$data <- list(X = X, Y = as.matrix(Y), data = data)
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
@@ -281,7 +317,7 @@ dnn <- function(formula = NULL,
     out$base_loss = base_loss
     if(!is.null(ylvls))  {
       out$data$ylvls <- ylvls
-      out$data$xlvls <- out$data$xlvls[-which(as.character(formula[2]) == names(out$data$xlvls))]
+      out$data$xlvls <- out$data$xlvls[-which(names(out$data$xlvls) %in% as.character(formula[[2]]))]
     }
     if(validation != 0) out$data <- append(out$data, list(validation = valid))
     out$weights <- list()
@@ -312,7 +348,7 @@ dnn <- function(formula = NULL,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE, x = x, y = y
+          bootstrap_parallel = FALSE
         ))
         pb$tick()
         models[[b]] = m
@@ -320,9 +356,7 @@ dnn <- function(formula = NULL,
 
     } else {
       if(is.logical(bootstrap_parallel)) {
-        if(bootstrap_parallel) {
           bootstrap_parallel = parallel::detectCores() -1
-        }
       }
       if(is.numeric(bootstrap_parallel)) {
         backend = parabar::start_backend(bootstrap_parallel)
@@ -336,7 +370,7 @@ dnn <- function(formula = NULL,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE, x = x, y = y
+          bootstrap_parallel = FALSE
         ))
         m
       })
@@ -345,7 +379,7 @@ dnn <- function(formula = NULL,
     }
 
     out$models <- models
-    out$data <- list(X = X, Y = as.matrix(Y), data = data)
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data)
     out$device = device_old
     out$responses = responses
     out$loss = loss_obj$call
@@ -704,7 +738,7 @@ plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
   checkmate::qassert(scale_edges, "B1")
 
   weights <- coef.citodnn(x)
-  input <- ncol(weights[[1]][1][[1]])-1
+  input <- ncol(weights[[1]][1][[1]])
   structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
                                       to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
                           value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))

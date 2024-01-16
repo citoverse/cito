@@ -32,8 +32,8 @@ dnn(
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
   early_stopping = FALSE,
-  x = NULL,
-  y = NULL
+  X = NULL,
+  Y = NULL
 )
 }
 \arguments{
@@ -85,9 +85,9 @@ dnn(
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
 
-\item{x}{Feature matrix, alternative data interface}
+\item{X}{Feature matrix or data.frame, alternative data interface}
 
-\item{y}{Response matrix, alternative data interface (must be a matrix)}
+\item{Y}{Response vector, factor, matrix or data.frame, alternative data interface}
 }
 \value{
 an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.

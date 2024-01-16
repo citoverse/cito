@@ -4,14 +4,14 @@
 \alias{simulate_shapes}
 \title{Data Simulation for CNN}
 \usage{
-simulate_shapes(n, size, p = 0.5)
+simulate_shapes(n, size, channels = 1)
 }
 \arguments{
 \item{n}{number of images}
 
 \item{size}{size of the (quadratic) images}
 
-\item{p}{probability of generating a rectangle (1-p for ellipsoids)}
+\item{channels}{number of channels the generated data has (in each channel a new rectangle/ellipsoid is created)}
 }
 \value{
 array of dimension (n, 1, size, size)
