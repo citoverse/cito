@@ -1,8 +1,8 @@
-visualize.training <- function(losses,epoch,new = FALSE, baseline = NULL){
+visualize.training <- function(losses,epoch, main, new = FALSE, baseline = NULL){
   if (epoch==1|new){
 
     graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l,losses$valid_l,baseline,na.rm=T)),
-                   main= "Training of NN",
+                   main= main,
                    xlab= "epoch",
                    ylab= "loss",
                    las = 1)
@@ -84,8 +84,9 @@ analyze_training<- function(object){
                                              y1 = object$base_loss,
                                              line = list(color = "#00c49aAA")
                                                 ))
+    title <- ifelse(inherits(object, "citocnn"), 'CNN Training', 'DNN Training')
     fig<- plotly::layout(fig,
-                         title='DNN Training',
+                         title=title,
                          xaxis = list(zeroline = FALSE),
                          yaxis = list(zeroline = FALSE,
                                       fixedrange = FALSE,

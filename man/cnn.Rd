@@ -26,9 +26,9 @@ cnn(
 )
 }
 \arguments{
-\item{X}{array with dimension 3, 4 or 5 for 1D-, 2D- or 3D-convolutions, respectively. The first dimension are the samples, the second dimension the channels and the third - fifth dimension are the input dimensions}
+\item{X}{predictor: array with dimension 3, 4 or 5 for 1D-, 2D- or 3D-convolutions, respectively. The first dimension are the samples, the second dimension the channels and the third - fifth dimension are the input dimensions}
 
-\item{Y}{vector, factor, numerical matrix or logical matrix}
+\item{Y}{response: vector, factor, numerical matrix or logical matrix}
 
 \item{architecture}{'citoarchitecture' object created by \code{\link{create_architecture}}}
 
@@ -50,7 +50,7 @@ cnn(
 
 \item{epochs}{epochs the training goes on for}
 
-\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss if available.}
 
 \item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
 
@@ -79,6 +79,16 @@ The list consists of the following attributes:
 \description{
 fits a custom convolutional neural network.
 }
+\section{Convolutional neural networks:}{
+Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured grid data, such as images.
+The characterizing parts of the architecture are convolutional layers, pooling layers and fully-connected (linear) layers:
+\itemize{
+\item Convolutional layers are the core building blocks of CNNs. They consist of filters (also called kernels), which are small, learnable matrices. These filters slide over the input data to perform element-wise multiplication, producing feature maps that capture local patterns and features. Multiple filters are used to detect different features in parallel. They help the network learn hierarchical representations of the input data by capturing low-level features (edges, textures) and gradually combining them (in subsequent convolutional layers) to form higher-level features.
+\item Pooling layers are used to downsample the spatial dimensions of the feature maps while retaining important information. Max pooling is a common pooling operation, where the maximum value in a local region of the input is retained, reducing the size of the feature maps.
+\item Fully-connected (linear) layers connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
+}
+}
+
 \section{Loss functions / Likelihoods}{
 We support loss functions and likelihoods for different tasks:\tabular{lll}{
    Name \tab Explanation \tab Example / Task \cr
@@ -93,9 +103,9 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
 }
 
 \section{Training and convergence of neural networks}{
-Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
+Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (amount of learnable parameters). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
 
-\figure{learning_rates.jpg}{Learning rates}
+\figure{learningrates.jpg}{Learning rates}
 
 If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
 
@@ -128,6 +138,7 @@ Overfitting means that the model fits the training data well, but generalizes po
 Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
 
 Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
+In the case of 2D and 3D inputs whole feature maps are disabled. Since the torch package doesn't currently support feature map-wise dropout for 1D inputs, instead random neurons in the feature maps are disabled similar to dropout in linear layers.
 
 By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
 }
@@ -138,10 +149,6 @@ When training a network, you have the flexibility to customize the optimizer set
 \code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 
 Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
-}
-
-\section{How neural networks work}{
-Adjust for CNN
 }
 
 \section{Training on graphic cards}{
@@ -160,8 +167,8 @@ library(cito)
 
 ## Data
 ### We generate our own data:
-### 320 images (size 50x50) of either a rectangle or ellipsoid
-shapes <- simulate_shapes(320, 50)
+### 320 images (3x50x50) of either rectangles or ellipsoids
+shapes <- simulate_shapes(n=320, size=50, channels=3)
 X <- shapes$data
 Y <- shapes$labels
 
@@ -187,6 +194,14 @@ plot(cnn.fit)
 
 ## Convergence can be tested via the analyze_training function
 analyze_training(cnn.fit)
+
+## Transfer learning
+### With the transfer() function we can use predefined architectures with pretrained weights
+transfer_architecture <- create_architecture(transfer("resnet18"))
+resnet <- cnn(X, Y, transfer_architecture, loss = "softmax",
+              epochs = 10, validation = 0.1, lr = 0.05)
+print(resnet)
+plot(resnet)
 }
 }
 }

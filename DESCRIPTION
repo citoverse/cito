@@ -37,7 +37,8 @@ Imports:
     parabar,
     abind,
     progress,
-    cli
+    cli,
+    torchvision
 License: GPL (>= 3)
 Suggests:
     rmarkdown,
