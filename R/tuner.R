@@ -91,7 +91,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
           parameters$data = data[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
           tune_df$models[[i]] = list(m)
-          tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
+          #tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
 
           if(!m$successfull) {
             tune_df$test[i] = Inf

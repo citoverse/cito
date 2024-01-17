@@ -301,7 +301,7 @@ dnn <- function(formula = NULL,
     out$call <- match.call()
     out$call$formula <- stats::terms.formula(formula, data=data)
     out$loss <- loss_obj
-    out$data <- list(X = X, Y = as.matrix(Y), data = data)
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data)
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
@@ -375,6 +375,9 @@ dnn <- function(formula = NULL,
     out$responses = responses
     out$loss = loss_obj$call
     out$response_column = response_column
+
+    out$successfull = any(sapply(models, function(m) m$successfull) == 0)
+
   }
   return(out)
 }
@@ -638,12 +641,16 @@ coef.citodnnBootstrap <- function(object, ...) {
 #' @param newdata new data for predictions
 #' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
 #' @param device device on which network should be trained on.
+#' @param reduce predictions from bootstrapped model are by default reduced (mean, optional median or none)
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"),...) {
+predict.citodnn <- function(object, newdata = NULL,
+                            type=c("link", "response", "class"),
+                            device = c("cpu","cuda", "mps"),
+                            reduce = c("mean", "median", "none"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -693,7 +700,11 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
 
 #' @rdname predict.citodnn
 #' @export
-predict.citodnnBootstrap <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"),...) {
+predict.citodnnBootstrap <- function(object,
+                                     newdata = NULL,
+                                     type=c("link", "response", "class"),
+                                     device = c("cpu","cuda", "mps"),
+                                     reduce = c("mean", "median", "none"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -703,7 +714,15 @@ predict.citodnnBootstrap <- function(object, newdata = NULL, type=c("link", "res
   if(is.null(newdata)) newdata = object$data$X
 
   predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device))
-  return(abind::abind(predictions, along = 0L))
+  predictions = abind::abind(predictions, along = 0L)
+  reduce <- match.arg(reduce)
+  if(reduce == "mean") {
+    return(apply(predictions, 2:3, mean))
+  } else if(reduce == "median") {
+    return(apply(predictions, 2:3, median))
+  } else {
+    return(predictions)
+  }
 }
 
 

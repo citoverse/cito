@@ -10,6 +10,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  reduce = c("mean", "median", "none"),
   ...
 )
 
@@ -18,6 +19,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  reduce = c("mean", "median", "none"),
   ...
 )
 }
@@ -29,6 +31,8 @@
 \item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
 
 \item{device}{device on which network should be trained on.}
+
+\item{reduce}{predictions from bootstrapped model are by default reduced (mean, optional median or none)}
 
 \item{...}{additional arguments}
 }

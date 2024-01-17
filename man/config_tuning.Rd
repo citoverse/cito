@@ -4,7 +4,7 @@
 \alias{config_tuning}
 \title{Config hyperparameter tuning}
 \usage{
-config_tuning(CV = 5, steps = 10, parallel = FALSE, NGPU = 1)
+config_tuning(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE)
 }
 \arguments{
 \item{CV}{numeric, specifies k-folded cross validation}
@@ -14,6 +14,8 @@ config_tuning(CV = 5, steps = 10, parallel = FALSE, NGPU = 1)
 \item{parallel}{numeric, number of parallel cores (tuning steps are parallelized)}
 
 \item{NGPU}{numeric, set if more than one GPU is available, tuning will be parallelized over CPU cores and GPUs, only works for NCPU > 1}
+
+\item{cancel}{CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss}
 }
 \description{
 Config hyperparameter tuning
