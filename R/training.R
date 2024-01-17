@@ -57,7 +57,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     })
 
     if(is.na(loss$item())) {
-      cat("Loss is NA. Bad training, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
+      if(verbose) cat("Loss is NA. Bad training, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
       model$successfull = 0
       break
     }
@@ -66,7 +66,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
     if(epoch >= model$burnin) {
       if(model$losses$train_l[epoch] > model$base_loss) {
-        cat("Cancel training because loss is still above baseline, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
+        if(verbose) cat("Cancel training because loss is still above baseline, please hyperparameters. See vignette('02_Troubleshooting') for help.\n")
         model$successfull = 0
         break
       }

@@ -38,7 +38,8 @@ Imports:
     abind,
     progress,
     cli,
-    torchvision
+    torchvision,
+    tibble
 License: GPL (>= 3)
 Suggests:
     rmarkdown,

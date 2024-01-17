@@ -7,21 +7,22 @@
 dnn(
   formula = NULL,
   data = NULL,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp"),
   hidden = c(50L, 50L),
   activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
     "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
     "softshrink", "hardshrink", "log_sigmoid"),
-  validation = 0,
   bias = TRUE,
+  dropout = 0,
+  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
+    "mvp"),
+  validation = 0,
   lambda = 0,
   alpha = 0.5,
-  dropout = 0,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
   batchsize = NULL,
   burnin = 5,
+  baseloss = NULL,
   shuffle = TRUE,
   epochs = 100,
   bootstrap = NULL,
@@ -32,6 +33,7 @@ dnn(
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
   early_stopping = FALSE,
+  tuning = config_tuning(),
   X = NULL,
   Y = NULL
 )
@@ -41,21 +43,21 @@ dnn(
 
 \item{data}{matrix or data.frame with features/predictors and response variable}
 
-\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
-
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 
 \item{activation}{activation functions, can be of length one, or a vector of different activation functions for each layer}
 
-\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
-
 \item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
+
+\item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
+
+\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
+
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
 
 \item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
 
 \item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
-
-\item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
 
 \item{optimizer}{which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}}
 
@@ -64,6 +66,8 @@ dnn(
 \item{batchsize}{number of samples that are used to calculate one learning rate step, default is 10\% of the training data}
 
 \item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+
+\item{baseloss}{baseloss, if null baseloss corresponds to intercept only models}
 
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
@@ -84,6 +88,8 @@ dnn(
 \item{device}{device on which network should be trained on. mps correspond to M1/M2 GPU devices.}
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+
+\item{tuning}{tuning options created with \code{\link{config_tuning()}}}
 
 \item{X}{Feature matrix or data.frame, alternative data interface}
 

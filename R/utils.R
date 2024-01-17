@@ -108,3 +108,157 @@ cast_to_r_keep_dim = function(x) {
   if(length(d) == 1) return(as.numeric(x))
   else return(as.matrix(x))
 }
+
+
+get_X_Y = function(formula, X, Y, data) {
+  if(!is.null(X)) {
+    if(!is.null(Y)) {
+      if(!is.matrix(Y)) Y <- data.frame(Y)
+      if(ncol(Y) == 1) {
+        if(is.null(colnames(Y))) colnames(Y) <- "Y"
+        formula <- stats::as.formula(paste0(colnames(Y), " ~ . - 1"))
+      } else {
+        if(is.null(colnames(Y))) colnames(Y) <- paste0("Y", 1:ncol(Y))
+        formula <- stats::as.formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ . - 1"))
+      }
+      data <- cbind(data.frame(Y), data.frame(X))
+    } else {
+      formula <- stats::as.formula("~ . - 1")
+      data <- data.frame(X)
+    }
+    formula <- formula(stats::terms.formula(formula, data = data))
+  } else if(!is.null(formula)) {
+    if(!is.null(data)) {
+      data <- data.frame(data)
+    }
+    formula <- formula(stats::terms.formula(formula, data = data))
+    formula <- stats::update.formula(formula, ~ . - 1)
+  } else {
+    stop("Either formula (and data) or X (and Y) have to be specified.")
+  }
+
+  if(!is.null(data)) {
+    char_cols <- sapply(data, is.character)
+    data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
+  }
+
+  X <- stats::model.matrix(formula, data)
+  Y <- stats::model.response(stats::model.frame(formula, data))
+  return(list(X = X, Y = Y, formula = formula, data = data))
+}
+
+
+
+check_hyperparameters = function(hidden  ,
+                              bias ,
+                              lambda ,
+                              alpha ,
+                              dropout,
+                              lr ,
+                              activation,
+                              batchsize,
+                              epochs ) {
+
+  out = list()
+  if(inherits(hidden, "tune")) {
+
+    if(is.null(hidden$lower)) hidden$lower = c(5, 1)
+    if(is.null(hidden$upper)) hidden$upper = c(100, 10)
+    if(is.null(hidden$fixed)) hidden$fixed = "both"
+
+    if(hidden$fixed == "depth") {
+      out$hidden$sampler = function() {
+        return(c(sample(hidden$lower[1]:hidden$upper[1], 1), hidden$additional))
+      }
+    } else if(hidden$fixed == "width") {
+      out$hidden$sampler = function() {
+        return(c(hidden$additional, sample(hidden$lower[1]:hidden$upper[1], 1)))
+      }
+    } else {
+      out$hidden$sampler = function() {
+        return(c(sample(hidden$lower[1]:hidden$upper[1], 1), sample(hidden$lower[2]:hidden$upper[2], 1)))
+      }
+    }
+  }
+
+  if(inherits(bias, "tune")) {
+    out$bias$sampler = function() {
+      return(sample(c(TRUE, FALSE), 1))
+    }
+  } else {
+    checkmate::qassert(bias, "B+")
+  }
+
+  if(inherits(lambda, "tune")) {
+    if(is.null(lambda$lower)) lambda$lower = 0.0
+    if(is.null(lambda$upper)) lambda$upper = 0.5
+    out$lambda$sampler = function() {
+      return(runif(1, lambda$lower, lambda$upper))
+    }
+  } else {
+    checkmate::qassert(lambda, "R1[0,)")
+  }
+
+  if(inherits(alpha, "tune")) {
+    if(is.null(alpha$lower)) alpha$lower = 0.0
+    if(is.null(alpha$upper)) alpha$upper = 1.0
+    out$alpha$sampler = function() {
+      return(runif(1, alpha$lower, alpha$upper))
+    }
+  } else {
+    checkmate::qassert(alpha, "R1[0,1]")
+  }
+
+  if(inherits(activation, "tune")) {
+    if(is.null(activation$lower)) activation$lower = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                                             "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
+                                             "softshrink", "hardshrink", "log_sigmoid")
+    out$activation$sampler = function() {
+      return(sample(activation$lower, 1))
+    }
+  } else {
+    checkmate::qassert(activation, "S+[1,)")
+  }
+
+
+  if(inherits(dropout, "tune")) {
+    if(is.null(dropout$lower)) dropout$lower = 0.0
+    if(is.null(dropout$upper)) dropout$upper = 1.0
+    out$dropout$sampler = function() {
+      return(runif(1, dropout$lower, dropout$upper))
+    }
+  } else {
+    checkmate::qassert(dropout, "R1[0,1]")
+  }
+
+  if(inherits(lr, "tune")) {
+    if(is.null(lr$lower)) lr$lower = 0.0
+    if(is.null(lr$upper)) lr$upper = 1.0
+    out$lr$sampler = function() {
+      return(runif(1, lr$lower, lr$upper))
+    }
+  } else {
+    checkmate::qassert(lr, "R1[0,1]")
+  }
+
+
+  if(inherits(batchsize, "tune")) {
+    if(is.null(batchsize$lower)) batchsize$lower = 1
+    if(is.null(batchsize$upper)) batchsize$upper = 100
+    out$batchsize$sampler = function() {
+      return(sample(batchsize$lower:batchsize$upper, 1))
+    }
+  }
+
+  if(inherits(epochs, "tune")) {
+    if(is.null(epochs$lower)) epochs$lower = 1
+    if(is.null(epochs$upper)) epochs$upper = 300
+    out$epochs$sampler = function() {
+      return(sample(epochs$lower:epochs$upper, 1))
+    }
+  }
+  return(out)
+}
+
+
+

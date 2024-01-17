@@ -4,18 +4,20 @@
 #'
 #' @param formula an object of class "\code{\link[stats]{formula}}": a description of the model that should be fitted
 #' @param data matrix or data.frame with features/predictors and response variable
-#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
-#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
+#'
+#' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
+#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
+#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
-#' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
 #' @param lr learning rate given to optimizer
 #' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
 #' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
+#' @param baseloss baseloss, if null baseloss corresponds to intercept only models
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
 #' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
@@ -26,6 +28,7 @@
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
+#' @param tuning tuning options created with \code{\link{config_tuning()}}
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
@@ -131,20 +134,21 @@
 #' @export
 dnn <- function(formula = NULL,
                 data = NULL,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp"),
                 hidden = c(50L, 50L),
                 activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                                "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                                "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
-                validation = 0,
                 bias = TRUE,
+                dropout = 0.0,
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp"),
+                validation = 0,
                 lambda = 0.0,
                 alpha = 0.5,
-                dropout = 0.0,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 batchsize = NULL,
                 burnin = 5,
+                baseloss = NULL,
                 shuffle = TRUE,
                 epochs = 100,
                 bootstrap = NULL,
@@ -155,67 +159,44 @@ dnn <- function(formula = NULL,
                 custom_parameters = NULL,
                 device = c("cpu","cuda", "mps"),
                 early_stopping = FALSE,
+                tuning = config_tuning(),
                 X = NULL,
                 Y = NULL) {
-  checkmate::assert(checkmate::checkMatrix(data), checkmate::checkDataFrame(data), checkmate::checkNull(data))
-  checkmate::assert(checkmate::checkMatrix(X), checkmate::checkDataFrame(X), checkmate::checkNull(X))
-  checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y), checkmate::checkMatrix(Y), checkmate::checkDataFrame(Y), checkmate::checkNull(Y))
-  checkmate::qassert(activation, "S+[1,)")
-  checkmate::qassert(bias, "B+")
-  checkmate::qassert(lambda, "R1[0,)")
-  checkmate::qassert(alpha, "R1[0,1]")
-  checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(dropout, "R+[0,1)")
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(plot,"B1")
-  checkmate::qassert(verbose,"B1")
-  checkmate::qassert(early_stopping,c("R1[1,)","B1"))
-  checkmate::qassert(device, "S+[3,)")
+
+  if(!inherits(activation, "tune")) {
+    if(!identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                                 "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
+                                 "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
+  }
+
+  out <- list()
+  class(out) <- "citodnn"
+
+  tuner = check_hyperparameters(hidden = hidden ,
+                                bias = bias,
+                                activation = activation,
+                                lambda = lambda,
+                                alpha = alpha,
+                                dropout =dropout,
+                                batchsize = batchsize,
+                                epochs = epochs,
+                                lr = lr)
 
   device <- match.arg(device)
-  if(!identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
-                              "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
-                              "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
+
   if(!is.function(loss) & !inherits(loss,"family")){
     loss <- match.arg(loss)
   }
   device_old = device
   device = check_device(device)
 
-  if(!is.null(X)) {
-    if(!is.null(Y)) {
-      if(!is.matrix(Y)) Y <- data.frame(Y)
-      if(ncol(Y) == 1) {
-        if(is.null(colnames(Y))) colnames(Y) <- "Y"
-        formula <- stats::as.formula(paste0(colnames(Y), " ~ . - 1"))
-      } else {
-        if(is.null(colnames(Y))) colnames(Y) <- paste0("Y", 1:ncol(Y))
-        formula <- stats::as.formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ . - 1"))
-      }
-      data <- cbind(data.frame(Y), data.frame(X))
-    } else {
-      formula <- stats::as.formula("~ . - 1")
-      data <- data.frame(X)
-    }
-    formula <- formula(stats::terms.formula(formula, data = data))
-  } else if(!is.null(formula)) {
-    if(!is.null(data)) {
-      data <- data.frame(data)
-    }
-    formula <- formula(stats::terms.formula(formula, data = data))
-    formula <- stats::update.formula(formula, ~ . - 1)
-  } else {
-    stop("Either formula (and data) or X (and Y) have to be specified.")
-  }
+  tmp_data = get_X_Y(formula, X, Y, data)
+  X = tmp_data$X
+  Y = tmp_data$Y
+  formula = tmp_data$formula
+  data = tmp_data$data
 
   if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
-  if(!is.null(data)) {
-    char_cols <- sapply(data, is.character)
-    data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
-  }
-
-  X <- stats::model.matrix(formula, data)
-  Y <- stats::model.response(stats::model.frame(formula, data))
 
   # No training if no Y specified (E.g. used in mmn())
   if(is.null(Y)) {
@@ -228,8 +209,7 @@ dnn <- function(formula = NULL,
                              activation = activation,
                              bias = bias,
                              dropout = dropout)
-    out <- list()
-    class(out) <- "citodnn"
+
     out$net <- net
     out$call <- match.call()
     out$call$formula <- stats::terms.formula(formula, data=data)
@@ -241,7 +221,10 @@ dnn <- function(formula = NULL,
 
 
   loss_obj <- get_loss(loss)
+  loss.fkt <- loss_obj$loss
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
+  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
+
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")
@@ -254,7 +237,6 @@ dnn <- function(formula = NULL,
   response_column <- NULL
   if(inherits(loss_obj$call, "character") && loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) #Gibt die RHS aus, falls keine LHS vorhanden. Relevant?
 
-
   targets <- format_targets(Y, loss_obj)
   Y_torch <- targets$Y
   Y_base <- targets$Y_base
@@ -264,13 +246,22 @@ dnn <- function(formula = NULL,
 
   X_torch <- torch::torch_tensor(X)
 
+
+  ### Hyperparameter tuning ###
+
+  if(length(tuner) != 0 ) {
+    parameters = as.list(match.call())
+
+    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss)
+    return(model)
+  }
+
+
   if(is.null(bootstrap)) {
 
-    loss.fkt <- loss_obj$loss
-    if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-
-    base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y_torch)$mean())
-
+    if(is.null(baseloss)) {
+      baseloss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y_torch)$mean())
+    }
     ### dataloader  ###
     if(validation != 0) {
       n_samples <- nrow(X)
@@ -314,7 +305,7 @@ dnn <- function(formula = NULL,
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
-    out$base_loss = base_loss
+    out$base_loss = baseloss
     if(!is.null(ylvls))  {
       out$data$ylvls <- ylvls
       out$data$xlvls <- out$data$xlvls[-which(names(out$data$xlvls) %in% as.character(formula[[2]]))]
@@ -387,6 +378,8 @@ dnn <- function(formula = NULL,
   }
   return(out)
 }
+
+
 
 #' Print class citodnn
 #'
