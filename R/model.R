@@ -1,23 +1,31 @@
 build_model <- function(object) {
   if(inherits(object, "citodnn")) {
-    net <- build_dnn(input = object$model_properties$input,
-                     output = object$model_properties$output,
-                     hidden = object$model_properties$hidden,
-                     activation = object$model_properties$activation,
-                     bias = object$model_properties$bias,
-                     dropout = object$model_properties$dropout)
+    net <- build_dnn(object$model_properties)
+  } else if(inherits(object, "citodnn_properties")) {
+    net <- build_dnn(object)
   } else if(inherits(object, "citocnn")) {
-    net <- build_cnn(input_shape = object$model_properties$input,
-                     output_shape = object$model_properties$output,
-                     architecture = object$model_properties$architecture)
+    net <- build_cnn(object$model_properties)
+  } else if(inherits(object, "citocnn_properties")) {
+    net <- build_cnn(object)
+  } else if(inherits(object, "citommn")) {
+    net <- build_mmn(object$model_properties)
+  } else if(inherits(object, "citommn_properties")) {
+    net <- build_mmn(object)
   } else {
-    stop("model not of class citodnn or citocnn")
+    stop("Object not of class citodnn, citodnn_properties, citocnn or citocnn_properties")
   }
   return(net)
 }
 
 
-build_dnn = function(input, output, hidden, activation, bias, dropout) {
+build_dnn = function(model_properties) {
+  input = model_properties$input
+  output = model_properties$output
+  hidden = model_properties$hidden
+  activation = model_properties$activation
+  bias = model_properties$bias
+  dropout = model_properties$dropout
+
   layers = list()
   if(is.null(hidden)) {
     layers[[1]] = torch::nn_linear(input, out_features = output, bias = bias)
@@ -50,7 +58,10 @@ build_dnn = function(input, output, hidden, activation, bias, dropout) {
 }
 
 
-build_cnn <- function(input_shape, output_shape, architecture) {
+build_cnn <- function(model_properties) {
+  input_shape = model_properties$input
+  output_shape = model_properties$output
+  architecture = model_properties$architecture
 
   input_dim <- length(input_shape) - 1
   net_layers = list()
@@ -172,6 +183,38 @@ build_cnn <- function(input_shape, output_shape, architecture) {
   if(transfer) {
     net <- replace_classifier(transfer_model, net)
   }
+
+  return(net)
+}
+
+build_mmn <- function(model_properties) {
+  create_mmn <- torch::nn_module(
+    initialize = function(subModules, fusion) {
+      self$subModules <- torch::nn_module_list(subModules)
+      self$fusion <- fusion
+    },
+    forward = function(input) {
+      for(i in 1:length(self$subModules)) {
+        input[[i]] <- self$subModules[[i]](input[[i]])
+      }
+      input <- self$fusion(torch::torch_cat(input[1:length(self$subModules)], dim = 2L))
+      input
+    }
+  )
+
+  subModules <- lapply(model_properties$subModules, build_model)
+
+  fusion_input <- 0
+  for(i in 1:length(subModules)) {
+    temp <- torch::torch_rand(c(1, model_properties$subModules[[i]]$input))
+    fusion_input <- fusion_input + dim(subModules[[i]](temp))[2]
+  }
+
+  model_properties$fusion$input <- fusion_input
+
+  fusion <- build_dnn(model_properties$fusion)
+
+  net <- create_mmn(subModules, fusion)
 
   return(net)
 }

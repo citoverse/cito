@@ -1,28 +1,44 @@
 #' @export
 mmn <- function(formula,
-                dataList,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
-                hidden = c(50L, 50L),
-                activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                dataList = NULL,
+                fusion_hidden = c(50L, 50L),
+                fusion_activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
                                "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
                                "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
-                bias = TRUE,
-                dropout = 0.0,
-                custom_parameters = NULL) {
+                fusion_bias = TRUE,
+                fusion_dropout = 0.0,
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+                optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+                lr = 0.01,
+                alpha = 0.5,
+                lambda = 0.0,
+                validation = 0.0,
+                batchsize = 32L,
+                shuffle = TRUE,
+                epochs = 100,
+                early_stopping = NULL,
+                lr_scheduler = NULL,
+                custom_parameters = NULL,
+                device = c("cpu", "cuda", "mps"),
+                plot = TRUE,
+                verbose = TRUE) {
 
-  build_mmn <- torch::nn_module(
-    initialize = function(subModules, dnn) {
-      self$subModules <- torch::nn_module_list(subModules)
-      self$dnn <- dnn
-    },
-    forward = function(input) {
-      for(i in 1:length(self$subModules)) {
-        input[[i]] <- self$subModules[[i]](input[[i]])
-      }
-      input <- self$dnn(torch::torch_cat(input[1:length(self$subModules)], dim = 2L))
-      input
-    }
-  )
+  #Data
+  checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
+
+  #Training
+  checkmate::qassert(lr, "R+[0,)")
+  checkmate::qassert(lambda, "R1[0,)")
+  checkmate::qassert(alpha, "R1[0,1]")
+  checkmate::qassert(validation, "R1[0,1)")
+  checkmate::qassert(batchsize, "X1[1,)")
+  checkmate::qassert(shuffle, "B1")
+  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::qassert(early_stopping, c("0","X1[1,)"))
+  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(plot, "B1")
+  checkmate::qassert(verbose, "B1")
+  checkmate::qassert(device, "S+[3,)")
 
   formula <- terms(formula)
   if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse(formula), "': ~ missing"))
@@ -30,7 +46,6 @@ mmn <- function(formula,
 
   Y <- eval(formula[[2]], envir = dataList)
   X <- format_input_data(formula[[3]], dataList)
-  models <- get_models(formula[[3]], dataList)
 
   if(!is.function(loss) & !inherits(loss,"family")) {
     loss <- match.arg(loss)
@@ -53,17 +68,23 @@ mmn <- function(formula,
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
 
+  model_properties <- list()
+  model_properties$subModules <- get_model_properties(formula[[3]], dataList)
+  model_properties$fusion <- list(output = y_dim,
+                                  hidden = fusion_hidden,
+                                  activation = fusion_activation,
+                                  bias = fusion_bias,
+                                  dropout = fusion_dropout)
+  class(model_properties) <- "citomm_properties"
 
-  dnn_input <- 0
-  for(i in 1:length(models)) {
-    dnn_input <- dnn_input + dim(models[[i]]$net(X[[i]][1,drop=F]))[2]
-  }
 
-  dnn <- build_dnn(dnn_input, y_dim, hidden, activation, bias, dropout)
 
-  net <- build_mmn(lapply(models, function(x) x$net), dnn)
-
-  return(list(net = net, X=X, Y=Y_torch))
+  out <- list(net = build_mmn(model_properties),
+              model_properties=model_properties,
+              X=X,
+              Y=Y_torch)
+  class(out) <- "citommn"
+  return(out)
 }
 
 format_input_data <- function(formula, dataList) {
@@ -102,22 +123,22 @@ format_input_data <- function(formula, dataList) {
   return(inner(formula, list()))
 }
 
-get_models <- function(formula, dataList) {
+get_model_properties <- function(formula, dataList) {
 
-  inner <- function(term, models) {
+  inner <- function(term, model_properties) {
     if(term[[1]] == "+") {
-      models <- inner(term[[2]], models)
-      models <- inner(term[[3]], models)
+      model_properties <- inner(term[[2]], model_properties)
+      model_properties <- inner(term[[3]], model_properties)
     } else if(term[[1]] == "dnn") {
       call <- match.call(dnn, term)
-      models <- append(models, list(eval(call, envir = dataList)))
+      model_properties <- append(model_properties, list(eval(call, envir = dataList)))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      models <- append(models, list(eval(call, envir = dataList)))
+      model_properties <- append(model_properties, list(eval(call, envir = dataList)))
     } else {
       stop(paste0("Symbol not supported: ", term[[1]]))
     }
-    return(models)
+    return(model_properties)
   }
 
   return(inner(formula, list()))

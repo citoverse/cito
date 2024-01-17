@@ -214,26 +214,15 @@ dnn <- function(formula = NULL,
   X <- stats::model.matrix(formula, data)
   Y <- stats::model.response(stats::model.frame(formula, data))
 
-  # No training if no Y specified (E.g. used in mmn())
+  # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
-    net <- build_dnn(input = ncol(X), output = NULL,
-                     hidden = hidden, activation = activation,
-                     bias = bias, dropout = dropout)
     model_properties <- list(input = ncol(X),
-                             output = NULL,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
                              dropout = dropout)
-    out <- list()
-    class(out) <- "citodnn"
-    out$net <- net
-    out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula, data=data)
-    out$data <- list(X = X, Y = NULL, data = data)
-    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j))
-    out$model_properties <- model_properties
-    return(out)
+    class(model_properties) <- "citodnn_properties"
+    return(model_properties)
   }
 
 
@@ -280,15 +269,16 @@ dnn <- function(formula = NULL,
       valid_dl <- NULL
     }
 
-    net <- build_dnn(input = ncol(X), output = y_dim,
-                      hidden = hidden, activation = activation,
-                      bias = bias, dropout = dropout)
     model_properties <- list(input = ncol(X),
                              output = y_dim,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
                              dropout = dropout)
+    class(model_properties) <- "citodnn_properties"
+
+    net <- build_dnn(model_properties)
+
     training_properties <- list(lr = lr,
                                lr_scheduler = lr_scheduler,
                                optimizer = optimizer,

@@ -162,28 +162,17 @@ cnn <- function(X,
   checkmate::qassert(device, "S+[3,)")
 
 
-  # No training if no Y specified (E.g. used in mmn())
+  # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
 
     input_shape <- dim(X)[-1]
 
     architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-    net <- build_cnn(input_shape = input_shape,
-                     output_shape = NULL,
-                     architecture = architecture)
-
     model_properties <- list(input = input_shape,
-                             output = NULL,
                              architecture = architecture)
-
-    out <- list()
-    class(out) <- "citocnn"
-    out$net <- net
-    out$call <- match.call()
-    out$data <- list(X = X, Y = NULL)
-    out$model_properties <- model_properties
-    return(out)
+    class(model_properties) <- "citocnn_properties"
+    return(model_properties)
   }
 
   device <- match.arg(device)
@@ -234,13 +223,15 @@ cnn <- function(X,
 
   architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-  net <- build_cnn(input_shape = input_shape,
-                   output_shape = y_dim,
-                   architecture = architecture)
+
 
   model_properties <- list(input = input_shape,
                            output = y_dim,
                            architecture = architecture)
+  class(model_properties) <- "citocnn_properties"
+
+  net <- build_cnn(model_properties)
+
 
   training_properties <- list(lr = lr,
                               lr_scheduler = lr_scheduler,
