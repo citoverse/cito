@@ -40,12 +40,15 @@ mmn <- function(formula,
   checkmate::qassert(verbose, "B1")
   checkmate::qassert(device, "S+[3,)")
 
-  formula <- terms(formula)
-  if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse(formula), "': ~ missing"))
-  if(length(formula) == 2) stop("Incorrect formula '", deparse(formula), "': response (left side of ~) missing")
+  device <- match.arg(device)
+  device_old <- device
+  device <- check_device(device)
 
-  Y <- eval(formula[[2]], envir = dataList)
-  X <- format_input_data(formula[[3]], dataList)
+  if(identical (fusion_activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
+                              "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
+                              "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) fusion_activation<- "relu"
+
+
 
   if(!is.function(loss) & !inherits(loss,"family")) {
     loss <- match.arg(loss)
@@ -62,11 +65,33 @@ mmn <- function(formula,
     }
   }
 
+  formula <- terms(formula)
+  if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse(formula), "': ~ missing"))
+  if(length(formula) == 2) stop("Incorrect formula '", deparse(formula), "': response (left side of ~) missing")
+
+  Y <- eval(formula[[2]], envir = dataList)
+  X <- format_input_data(formula[[3]], dataList)
+
   targets <- format_targets(Y, loss_obj)
   Y_torch <- targets$Y
   Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
+
+  loss.fkt <- loss_obj$loss
+  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
+  base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y_torch)$mean())
+
+  if(validation != 0) {
+    n_samples <- dim(Y_torch)[1]
+    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    train <- c(1:n_samples)[-valid]
+    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle)))
+    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle)))
+  } else {
+    train_dl <- do.call(get_data_loader, append(X, list(Y_torch, batch_size = batchsize, shuffle = shuffle)))
+    valid_dl <- NULL
+  }
 
   model_properties <- list()
   model_properties$subModules <- get_model_properties(formula[[3]], dataList)
@@ -77,13 +102,43 @@ mmn <- function(formula,
                                   dropout = fusion_dropout)
   class(model_properties) <- "citomm_properties"
 
+  net <- build_mmn(model_properties)
+
+  training_properties <- list(lr = lr,
+                              lr_scheduler = lr_scheduler,
+                              optimizer = optimizer,
+                              epochs = epochs,
+                              early_stopping = early_stopping,
+                              plot = plot,
+                              validation = validation,
+                              lambda = lambda,
+                              alpha = alpha,
+                              batchsize = batchsize,
+                              shuffle = shuffle)
 
 
-  out <- list(net = build_mmn(model_properties),
-              model_properties=model_properties,
-              X=X,
-              Y=Y_torch)
+  out <- list()
   class(out) <- "citommn"
+  out$net <- net
+  out$call <- match.call()
+  out$call$formula <- formula
+  out$loss <- loss_obj
+  out$data <- list(dataList=dataList)
+  if(!is.null(ylvls)) out$data$ylvls <- ylvls
+  if(validation != 0) out$data <- append(out$data, list(validation = valid))
+  out$base_loss <- base_loss
+  out$weights <- list()
+  out$use_model_epoch <- 1
+  out$loaded_model_epoch <- 0
+  out$model_properties <- model_properties
+  out$training_properties <- training_properties
+  out$device <- device_old
+
+
+
+  ### training loop ###
+  out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+
   return(out)
 }
 

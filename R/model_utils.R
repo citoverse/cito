@@ -52,9 +52,9 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
 }
 
 
-get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE) {
+get_data_loader = function(..., batch_size=25L, shuffle=TRUE) {
 
-  ds <- torch::tensor_dataset(X = X, Y=Y)
+  ds <- torch::tensor_dataset(...)
 
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
 

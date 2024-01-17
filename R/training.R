@@ -37,8 +37,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### Batch evaluation ###
     coro::loop(for (b in train_dl) {
       optimizer$zero_grad()
-      output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
-      loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
+      b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
+      if(inherits(model, "citommn")) {
+        output <- model$net(b[-length(b)])
+      } else {
+        output <- model$net(b[[1]])
+      }
+      loss <- loss.fkt(output, b[[length(b)]])$mean()
+
       if(regularize){
         regularization_loss <- regularize_weights(parameters = model$net$parameters,
                                    alpha = model$training_properties$alpha,
@@ -67,8 +73,13 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-        output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
-        loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
+        b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
+        if(inherits(model, "citommn")) {
+          output <- model$net(b[-length(b)])
+        } else {
+          output <- model$net(b[[1]])
+        }
+        loss <- loss.fkt(output, b[[length(b)]])$mean()
 
         valid_l <- c(valid_l, loss$item())
       })
@@ -99,6 +110,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
     ### create plot ###
     main <- ifelse(inherits(model, "citocnn"), "Training of CNN", "Training of DNN")
+    main <- switch (class(model),
+      citodnn = "Training of DNN",
+      citocnn = "Training of CNN",
+      citommn = "Training of MMN"
+    )
     if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$base_loss)
     plot_new <- FALSE
 
