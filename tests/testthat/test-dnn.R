@@ -23,23 +23,39 @@ data = data.frame(Y = Y, X = X)
 # Architecture
 scenarios =
   list(
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
 )
 
 testthat::test_that("DNN architecture", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()
-
   for(i in 1:length(scenarios)) {
     .n = wrap_dnn(scenarios[[i]])
   }
+
+  if(  torch::cuda_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "cuda"
+      .n = wrap_dnn(sc)
+    }
+  }
+
+  if(  torch::backends_mps_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "mps"
+      .n = wrap_dnn(sc)
+    }
+  }
+
 })
 
 # Family
@@ -61,6 +77,22 @@ testthat::test_that("DNN softmax/binomial", {
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
   }
+
+  if(  torch::cuda_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "cuda"
+      .n = wrap_dnn(sc)
+    }
+  }
+
+  if(  torch::backends_mps_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "mps"
+      .n = wrap_dnn(sc)
+    }
+  }
 })
 
 
@@ -69,14 +101,14 @@ Y = matrix(rpois(50*3,lambda = 2), 50, 3)
 data = data.frame(Y = Y, X = X)
 scenarios =
   list(
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L , verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L),
 
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L)
   )
 testthat::test_that("DNN rnorm/poisson", {
@@ -87,6 +119,26 @@ testthat::test_that("DNN rnorm/poisson", {
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
   }
+
+  if(  torch::cuda_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "cuda"
+      .n = wrap_dnn(sc)
+    }
+  }
+
+  if(  torch::backends_mps_is_available() ) {
+    for(i in 1:length(scenarios)) {
+
+      ## Poisson not yet supported, skip for now
+      if(! (i %in% c(3, 4, 7,8))) {
+        sc = scenarios[[i]]
+        sc$device = "mps"
+        .n = wrap_dnn(sc)
+      }
+    }
+  }
 })
 
 
@@ -95,9 +147,9 @@ Y = matrix(rpois(50*3,lambda = 2), 50, 3)
 data = data.frame(Y = Y, X = X)
 scenarios =
   list(
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L, bootstrap = 2L)
   )
 testthat::test_that("DNN mae", {
@@ -107,6 +159,22 @@ testthat::test_that("DNN mae", {
 
   for(i in 1:length(scenarios)) {
     wrap_dnn(scenarios[[i]])
+  }
+
+  if(  torch::cuda_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "cuda"
+      .n = wrap_dnn(sc)
+    }
+  }
+
+  if(  torch::backends_mps_is_available() ) {
+    for(i in 1:length(scenarios)) {
+      sc = scenarios[[i]]
+      sc$device = "mps"
+      .n = wrap_dnn(sc)
+    }
   }
 })
 
@@ -240,9 +308,3 @@ testthat::test_that("DNN baseline loss check",{
   testthat::expect_equal( !!m$base_loss, !!loss , tolerance = 0.01)
 
   })
-
-
-
-
-
-

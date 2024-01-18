@@ -10,7 +10,7 @@
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X array. If not provided X from original training will be used
 #' @param Y vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used
-#' @param device device on which network should be trained on, either "cpu" or "cuda"
+#' @param device can be used to overwrite device used in previous training
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
@@ -28,16 +28,14 @@ continue_training <- function(model, ...){UseMethod("continue_training")}
 continue_training.citodnn <- function(model,
                               epochs = 32,
                               data=NULL,
-                              device= c("cpu","cuda", "mps"),
+                              device= NULL,
                               verbose = TRUE,
                               changed_params=NULL,
                               ...){
 
-  checkmate::qassert(device, "S+[3,)")
-  device <- match.arg(device)
-  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
-  device <- check_device(device)
+  if(is.null(device)) device = model$device
 
+  device <- check_device(device)
 
   model<- check_model(model)
 
@@ -89,7 +87,7 @@ continue_training.citodnn <- function(model,
 continue_training.citodnnBootstrap <- function(model,
                                       epochs = 32,
                                       data=NULL,
-                                      device= c("cpu","cuda", "mps"),
+                                      device= NULL,
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       parallel = FALSE,

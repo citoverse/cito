@@ -13,7 +13,7 @@ continue_training(model, ...)
   model,
   epochs = 32,
   data = NULL,
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   verbose = TRUE,
   changed_params = NULL,
   ...
@@ -23,7 +23,7 @@ continue_training(model, ...)
   model,
   epochs = 32,
   data = NULL,
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   verbose = TRUE,
   changed_params = NULL,
   parallel = FALSE,
@@ -50,7 +50,7 @@ continue_training(model, ...)
 
 \item{data}{matrix or data.frame. If not provided data from original training will be used}
 
-\item{device}{device on which network should be trained on, either "cpu" or "cuda"}
+\item{device}{can be used to overwrite device used in previous training}
 
 \item{verbose}{print training and validation loss of epochs}
 

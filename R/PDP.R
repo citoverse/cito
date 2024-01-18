@@ -273,6 +273,10 @@ PDP.citodnnBootstrap <- function(model,
 
 
 getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , link, ... ) {
+
+  device = model$net$parameters[[1]]$device
+  dtype = model$net$parameters[[1]]$dtype
+
   return(
     lapply(1:model$model_properties$output, function(n_output) {
       df_ice = NULL
@@ -281,7 +285,9 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
           x = data[,v],
           y = sapply(seq_len(nrow(data)),function(i){
             perm_data[,v]<- perm_data[i,v]
-            return(as.numeric(mean(link(model$net(torch::torch_tensor(perm_data))   )[,n_output,drop=FALSE] ))  )
+            return(as.numeric(mean(link(model$net(torch::torch_tensor(perm_data,
+                                                                      device = device,
+                                                                      dtype = dtype))   )[,n_output,drop=FALSE] ))  )
           })
         )
         df <- df[order(df$x),]
@@ -302,7 +308,9 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
           df_ice <- lapply(seq_len(length(instances)), function(i){
             perm_dat<-stats::model.matrix(model$training_properties$formula, data)
             perm_dat[,v] <- instances[i]
-            return(cbind(instances[i] ,as.numeric(link(model$net(torch::torch_tensor(perm_dat)))[,n_output,drop=FALSE] ), 1:nrow(perm_dat) ))
+            return(cbind(instances[i] ,as.numeric(link(model$net(torch::torch_tensor(perm_dat,
+                                                                                     device = device,
+                                                                                     dtype = dtype)))[,n_output,drop=FALSE] ), 1:nrow(perm_dat) ))
           })
 
           df_ice<- do.call(rbind, df_ice)

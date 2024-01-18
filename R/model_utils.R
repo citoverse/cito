@@ -38,7 +38,7 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     }
     y_dim <- length(unique(Y))
     prop <- as.vector(table(Y)/sum(table(Y)))
-    Y_base <- matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE)
+    Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
   } else {
     y_dim <- ncol(Y)
@@ -62,7 +62,7 @@ get_data_loader = function(X, Y, batch_size=25L, shuffle=TRUE) {
 }
 
 
-get_loss <- function(loss) {
+get_loss <- function(loss, device = "cpu") {
   out <- list()
   out$parameter <- NULL
 
@@ -78,7 +78,7 @@ get_loss <- function(loss) {
 
   if(inherits(loss, "family")){
     if(loss$family == "gaussian") {
-      out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE)
+      out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE, device = device)
       out$invlink <- function(a) a
       out$link <- function(a) a
       out$loss <- function(pred, true) {
@@ -130,18 +130,18 @@ get_loss <- function(loss) {
       out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
       out$link <- function(a) log(a) + log(ncol(a))
       out$loss <- function(pred, true) {
-        return(torch::nnf_cross_entropy(pred, true$squeeze(), reduction = "none"))
+        return(torch::nnf_cross_entropy(pred, true$squeeze(dim = 2), reduction = "none"))
       }
     } else if(loss == "mvp") {
       df = floor(ncol(Y)/2)
-      out$parameter <- torch::torch_tensor(matrix(runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE)
+      out$parameter <- torch::torch_tensor(matrix(runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE, device = device)
       out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
       out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
       out$loss <- function(pred, true) {
         sigma = out$parameter
         Ys = true
         df = ncol(sigma)
-        noise = torch::torch_randn(list(100L, nrow(pred), df))
+        noise = torch::torch_randn(list(100L, nrow(pred), df), device = device)
         E = plogisT((torch::torch_einsum("ijk, lk -> ijl", list(noise, sigma))+pred)*1.702)*0.999999+0.0000005
         logprob = -(log(E)*Ys + log(1.0-E)*(1.0-Ys))
         logprob = - logprob$sum(3)

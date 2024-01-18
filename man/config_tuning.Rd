@@ -4,7 +4,15 @@
 \alias{config_tuning}
 \title{Config hyperparameter tuning}
 \usage{
-config_tuning(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE)
+config_tuning(
+  CV = 5,
+  steps = 10,
+  parallel = FALSE,
+  NGPU = 1,
+  cancel = TRUE,
+  bootstrap_final = NULL,
+  bootstrap_parallel = FALSE
+)
 }
 \arguments{
 \item{CV}{numeric, specifies k-folded cross validation}
@@ -16,6 +24,10 @@ config_tuning(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE)
 \item{NGPU}{numeric, set if more than one GPU is available, tuning will be parallelized over CPU cores and GPUs, only works for NCPU > 1}
 
 \item{cancel}{CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss}
+
+\item{bootstrap_final}{bootstrap final model, if all models should be boostrapped, please specify globally using the bootstrap argument}
+
+\item{bootstrap_parallel}{should the bootstrapping be parallelized or not}
 }
 \description{
 Config hyperparameter tuning

@@ -15,6 +15,7 @@ cnn(
   lambda = 0,
   validation = 0,
   batchsize = 32L,
+  burnin = 10,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = NULL,
@@ -45,6 +46,8 @@ cnn(
 \item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
 
 \item{batchsize}{number of samples that are used to calculate one learning rate step}
+
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
 
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 

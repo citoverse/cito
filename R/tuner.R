@@ -27,21 +27,24 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL) {
 #' @param parallel numeric, number of parallel cores (tuning steps are parallelized)
 #' @param NGPU numeric, set if more than one GPU is available, tuning will be parallelized over CPU cores and GPUs, only works for NCPU > 1
 #' @param cancel CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss
-#'
+#' @param bootstrap_final bootstrap final model, if all models should be boostrapped, please specify globally using the bootstrap argument
+#' @param bootstrap_parallel should the bootstrapping be parallelized or not
 #'
 #' @export
-config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE) {
+config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE) {
   out = list()
   out$CV = CV
   out$steps = steps
   out$parallel = parallel
   out$NGPU = NGPU
+  out$bootstrap = bootstrap_final
+  out$bootstrap_parallel = bootstrap_parallel
   return(out)
 }
 
 
 
-tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss) {
+tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss, device) {
 
   parallel = tuning$parallel
   NGPU = tuning$NGPU
@@ -92,7 +95,6 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
           m = do.call(dnn, parameters)
           tune_df$models[[i]] = list(m)
           #tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
-
           if(!m$successfull) {
             tune_df$test[i] = Inf
             break
@@ -120,7 +122,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2), clear=FALSE)
 
     tune_df <- parabar::par_lapply(backend, 1:steps, function(i) {
-      loss_obj <- get_loss(loss)
+      loss_obj <- get_loss(loss, device = device)
       loss.fkt <- loss_obj$loss
       targets <- format_targets(Y, loss_obj)
       Y_torch <- targets$Y
@@ -174,6 +176,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
   parameters$X = X
   parameters$Y = Y
   parameters$data = data
+
+  parameters$bootstrap = tuning$bootstrap
+  parameters$bootstrap_parallel = tuning$bootstrap_parallel
 
   tmp_hp = tune_df[which.min(tune_df$test),-(1:4)]
   for(j in 1:ncol(tmp_hp)) {

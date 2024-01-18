@@ -63,10 +63,7 @@ summary(nn.fit)
 
 ## Predictions with bootstrapping:
 dim(predict(nn.fit))
-## The first dim corresponds to the bootstrapping, if you want the average
-## predictions, you need to calculate the mean by your own:
-apply(predict(nn.fit), 2:3, mean)
-
+## predictions are by default averaged (over the bootstrap samples)
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:

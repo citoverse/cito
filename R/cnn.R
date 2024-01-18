@@ -13,6 +13,7 @@
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param batchsize number of samples that are used to calculate one learning rate step
+#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss if available.
@@ -130,6 +131,7 @@ cnn <- function(X,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
+                burnin = 10,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = NULL,
@@ -269,6 +271,7 @@ cnn <- function(X,
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
+  out$burnin = burnin
 
 
 

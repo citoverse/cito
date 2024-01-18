@@ -220,11 +220,8 @@ dnn <- function(formula = NULL,
   }
 
 
-  loss_obj <- get_loss(loss)
-  loss.fkt <- loss_obj$loss
+  loss_obj <- get_loss(loss, device = device)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")
@@ -233,6 +230,9 @@ dnn <- function(formula = NULL,
       loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
     }
   }
+
+  loss.fkt <- loss_obj$loss
+  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
 
   response_column <- NULL
   if(inherits(loss_obj$call, "character") && loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) #Gibt die RHS aus, falls keine LHS vorhanden. Relevant?
@@ -246,13 +246,12 @@ dnn <- function(formula = NULL,
 
   X_torch <- torch::torch_tensor(X)
 
-
   ### Hyperparameter tuning ###
 
   if(length(tuner) != 0 ) {
     parameters = as.list(match.call())
-
-    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss)
+    parameters$hidden = hidden
+    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss, device)
     return(model)
   }
 
@@ -260,7 +259,7 @@ dnn <- function(formula = NULL,
   if(is.null(bootstrap)) {
 
     if(is.null(baseloss)) {
-      baseloss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y_torch)$mean())
+      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$to(device = device)), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean())
     }
     ### dataloader  ###
     if(validation != 0) {
