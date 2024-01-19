@@ -182,6 +182,7 @@ dnn <- function(formula = NULL,
                                 epochs = epochs,
                                 lr = lr)
 
+
   device <- match.arg(device)
 
   if(!is.function(loss) & !inherits(loss,"family")){
@@ -250,7 +251,8 @@ dnn <- function(formula = NULL,
 
   if(length(tuner) != 0 ) {
     parameters = as.list(match.call())
-    parameters$hidden = hidden
+    parameters[!nzchar(names(parameters))] = NULL
+    #parameters$hidden = hidden
     model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss, device)
     return(model)
   }
@@ -259,7 +261,7 @@ dnn <- function(formula = NULL,
   if(is.null(bootstrap)) {
 
     if(is.null(baseloss)) {
-      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$to(device = device)), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean())
+      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu() )
     }
     ### dataloader  ###
     if(validation != 0) {

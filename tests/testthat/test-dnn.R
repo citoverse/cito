@@ -1,7 +1,7 @@
 source("utils.R")
 
 wrap_dnn = function(pars) {
-  testthat::expect_error({model = do.call(dnn, pars)}, NA)
+  testthat::expect_error({model <<- do.call(dnn, pars)}, NA)
   testthat::expect_error({.n = predict(model, newdata=pars$X)}, NA)
   testthat::expect_error({.n = continue_training(model, epochs = 2L, verbose = FALSE)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
@@ -228,7 +228,7 @@ testthat::expect_error({
   }, NA)
 
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.1))
 }
 
 custom_loss_MVN = function(true, pred) {

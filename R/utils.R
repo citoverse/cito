@@ -105,8 +105,8 @@ LHSForm = function (form, as.form = FALSE)
 
 cast_to_r_keep_dim = function(x) {
   d = dim(x)
-  if(length(d) == 1) return(as.numeric(x))
-  else return(as.matrix(x))
+  if(length(d) == 1) return(as.numeric(x$cpu()))
+  else return(as.matrix(x$cpu()))
 }
 
 
