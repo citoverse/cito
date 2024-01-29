@@ -1,7 +1,7 @@
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
-  if(!inherits(object, c("citodnn", "citocnn"))) stop("model not of class citodnn or citocnn")
+  if(!inherits(object, c("citodnn", "citocnn", "citommn"))) stop("model not of class citodnn, citocnn or citommn")
 
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
