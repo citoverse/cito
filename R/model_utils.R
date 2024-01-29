@@ -267,14 +267,13 @@ get_transfer_output_shape <- function(name) {
 }
 
 # Load the pretrained models.
-# In inception_v3 the auxiliary part is omitted since we don't use it, and the input transformation is moved to the forward function since we always use pretrained weights.
+# In inception_v3 the auxiliary part is omitted since we don't use it and the input transformation is moved to the forward function
 # In mobilenet_v2 the global average pool is moved from the forward function to a module, so the last 2 modules of all models are avgpool and classifier, respectively.
 get_pretrained_model <- function(transfer, pretrained) {
   if(transfer == "inception_v3") {
     inception_v3 <- torchvision::model_inception_v3(pretrained = pretrained)
 
-    forward <- c(sub("        ", "    ", deparse(inception_v3$.transform_input)[c(1,2,4:9)]),
-                 "    x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)",
+    forward <- c(deparse(inception_v3$.transform_input)[c(1:11)],
                  deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
 
     torch_model <- torch::nn_module(
@@ -286,7 +285,8 @@ get_pretrained_model <- function(transfer, pretrained) {
           }
         }
       },
-      forward = eval(parse(text=forward))
+      forward = eval(parse(text=forward)),
+      transform_input = pretrained
     )(inception_v3)
 
   } else if(transfer == "mobilenet_v2") {
@@ -352,13 +352,13 @@ replace_classifier <- function(transfer_model, cito_model) {
   return(net(transfer_model, cito_model))
 }
 
- freeze_weights <- function(transfer_model) {
-   for(child in transfer_model$children[-length(transfer_model$children)]) {
-     for(parameter in child$parameters) {
-       parameter$requires_grad_(FALSE)
-     }
+freeze_weights <- function(transfer_model) {
+ for(child in transfer_model$children[-length(transfer_model$children)]) {
+   for(parameter in child$parameters) {
+     parameter$requires_grad_(FALSE)
    }
-   return(transfer_model)
  }
+ return(transfer_model)
+}
 
 
