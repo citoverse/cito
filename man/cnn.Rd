@@ -6,7 +6,7 @@
 \usage{
 cnn(
   X,
-  Y,
+  Y = NULL,
   architecture,
   loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),

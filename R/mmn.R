@@ -65,7 +65,7 @@ mmn <- function(formula,
     }
   }
 
-  formula <- terms(formula)
+  formula <- stats::terms(formula)
   if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse(formula), "': ~ missing"))
   if(length(formula) == 2) stop("Incorrect formula '", deparse(formula), "': response (left side of ~) missing")
 
@@ -100,7 +100,7 @@ mmn <- function(formula,
                                   activation = fusion_activation,
                                   bias = fusion_bias,
                                   dropout = fusion_dropout)
-  class(model_properties) <- "citomm_properties"
+  class(model_properties) <- "citommn_properties"
 
   net <- build_mmn(model_properties)
 
@@ -142,6 +142,56 @@ mmn <- function(formula,
   return(out)
 }
 
+#' Predict from a fitted mmn model
+#'
+#' @param object a model created by \code{\link{mmn}}
+#' @param newdata new data for predictions
+#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
+#' @param device device on which network should be trained on.
+#' @param ... additional arguments
+#' @return prediction matrix
+#'
+#' @example /inst/examples/predict.citommn-example.R
+#' @export
+predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"), ...) {
+
+  checkmate::assert(checkmate::checkNull(newdata),
+                    checkmate::checkList(newdata))
+
+  object <- check_model(object)
+
+  type <- match.arg(type)
+
+  device <- match.arg(device)
+
+  if(type %in% c("link", "class")) {
+    link <- object$loss$invlink
+  }else{
+    link = function(a) a
+  }
+
+  device <- check_device(device)
+
+  object$net$to(device = device)
+
+
+  ### TO DO: use dataloaders via get_data_loader function
+  if(is.null(newdata)){
+    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList)
+  } else {
+    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
+  }
+
+  pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
+
+  if(!is.null(object$data$ylvls)) {
+    colnames(pred) <- object$data$ylvls
+    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  }
+
+  return(pred)
+}
+
 format_input_data <- function(formula, dataList) {
 
   inner <- function(term, input_data) {
@@ -152,16 +202,16 @@ format_input_data <- function(formula, dataList) {
       call <- match.call(dnn, term)
 
       if(!is.null(call$X)) {
-        input_data <- append(input_data, torch::torch_tensor(model.matrix(as.formula("~ . - 1"), data = data.frame(eval(call$X, envir = dataList)))))
+        input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(stats::formula("~ . - 1"), data = data.frame(eval(call$X, envir = dataList)))))
       } else if(!is.null(call$formula)) {
         if(!is.null(call$data)) {
           data <- data.frame(eval(call$data, envir = dataList))
-          formula <- formula(stats::terms.formula(formula(call$formula), data = data))
+          formula <- stats::formula(stats::terms(stats::formula(call$formula), data = data))
           formula <- stats::update.formula(formula, ~ . - 1)
-          input_data <- append(input_data, torch::torch_tensor(model.matrix(formula, data = data)))
+          input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(formula, data = data)))
         } else {
-          formula <- stats::update.formula(formula(call$formula), ~ . - 1)
-          input_data <- append(input_data, torch::torch_tensor(model.matrix(formula, data = dataList)))
+          formula <- stats::update.formula(stats::formula(call$formula), ~ . - 1)
+          input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(formula, data = dataList)))
         }
       } else {
         stop(paste0("In '", deparse(term), "' either 'formula' or 'X' must be specified."))
