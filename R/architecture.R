@@ -320,24 +320,31 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 #'
 #' @example /inst/examples/print.citoarchitecture-example.R
 #' @export
-print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
-  x <- adjust_architecture(x, length(input_shape)-1)
-  need_output_layer <- TRUE
+print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
-  for(layer in x) {
-    if(inherits(layer, "transfer")) {
-      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
-      need_output_layer <- layer$replace_classifier
+  if (missing(input_shape)) {
+    message("For a more detailed output specify the input_shape (and output_shape) argument(s)! See ?print.citoarchitecture for more information!")
+    class(x) <- "list"
+    print(x)
+  } else {
+    x <- adjust_architecture(x, length(input_shape)-1)
+    need_output_layer <- TRUE
+
+    for(layer in x) {
+      if(inherits(layer, "transfer")) {
+        if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+        need_output_layer <- layer$replace_classifier
+      }
+      input_shape <- print(layer, input_shape, output_shape)
     }
-    input_shape <- print(layer, input_shape, output_shape)
-  }
 
-  if(need_output_layer) {
-    output_layer <- linear(n_neurons=output_shape, bias = TRUE,
-                           activation="Depends on loss", normalization=FALSE, dropout=0)
-    print(output_layer, input_shape)
+    if(need_output_layer && !is.null(output_shape)) {
+      output_layer <- linear(n_neurons=output_shape, bias = TRUE,
+                             activation="Depends on loss", normalization=FALSE, dropout=0)
+      print(output_layer, input_shape)
+    }
+    cat("-------------------------------------------------------------------------------\n")
   }
-  cat("-------------------------------------------------------------------------------\n")
 }
 
 print.linear <- function(layer, input_shape, ...) {
