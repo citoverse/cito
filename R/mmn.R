@@ -71,6 +71,7 @@ mmn <- function(formula,
 
   Y <- eval(formula[[2]], envir = dataList)
   X <- format_input_data(formula[[3]], dataList)
+  X <- lapply(X, torch::torch_tensor, dtype=torch::torch_float32())
 
   targets <- format_targets(Y, loss_obj)
   Y_torch <- targets$Y
@@ -182,6 +183,8 @@ predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
 
+  newdata <- lapply(newdata, torch::torch_tensor, dtype=torch::torch_float32())
+
   pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
 
   if(!is.null(object$data$ylvls)) {
@@ -202,23 +205,23 @@ format_input_data <- function(formula, dataList) {
       call <- match.call(dnn, term)
 
       if(!is.null(call$X)) {
-        input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(stats::formula("~ . - 1"), data = data.frame(eval(call$X, envir = dataList)))))
+        input_data <- append(input_data, list(stats::model.matrix(stats::formula("~ . - 1"), data = data.frame(eval(call$X, envir = dataList)))))
       } else if(!is.null(call$formula)) {
         if(!is.null(call$data)) {
           data <- data.frame(eval(call$data, envir = dataList))
           formula <- stats::formula(stats::terms(stats::formula(call$formula), data = data))
           formula <- stats::update.formula(formula, ~ . - 1)
-          input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(formula, data = data)))
+          input_data <- append(input_data, list(stats::model.matrix(formula, data = data)))
         } else {
           formula <- stats::update.formula(stats::formula(call$formula), ~ . - 1)
-          input_data <- append(input_data, torch::torch_tensor(stats::model.matrix(formula, data = dataList)))
+          input_data <- append(input_data, list(stats::model.matrix(formula, data = dataList)))
         }
       } else {
         stop(paste0("In '", deparse(term), "' either 'formula' or 'X' must be specified."))
       }
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      input_data <- append(input_data, torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32()))
+      input_data <- append(input_data, list(eval(call$X, envir = dataList)))
     } else {
       stop(paste0("Symbol not supported: ", term[[1]]))
     }
