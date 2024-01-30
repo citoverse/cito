@@ -81,7 +81,6 @@ create_architecture <- function(...,
     if(!inherits(layer, "citolayer")) stop("Objects must be of class citolayer")
     if(inherits(layer, "transfer")) {
       if(length(architecture) != 0) stop("There mustn't be any layers before a transfer layer")
-      layer$replace_classifier <- length(list(...)) > 1
       architecture <- append(architecture, list(layer))
       transfer <- TRUE
     } else {
@@ -284,7 +283,6 @@ maxPool <- function(kernel_size = NULL,
 #' With this object the pretrained models that are available in the 'torchvision' package can be used in cito.
 #' When 'freeze' is set to TRUE, only the weights of the last part of the network (consisting of one or more linear layers) are adjusted in the training.
 #' There mustn't be any other citolayers before the transfer citolayer object when calling \code{\link{create_architecture}}.
-#' If there are any citolayers after the transfer citolayer, the linear classifier part of the pretrained model is replaced with the specified citolayers.
 
 #' @return S3 object of class \code{"transfer" "citolayer"}
 #' @import checkmate
@@ -304,8 +302,7 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 
   layer <- list(name = name,
                 pretrained = pretrained,
-                freeze = pretrained & freeze,
-                replace_classifier = FALSE)
+                freeze = pretrained & freeze)
   class(layer) <- c("transfer", "citolayer")
   return(layer)
 }
@@ -328,17 +325,15 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
     print(x)
   } else {
     x <- adjust_architecture(x, length(input_shape)-1)
-    need_output_layer <- TRUE
 
     for(layer in x) {
       if(inherits(layer, "transfer")) {
         if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
-        need_output_layer <- layer$replace_classifier
       }
-      input_shape <- print(layer, input_shape, output_shape)
+      input_shape <- print(layer, input_shape)
     }
 
-    if(need_output_layer && !is.null(output_shape)) {
+    if(!is.null(output_shape)) {
       output_layer <- linear(n_neurons=output_shape, bias = TRUE,
                              activation="Depends on loss", normalization=FALSE, dropout=0)
       print(output_layer, input_shape)
@@ -437,11 +432,9 @@ print.maxPool <- function(layer, input_shape, ...) {
   return(invisible(output_shape))
 }
 
-print.transfer <- function(layer, input_shape, output_shape, ...) {
+print.transfer <- function(layer, input_shape, ...) {
 
-  if(layer$replace_classifier) {
-    output_shape <- get_transfer_output_shape(layer$name)
-  }
+  output_shape <- get_transfer_output_shape(layer$name)
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("Transfer   |Input: ", paste(input_shape, collapse = "x"), "\n"))
@@ -464,10 +457,8 @@ print.transfer <- function(layer, input_shape, output_shape, ...) {
 #'
 #' @example /inst/examples/plot.citoarchitecture-example.R
 #' @export
-plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
+plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
   x <- adjust_architecture(x, length(input_shape)-1)
-
-  transfer_only <- length(x) == 1 && inherits(x[[1]], "transfer")
 
   text <- c(paste0("Input size: ", paste(input_shape, collapse = "x")), "")
   type <- c("data", "arrow")
@@ -483,14 +474,11 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
       }
       text <- c(text, tmp)
       type <- c(type, "transfer")
-      if(!transfer_only) {
-        input_shape <- get_transfer_output_shape(layer[["name"]])
-        text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
-        type <- c(type, "arrow")
-      } else {
-        text <- c(text, "")
-        type <- c(type, "arrow")
-      }
+
+      input_shape <- get_transfer_output_shape(layer[["name"]])
+      text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+      type <- c(type, "arrow")
+
     } else if(inherits(layer, "linear")) {
       text <- c(text, paste0("Linear layer with ", layer[["n_neurons"]], " neurons"))
       type <- c(type, "linear")
@@ -504,6 +492,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
         text <- c(text, paste0("Dropout rate: ", layer[["dropout"]]))
         type <- c(type, "arrow")
       }
+      input_shape <- layer[["n_neurons"]]
     } else if(inherits(layer, "conv")) {
       kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
       stride <- paste(layer[["stride"]], collapse = "x")
@@ -561,12 +550,14 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
     }
   }
 
-  if(!transfer_only) {
+  if(!is.null(output_shape)) {
     text <- c(text, paste0("Linear layer with ", output_shape, " neurons"), "")
     type <- c(type, "linear", "arrow")
+    input_shape <- output_shape
   }
 
-  text <- c(text, paste0("Output size: ", paste(output_shape, collapse = "x")))
+
+  text <- c(text, paste0("Output size: ", prod(input_shape)))
   type <- c(type, "data")
 
 

@@ -4,7 +4,7 @@
 \alias{print.citoarchitecture}
 \title{Print class citoarchitecture}
 \usage{
-\method{print}{citoarchitecture}(x, input_shape, output_shape, ...)
+\method{print}{citoarchitecture}(x, input_shape, output_shape = NULL, ...)
 }
 \arguments{
 \item{x}{an object created by \code{\link{create_architecture}}}

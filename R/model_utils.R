@@ -267,14 +267,19 @@ get_transfer_output_shape <- function(name) {
 }
 
 # Load the pretrained models.
-# In inception_v3 the auxiliary part is omitted since we don't use it and the input transformation is moved to the forward function
+# In inception_v3 the auxiliary part is omitted since we don't use it and the input transformation is moved to the forward function (if pretrained=TRUE)
 # In mobilenet_v2 the global average pool is moved from the forward function to a module, so the last 2 modules of all models are avgpool and classifier, respectively.
 get_pretrained_model <- function(transfer, pretrained) {
   if(transfer == "inception_v3") {
     inception_v3 <- torchvision::model_inception_v3(pretrained = pretrained)
 
-    forward <- c(deparse(inception_v3$.transform_input)[c(1:11)],
-                 deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
+
+    forward <- deparse(inception_v3$.forward)[1:2]
+    if(pretrained) {
+      forward <- c(forward, deparse(inception_v3$.transform_input)[c(4:9)], "        x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)")
+    }
+
+    forward <- c(forward, deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
 
     torch_model <- torch::nn_module(
       classname = "inception_v3",
@@ -311,40 +316,17 @@ get_pretrained_model <- function(transfer, pretrained) {
   return(torch_model)
 }
 
-replace_output_layer <- function(transfer_model, output_shape) {
-  n <- length(transfer_model$children)
-  if(names(transfer_model$children)[n] == "fc") {
-    if(is.null(output_shape)) {
-      transfer_model$fc <- torch::nn_identity()
-    } else {
-      transfer_model$fc <- torch::nn_linear(transfer_model$fc$in_features, output_shape)
-    }
-  } else if(names(transfer_model$children)[n] == "classifier") {
-    classifier <- transfer_model$classifier
-    k <- length(classifier$children)
-    if(is.null(output_shape)) {
-      classifier[[names(classifier$children)[k]]] <- torch::nn_identity()
-    } else {
-      classifier[[names(classifier$children)[k]]] <- torch::nn_linear(classifier[[names(classifier$children)[k]]]$in_features, output_shape)
-    }
-    transfer_model$classifier <- classifier
-  } else {
-    stop("Error in replacing output layer of pretrained model")
-  }
-  return(transfer_model)
-}
-
 replace_classifier <- function(transfer_model, cito_model) {
 
   forward <- deparse(transfer_model$forward)
-  forward <- c(forward[1:(which(grepl("flatten", forward))-1)], "    x <- self$cito(x)", "    x", "}")
+  forward <- c(forward[1:(which(grepl("flatten", forward))-1)], "    x <- self$classifier(x)", "    x", "}")
 
   net <- torch::nn_module(
     initialize = function(transfer_model, cito_model) {
       for (child in names(transfer_model$children)[-length(transfer_model$children)]) {
         eval(parse(text=paste0("self$", child, " <- transfer_model$", child)))
       }
-      self$cito <- cito_model
+      self$classifier <- cito_model
     },
     forward = eval(parse(text=forward))
   )
@@ -353,10 +335,8 @@ replace_classifier <- function(transfer_model, cito_model) {
 }
 
 freeze_weights <- function(transfer_model) {
- for(child in transfer_model$children[-length(transfer_model$children)]) {
-   for(parameter in child$parameters) {
-     parameter$requires_grad_(FALSE)
-   }
+ for(parameter in transfer_model$parameters) {
+   parameter$requires_grad_(FALSE)
  }
  return(transfer_model)
 }

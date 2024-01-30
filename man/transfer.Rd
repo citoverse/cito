@@ -31,7 +31,6 @@ This function creates a 'transfer' 'citolayer' object that is passed to the \cod
 With this object the pretrained models that are available in the 'torchvision' package can be used in cito.
 When 'freeze' is set to TRUE, only the weights of the last part of the network (consisting of one or more linear layers) are adjusted in the training.
 There mustn't be any other citolayers before the transfer citolayer object when calling \code{\link{create_architecture}}.
-If there are any citolayers after the transfer citolayer, the linear classifier part of the pretrained model is replaced with the specified citolayers.
 }
 \examples{
 \donttest{

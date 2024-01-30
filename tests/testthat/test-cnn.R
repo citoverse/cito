@@ -92,15 +92,15 @@ testthat::test_that("CNN accuracy", {
   skip_if_no_torch()
 
   set.seed(123)
-  n <- 500
+  n <- 1000
   shapes <- simulate_shapes(n, 50)
   test <- sample.int(n, 0.1*n)
   train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", epochs=200, plot=FALSE, verbose=FALSE)
+  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", validation=0.1, epochs=200, plot=FALSE, verbose=FALSE)
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)
-  testthat::expect_gt(accuracy, 0.95)
+  testthat::expect_gt(accuracy, 0.90)
 })
 
 

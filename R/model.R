@@ -71,14 +71,11 @@ build_cnn <- function(model_properties) {
   for(layer in architecture) {
     if(inherits(layer, "transfer")) {
       if(!(input_dim == 2 && input_shape[1] == 3)) stop("The pretrained models only work on RGB images: [n, 3, x, y]")
+
       transfer_model <- get_pretrained_model(layer$name, layer$pretrained)
 
       if(layer$freeze) transfer_model <- freeze_weights(transfer_model)
 
-      if(!layer$replace_classifier) {
-        transfer_model <- replace_output_layer(transfer_model, output_shape)
-        return(transfer_model)
-      }
       transfer <- TRUE
       input_shape <- get_transfer_output_shape(layer$name)
     } else if(inherits(layer, "conv")) {
