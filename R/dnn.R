@@ -147,7 +147,7 @@ dnn <- function(formula = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 batchsize = NULL,
-                burnin = 5,
+                burnin = 30,
                 baseloss = NULL,
                 shuffle = TRUE,
                 epochs = 100,
@@ -190,31 +190,52 @@ dnn <- function(formula = NULL,
   }
   device_old = device
   device = check_device(device)
-
   tmp_data = get_X_Y(formula, X, Y, data)
+  old_formula = tmp_data$old_formula
+  out$old_formula = old_formula
   X = tmp_data$X
   Y = tmp_data$Y
+  Z = tmp_data$Z
   formula = tmp_data$formula
+  Z_formula = tmp_data$Z_terms
   data = tmp_data$data
+
+  if(!is.null(Z)) {
+
+    Z_args = list()
+    for(i in 1:length(tmp_data$Z_args)) {
+      Z_args = append(Z_args, eval(tmp_data$Z_args[[i]]))
+    }
+
+    embeddings = list(inputs = ncol(Z),
+                      dims = apply(Z, 2, function(z) length(levels(as.factor(z)))), # input embeddings
+                      args = Z_args )
+  } else {
+    embeddings = NULL
+  }
 
   if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
 
   # No training if no Y specified (E.g. used in mmn())
+
+  # TODO: check for redundancy
   if(is.null(Y)) {
     net <- build_dnn(input = ncol(X), output = NULL,
                      hidden = hidden, activation = activation,
-                     bias = bias, dropout = dropout)
+                     bias = bias, dropout = dropout, embeddings = embeddings)
     model_properties <- list(input = ncol(X),
                              output = NULL,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
-                             dropout = dropout)
+                             dropout = dropout,
+                             embeddings = embeddings)
 
     out$net <- net
     out$call <- match.call()
     out$call$formula <- stats::terms.formula(formula, data=data)
-    out$data <- list(X = X, Y = NULL, data = data)
+    out$Z_formula = Z_formula
+    out$data <- list(X = X, Y = NULL, data = data, Z = Z)
     out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j))
     out$model_properties <- model_properties
     return(out)
@@ -240,12 +261,18 @@ dnn <- function(formula = NULL,
 
   targets <- format_targets(Y, loss_obj)
   Y_torch <- targets$Y
+  Y_transformed = as.matrix(Y_torch)
   Y_base <- targets$Y_base
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
   responses <- targets$responses
 
   X_torch <- torch::torch_tensor(X)
+  if(!is.null(embeddings)) {
+    Z_torch = torch::torch_tensor(Z, dtype = torch::torch_long())
+  } else {
+    Z_torch = NULL
+  }
 
   ### Hyperparameter tuning ###
 
@@ -253,12 +280,12 @@ dnn <- function(formula = NULL,
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
     #parameters$hidden = hidden
-    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss, device)
+    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, Z, data, old_formula, tuning, Y_torch, loss, device) # add Z....
     return(model)
   }
 
 
-  if(is.null(bootstrap)) {
+  if(is.null(bootstrap) || !bootstrap) {
 
     if(is.null(baseloss)) {
       baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu() )
@@ -268,22 +295,23 @@ dnn <- function(formula = NULL,
       n_samples <- nrow(X)
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
-      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
-      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
+      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
     } else {
-      train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
+      train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
       valid_dl <- NULL
     }
 
     net <- build_dnn(input = ncol(X), output = y_dim,
                       hidden = hidden, activation = activation,
-                      bias = bias, dropout = dropout)
+                      bias = bias, dropout = dropout, embeddings = embeddings)
     model_properties <- list(input = ncol(X),
                              output = y_dim,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
-                             dropout = dropout)
+                             dropout = dropout,
+                             embeddings = embeddings)
     training_properties <- list(lr = lr,
                                lr_scheduler = lr_scheduler,
                                optimizer = optimizer,
@@ -295,14 +323,17 @@ dnn <- function(formula = NULL,
                                alpha = alpha,
                                batchsize = batchsize,
                                shuffle = shuffle,
-                               formula = formula)
+                               formula = formula,
+                               embeddings = embeddings)
     out <- list()
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
     out$call$formula <- stats::terms.formula(formula, data=data)
+    out$Z_formula = Z_formula
+    out$old_formula = old_formula
     out$loss <- loss_obj
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data)
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
@@ -336,12 +367,14 @@ dnn <- function(formula = NULL,
       for(b in 1:bootstrap) {
         indices <- sample(nrow(data),replace = TRUE)
         m = do.call(dnn, args = list(
-          formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
           bootstrap_parallel = FALSE
         ))
+        m$data$indices = indices
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
         pb$tick()
         models[[b]] = m
       }
@@ -358,12 +391,14 @@ dnn <- function(formula = NULL,
       models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
         indices <- sample(nrow(data),replace = TRUE)
         m = do.call(dnn, args = list(
-          formula = formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
           bootstrap_parallel = FALSE
         ))
+        m$data$indices = indices
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
         m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)
@@ -371,11 +406,12 @@ dnn <- function(formula = NULL,
     }
 
     out$models <- models
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data)
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
     out$device = device_old
     out$responses = responses
     out$loss = loss_obj$call
     out$response_column = response_column
+    out$old_formula = old_formula
 
     out$successfull = any(sapply(models, function(m) m$successfull) == 0)
 
@@ -494,12 +530,12 @@ print.summary.citodnn <- function(x, ... ){
 
 #' @rdname summary.citodnn
 #' @export
-summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ...){
+summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, adjust_se = FALSE,...){
   object$models <- lapply(object$models, check_model)
   out <- list()
   class(out) <- "summary.citodnnBootstrap"
   if(is.null(device)) device = object$device
-  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device))
+  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device, ...))
   out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
 
   if(!is.null(out$importance[[1]])){
@@ -509,6 +545,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ..
       if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
       imps = apply(tmp, 1, mean) - 1
       imps_se = apply(tmp, 1, stats::sd)
+
+      if(adjust_se) imps_se = imps_se * 1/sqrt(3)
 
       coefmat = cbind(
         as.vector(as.matrix(imps)),
@@ -671,21 +709,34 @@ predict.citodnn <- function(object, newdata = NULL,
 
   device <- check_device(device)
 
+  Z = NULL
+
   object$net$to(device = device)
 
   ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
     newdata = torch::torch_tensor(object$data$X, device = device)
+    if(!is.null(object$model_properties$embeddings)) {
+      Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long(), device = device)
+    }
   } else {
+    copy_newdata = newdata
     if(is.data.frame(newdata)) {
       newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)
     } else {
       newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)
     }
     newdata <- torch::torch_tensor(newdata, device = device)
+
+    if(!is.null(object$model_properties$embeddings)) {
+      tmp = do.call(cbind, lapply(object$Z_formula, function(term) copy_newdata[, term] ))
+      Z = torch::torch_tensor(tmp, dtype = torch::torch_long(), device = device)
+    }
+
   }
 
-  pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
+  if(is.null(object$model_properties$embeddings)) pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
+  else pred <- torch::as_array(link(object$net(newdata, Z))$to(device="cpu"))
 
   if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
   if(type == "class") pred <- as.factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]))
@@ -739,6 +790,11 @@ predict.citodnnBootstrap <- function(object,
 #' @example /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
+
+  if(!is.null(x$data$Z)) {
+    cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")
+    return(invisible(NULL))
+  }
 
   sapply(c("igraph","ggraph","ggplot2"),function(x)
     if (!requireNamespace(x, quietly = TRUE)) {

@@ -7,7 +7,7 @@
 \usage{
 \method{summary}{citodnn}(object, n_permute = NULL, device = NULL, ...)
 
-\method{summary}{citodnnBootstrap}(object, n_permute = NULL, device = NULL, ...)
+\method{summary}{citodnnBootstrap}(object, n_permute = NULL, device = NULL, adjust_se = FALSE, ...)
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}

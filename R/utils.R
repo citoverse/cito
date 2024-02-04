@@ -111,6 +111,9 @@ cast_to_r_keep_dim = function(x) {
 
 
 get_X_Y = function(formula, X, Y, data) {
+
+  if(!is.null(formula)) old_formula = formula
+
   if(!is.null(X)) {
     if(!is.null(Y)) {
       if(!is.matrix(Y)) Y <- data.frame(Y)
@@ -124,13 +127,19 @@ get_X_Y = function(formula, X, Y, data) {
       data <- cbind(data.frame(Y), data.frame(X))
     } else {
       formula <- stats::as.formula("~ . - 1")
+      old_formula = formula
       data <- data.frame(X)
     }
     formula <- formula(stats::terms.formula(formula, data = data))
+    old_formula = formula
   } else if(!is.null(formula)) {
     if(!is.null(data)) {
       data <- data.frame(data)
     }
+    old_formula = formula
+    parsed_formula = splitForm(formula)
+    formula = parsed_formula$fixedFormula
+    Specials = list(terms = parsed_formula$reTrmFormulas, types = parsed_formula$reTrmClasses, args = parsed_formula$reTrmAddArgs)
     formula <- formula(stats::terms.formula(formula, data = data))
     formula <- stats::update.formula(formula, ~ . - 1)
   } else {
@@ -141,10 +150,22 @@ get_X_Y = function(formula, X, Y, data) {
     char_cols <- sapply(data, is.character)
     data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
   }
-
   X <- stats::model.matrix(formula, data)
   Y <- stats::model.response(stats::model.frame(formula, data))
-  return(list(X = X, Y = Y, formula = formula, data = data))
+  if(is.null(Specials$terms)) {
+    out = list(X = X, Y = Y, formula = formula, data = data, Z = NULL, Z_terms = NULL)
+  } else {
+    terms = sapply(Specials$terms, as.character)
+    Z =
+      lapply(terms, function(i) {
+        return(as.integer(data[,i]))
+      })
+    Z = do.call(cbind, Z)
+    colnames(Z) = terms
+    out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args)
+  }
+  out$old_formula = old_formula
+  return(out)
 }
 
 

@@ -1,4 +1,11 @@
-get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu"){
+get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", out_of_bag = FALSE){
+
+  if(out_of_bag) {
+    model$data$data = model$data$original$data[-model$data$indices,]
+    model$data$X = model$data$original$X[-model$data$indices,]
+    if(is.matrix(model$data$Y)) model$data$Y = model$data$original$Y[-model$data$indices,,drop=FALSE]
+    if(is.vector(model$data$Y)) model$data$Y = model$data$original$Y[-model$data$indices]
+  }
 
   if(is.null(n_permute)) n_permute <- ceiling(sqrt(nrow(model$data$data))*3)
   model<- check_model(model)

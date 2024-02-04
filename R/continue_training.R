@@ -61,6 +61,8 @@ continue_training.citodnn <- function(model,
   ylvls <- targets$ylvls
 
   X <- torch::torch_tensor(as.matrix(X))
+  Z = NULL
+  if(!is.null(model$data$Z)) Z = torch::torch_tensor(as.matrix(model$data$Z), dtype=torch::torch_long())
 
 
   ### dataloader  ###
@@ -68,10 +70,10 @@ continue_training.citodnn <- function(model,
     n_samples <- nrow(X)
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    train_dl <- get_data_loader(X[train,], Y[train,], Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    valid_dl <- get_data_loader(X[valid,], Y[valid,], Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
   } else {
-    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    train_dl <- get_data_loader(X, Y, Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     valid_dl <- NULL
   }
 

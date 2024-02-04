@@ -16,5 +16,5 @@ tune(lower = NULL, upper = NULL, fixed = NULL, additional = NULL)
 \item{additional}{numeric, additional control parameter which sets the value of the fixed argument}
 }
 \description{
-Is used to control which hyperparameter should be tuned
+Control hyperparameter tuning
 }

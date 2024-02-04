@@ -21,7 +21,7 @@ dnn(
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
   batchsize = NULL,
-  burnin = 5,
+  burnin = 30,
   baseloss = NULL,
   shuffle = TRUE,
   epochs = 100,

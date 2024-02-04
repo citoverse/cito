@@ -9,25 +9,27 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
   hh = diag(h, length(n))
   f_x0 = f(x0)
   N = nrow(x0)
-  for (i in 1:(length(n)-1)) {
-    i_idx = n[i]
-    hi <- hh[, i]
-    hi = matrix(hi, N, length(n), byrow = TRUE )
-    x0_tmp = x0
-    x0_tmp[,n] = x0_tmp[,n] + hi
-    H[,i, i] =  (f(x0_tmp) - f_x0 )/h[i]
-    if(interactions) {
-      for (j in (i + 1):length(n)) {
-        j_idx = n[j]
-        hj = hh[, j]
-        hj = matrix(hj, N, length(n), byrow = TRUE )
-        x0_tmp_pp = x0_tmp_pn = x0_tmp_np = x0_tmp_nn = x0
-        x0_tmp_pp[,n] = x0_tmp_pp[,n] + hi + hj
-        x0_tmp_pn[,n] = x0_tmp_pn[,n] + hi - hj
-        x0_tmp_np[,n] = x0_tmp_np[,n] - hi + hj
-        x0_tmp_nn[,n] = x0_tmp_nn[,n] - hi - hj
-        H[,i, j] = (f(x0_tmp_pp) - f(x0_tmp_pn) - f(x0_tmp_np) + f(x0_tmp_nn))/(4 * h[i]^2)
-        H[,j, i] = H[,i, j]
+  if(length(n) > 1) {
+    for (i in 1:(length(n)-1)) {
+      i_idx = n[i]
+      hi <- hh[, i]
+      hi = matrix(hi, N, length(n), byrow = TRUE )
+      x0_tmp = x0
+      x0_tmp[,n] = x0_tmp[,n] + hi
+      H[,i, i] =  (f(x0_tmp) - f_x0 )/h[i]
+      if(interactions) {
+        for (j in (i + 1):length(n)) {
+          j_idx = n[j]
+          hj = hh[, j]
+          hj = matrix(hj, N, length(n), byrow = TRUE )
+          x0_tmp_pp = x0_tmp_pn = x0_tmp_np = x0_tmp_nn = x0
+          x0_tmp_pp[,n] = x0_tmp_pp[,n] + hi + hj
+          x0_tmp_pn[,n] = x0_tmp_pn[,n] + hi - hj
+          x0_tmp_np[,n] = x0_tmp_np[,n] - hi + hj
+          x0_tmp_nn[,n] = x0_tmp_nn[,n] - hi - hj
+          H[,i, j] = (f(x0_tmp_pp) - f(x0_tmp_pn) - f(x0_tmp_np) + f(x0_tmp_nn))/(4 * h[i]^2)
+          H[,j, i] = H[,i, j]
+        }
       }
     }
   }

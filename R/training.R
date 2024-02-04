@@ -38,7 +38,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### Batch evaluation ###
     coro::loop(for (b in train_dl) {
       optimizer$zero_grad()
-      output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+      if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+      else output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[3]]$to(device = device, non_blocking = TRUE))
       loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
       if(regularize){
         regularization_loss <- regularize_weights(parameters = model$net$parameters,
@@ -49,6 +50,18 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       } else {
         total_loss = loss
       }
+
+      if(!is.null(model$training_properties$embeddings)) {
+        for(i in 1:length(model$training_properties$embeddings$dims)) {
+          if(model$training_properties$embeddings$args[[i]]$lambda > 0) {
+            total_loss = torch::torch_add(total_loss,  regularize_weights(model$net[[paste0("e_", i)]]$parameters,
+                                                                          lambda = model$training_properties$embeddings$args[[i]]$lambda,
+                                                                          alpha = model$training_properties$embeddings$args[[i]]$alpha))
+          }
+
+        }
+      }
+
       total_loss$backward()
 
       optimizer$step()
@@ -79,7 +92,9 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-        output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+        #output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+        if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
+        else output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[3]]$to(device = device, non_blocking = TRUE))
         loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
 
         valid_l <- c(valid_l, loss$item())

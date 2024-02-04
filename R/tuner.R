@@ -1,6 +1,6 @@
 #' Tune hyperparameter
 #'
-#' Is used to control which hyperparameter should be tuned
+#' Control hyperparameter tuning
 #'
 #' @param lower numeric, numeric vector, character, lower boundaries of tuning space
 #' @param upper numeric, numeric vector, character, upper foundaries of tuning space
@@ -44,7 +44,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
 
 
 
-tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, formula, tuning, Y_torch, loss, device) {
+tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, formula, tuning, Y_torch, loss, device) {
 
   parallel = tuning$parallel
   NGPU = tuning$NGPU
@@ -88,9 +88,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
         # start CV
         # Stop if training is aborted
         for(cv in test_indices) {
-          parameters$X = X[-cv,,drop=FALSE]
-          if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
-          else parameters$Y = Y[-cv]
+          #parameters$X = X[-cv,,drop=FALSE]
+          #if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
+          #else parameters$Y = Y[-cv]
           parameters$data = data[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
           tune_df$models[[i]] = list(m)
@@ -149,9 +149,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
       # start CV
       # Stop if training is aborted
       for(cv in test_indices) {
-        parameters$X = X[-cv,,drop=FALSE]
-        if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
-        else parameters$Y = Y[-cv]
+        #parameters$X = X[-cv,,drop=FALSE]
+        #if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
+        #else parameters$Y = Y[-cv]
         parameters$data = data[-cv,,drop=FALSE]
         m = do.call(dnn, parameters)
         tune_df$models[[i]] = list(m)
@@ -173,8 +173,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
     tune_df = do.call(rbind, tune_df)
   }
 
-  parameters$X = X
-  parameters$Y = Y
+  #parameters$X = X
+  #parameters$Y = Y
+  #parameters$Z = Z
   parameters$data = data
 
   parameters$bootstrap = tuning$bootstrap
@@ -191,7 +192,6 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y, data, for
 
   # fit best model
   cat("Fitting final model...\n")
-
   m = do.call(dnn, parameters)
   m$tuning = tune_df
   return(m)

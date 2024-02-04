@@ -17,19 +17,19 @@ wrap_dnn = function(pars) {
 
 X = matrix(runif(3*50), 50, 3)
 Y = matrix(rbinom(3*50, 1, 0.5), 50, 3)
-data = data.frame(Y = Y, X = X)
+data = data.frame(Y = Y, X, Cat = as.factor(rep(1:5, 10)))
 
 #### Test scenarios ####
 # Architecture
 scenarios =
   list(
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
 )
 
 testthat::test_that("DNN architecture", {
