@@ -22,8 +22,7 @@ editor_options:
 
 ## Species distribution model - African elephant
 
-The goal is to build a SDM for the African elephant. A pre-processed dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be found in the EcoData package which is only available on github:
-
+The goal is to build a SDM for the African elephant. A pre-processed dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be found in the EcoData package which is only available on github. In the data from the EcoData package, all 19 bioclimatic variables have already been scaled and the data have been downsampled (i.e., random observations with no occurrences have been removed to balance the number of presences and absences). A detailed description of the preprocessing can be found in the following repository [Amesoeder et al., 2023](https://github.com/citoverse/Amesoeder-et-al-2023):
 
 ```r
 if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData",
