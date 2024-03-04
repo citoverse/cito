@@ -22,7 +22,7 @@ Authors@R:
              role = "ctb",
              email = "armin.schenk99@gmail.com")
            )
-Description: Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card. 
+Description: The 'cito' package provides a user-friendly interface for training and interpreting deep neural networks (DNN). 'cito' simplifies the fitting of DNNs by supporting the familiar formula syntax, hyper-parameter tuning under cross-validation, and helps to detect and handle convergence problems.  DNNs can be trained on CPU, GPU and MacOS GPUs. In addition, 'cito' has many downstream functionalities such as various explainable AI metrics (e.g. variable importance, partial dependence plots, accumulated local effect plots, and effect estimates) to interpret trained DNNs. Finally, 'cito' optionally provides confidence intervals (and p-values) for all xAI metrics and predictions.
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

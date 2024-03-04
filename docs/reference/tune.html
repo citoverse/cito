@@ -60,7 +60,13 @@
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tune</span><span class="op">(</span>lower <span class="op">=</span> <span class="cn">NULL</span>, upper <span class="op">=</span> <span class="cn">NULL</span>, fixed <span class="op">=</span> <span class="cn">NULL</span>, additional <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tune</span><span class="op">(</span></span>
+<span>  lower <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  upper <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  fixed <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  additional <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  values <span class="op">=</span> <span class="cn">NULL</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -79,6 +85,10 @@
 
 <dt>additional</dt>
 <dd><p>numeric, additional control parameter which sets the value of the fixed argument</p></dd>
+
+
+<dt>values</dt>
+<dd><p>custom values from which hyperparameters are sampled, must be a matrix for hidden layers (first column == nodes, second column == number of layers)</p></dd>
 
 </dl></div>
 

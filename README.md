@@ -85,58 +85,84 @@ analyze_training(nn.fit)
 plot(nn.fit)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](man/figures/README-unnamed-chunk-7-1.png)<!-- -->
 
-4.  Return xAI effects (feature importances and average conditional
-    effects) and their uncertainties:
+4.  ‘cito’ supports many advanced functionalities such as common
+    explainable AI metrics that can be used for inference (i.e. to
+    interpret the models). Variable importance (similar to a variation
+    partitioning) and linear effects are directly returned by the
+    `summary` function:
 
 ``` r
 summary(nn.fit)
+## Summary of Deep Neural Network Model
+## 
+## ── Feature Importance
+##                 Importance Std.Err Z value Pr(>|z|)   
+## Sepal.Width →        1.205   0.507    2.38   0.0175 * 
+## Petal.Length →      27.720  10.575    2.62   0.0088 **
+## Petal.Width →        0.677   0.637    1.06   0.2876   
+## Species →            1.270   1.096    1.16   0.2465   
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## ── Average Conditional Effects
+##                     ACE Std.Err Z value Pr(>|z|)    
+## Sepal.Width →    0.5283  0.0828    6.38  1.8e-10 ***
+## Petal.Length →   0.7253  0.0649   11.18  < 2e-16 ***
+## Petal.Width →   -0.1924  0.1396   -1.38     0.17    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## ── Standard Deviation of Conditional Effects
+##                    ACE Std.Err Z value Pr(>|z|)    
+## Sepal.Width →   0.1495  0.0409    3.66  0.00026 ***
+## Petal.Length →  0.1291  0.0396    3.26  0.00111 ** 
+## Petal.Width →   0.0529  0.0311    1.70  0.08878 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
-
-    ## Summary of Deep Neural Network Model
-
-    ## 
-
-    ## ── Feature Importance
-
-    ##                             Importance Std.Err Z value Pr(>|z|)   
-    ## Sepal.Width → Sepal.Length       1.755   0.570    3.08   0.0021 **
-    ## Petal.Length → Sepal.Length     18.027   8.809    2.05   0.0407 * 
-    ## Petal.Width → Sepal.Length       0.521   0.716    0.73   0.4666   
-    ## Species → Sepal.Length           0.392   0.218    1.80   0.0720 . 
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    ## 
-
-    ## ── Average Conditional Effects
-
-    ##                                 ACE Std.Err Z value Pr(>|z|)    
-    ## Sepal.Width → Sepal.Length   0.7326  0.0497   14.74   <2e-16 ***
-    ## Petal.Length → Sepal.Length  0.6164  0.0901    6.84    8e-12 ***
-    ## Petal.Width → Sepal.Length  -0.1181  0.1587   -0.74     0.46    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    ## 
-
-    ## ── Standard Deviation of Conditional Effects
-
-    ##                                ACE Std.Err Z value Pr(>|z|)    
-    ## Sepal.Width → Sepal.Length  0.1482  0.0432    3.43   0.0006 ***
-    ## Petal.Length → Sepal.Length 0.1167  0.0396    2.94   0.0032 ** 
-    ## Petal.Width → Sepal.Length  0.0470  0.0268    1.76   0.0790 .  
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 5.  Predict (with confidence intervals):
 
 ``` r
 dim(predict(nn.fit, newdata = datasets::iris))
+## [1] 150   1
 ```
 
-    ## [1]  30 150   1
+### Hyperparameter tuning
+
+Certain arguments/parameters such as the architecture, activation
+function, and the learning rate can be automatically tuned under
+crossvalidation (for a full list, see `?dnn`). Parameters that should be
+tuned, can be flagged by using the function `tune()` instead of a
+hyperparameter value:
+
+``` r
+nn.fit <- dnn(Sepal.Length~., data = datasets::iris, lr = tune(0.0001, 0.1))
+## Starting hyperparameter tuning...
+## Fitting final model...
+nn.fit$tuning
+## # A tibble: 10 × 5
+##    steps    test train models          lr
+##    <int>   <dbl> <dbl> <list>       <dbl>
+##  1     1 Inf         0 <list [1]> 0.0887 
+##  2     2 Inf         0 <list [1]> 0.0264 
+##  3     3   1.13      0 <list [1]> 0.0416 
+##  4     4   0.757     0 <list [1]> 0.0373 
+##  5     5 Inf         0 <list [1]> 0.0175 
+##  6     6 Inf         0 <list [1]> 0.0581 
+##  7     7   0.526     0 <list [1]> 0.00348
+##  8     8 Inf         0 <list [1]> 0.0179 
+##  9     9 Inf         0 <list [1]> 0.0687 
+## 10    10 Inf         0 <list [1]> 0.0497
+```
+
+The tuning can be configured with `tuning=config_tuning()`. After
+tuning, a final model trained with the best hyperparameters is returned.
+Hyperparameter combinations that do not achieve a loss below the
+baseline loss will be aborted early and not fully cross-validated. These
+runs are given a test loss of infinity.
 
 ## Advanced
 
@@ -159,7 +185,7 @@ normal distribution:
 
 ``` r
 create_cov = function(L, Diag) {
-  return(torch::torch_matmul(L, L$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(L, L$t()) + torch::torch_diag(Diag$exp()+0.001))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -185,7 +211,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              plot = FALSE,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3), # Our parameters with starting values
+               list(SigmaDiag =  rep(0, 3), # Our parameters with starting values
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2)) # Our parameters with starting values
 )
 ```
@@ -195,20 +221,18 @@ Estimated covariance matrix:
 ``` r
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
                      nn.fit$loss$parameter$SigmaDiag))
+##            [,1]       [,2]       [,3]
+## [1,] 0.29110381 0.06862528 0.13878071
+## [2,] 0.06862528 0.10975803 0.04459281
+## [3,] 0.13878071 0.04459281 0.16815922
 ```
-
-    ##            [,1]       [,2]       [,3]
-    ## [1,] 0.24824733 0.06395083 0.13815881
-    ## [2,] 0.06395083 0.11858207 0.03379684
-    ## [3,] 0.13815881 0.03379684 0.24378222
 
 Empirical covariance matrix:
 
 ``` r
 cov(predict(nn.fit) - nn.fit$data$Y)
+##            [,1]       [,2]       [,3]
+## [1,] 0.22410463 0.06030019 0.12087770
+## [2,] 0.06030019 0.08968497 0.01781354
+## [3,] 0.12087770 0.01781354 0.13009877
 ```
-
-    ##              Sepal.Length Sepal.Width Petal.Length
-    ## Sepal.Length   0.25081444  0.06944643   0.15270816
-    ## Sepal.Width    0.06944643  0.09439328   0.02924789
-    ## Petal.Length   0.15270816  0.02924789   0.16690478

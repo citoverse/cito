@@ -696,8 +696,6 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 #' @param output_shape the number of nodes in the output layer
 #' @param ... additional arguments
 #' @return original object
-#'
-#' @example /inst/examples/print.citoarchitecture-example.R
 print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
   x <- adjust_architecture(x, length(input_shape)-1)
   need_output_layer <- TRUE

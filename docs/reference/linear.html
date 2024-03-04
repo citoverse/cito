@@ -50,7 +50,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="" class="logo" alt=""><h1>Linear layer</h1>
-      <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/R/architecture.R" class="external-link"><code>R/architecture.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/R/cnn.R" class="external-link"><code>R/cnn.R</code></a></small>
       <div class="d-none name"><code>linear.Rd</code></div>
     </div>
 
@@ -113,25 +113,6 @@ The parameters that aren't assigned here (and are therefore still NULL) are fill
     <p>Armin Schenk</p>
     </div>
 
-    <div class="section level2">
-    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_is_installed.html" class="external-link">torch_is_installed</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">{</span></span></span>
-<span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://citoverse.github.io/cito/" class="external-link">cito</a></span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># A linear layer where all available parameters are assigned</span></span></span>
-<span class="r-in"><span><span class="co"># No value will be overwritten by 'create_architecture()'</span></span></span>
-<span class="r-in"><span><span class="va">layer1</span> <span class="op">&lt;-</span> <span class="fu">linear</span><span class="op">(</span><span class="fl">100</span>, <span class="cn">TRUE</span>, <span class="st">"relu"</span>, <span class="cn">FALSE</span>, <span class="fl">0.5</span><span class="op">)</span></span></span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># A linear layer where only the activation function is assigned</span></span></span>
-<span class="r-in"><span><span class="co"># n_neurons, bias, normalization and dropout are filled with the defaults</span></span></span>
-<span class="r-in"><span><span class="co"># passed to the 'create_architecture()' function</span></span></span>
-<span class="r-in"><span><span class="va">layer2</span> <span class="op">&lt;-</span> <span class="fu">linear</span><span class="op">(</span>activation<span class="op">=</span><span class="st">"selu"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in linear(100, TRUE, "relu", FALSE, 0.5):</span> could not find function "linear"</span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
-</code></pre></div>
-    </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside></div>
 

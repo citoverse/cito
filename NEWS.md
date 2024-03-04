@@ -3,15 +3,18 @@
 ## New features
 * hyperparameter tuning (experimental)
 * burnin parameter
-* mvp 
+* multivariate probit model
+* X and Y support (alternative interface)
 
 ## Minor changes
 * Improved vignette
-
+* Improved README
 
 ## Bug fixes
 * dropout is turned off after training (into evaluation mode)
 * predict type was changed
+* small bug in the activation functions
+* extended support for mps devices
 
 
 

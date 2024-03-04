@@ -109,7 +109,7 @@ nn.fit$parameter$scale
 ## Sigma = L*L^t + D
 ## Helper function to build covariance matrix
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -127,7 +127,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              loss = custom_loss_MVN,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3),
+               list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,

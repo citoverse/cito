@@ -228,7 +228,7 @@ testthat::expect_error({
   }, NA)
 
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.1))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -252,7 +252,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              plot = FALSE,
              custom_parameters =
-               list(SigmaDiag =  rep(1., 3),
+               list(SigmaDiag =  rep(0., 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 }, NA)
