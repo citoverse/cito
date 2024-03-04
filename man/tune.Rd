@@ -4,7 +4,13 @@
 \alias{tune}
 \title{Tune hyperparameter}
 \usage{
-tune(lower = NULL, upper = NULL, fixed = NULL, additional = NULL)
+tune(
+  lower = NULL,
+  upper = NULL,
+  fixed = NULL,
+  additional = NULL,
+  values = NULL
+)
 }
 \arguments{
 \item{lower}{numeric, numeric vector, character, lower boundaries of tuning space}
@@ -14,6 +20,8 @@ tune(lower = NULL, upper = NULL, fixed = NULL, additional = NULL)
 \item{fixed}{charachter, used for multi-dimensional hyperparameters such as hidden, which dimensions should be fixed}
 
 \item{additional}{numeric, additional control parameter which sets the value of the fixed argument}
+
+\item{values}{custom values from which hyperparameters are sampled, must be a matrix for hidden layers (first column == nodes, second column == number of layers)}
 }
 \description{
 Control hyperparameter tuning

@@ -4,7 +4,7 @@
 \alias{e}
 \title{Embeddings}
 \usage{
-e(dim = 1L, weights = NULL, train = TRUE)
+e(dim = 1L, weights = NULL, train = TRUE, lambda = 0, alpha = 1)
 }
 \arguments{
 \item{dim}{integer, embedding dimension}
@@ -12,7 +12,11 @@ e(dim = 1L, weights = NULL, train = TRUE)
 \item{weights}{matrix, to use custom embedding matrices}
 
 \item{train}{logical, should the embeddings be trained or not}
+
+\item{lambda}{regularization strength on the embeddings}
+
+\item{alpha}{mix between L1 and L2 regularization}
 }
 \description{
-Can be used for categorical variables, it is more efficient than one-hot encoding
+Can be used for categorical variables, a more efficient alternative to one-hot encoding
 }

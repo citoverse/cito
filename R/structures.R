@@ -1,6 +1,6 @@
 #' Embeddings
 #'
-#' Can be used for categorical variables, it is more efficient than one-hot encoding
+#' Can be used for categorical variables, a more efficient alternative to one-hot encoding
 #'
 #' @param dim integer, embedding dimension
 #' @param weights matrix, to use custom embedding matrices

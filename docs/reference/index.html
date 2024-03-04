@@ -10,7 +10,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">cito</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -80,9 +80,24 @@
         <dd>Visualize training of Neural Network</dd>
       </dl><dl><dt>
           
+          <code><a href="avgPool.html">avgPool()</a></code> 
+        </dt>
+        <dd>Average pooling layer</dd>
+      </dl><dl><dt>
+          
           <code><a href="cito.html">cito</a></code> <code><a href="cito.html">cito-package</a></code> 
         </dt>
         <dd>'cito': Building and training neural networks</dd>
+      </dl><dl><dt>
+          
+          <code><a href="cnn.html">cnn()</a></code> 
+        </dt>
+        <dd>CNN</dd>
+      </dl><dl><dt>
+          
+          <code><a href="coef.citocnn.html">coef(<i>&lt;citocnn&gt;</i>)</a></code> 
+        </dt>
+        <dd>Returns list of parameters the neural network model currently has in use</dd>
       </dl><dl><dt>
           
           <code><a href="coef.citodnn.html">coef(<i>&lt;citodnn&gt;</i>)</a></code> <code><a href="coef.citodnn.html">coef(<i>&lt;citodnnBootstrap&gt;</i>)</a></code> 
@@ -105,9 +120,24 @@
         <dd>Creation of customized optimizer objects</dd>
       </dl><dl><dt>
           
+          <code><a href="config_tuning.html">config_tuning()</a></code> 
+        </dt>
+        <dd>Config hyperparameter tuning</dd>
+      </dl><dl><dt>
+          
           <code><a href="continue_training.html">continue_training()</a></code> 
         </dt>
-        <dd>Continues training of a model generated with <code>dnn</code> for additional epochs.</dd>
+        <dd>Continues training of a model generated with <code>dnn</code> or <code>cnn</code> for additional epochs.</dd>
+      </dl><dl><dt>
+          
+          <code><a href="conv.html">conv()</a></code> 
+        </dt>
+        <dd>Convolutional layer</dd>
+      </dl><dl><dt>
+          
+          <code><a href="create_architecture.html">create_architecture()</a></code> 
+        </dt>
+        <dd>CNN architecture</dd>
       </dl><dl><dt>
           
           <code><a href="dnn.html">dnn()</a></code> 
@@ -115,14 +145,59 @@
         <dd>DNN</dd>
       </dl><dl><dt>
           
+          <code><a href="e.html">e()</a></code> 
+        </dt>
+        <dd>Embeddings</dd>
+      </dl><dl><dt>
+          
+          <code><a href="findReTrmClasses.html">findReTrmClasses()</a></code> 
+        </dt>
+        <dd>list of specials -- taken from enum.R</dd>
+      </dl><dl><dt>
+          
+          <code><a href="linear.html">linear()</a></code> 
+        </dt>
+        <dd>Linear layer</dd>
+      </dl><dl><dt>
+          
+          <code><a href="maxPool.html">maxPool()</a></code> 
+        </dt>
+        <dd>Maximum pooling layer</dd>
+      </dl><dl><dt>
+          
+          <code><a href="plot.citoarchitecture.html">plot(<i>&lt;citoarchitecture&gt;</i>)</a></code> 
+        </dt>
+        <dd>Plot the CNN architecture</dd>
+      </dl><dl><dt>
+          
+          <code><a href="plot.citocnn.html">plot(<i>&lt;citocnn&gt;</i>)</a></code> 
+        </dt>
+        <dd>Plot the CNN architecture</dd>
+      </dl><dl><dt>
+          
           <code><a href="plot.citodnn.html">plot(<i>&lt;citodnn&gt;</i>)</a></code> <code><a href="plot.citodnn.html">plot(<i>&lt;citodnnBootstrap&gt;</i>)</a></code> 
         </dt>
         <dd>Creates graph plot which gives an overview of the network architecture.</dd>
       </dl><dl><dt>
           
+          <code><a href="predict.citocnn.html">predict(<i>&lt;citocnn&gt;</i>)</a></code> 
+        </dt>
+        <dd>Predict from a fitted cnn model</dd>
+      </dl><dl><dt>
+          
           <code><a href="predict.citodnn.html">predict(<i>&lt;citodnn&gt;</i>)</a></code> <code><a href="predict.citodnn.html">predict(<i>&lt;citodnnBootstrap&gt;</i>)</a></code> 
         </dt>
         <dd>Predict from a fitted dnn model</dd>
+      </dl><dl><dt>
+          
+          <code><a href="print.citoarchitecture.html">print(<i>&lt;citoarchitecture&gt;</i>)</a></code> 
+        </dt>
+        <dd>Print class citoarchitecture</dd>
+      </dl><dl><dt>
+          
+          <code><a href="print.citocnn.html">print(<i>&lt;citocnn&gt;</i>)</a></code> 
+        </dt>
+        <dd>Print class citocnn</dd>
       </dl><dl><dt>
           
           <code><a href="print.citodnn.html">print(<i>&lt;citodnn&gt;</i>)</a></code> <code><a href="print.citodnn.html">print(<i>&lt;citodnnBootstrap&gt;</i>)</a></code> 
@@ -145,9 +220,34 @@
         <dd>Extract Model Residuals</dd>
       </dl><dl><dt>
           
+          <code><a href="simulate_shapes.html">simulate_shapes()</a></code> 
+        </dt>
+        <dd>Data Simulation for CNN</dd>
+      </dl><dl><dt>
+          
+          <code><a href="sumTerms.html">sumTerms()</a></code> 
+        </dt>
+        <dd>combine a list of formula terms as a sum</dd>
+      </dl><dl><dt>
+          
+          <code><a href="summary.citocnn.html">summary(<i>&lt;citocnn&gt;</i>)</a></code> 
+        </dt>
+        <dd>Summary citocnn</dd>
+      </dl><dl><dt>
+          
           <code><a href="summary.citodnn.html">summary(<i>&lt;citodnn&gt;</i>)</a></code> <code><a href="summary.citodnn.html">summary(<i>&lt;citodnnBootstrap&gt;</i>)</a></code> 
         </dt>
         <dd>Summarize Neural Network of class citodnn</dd>
+      </dl><dl><dt>
+          
+          <code><a href="transfer.html">transfer()</a></code> 
+        </dt>
+        <dd>Transfer learning</dd>
+      </dl><dl><dt>
+          
+          <code><a href="tune.html">tune()</a></code> 
+        </dt>
+        <dd>Tune hyperparameter</dd>
       </dl></div>
   </main></div>
 

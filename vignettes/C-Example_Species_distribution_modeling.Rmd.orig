@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   #dpi=32,
   #out.width="400px",
+  fig.cap = "",
   fig.align="center",
   fig.path = 'C/C-'
 
@@ -153,7 +154,7 @@ model_boot = dnn(Presence~., data = df,
 We can use the model now for predictions:
 
 ```{r}
-predictions = predict(model_boot, newdata = test)
+predictions = predict(model_boot, newdata = test, reduce = "none")
 dim(predictions)
 ```
 

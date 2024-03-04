@@ -1,4 +1,4 @@
-# This file was taken from glmmTMB
+# This file was taken and adjusted from glmmTMB https://github.com/glmmTMB/glmmTMB
 .valid_covstruct <- c(
   e = 0
 )
@@ -15,14 +15,11 @@ if (getRversion() < "4.0.0") {
   }
 }
 
-#' expand double-bar RE notation by splitting
-#' @param term a formula term
-#' @rdname formfuns
-#' @export
+
 expandDoubleVert <- function(term) {
-  frml <- formula(substitute(~x,list(x=term[[2]])))
+  frml <- stats::formula(substitute(~x,list(x=term[[2]])))
   ## need term.labels not all.vars to capture interactions too:
-  tt <- terms(frml)
+  tt <- stats::terms(frml)
   newtrms <- lapply(attr(tt, "term.labels"),
                     function(t) {
                       sumTerms(list(0, toLang(t)))
@@ -40,10 +37,7 @@ expandDoubleVert <- function(term) {
   return(res)
 }
 
-#' extract right-hand side of a formula
-#' @param form a formula object
-#' @param as.form (logical) return a formula (TRUE) or as a call/symbolic object (FALSE) ?
-#' @export
+
 RHSForm <- function(form, as.form=FALSE) {
   if (!as.form) return(form[[length(form)]])
   if (length(form)==2) return(form)  ## already RHS-only
@@ -63,11 +57,7 @@ RHSForm <- function(form, as.form=FALSE) {
   return(form)
 }
 
-#' set the right side of a formula
-#' @param formula a formula object
-#' @param value replacement value for RHS
-#' @rdname formfuns
-#' @export
+
 `RHSForm<-` <- function(formula,value) {
   formula[[length(formula)]] <- value
   formula
@@ -75,23 +65,16 @@ RHSForm <- function(form, as.form=FALSE) {
 
 #' combine a list of formula terms as a sum
 #' @param termList a list of formula terms
-#' @rdname formfuns
-#' @export
 sumTerms <- function(termList) {
   Reduce(function(x,y) makeOp(x,y,op=quote(`+`)),termList)
 }
 
-#' extract random effects component of formula
-#' @param f a formula
-#' @param response include response variable?
-#' @param bracket bracket-protect terms?
-#' @rdname formfuns
-#' @export
+
 reOnly <- function(f, response=FALSE,bracket=TRUE) {
   flen <- length(f)
   f2 <- f[[2]]
   if (bracket)
-    f <- lapply(findbars(f), makeOp, quote(`(`)) ## bracket-protect terms
+    f <- lapply(lme4::findbars(f), makeOp, quote(`(`)) ## bracket-protect terms
   f <- sumTerms(f)
   if (response && flen==3) {
     form <- makeOp(f2, f, quote(`~`))
@@ -101,13 +84,7 @@ reOnly <- function(f, response=FALSE,bracket=TRUE) {
   return(form)
 }
 
-#' combine unary or binary operator + arguments (sugar for 'substitute')
-#' @param x a formula term
-#' @param y a formula term (or an operator)
-#' @param op an operator
-#' @rdname formfuns
-## FIXME: would be nice to have multiple dispatch, so
-## (arg,op) gave unary, (arg,arg,op) gave binary operator
+
 makeOp <- function(x, y, op=NULL) {
   if (is.null(op) || missing(y)) {  ## unary
     if (is.null(op)) {
@@ -118,17 +95,9 @@ makeOp <- function(x, y, op=NULL) {
   } else substitute(OP(X,Y), list(X=x,OP=op,Y=y))
 }
 
-#' combines the right-hand sides of two formulas, or a formula and a symbol
-#' @param f1 formula #1
-#' @param f2 formula #2
-#' @rdname formfuns
-#' @export
-#' @examples
-#' addForm0(y~x,~1)
-#' addForm0(~x,~y)
 addForm0 <- function(f1,f2) {
   tilde <- as.symbol("~")
-  if (!identical(head(f2),tilde)) {
+  if (!identical(utils::head(f2),tilde)) {
     f2 <- makeOp(f2,tilde)
   }
   if (length(f2)==3) warning("discarding LHS of second argument")
@@ -136,10 +105,6 @@ addForm0 <- function(f1,f2) {
   return(f1)
 }
 
-#' Combine right-hand sides of an arbitrary number of formulas
-#' @param ... arguments to pass through to \code{addForm0}
-#' @rdname formfuns
-#' @export
 addForm <- function(...) {
   Reduce(addForm0,list(...))
 }
@@ -151,13 +116,9 @@ findReTrmClasses <- function() {
 
 toLang <- function(x) parse(text=x)[[1]]
 
-#' apply
-#' @param f a language object (an atom of a formula)
-#' expandGrpVar(quote(x*y))
-#' expandGrpVar(quote(x/y))
 expandGrpVar <- function(f) {
-  form <- as.formula(makeOp(f,quote(`~`)))
-  mm <- terms(form)
+  form <- stats::as.formula(makeOp(f,quote(`~`)))
+  mm <- stats::terms(form)
   tl <- attr(mm,"term.labels")
   ## reverse order: f/g -> f + g:f (for lme4/back-compatibility)
   switch_order <- function(x) paste(rev(unlist(strsplit(x, ":"))), collapse = ":")
@@ -170,28 +131,7 @@ expandGrpVar <- function(f) {
   return(res)
 }
 
-##' expand interactions/combinations of grouping variables
-##'
-##' Modeled after lme4:::expandSlash, by Doug Bates. However,
-##' all formula operators that apply to factors (\code{*}, \code{/}, \code{+})
-##' are applicable: the results are expanded into a list of independent (additive)
-##' random effect terms
-##' @param bb a list of naked grouping variables, i.e. 1 | f
-##' @examples
-##' ff <- lme4::findbars(y~1+(x|f/g))
-##' expandAllGrpVar(ff)
-##' expandAllGrpVar(quote(1|(f/g)/h))
-##' expandAllGrpVar(quote(1|f/g/h))
-##' expandAllGrpVar(quote(1|f*g))
-##' expandAllGrpVar(quote(1|f+g))
-##' expandAllGrpVar(quote(a+b|f+g+h*i))
-##' ## wish list ... this should be (1|a) + (1|a:b) + (1|a:b:c) + (1|a:b:d) ...
-##' ## expandAllGrpVar(quote(a/b/(c+d)))
-##' expandAllGrpVar(quote(s(log(d), k = 4)))
-##' expandAllGrpVar(quote(s(log(d+1))))
-##' @importFrom utils head
-##' @rdname formfuns
-##' @export
+
 expandAllGrpVar <- function(bb) {
   ## Return the list of expanded terms (/, *, ?)
   if (!is.list(bb))
@@ -204,7 +144,7 @@ expandAllGrpVar <- function(bb) {
           ## unary operator such as diag(1|f/g)
           ## return diag(...) + diag(...) + ...
           return(lapply(esfun(x[[2]]),
-                        makeOp, y=head(x)))
+                        makeOp, y=utils::head(x)))
         }
         if (length(x)==3) {
           ## binary operator
@@ -224,48 +164,12 @@ expandAllGrpVar <- function(bb) {
   }
 }
 
-## sugar: this returns the operator, whether ~ or something else
 head.formula <- head.call <- function(x, ...) {
   x[[1]]
 }
 
-## sugar: we can call head on a symbol and get back the symbol
 head.name <- function(x, ...) { x }
 
-## TEST: does this work as a drop-in replacement for lme4::findbars
-## if default.special = NULL?
-## (would replace current expandDoubleVerts machinery)
-
-##' Find and process random effects terms
-##'
-##' @param term a formula or piece of a formula
-##' @param debug (logical) debug?
-##' @param specials list of special terms
-##' @param default.special character: special to use for parenthesized terms - i.e. random effects terms with unspecified structure
-##' @param expand_doublevert_method method for handling \code{||} operator: split into separate terms or replace by \code{diag}? Inherited from \emph{previous call where it was specified}.
-##' 1. atom (not a call or an expression): NULL
-##' 2. special, i.e. foo(...) where "foo" is in specials: return term
-##' 3. parenthesized term: \emph{if} the head of the head is | (i.e.
-##'    it is of the form (xx|gg), then convert it to the default
-##'    special type; we won't allow pathological cases like
-##'    ((xx|gg)) ... [can we detect them?]
-##' @examples
-##' splitForm(quote(us(x,n=2)))
-##' findbars_x(~ 1 + (x + y || g), expand_doublevert_method = "diag_special")
-##' findbars_x(~ 1 + (x + y || g), expand_doublevert_method = "split")
-##' findbars_x(~ 1 + (1 | f) + (1 | g))
-##' findbars_x(~ 1 + (1 | f) + (1 | g))
-##' findbars_x(~ 1 + (1|h) + (x + y || g), expand_doublevert_method = "split")
-##' findbars_x(~ 1 + (1|Subject))
-##' findbars_x(~ (1||Subject))
-##' findbars_x(~ (1|Subject))
-##' findbars_x(~ (1|Subject), default.special = NULL)
-##' findbars_x(~ 1 + x)
-##' findbars_x(~ s(x, bs = "tp"))
-##' findbars_x(y ~ a + log(b) + s(x, bs = "tp") + s(y, bs = "gp"),
-##'    target = "s", default.special = NULL)
-##' @rdname formfuns
-##' @export
 findbars_x <- function(term,
                        debug=FALSE,
                        specials=character(0),
@@ -295,7 +199,7 @@ findbars_x <- function(term,
       if (debug) cat("special: ",deparse(term),"\n")
       return(term)
     }
-    if (head(term) == as.name(target)) {  ## found x | g
+    if (utils::head(term) == as.name(target)) {  ## found x | g
       if (debug) {
         tt <- if (target == '|') "bar" else sprintf('"%s"', target)
         cat(sprintf("%s term: %s\n", tt, deparse(term)))
@@ -303,7 +207,7 @@ findbars_x <- function(term,
       if (is.null(ds)) return(term)
       return(makeOp(term, ds))
     }
-    if (head(term) == as.name("||")) {
+    if (utils::head(term) == as.name("||")) {
       if (expand_doublevert_method == "diag_special") {
         return(makeOp(makeOp(term[[2]], term[[3]],
                              op = quote(`|`)),
@@ -315,7 +219,7 @@ findbars_x <- function(term,
       }
       stop("unknown doublevert method ", expand_doublevert_method)
     }
-    if (head(term) == as.name("(")) {  ## found (...)
+    if (utils::head(term) == as.name("(")) {  ## found (...)
       if (debug) cat("paren term:",deparse(term),"\n")
       return(fbx(term[[2]]))
     }
@@ -343,37 +247,6 @@ findbars_x <- function(term,
 
 }
 
-##' Parse a formula into fixed formula and random effect terms,
-##' treating 'special' terms (of the form foo(x|g[,m])) appropriately
-##'
-##' Taken from Steve Walker's lme4ord,
-##' ultimately from the flexLambda branch of lme4
-##' <https://github.com/stevencarlislewalker/lme4ord/blob/master/R/formulaParsing.R>.  Mostly for internal use.
-##' @title Split formula containing special random effect terms
-##' @param formula a formula containing special random effect terms
-##' @param defaultTerm default type for non-special RE terms
-##' @param allowFixedOnly (logical) are formulas with no RE terms OK?
-##' @param allowNoSpecials (logical) are formulas with only standard RE terms OK?
-##' @return a list containing elements \code{fixedFormula};
-##' \code{reTrmFormulas} list of \code{x | g} formulas for each term;
-##' \code{reTrmAddArgs} list of function+additional arguments, i.e. \code{list()} (non-special), \code{foo()} (no additional arguments), \code{foo(addArgs)} (additional arguments); \code{reTrmClasses} (vector of special functions/classes, as character)
-##' @examples
-##' splitForm(~x+y)                     ## no specials or RE
-##' splitForm(~x+y+(f|g))               ## no specials
-##' splitForm(~x+y+diag(f|g))           ## one special
-##' splitForm(~x+y+(diag(f|g)))         ## 'hidden' special
-##' splitForm(~x+y+(f|g)+cs(1|g))       ## combination
-##' splitForm(~x+y+(1|f/g))             ## 'slash'; term
-##' splitForm(~x+y+(1|f/g/h))             ## 'slash'; term
-##' splitForm(~x+y+(1|(f/g)/h))             ## 'slash'; term
-##' splitForm(~x+y+(f|g)+cs(1|g)+cs(a|b,stuff))  ## complex special
-##' splitForm(~(((x+y))))               ## lots of parentheses
-##' splitForm(~1+rr(f|g,n=2))
-##' splitForm(~1+s(x, bs = "tp"))
-##'
-##' @author Steve Walker
-##' @importFrom lme4 nobars
-##' @export
 splitForm <- function(formula,
                       defaultTerm="us",
                       allowFixedOnly=TRUE,
@@ -451,7 +324,7 @@ splitForm <- function(formula,
   ## nobars() will get rid of any *naked* RE terms
   ## FIXME ... let noSpecials handle naked bar-terms if desired ?
   ## (would adding "|" to reTrmClasses work?)
-  fixedFormula <- noSpecials(nobars(formula))
+  fixedFormula <- noSpecials(lme4::nobars(formula))
 
   list(fixedFormula  = fixedFormula,
        reTrmFormulas = reTrmFormulas,
@@ -459,26 +332,13 @@ splitForm <- function(formula,
        reTrmClasses  = reTrmClasses)
 }
 
-##' @param term language object
-##' @rdname splitForm
-##' @param debug debugging mode (print stuff)?
-##' @examples
-##' noSpecials(y~1+us(1|f))
-##' noSpecials(y~1+us(1|f),delete=FALSE)
-##' noSpecials(y~us(1|f))
-##' noSpecials(y~us(1|f), delete=FALSE)
-##' noSpecials(y~us(1|f), debug=TRUE)
-##' noSpecials(y~us+1)  ## should *not* delete unless head of a function
-##' noSpecials(~us(1|f)+1)   ## should work on a one-sided formula!
-##' noSpecials(~s(stuff) + a + b, specials = "s")
-##' @export
-##' @keywords internal
+
 noSpecials <- function(term, delete=TRUE, debug=FALSE, specials = findReTrmClasses()) {
   nospec <- noSpecials_(term, delete=delete, debug=debug, specials = specials)
   if (inherits(term, "formula") && length(term) == 3 && is.symbol(nospec)) {
     ## called with two-sided RE-only formula:
     ##    construct response~1 formula
-    as.formula(substitute(R~1,list(R=nospec)),
+    stats::as.formula(substitute(R~1,list(R=nospec)),
                env=environment(term))
     ## FIXME::better 'nothing left' handling
   } else if (is.null(nospec)) {
@@ -537,47 +397,21 @@ isAnyArgSpecial <- function(term, specials = findReTrmClasses()) {
   FALSE
 }
 
-## This could be in principle be fooled by a term with a matching name
-## but this case is caught in noSpecials_() where we test for length>1
 anySpecial <- function(term, specials=findReTrmClasses()) {
   any(specials %in% all.names(term))
 }
 
-##' test whether a formula contains a particular element?
-##' @rdname formfuns
-##' @examples
-##' inForm(z~.,quote(.))
-##' inForm(z~y,quote(.))
-##' inForm(z~a+b+c,quote(c))
-##' inForm(z~a+b+(d+e),quote(c))
-##' f <- ~ a + offset(x)
-##' f2 <- z ~ a
-##' inForm(f,quote(offset))
-##' inForm(f2,quote(offset))
-##' @export
-##' @keywords internal
 inForm <- function(form, value) {
   if (any(sapply(form,identical,value))) return(TRUE)
   if (all(sapply(form,length)==1)) return(FALSE)
   return(any(vapply(form,inForm,value,FUN.VALUE=logical(1))))
 }
 
-##' extract terms with a given head from an expression/formula
-##' @rdname formfuns
-##' @param term expression/formula
-##' @param value head of terms to extract
-##' @return a list of expressions
-##' @examples
-##' extractForm(~a+offset(b),quote(offset))
-##' extractForm(~c,quote(offset))
-##' extractForm(~a+offset(b)+offset(c),quote(offset))
-##' extractForm(~offset(x),quote(offset))
-##' @export
-##' @keywords internal
+
 extractForm <- function(term,value) {
   if (!inForm(term,value)) return(NULL)
   if (is.name(term) || !is.language(term)) return(NULL)
-  if (identical(head(term),value)) {
+  if (identical(utils::head(term),value)) {
     return(list(term))
   }
   if (length(term) == 2) {
@@ -587,41 +421,23 @@ extractForm <- function(term,value) {
            extractForm(term[[3]],value)))
 }
 
-##' return a formula/expression with a given value stripped, where
-##' it occurs as the head of a term
-##' @rdname formfuns
-##' @examples
-##' dropHead(~a+offset(b),quote(offset))
-##' dropHead(~a+poly(x+z,3)+offset(b),quote(offset))
-##' @export
-##' @keywords internal
-dropHead <- function(term,value) {
+drophead <- function(term,value) {
   if (!inForm(term,value)) return(term)
   if (is.name(term) || !is.language(term)) return(term)
-  if (identical(head(term),value)) {
+  if (identical(utils::head(term),value)) {
     return(term[[2]])
   }
   if (length(term) == 2) {
-    return(dropHead(term[[2]],value))
+    return(drophead(term[[2]],value))
   } else  if (length(term) == 3) {
-    term[[2]] <- dropHead(term[[2]],value)
-    term[[3]] <- dropHead(term[[3]],value)
+    term[[2]] <- drophead(term[[2]],value)
+    term[[3]] <- drophead(term[[3]],value)
     return(term)
   } else stop("length(term)>3")
 }
 
 
-##' drop terms matching a particular value from an expression
-##' @rdname formfuns
-## from Gabor Grothendieck: recursive solution
-## http://stackoverflow.com/questions/40308944/removing-offset-terms-from-a-formula
-##' @param x formula
-##' @param value term to remove from formula
-##' @param preserve (integer) retain the specified occurrence of "value"
-##' @examples
-##' drop.special(x~a + b+ offset(z))
-##' @export
-##' @keywords internal
+
 drop.special <- function(x, value=quote(offset), preserve = NULL) {
   k <- 0
   proc <- function(x) {
@@ -635,18 +451,10 @@ drop.special <- function(x, value=quote(offset), preserve = NULL) {
   } else {
     newform <- substitute(. ~ . - x, list(x=value))
   }
-  return(update(proc(x), newform))
+  return(stats::update(proc(x), newform))
 }
 
-#' replace a component of a call/parse tree
-#' n.b. won't work for terms with more than 2 args ...
-#' @rdname formfuns
-#' @export
-#' @examples
-#' replaceForm(quote(a(b+x*c(y,z))),quote(y),quote(R))
-#' ss <- ~(1 | cask:batch) + (1 | batch)
-#' replaceForm(ss,quote(cask:batch),quote(batch:cask))
-#' replaceForm(ss, quote(`:`), quote(`%:%`))
+
 replaceForm <- function(term,target,repl) {
   if (identical(term,target)) return(repl)
   if (!inForm(term,target)) return(term)
@@ -659,34 +467,18 @@ replaceForm <- function(term,target,repl) {
                                  y=replaceForm(term[[3]],target,repl))))
 }
 
-##' @noRd
-##' @examples
-##' no_specials(y ~ 1 + s(x) + (f|g))
 no_specials <- function(term, specials = c("|", "||", "s")) {
   if (is.list(term)) {
     return(lapply(term, no_specials))
   }
   for (ss in specials) {
-    if (identical(head(term), as.name(ss))) return(term)
+    if (identical(utils::head(term), as.name(ss))) return(term)
   }
   if (length(term) == 3) stop("don't know what to do")
   return(no_specials(term[[2]], specials))
 }
 
 
-##' Substitute safe chars (+) for specials (for use in \code{model.frame})
-##' (Generalized from \code{lme4}'s \code{subbars} function.)
-##' @param term formula or term in a formula
-##' @param specials names of specials to process
-##' @param keep_args number of arguments to retain (matching \code{specials})
-##' @return a term or formula with specials replaced by \code{+} (and extra arguments dropped)
-##' @keywords internal
-##' @examples
-##' sub_specials( ~ s(a, k=4))
-##' sub_specials( ~ (1|x) + (a + b || y) + s(a, k=4))
-##' sub_specials(Reaction ~ s(Days) + (1 + Subject))
-##' sub_specials(~ s(cos((y^2*3)/2), bs = "tp"))
-##' @export
 sub_specials <- function (term,
                           specials = c("|", "||", "s"),
                           keep_args = c(2L, 2L, NA_integer_)) {

@@ -25,7 +25,8 @@ knitr::opts_chunk$set(
   #dpi=32,
   #out.width="400px",
   fig.align="center",
-  fig.path = 'A/A-'
+  fig.path = 'A/A-',
+  fig.cap = ""
 )
 options("progress_enabled" = FALSE)
 ```
@@ -45,22 +46,47 @@ library (cito)
 
 If you have problems installing Torch, check out the [installation help from the torch developer](https://torch.mlverse.org/docs/articles/installation.html).
 
+## Details about the internal implementation of ‘cito’
+
+### Internal Data Representation
+
+Tabular data are typically supplied to cito as a data.frame in the usual encoding via the data argument. Categorical data are processed internally using the model.matrix functions from the R 'stats' package. Categorical features are automatically one-hot encoded (no reference level). The data are then split into a feature matrix (variables) and a response matrix.
+
+The training of the neural networks is based on stochastic gradient descent, which involves sampling random batches of data at each optimization step. To optimize the sampling and subsetting of the data, 'torch' provides optimized data loader objects that create data iterators (objects that iterate once over the data set corresponding to an epoch). The feature and response matrices are passed to 'torch' data loaders that reside on the CPU (to avoid memory overflows on the GPU, if available).
+
+### Construction of the neural networks
+
+Neural networks (NN) are built using the 'nn_sequential' object from the 'torch' package. nn_sequential' expects a list of layers and then returns a fully functional neural network object. It also initializes all weights of the layers. The list of layers is built based on user input, in particular the hidden argument for the number and size of hidden layers, and the activation argument for the corresponding activation layers.
+
+### Training and Evaluation
+
+Once the NN structure and data are prepared, the actual training starts (the baseline loss is also calculated before the training starts). The training consists of two loops. An outer loop for the number of epochs (one epoch means that the data has been used once to update the weights). And an inner loop for the stochastic gradient descent, i.e. for n = 100 observations and batch size = 20, it takes 5 batches of data to traverse the dataset once.
+
+At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the backpropagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
+
+If validation is turned on, after each epoch the model is evaluated on the validation holdout (which was separated from the data at the beginning).
+
+### Transferability
+
+To make the model portable (e.g. save and reload the model), the weights are stored as R matrices in the final object of the 'dnn' function. This is necessary because the 'torch' objects are just pointers to the corresponding data structures. Naively, storing these pointers is pointless, because after the R session ends, the memory is freed and the pointers are meaningless.
+
 ## Introduction to models and model structures
 
 ### Loss functions / Likelihoods
 
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
-|                 |                           |                                                                         |                                               |
-|:----------------|:----------------|:--------------------|----------------------------------------------------|
-| Name            | Explanation               | Example / Task                                                          | Meta-Code                                     |
-| `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`      |
-| `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`      |
-| `softmax`       | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "softmax")`       |
-| `cross-entropy` | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "cross-entropy")` |
-| `gaussian`      | Normal likelihood         | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")` |
-| `binomial`      | Binomial likelihood       | Classification/Logistic regression, mortality (0/1 data)                | `dnn(Presence~., ..., loss = "Binomial")`     |
-| `poisson`       | Poisson likelihood        | Regression, count data, e.g. species abundances                         | `dnn(Abundance~., ..., loss = "Poisson")`     |
+|                 |                           |                                                                         |                                                             |
+|:----------------|:--------------------------|:------------------------------------------------------------------------|-------------------------------------------------------------|
+| Name            | Explanation               | Example / Task                                                          | Meta-Code                                                   |
+| `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
+| `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
+| `softmax`       | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "softmax")`                     |
+| `cross-entropy` | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "cross-entropy")`               |
+| `gaussian`      | Normal likelihood         | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
+| `binomial`      | Binomial likelihood       | Classification/Logistic regression, mortality (0/1 data)                | `dnn(Presence~., ..., loss = "Binomial")`                   |
+| `poisson`       | Poisson likelihood        | Regression, count data, e.g. species abundances                         | `dnn(Abundance~., ..., loss = "Poisson")`                   |
+| `mvp`           | Multivariate probit model | Joint Species Distribution model                                        | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
 
 Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
 
@@ -155,13 +181,13 @@ print(nn.fit)
 
 xAI can produce outputs that are similar to known outputs from statistical models:
 
-| xAI Method                                                                        | Explanation                                                                                                                                                   | Statistical equivalent    |
-|-----------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
-| Feature importance (returned by `summary(nn.fit)`)                                | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features. | `anova(model)`            |
-| Average conditional effects (ACE) (returned by `summary(nn.fit)`)                 | Average of local derivatives, approximation of linear effects. See [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551)                              | `lm(Y~X)`                 |
-| Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`)  | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                      |                           |
-| Partial dependency plots (`PDP(nn.fit)`)                                          | Visualization of the response-effect curve.                                                                                                                   | `plot(allEffects(model))` |
-| Accumulated local effect plots (`ALE(nn.fit)`)                                    | Visualization of the response-effect curve. More robust against collinearity compared to PDPs                                                                 | `plot(allEffects(model))` |
+| xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
+|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
+| Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
+| Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
+| Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
+| Partial dependency plots (`PDP(nn.fit)`)                                         | Visualization of the response-effect curve.                                                                                                                                                      | `plot(allEffects(model))` |
+| Accumulated local effect plots (`ALE(nn.fit)`)                                   | Visualization of the response-effect curve. More robust against collinearity compared to PDPs                                                                                                    | `plot(allEffects(model))` |
 
 The `summary()` returns feature importance, ACE and SDCE:
 
@@ -253,7 +279,7 @@ nn.fit <- dnn(Sepal.Length~., data = data,
 
 Note: The default activation function should be adequate for most tasks. We don't recommend tuning it.
 
-## Training hyperparameters
+## Tuning hyperparameters
 
 ### Regularization
 
@@ -264,7 +290,6 @@ If elastic net is used, 'cito' will produce a sparse, generalized neural network
 $$
  loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
 $$
-
 
 ```{r alpha, results ="hide",fig.show='hide',eval=TRUE }
 #elastic net penalty in all layers:
@@ -278,8 +303,6 @@ Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/p
 ```{r dropout, results ="hide",fig.show='hide' ,eval=TRUE}
 #dropout of 35% on all layers:
 nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = 0.35, verbose=FALSE)
-#dropout of 35% only on last 2 layers:
-nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = c(0, 0, 0.35, 0.35), verbose=FALSE)
 ```
 
 ### Learning rate
@@ -324,6 +347,40 @@ Adding early stopping criteria helps you save time by stopping the training proc
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000,
               validation = 0.2, early_stopping = 15, verbose=FALSE)
 ```
+
+## Automatic hyperparameter tuning (experimental)
+
+We started to support automatic hyperparameter tuning under Cross Validation. The tuning strategy is random search, i.e. potential hyperparameter values are sampled from uniform distributions, the boundaries can be specified by the user.
+
+We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
+
+| Hyperparameter | Example                                     | Details                                                                                                                                                                       |
+|:---------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
+| bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
+| lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |
+| alpha          | `dnn(…, lambda = tune(0.2, 0.4))`           | alpha will be tuned within the range (0.2, 0.4)                                                                                                                               |
+| activation     | `dnn(…, activation = tune())`               | activation functions of the hidden layers will be tuned                                                                                                                       |
+| dropout        | `dnn(…, dropout = tune())`                  | Dropout rate will be tuned (globally for all layers)                                                                                                                          |
+| lr             | `dnn(…, lr = tune())`                       | Learning rate will be tuned                                                                                                                                                   |
+| batchsize      | `dnn(…, batchsize = tune())`                | batch size will be tuned                                                                                                                                                      |
+| epochs         | `dnn(…, batchsize = tune())`                | batchsize will be tuned                                                                                                                                                       |
+
+The hyperparameters are tuned by random search (i.e., random values for the hyperparameters within a specified range) and by cross-validation. The exact tuning regime can be specified with [config_tuning].
+
+Note that hyperparameter tuning can be expensive. We have implemented an option to parallelize hyperparameter tuning, including parallelization over one or more GPUs (the hyperparameter evaluation is parallelized, not the CV). This can be especially useful for small models. For example, if you have 4 GPUs, 20 CPU cores, and 20 steps (random samples from the random search), you could run `dnn(..., device="cuda",lr = tune(), batchsize=tune(), tuning=config_tuning(parallel=20, NGPU=4)`, which will distribute 20 model fits across 4 GPUs, so that each GPU will process 5 models (in parallel).
+
+Tune learning rate as it is one of the most important hyperparameters:
+
+```{r}
+nn.fit_tuned = dnn(Species~.,
+                   data = iris,
+                   lr = tune(0.0001, 0.1),
+                   loss = "softmax",
+                   tuning = config_tuning(steps = 3L, CV = 3L))
+```
+
+After tuning, the final model is trained with the best set of hyperparameters and returned.
 
 ## Continue training process
 

@@ -107,6 +107,29 @@ summary(nn.fit)
 dim(predict(nn.fit))
 ## predictions are by default averaged (over the bootstrap samples)
 
+
+
+# Hyperparameter tuning (experimental feature)
+hidden_values = matrix(c(5, 2,
+                         4, 2,
+                         10,2,
+                         15,2), 4, 2, byrow = TRUE)
+## Potential architectures we want to test, first column == number of nodes
+print(hidden_values)
+
+nn.fit = dnn(Species~.,
+             data = iris,
+             epochs = 30L,
+             loss = "softmax",
+             hidden = tune(values = hidden_values),
+             lr = tune(0.00001, 0.1) # tune lr between range 0.00001 and 0.1
+             )
+## Tuning results:
+print(nn.fit$tuning)
+
+# test = Inf means that tuning was cancelled after only one fit (within the CV)
+
+
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
 custom_loss = function(true, pred) {

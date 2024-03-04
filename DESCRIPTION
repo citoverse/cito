@@ -39,7 +39,8 @@ Imports:
     progress,
     cli,
     torchvision,
-    tibble
+    tibble,
+    lme4
 License: GPL (>= 3)
 Suggests:
     rmarkdown,

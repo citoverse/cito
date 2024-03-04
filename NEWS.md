@@ -1,3 +1,20 @@
+# cito 1.1
+
+## New features
+* hyperparameter tuning (experimental)
+* burnin parameter
+* mvp 
+
+## Minor changes
+* Improved vignette
+
+
+## Bug fixes
+* dropout is turned off after training (into evaluation mode)
+* predict type was changed
+
+
+
 # cito 1.0.2
 
 ## New features

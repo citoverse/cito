@@ -308,3 +308,28 @@ testthat::test_that("DNN baseline loss check",{
   testthat::expect_equal( !!m$base_loss, !!loss , tolerance = 0.01)
 
   })
+
+
+testthat::test_that("DNN hyperparameter tuning",{
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(values=c("selu","relu")), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)),
+                              tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax",lr=tune(values=c(0.01, 0.1)), epochs = tune(1, 4),bias=tune(),activation=tune(),dropout=tune(values=c(0.2, 0.3)),
+                              tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+                              tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({dnn(Species~., data=iris,loss="softmax", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+                              tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  })
+

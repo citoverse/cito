@@ -40,7 +40,16 @@
     <loc>/reference/analyze_training.html</loc>
   </url>
   <url>
+    <loc>/reference/avgPool.html</loc>
+  </url>
+  <url>
     <loc>/reference/cito.html</loc>
+  </url>
+  <url>
+    <loc>/reference/cnn.html</loc>
+  </url>
+  <url>
+    <loc>/reference/coef.citocnn.html</loc>
   </url>
   <url>
     <loc>/reference/coef.citodnn.html</loc>
@@ -55,13 +64,40 @@
     <loc>/reference/config_optimizer.html</loc>
   </url>
   <url>
+    <loc>/reference/config_tuning.html</loc>
+  </url>
+  <url>
     <loc>/reference/continue_training.html</loc>
+  </url>
+  <url>
+    <loc>/reference/conv.html</loc>
+  </url>
+  <url>
+    <loc>/reference/create_architecture.html</loc>
   </url>
   <url>
     <loc>/reference/dnn.html</loc>
   </url>
   <url>
+    <loc>/reference/e.html</loc>
+  </url>
+  <url>
+    <loc>/reference/findReTrmClasses.html</loc>
+  </url>
+  <url>
     <loc>/reference/index.html</loc>
+  </url>
+  <url>
+    <loc>/reference/linear.html</loc>
+  </url>
+  <url>
+    <loc>/reference/maxPool.html</loc>
+  </url>
+  <url>
+    <loc>/reference/plot.citoarchitecture.html</loc>
+  </url>
+  <url>
+    <loc>/reference/plot.citocnn.html</loc>
   </url>
   <url>
     <loc>/reference/plot.citodnn.html</loc>
@@ -70,10 +106,19 @@
     <loc>/reference/plot.citodnnBootstrap.html</loc>
   </url>
   <url>
+    <loc>/reference/predict.citocnn.html</loc>
+  </url>
+  <url>
     <loc>/reference/predict.citodnn.html</loc>
   </url>
   <url>
     <loc>/reference/predict.citodnnBootstrap.html</loc>
+  </url>
+  <url>
+    <loc>/reference/print.citoarchitecture.html</loc>
+  </url>
+  <url>
+    <loc>/reference/print.citocnn.html</loc>
   </url>
   <url>
     <loc>/reference/print.citodnn.html</loc>
@@ -97,9 +142,24 @@
     <loc>/reference/residuals.citodnn.html</loc>
   </url>
   <url>
+    <loc>/reference/simulate_shapes.html</loc>
+  </url>
+  <url>
+    <loc>/reference/sumTerms.html</loc>
+  </url>
+  <url>
+    <loc>/reference/summary.citocnn.html</loc>
+  </url>
+  <url>
     <loc>/reference/summary.citodnn.html</loc>
   </url>
   <url>
     <loc>/reference/summary.citodnnBootstrap.html</loc>
+  </url>
+  <url>
+    <loc>/reference/transfer.html</loc>
+  </url>
+  <url>
+    <loc>/reference/tune.html</loc>
   </url>
 </urlset>

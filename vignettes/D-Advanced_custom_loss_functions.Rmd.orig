@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   #dpi=32,
   #out.width="400px",
+  fig.cap = "",
   fig.align="center",
   fig.path = 'D/D-'
 )
@@ -73,7 +74,7 @@ exp(m$parameter$scale_par) # true scale parameter: 0.4!
 
 ### Example 2: Quantile regression
 
-The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression (a form of conformal prediction), which has the advantage of providing constant prediction intervals, which can be beneficial in certain situations (e.g., heteroscedasticity):
+The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression, which has the advantage of providing non-constant prediction intervals (for example for heteroscedasticity):
 
 Simulate data:
 

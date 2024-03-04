@@ -28,7 +28,7 @@
 
 \item{newdata}{new data for predictions}
 
-\item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
+\item{type}{type of predictions. The default is on the scale of the linear predictor, "response" is on the scale of the response, and "class" means that class predictions are returned (if it is a classification task)}
 
 \item{device}{device on which network should be trained on.}
 

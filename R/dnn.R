@@ -28,7 +28,7 @@
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
-#' @param tuning tuning options created with \code{\link{config_tuning()}}
+#' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
@@ -47,6 +47,7 @@
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
 #' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
+#' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) |
 #'
 #' # Training and convergence of neural networks
 #'
@@ -101,6 +102,32 @@
 #' \code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 #'
 #' Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
+#'
+#'
+#' # Hyperparameter tuning
+#'
+#' We have implemented experimental support for hyperparameter tuning. We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. [tune()] is a function that creates a range of random values for the given hyperparameter. You can change the maximum and minimum range of the potential hyperparameters or pass custom values to the `tune(values = c(....))` function. The following table lists the hyperparameters that can currently be tuned:
+#'
+#'   | Hyperparameter| Example| Details |
+#'   | :--- | :--- | :--- |
+#'   | hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` |Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper #' boundaries must be provided (first = number of nodes)|
+#'   | bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
+#'   | lambda | `dnn(…, lambda = tune(0.0001, 0.1))` |lambda will be tuned within the range (0.0001, 0.1)|
+#'   | alpha | `dnn(…, lambda = tune(0.2, 0.4))` |alpha will be tuned within the range (0.2, 0.4)|
+#'   | activation | `dnn(…, activation = tune())`  |	activation functions of the hidden layers will be tuned|
+#'   | dropout | `dnn(…, dropout = tune())`  | Dropout rate will be tuned (globally for all layers)|
+#'   | lr | `dnn(…, lr = tune())`  |Learning rate will be tuned|
+#'   | batchsize | `dnn(…, batchsize = tune())`  | batch size will be tuned |
+#'   | epochs | `dnn(…, batchsize = tune())`  | batchsize will be tuned |
+#'
+#'   The hyperparameters are tuned by random search (i.e., random values for the hyperparameters within a specified range) and by cross-validation. The exact tuning regime can be specified with [config_tuning].
+#'
+#' Note that hyperparameter tuning can be expensive. We have implemented an option to parallelize hyperparameter tuning, including parallelization over one or more GPUs (the hyperparameter evaluation is parallelized, not the CV). This can be especially useful for small models. For example, if you have 4 GPUs, 20 CPU cores, and 20 steps (random samples from the random search), you could run `dnn(..., device="cuda",lr = tune(), batchsize=tune(), tuning=config_tuning(parallel=20, NGPU=4)`, which will distribute 20 model fits across 4 GPUs, so that each GPU will process 5 models (in parallel).
+#'
+#' As this is an experimental feature, we welcome feature requests and bug reports on our github site.
+#'
+#' For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
+#'
 #'
 #'# How neural networks work
 #' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
@@ -164,9 +191,7 @@ dnn <- function(formula = NULL,
                 Y = NULL) {
 
   if(!inherits(activation, "tune")) {
-    if(!identical (activation, c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
-                                 "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
-                                 "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"))) activation<- "relu"
+
   }
 
   out <- list()
@@ -242,7 +267,7 @@ dnn <- function(formula = NULL,
   }
 
 
-  loss_obj <- get_loss(loss, device = device)
+  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
@@ -413,7 +438,7 @@ dnn <- function(formula = NULL,
     out$response_column = response_column
     out$old_formula = old_formula
 
-    out$successfull = any(sapply(models, function(m) m$successfull) == 0)
+    out$successfull = any(!sapply(models, function(m) m$successfull) == 0)
 
   }
   return(out)
@@ -483,6 +508,7 @@ residuals.citodnn <- function(object,...){
 #' @param object a model of class citodnn created by \code{\link{dnn}}
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
 #' @param device for calculating variable importance and conditional effects
+#' @param adjust_se adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )
 #' @param ... additional arguments
 #' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
 #' @export
@@ -678,7 +704,7 @@ coef.citodnnBootstrap <- function(object, ...) {
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param newdata new data for predictions
-#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
+#' @param type type of predictions. The default is on the scale of the linear predictor, "response" is on the scale of the response, and "class" means that class predictions are returned (if it is a classification task)
 #' @param device device on which network should be trained on.
 #' @param reduce predictions from bootstrapped model are by default reduced (mean, optional median or none)
 #' @param ... additional arguments
@@ -771,7 +797,7 @@ predict.citodnnBootstrap <- function(object,
   if(reduce == "mean") {
     return(apply(predictions, 2:3, mean))
   } else if(reduce == "median") {
-    return(apply(predictions, 2:3, median))
+    return(apply(predictions, 2:3, stats::median))
   } else {
     return(predictions)
   }

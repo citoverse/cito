@@ -1,7 +1,7 @@
 ---
 title: "Advanced: Custom loss functions and prediction intervals"
 author: "Maximilian Pichler"
-date: "2023-09-29"
+date: "2024-02-21"
 abstract: "This vignette shows how cito can be used for advanced techniques such as custom loss functions."
 output:
  rmarkdown::html_vignette:
@@ -53,114 +53,111 @@ m = dnn(Y~X, data = df,
         loss = gaussian_ll, # custom function
         custom_parameters = list(scale_par = 0.0) # custom parameter that should be addtionally optimized
         )
-#> Loss at epoch 1: 1.515620, lr: 0.01000
+#> Loss at epoch 1: 1.448659, lr: 0.01000
 ```
 
-<div class="figure" style="text-align: center">
-<img src="D/D-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"  />
-<p class="caption">plot of chunk unnamed-chunk-2</p>
-</div>
+<img src="D/D-unnamed-chunk-2-1.png" style="display: block; margin: auto;" />
 
 ```
-#> Loss at epoch 2: 1.395304, lr: 0.01000
-#> Loss at epoch 3: 1.309052, lr: 0.01000
-#> Loss at epoch 4: 1.258372, lr: 0.01000
-#> Loss at epoch 5: 1.156394, lr: 0.01000
-#> Loss at epoch 6: 1.133306, lr: 0.01000
-#> Loss at epoch 7: 1.089422, lr: 0.01000
-#> Loss at epoch 8: 1.049361, lr: 0.01000
-#> Loss at epoch 9: 1.009320, lr: 0.01000
-#> Loss at epoch 10: 1.023666, lr: 0.01000
-#> Loss at epoch 11: 0.978906, lr: 0.01000
-#> Loss at epoch 12: 0.963037, lr: 0.01000
-#> Loss at epoch 13: 0.943840, lr: 0.01000
-#> Loss at epoch 14: 0.939929, lr: 0.01000
-#> Loss at epoch 15: 0.918484, lr: 0.01000
-#> Loss at epoch 16: 0.949027, lr: 0.01000
-#> Loss at epoch 17: 0.889540, lr: 0.01000
-#> Loss at epoch 18: 0.868169, lr: 0.01000
-#> Loss at epoch 19: 0.836739, lr: 0.01000
-#> Loss at epoch 20: 0.821653, lr: 0.01000
-#> Loss at epoch 21: 0.788032, lr: 0.01000
-#> Loss at epoch 22: 0.789839, lr: 0.01000
-#> Loss at epoch 23: 0.764014, lr: 0.01000
-#> Loss at epoch 24: 0.752003, lr: 0.01000
-#> Loss at epoch 25: 0.739545, lr: 0.01000
-#> Loss at epoch 26: 0.716911, lr: 0.01000
-#> Loss at epoch 27: 0.719905, lr: 0.01000
-#> Loss at epoch 28: 0.679905, lr: 0.01000
-#> Loss at epoch 29: 0.681771, lr: 0.01000
-#> Loss at epoch 30: 0.653191, lr: 0.01000
-#> Loss at epoch 31: 0.621209, lr: 0.01000
-#> Loss at epoch 32: 0.634578, lr: 0.01000
-#> Loss at epoch 33: 0.591748, lr: 0.01000
-#> Loss at epoch 34: 0.585131, lr: 0.01000
-#> Loss at epoch 35: 0.564346, lr: 0.01000
-#> Loss at epoch 36: 0.587230, lr: 0.01000
-#> Loss at epoch 37: 0.584015, lr: 0.01000
-#> Loss at epoch 38: 0.544748, lr: 0.01000
-#> Loss at epoch 39: 0.564282, lr: 0.01000
-#> Loss at epoch 40: 0.601760, lr: 0.01000
-#> Loss at epoch 41: 0.533758, lr: 0.01000
-#> Loss at epoch 42: 0.541448, lr: 0.01000
-#> Loss at epoch 43: 0.521584, lr: 0.01000
-#> Loss at epoch 44: 0.537797, lr: 0.01000
-#> Loss at epoch 45: 0.507872, lr: 0.01000
-#> Loss at epoch 46: 0.557190, lr: 0.01000
-#> Loss at epoch 47: 0.606297, lr: 0.01000
-#> Loss at epoch 48: 0.604647, lr: 0.01000
-#> Loss at epoch 49: 0.547326, lr: 0.01000
-#> Loss at epoch 50: 0.531875, lr: 0.01000
-#> Loss at epoch 51: 0.559819, lr: 0.01000
-#> Loss at epoch 52: 0.541788, lr: 0.01000
-#> Loss at epoch 53: 0.567545, lr: 0.01000
-#> Loss at epoch 54: 0.524311, lr: 0.01000
-#> Loss at epoch 55: 0.551780, lr: 0.01000
-#> Loss at epoch 56: 0.560110, lr: 0.01000
-#> Loss at epoch 57: 0.581988, lr: 0.01000
-#> Loss at epoch 58: 0.560242, lr: 0.01000
-#> Loss at epoch 59: 0.546711, lr: 0.01000
-#> Loss at epoch 60: 0.534865, lr: 0.01000
-#> Loss at epoch 61: 0.519736, lr: 0.01000
-#> Loss at epoch 62: 0.544029, lr: 0.01000
-#> Loss at epoch 63: 0.535806, lr: 0.01000
-#> Loss at epoch 64: 0.527457, lr: 0.01000
-#> Loss at epoch 65: 0.515996, lr: 0.01000
-#> Loss at epoch 66: 0.560176, lr: 0.01000
-#> Loss at epoch 67: 0.577645, lr: 0.01000
-#> Loss at epoch 68: 0.529065, lr: 0.01000
-#> Loss at epoch 69: 0.543513, lr: 0.01000
-#> Loss at epoch 70: 0.516313, lr: 0.01000
-#> Loss at epoch 71: 0.543963, lr: 0.01000
-#> Loss at epoch 72: 0.554372, lr: 0.01000
-#> Loss at epoch 73: 0.535363, lr: 0.01000
-#> Loss at epoch 74: 0.520328, lr: 0.01000
-#> Loss at epoch 75: 0.503821, lr: 0.01000
-#> Loss at epoch 76: 0.537065, lr: 0.01000
-#> Loss at epoch 77: 0.572082, lr: 0.01000
-#> Loss at epoch 78: 0.528110, lr: 0.01000
-#> Loss at epoch 79: 0.568486, lr: 0.01000
-#> Loss at epoch 80: 0.539701, lr: 0.01000
-#> Loss at epoch 81: 0.559193, lr: 0.01000
-#> Loss at epoch 82: 0.491542, lr: 0.01000
-#> Loss at epoch 83: 0.579737, lr: 0.01000
-#> Loss at epoch 84: 0.548308, lr: 0.01000
-#> Loss at epoch 85: 0.551581, lr: 0.01000
-#> Loss at epoch 86: 0.558790, lr: 0.01000
-#> Loss at epoch 87: 0.504470, lr: 0.01000
-#> Loss at epoch 88: 0.547506, lr: 0.01000
-#> Loss at epoch 89: 0.557162, lr: 0.01000
-#> Loss at epoch 90: 0.577531, lr: 0.01000
-#> Loss at epoch 91: 0.541850, lr: 0.01000
-#> Loss at epoch 92: 0.560345, lr: 0.01000
-#> Loss at epoch 93: 0.541367, lr: 0.01000
-#> Loss at epoch 94: 0.547881, lr: 0.01000
-#> Loss at epoch 95: 0.530327, lr: 0.01000
-#> Loss at epoch 96: 0.563517, lr: 0.01000
-#> Loss at epoch 97: 0.574710, lr: 0.01000
-#> Loss at epoch 98: 0.523392, lr: 0.01000
-#> Loss at epoch 99: 0.545521, lr: 0.01000
-#> Loss at epoch 100: 0.533824, lr: 0.01000
+#> Loss at epoch 2: 1.256327, lr: 0.01000
+#> Loss at epoch 3: 1.159103, lr: 0.01000
+#> Loss at epoch 4: 1.105518, lr: 0.01000
+#> Loss at epoch 5: 1.073779, lr: 0.01000
+#> Loss at epoch 6: 1.048871, lr: 0.01000
+#> Loss at epoch 7: 1.027676, lr: 0.01000
+#> Loss at epoch 8: 1.008031, lr: 0.01000
+#> Loss at epoch 9: 0.990182, lr: 0.01000
+#> Loss at epoch 10: 0.972489, lr: 0.01000
+#> Loss at epoch 11: 0.951989, lr: 0.01000
+#> Loss at epoch 12: 0.935877, lr: 0.01000
+#> Loss at epoch 13: 0.918649, lr: 0.01000
+#> Loss at epoch 14: 0.898347, lr: 0.01000
+#> Loss at epoch 15: 0.879806, lr: 0.01000
+#> Loss at epoch 16: 0.859411, lr: 0.01000
+#> Loss at epoch 17: 0.840322, lr: 0.01000
+#> Loss at epoch 18: 0.816451, lr: 0.01000
+#> Loss at epoch 19: 0.794193, lr: 0.01000
+#> Loss at epoch 20: 0.769379, lr: 0.01000
+#> Loss at epoch 21: 0.744284, lr: 0.01000
+#> Loss at epoch 22: 0.724098, lr: 0.01000
+#> Loss at epoch 23: 0.697090, lr: 0.01000
+#> Loss at epoch 24: 0.675612, lr: 0.01000
+#> Loss at epoch 25: 0.658688, lr: 0.01000
+#> Loss at epoch 26: 0.638189, lr: 0.01000
+#> Loss at epoch 27: 0.626986, lr: 0.01000
+#> Loss at epoch 28: 0.612315, lr: 0.01000
+#> Loss at epoch 29: 0.598691, lr: 0.01000
+#> Loss at epoch 30: 0.596526, lr: 0.01000
+#> Loss at epoch 31: 0.587633, lr: 0.01000
+#> Loss at epoch 32: 0.587101, lr: 0.01000
+#> Loss at epoch 33: 0.603735, lr: 0.01000
+#> Loss at epoch 34: 0.598259, lr: 0.01000
+#> Loss at epoch 35: 0.579663, lr: 0.01000
+#> Loss at epoch 36: 0.593990, lr: 0.01000
+#> Loss at epoch 37: 0.580183, lr: 0.01000
+#> Loss at epoch 38: 0.584613, lr: 0.01000
+#> Loss at epoch 39: 0.580791, lr: 0.01000
+#> Loss at epoch 40: 0.583122, lr: 0.01000
+#> Loss at epoch 41: 0.587117, lr: 0.01000
+#> Loss at epoch 42: 0.579539, lr: 0.01000
+#> Loss at epoch 43: 0.571477, lr: 0.01000
+#> Loss at epoch 44: 0.576813, lr: 0.01000
+#> Loss at epoch 45: 0.569428, lr: 0.01000
+#> Loss at epoch 46: 0.590212, lr: 0.01000
+#> Loss at epoch 47: 0.596876, lr: 0.01000
+#> Loss at epoch 48: 0.589308, lr: 0.01000
+#> Loss at epoch 49: 0.577736, lr: 0.01000
+#> Loss at epoch 50: 0.581777, lr: 0.01000
+#> Loss at epoch 51: 0.578728, lr: 0.01000
+#> Loss at epoch 52: 0.611516, lr: 0.01000
+#> Loss at epoch 53: 0.598170, lr: 0.01000
+#> Loss at epoch 54: 0.579697, lr: 0.01000
+#> Loss at epoch 55: 0.575621, lr: 0.01000
+#> Loss at epoch 56: 0.584954, lr: 0.01000
+#> Loss at epoch 57: 0.573962, lr: 0.01000
+#> Loss at epoch 58: 0.589617, lr: 0.01000
+#> Loss at epoch 59: 0.586153, lr: 0.01000
+#> Loss at epoch 60: 0.582738, lr: 0.01000
+#> Loss at epoch 61: 0.590680, lr: 0.01000
+#> Loss at epoch 62: 0.582296, lr: 0.01000
+#> Loss at epoch 63: 0.574342, lr: 0.01000
+#> Loss at epoch 64: 0.582494, lr: 0.01000
+#> Loss at epoch 65: 0.572388, lr: 0.01000
+#> Loss at epoch 66: 0.590982, lr: 0.01000
+#> Loss at epoch 67: 0.568253, lr: 0.01000
+#> Loss at epoch 68: 0.578817, lr: 0.01000
+#> Loss at epoch 69: 0.577479, lr: 0.01000
+#> Loss at epoch 70: 0.576766, lr: 0.01000
+#> Loss at epoch 71: 0.592157, lr: 0.01000
+#> Loss at epoch 72: 0.591887, lr: 0.01000
+#> Loss at epoch 73: 0.571302, lr: 0.01000
+#> Loss at epoch 74: 0.580755, lr: 0.01000
+#> Loss at epoch 75: 0.575244, lr: 0.01000
+#> Loss at epoch 76: 0.570401, lr: 0.01000
+#> Loss at epoch 77: 0.583778, lr: 0.01000
+#> Loss at epoch 78: 0.596156, lr: 0.01000
+#> Loss at epoch 79: 0.578281, lr: 0.01000
+#> Loss at epoch 80: 0.592188, lr: 0.01000
+#> Loss at epoch 81: 0.590521, lr: 0.01000
+#> Loss at epoch 82: 0.601451, lr: 0.01000
+#> Loss at epoch 83: 0.574588, lr: 0.01000
+#> Loss at epoch 84: 0.598384, lr: 0.01000
+#> Loss at epoch 85: 0.573853, lr: 0.01000
+#> Loss at epoch 86: 0.569221, lr: 0.01000
+#> Loss at epoch 87: 0.569153, lr: 0.01000
+#> Loss at epoch 88: 0.578949, lr: 0.01000
+#> Loss at epoch 89: 0.576531, lr: 0.01000
+#> Loss at epoch 90: 0.588011, lr: 0.01000
+#> Loss at epoch 91: 0.578666, lr: 0.01000
+#> Loss at epoch 92: 0.573792, lr: 0.01000
+#> Loss at epoch 93: 0.586368, lr: 0.01000
+#> Loss at epoch 94: 0.572133, lr: 0.01000
+#> Loss at epoch 95: 0.585475, lr: 0.01000
+#> Loss at epoch 96: 0.585286, lr: 0.01000
+#> Loss at epoch 97: 0.609225, lr: 0.01000
+#> Loss at epoch 98: 0.587953, lr: 0.01000
+#> Loss at epoch 99: 0.580966, lr: 0.01000
+#> Loss at epoch 100: 0.568228, lr: 0.01000
 ```
 
 The optimized parameters are saved in the parameter field:
@@ -168,12 +165,12 @@ The optimized parameters are saved in the parameter field:
 
 ```r
 exp(m$parameter$scale_par) # true scale parameter: 0.4!
-#> [1] 0.4177748
+#> [1] 0.4332361
 ```
 
 ### Example 2: Quantile regression
 
-The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression (a form of conformal prediction), which has the advantage of providing constant prediction intervals, which can be beneficial in certain situations (e.g., heteroscedasticity):
+The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression, which has the advantage of providing non-constant prediction intervals (for example for heteroscedasticity):
 
 Simulate data:
 
@@ -194,10 +191,7 @@ data = sim_in(500L)
 plot(data$X1, data$Y)
 ```
 
-<div class="figure" style="text-align: center">
-<img src="D/D-unnamed-chunk-4-1.png" alt="plot of chunk unnamed-chunk-4"  />
-<p class="caption">plot of chunk unnamed-chunk-4</p>
-</div>
+<img src="D/D-unnamed-chunk-4-1.png" style="display: block; margin: auto;" />
 
 The variance increases with higher feature values
 
@@ -224,76 +218,76 @@ m = dnn(cbind(Y, Y, Y)~., data = data,
         lambda = 0.000, alpha = 0.5,
         epochs = 70L, hidden = c(30L, 30L),
         activation = "selu", verbose = TRUE, plot = FALSE)
-#> Loss at epoch 1: 5.888834, lr: 0.01000
-#> Loss at epoch 2: 5.591826, lr: 0.01000
-#> Loss at epoch 3: 5.341350, lr: 0.01000
-#> Loss at epoch 4: 5.094756, lr: 0.01000
-#> Loss at epoch 5: 4.849181, lr: 0.01000
-#> Loss at epoch 6: 4.593567, lr: 0.01000
-#> Loss at epoch 7: 4.282295, lr: 0.01000
-#> Loss at epoch 8: 3.962109, lr: 0.01000
-#> Loss at epoch 9: 3.730334, lr: 0.01000
-#> Loss at epoch 10: 3.517436, lr: 0.01000
-#> Loss at epoch 11: 3.389656, lr: 0.01000
-#> Loss at epoch 12: 3.300763, lr: 0.01000
-#> Loss at epoch 13: 3.258910, lr: 0.01000
-#> Loss at epoch 14: 3.187895, lr: 0.01000
-#> Loss at epoch 15: 3.139322, lr: 0.01000
-#> Loss at epoch 16: 3.072943, lr: 0.01000
-#> Loss at epoch 17: 3.049862, lr: 0.01000
-#> Loss at epoch 18: 3.055812, lr: 0.01000
-#> Loss at epoch 19: 3.037665, lr: 0.01000
-#> Loss at epoch 20: 3.034843, lr: 0.01000
-#> Loss at epoch 21: 2.993039, lr: 0.01000
-#> Loss at epoch 22: 3.029911, lr: 0.01000
-#> Loss at epoch 23: 3.016335, lr: 0.01000
-#> Loss at epoch 24: 2.999973, lr: 0.01000
-#> Loss at epoch 25: 2.997170, lr: 0.01000
-#> Loss at epoch 26: 2.979195, lr: 0.01000
-#> Loss at epoch 27: 2.960698, lr: 0.01000
-#> Loss at epoch 28: 3.024710, lr: 0.01000
-#> Loss at epoch 29: 2.963467, lr: 0.01000
-#> Loss at epoch 30: 2.964932, lr: 0.01000
-#> Loss at epoch 31: 3.002780, lr: 0.01000
-#> Loss at epoch 32: 2.972047, lr: 0.01000
-#> Loss at epoch 33: 2.969632, lr: 0.01000
-#> Loss at epoch 34: 2.974920, lr: 0.01000
-#> Loss at epoch 35: 2.956212, lr: 0.01000
-#> Loss at epoch 36: 3.026191, lr: 0.01000
-#> Loss at epoch 37: 2.958736, lr: 0.01000
-#> Loss at epoch 38: 2.970557, lr: 0.01000
-#> Loss at epoch 39: 2.968193, lr: 0.01000
-#> Loss at epoch 40: 2.970334, lr: 0.01000
-#> Loss at epoch 41: 2.963888, lr: 0.01000
-#> Loss at epoch 42: 2.960575, lr: 0.01000
-#> Loss at epoch 43: 2.975962, lr: 0.01000
-#> Loss at epoch 44: 2.986119, lr: 0.01000
-#> Loss at epoch 45: 2.969117, lr: 0.01000
-#> Loss at epoch 46: 2.968599, lr: 0.01000
-#> Loss at epoch 47: 2.979469, lr: 0.01000
-#> Loss at epoch 48: 2.961382, lr: 0.01000
-#> Loss at epoch 49: 2.961033, lr: 0.01000
-#> Loss at epoch 50: 2.976546, lr: 0.01000
-#> Loss at epoch 51: 2.941517, lr: 0.01000
-#> Loss at epoch 52: 2.951265, lr: 0.01000
-#> Loss at epoch 53: 2.955796, lr: 0.01000
-#> Loss at epoch 54: 2.943864, lr: 0.01000
-#> Loss at epoch 55: 2.940066, lr: 0.01000
-#> Loss at epoch 56: 2.949237, lr: 0.01000
-#> Loss at epoch 57: 2.943916, lr: 0.01000
-#> Loss at epoch 58: 2.942507, lr: 0.01000
-#> Loss at epoch 59: 2.961354, lr: 0.01000
-#> Loss at epoch 60: 2.981447, lr: 0.01000
-#> Loss at epoch 61: 2.959459, lr: 0.01000
-#> Loss at epoch 62: 2.931861, lr: 0.01000
-#> Loss at epoch 63: 2.930637, lr: 0.01000
-#> Loss at epoch 64: 2.947635, lr: 0.01000
-#> Loss at epoch 65: 2.955172, lr: 0.01000
-#> Loss at epoch 66: 2.947920, lr: 0.01000
-#> Loss at epoch 67: 2.935133, lr: 0.01000
-#> Loss at epoch 68: 2.940571, lr: 0.01000
-#> Loss at epoch 69: 2.917623, lr: 0.01000
-#> Loss at epoch 70: 2.971692, lr: 0.01000
+#> Loss at epoch 1: 5.408019, lr: 0.01000
+#> Loss at epoch 2: 5.333291, lr: 0.01000
+#> Loss at epoch 3: 5.255817, lr: 0.01000
+#> Loss at epoch 4: 5.173627, lr: 0.01000
+#> Loss at epoch 5: 5.084182, lr: 0.01000
+#> Loss at epoch 6: 4.985171, lr: 0.01000
+#> Loss at epoch 7: 4.874483, lr: 0.01000
+#> Loss at epoch 8: 4.750940, lr: 0.01000
+#> Loss at epoch 9: 4.612569, lr: 0.01000
+#> Loss at epoch 10: 4.463618, lr: 0.01000
+#> Loss at epoch 11: 4.303880, lr: 0.01000
+#> Loss at epoch 12: 4.132645, lr: 0.01000
+#> Loss at epoch 13: 3.958434, lr: 0.01000
+#> Loss at epoch 14: 3.796573, lr: 0.01000
+#> Loss at epoch 15: 3.653077, lr: 0.01000
+#> Loss at epoch 16: 3.526174, lr: 0.01000
+#> Loss at epoch 17: 3.420648, lr: 0.01000
+#> Loss at epoch 18: 3.327523, lr: 0.01000
+#> Loss at epoch 19: 3.249835, lr: 0.01000
+#> Loss at epoch 20: 3.184629, lr: 0.01000
+#> Loss at epoch 21: 3.130454, lr: 0.01000
+#> Loss at epoch 22: 3.087324, lr: 0.01000
+#> Loss at epoch 23: 3.051507, lr: 0.01000
+#> Loss at epoch 24: 3.020186, lr: 0.01000
+#> Loss at epoch 25: 2.993808, lr: 0.01000
+#> Loss at epoch 26: 2.969885, lr: 0.01000
+#> Loss at epoch 27: 2.949128, lr: 0.01000
+#> Loss at epoch 28: 2.931357, lr: 0.01000
+#> Loss at epoch 29: 2.918594, lr: 0.01000
+#> Loss at epoch 30: 2.906851, lr: 0.01000
+#> Loss at epoch 31: 2.896184, lr: 0.01000
+#> Loss at epoch 32: 2.889005, lr: 0.01000
+#> Loss at epoch 33: 2.882415, lr: 0.01000
+#> Loss at epoch 34: 2.876860, lr: 0.01000
+#> Loss at epoch 35: 2.870946, lr: 0.01000
+#> Loss at epoch 36: 2.867113, lr: 0.01000
+#> Loss at epoch 37: 2.862620, lr: 0.01000
+#> Loss at epoch 38: 2.858537, lr: 0.01000
+#> Loss at epoch 39: 2.855360, lr: 0.01000
+#> Loss at epoch 40: 2.852441, lr: 0.01000
+#> Loss at epoch 41: 2.849163, lr: 0.01000
+#> Loss at epoch 42: 2.845885, lr: 0.01000
+#> Loss at epoch 43: 2.843100, lr: 0.01000
+#> Loss at epoch 44: 2.841253, lr: 0.01000
+#> Loss at epoch 45: 2.837898, lr: 0.01000
+#> Loss at epoch 46: 2.835108, lr: 0.01000
+#> Loss at epoch 47: 2.833399, lr: 0.01000
+#> Loss at epoch 48: 2.830339, lr: 0.01000
+#> Loss at epoch 49: 2.828214, lr: 0.01000
+#> Loss at epoch 50: 2.826396, lr: 0.01000
+#> Loss at epoch 51: 2.824593, lr: 0.01000
+#> Loss at epoch 52: 2.822212, lr: 0.01000
+#> Loss at epoch 53: 2.820205, lr: 0.01000
+#> Loss at epoch 54: 2.818298, lr: 0.01000
+#> Loss at epoch 55: 2.816402, lr: 0.01000
+#> Loss at epoch 56: 2.815773, lr: 0.01000
+#> Loss at epoch 57: 2.813069, lr: 0.01000
+#> Loss at epoch 58: 2.812088, lr: 0.01000
+#> Loss at epoch 59: 2.809517, lr: 0.01000
+#> Loss at epoch 60: 2.808090, lr: 0.01000
+#> Loss at epoch 61: 2.807289, lr: 0.01000
+#> Loss at epoch 62: 2.805554, lr: 0.01000
+#> Loss at epoch 63: 2.803404, lr: 0.01000
+#> Loss at epoch 64: 2.801963, lr: 0.01000
+#> Loss at epoch 65: 2.800906, lr: 0.01000
+#> Loss at epoch 66: 2.798794, lr: 0.01000
+#> Loss at epoch 67: 2.797041, lr: 0.01000
+#> Loss at epoch 68: 2.795433, lr: 0.01000
+#> Loss at epoch 69: 2.794709, lr: 0.01000
+#> Loss at epoch 70: 2.793144, lr: 0.01000
 
 plot(data$X1, data$Y)
 lines(smooth.spline(data$X1, predict(m)[,1], spar = 0.01), col = "blue")
@@ -301,10 +295,7 @@ lines(smooth.spline(data$X1, predict(m)[,3], spar = 0.01), col = "blue")
 lines(smooth.spline(data$X1, predict(m)[,2], spar = 0.01), col = "red")
 ```
 
-<div class="figure" style="text-align: center">
-<img src="D/D-unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5"  />
-<p class="caption">plot of chunk unnamed-chunk-5</p>
-</div>
+<img src="D/D-unnamed-chunk-5-1.png" style="display: block; margin: auto;" />
 
 ### Example 3: Using cito for optimization / active learning
 
@@ -340,16 +331,13 @@ df = data.frame(y1 = noise_y[,1], y2 = noise_y[,2], noise)
 m = dnn(cbind(y1, y2)~., data = df, loss = custom_loss, batchsize = 1L, epochs = 20L, verbose = FALSE)
 ```
 
-<div class="figure" style="text-align: center">
-<img src="D/D-unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6"  />
-<p class="caption">plot of chunk unnamed-chunk-6</p>
-</div>
+<img src="D/D-unnamed-chunk-6-1.png" style="display: block; margin: auto;" />
 
 ```r
 # Effect:
 mean(predict(m)[,1])
-#> [1] 1.936987
+#> [1] 2.02776
 # SD
 mean(exp(predict(m)[,2]))
-#> [1] 0.3652849
+#> [1] 0.3864421
 ```

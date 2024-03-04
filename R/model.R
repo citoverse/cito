@@ -50,6 +50,7 @@ build_dnn = function(input, output, hidden, activation, bias, dropout, embedding
 
     if(!is.null(output)) layers[[length(layers)+1]] = torch::nn_linear(hidden[i], out_features = output, bias = bias[i+1])
   }
+  self = NULL
   if(!is.null(embeddings)) {
     net_embed <- torch::nn_module(
       initialize = function() {

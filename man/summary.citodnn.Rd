@@ -17,6 +17,8 @@
 \item{device}{for calculating variable importance and conditional effects}
 
 \item{...}{additional arguments}
+
+\item{adjust_se}{adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )}
 }
 \value{
 summary.citodnn returns an object of class "summary.citodnn", a list with components
