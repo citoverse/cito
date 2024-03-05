@@ -281,7 +281,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$bias$sampler = function() {
-        return(sample(bias$values, 1))
+        if(length(bias$values) > 1) return(sample(bias$values, 1))
+        else return(bias$values)
       }
     }
   } else {
@@ -299,7 +300,8 @@ check_hyperparameters = function(hidden  ,
     } else {
 
       out$lambda$sampler = function() {
-        return(sample(lambda$values, 1))
+        if(length(lambda$values) > 1) return(sample(lambda$values, 1))
+        else return(lambda$values)
       }
     }
   } else {
@@ -317,7 +319,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$alpha$sampler = function() {
-        return(sample(alpha$values, 1))
+        if(length(alpha$values) > 1) return(sample(alpha$values, 1))
+        else return(alpha$values)
       }
     }
   } else {
@@ -336,7 +339,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$activation$sampler = function() {
-        return(sample(activation$values, 1))
+        if(length(activation$values) > 1) return(sample(activation$values, 1))
+        else return(activation$values)
       }
     }
   } else {
@@ -353,7 +357,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$dropout$sampler = function() {
-        return(sample(dropout$values, 1))
+        if(length(dropout$values) > 1) return(sample(dropout$values, 1))
+        else return(dropout$values)
       }
     }
   } else {
@@ -369,7 +374,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$lr$sampler = function() {
-        return(sample(lr$values, 1))
+        if(length(lr$values) > 1) return(sample(lr$values, 1))
+        else return(lr$values)
       }
     }
   } else {
@@ -386,7 +392,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$batchsize$sampler = function() {
-        return(sample(batchsize$values, 1))
+        if(length(batchsize$values) > 1) return(sample(batchsize$values, 1))
+        else return(batchsize$values)
       }
     }
   }
@@ -400,7 +407,8 @@ check_hyperparameters = function(hidden  ,
       }
     } else {
       out$epochs$sampler = function() {
-        return(sample(epochs$values, 1))
+        if(length(epochs$values) > 1) return(sample(epochs$values, 1))
+        else return(epochs$values)
       }
     }
   }
