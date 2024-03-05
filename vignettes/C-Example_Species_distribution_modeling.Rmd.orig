@@ -228,7 +228,7 @@ ALE(model_boot, variable = "bio16")
 
 ## Multi-species distribution model
 
-Cito supports many different loss functions which we can use to build multi-species distribution models (MSDM). MSDM are multi-label, i.e. they model and predict simoustanously many responses. We will use eucalypts data from [Pollock et al., 2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180). The dataset has occurrence of 12 species over 458 sites.
+Cito supports many different loss functions which we can use to build multi-species distribution models (MSDM). MSDM are multi-label, i.e. they model and predict simultaneously many responses. We will use eucalypts data from [Pollock et al., 2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180). The dataset has occurrence of 12 species over 458 sites.
 
 ```{r}
 load(url("https://github.com/TheoreticalEcology/s-jSDM/raw/master/sjSDM/data/eucalypts.rda"))
@@ -246,11 +246,12 @@ df = cbind(eucalypts$PA, scale(eucalypts$env))
 head(df)
 ```
 
-We will use the binomial likelihood - each species occurrence data will be modeled by a binomial likelihood. Build simple model:
+We will use the binomial likelihood - each species occurrence data will be modelled by a binomial likelihood. Build simple model:
 
 ```{r}
 model = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
             data = df,
+            lr = 0.1,
             verbose = FALSE,
             loss = "binomial")
 ```
@@ -276,7 +277,7 @@ model_boot = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, AR
                                   epochs = 200L,
                  hidden = c(50L, 50L),
                  batchsize = 50L,
-                 lr = 0.05,
+                 lr = 0.1,
                  lambda = 0.001,
                  alpha = 1.0,
                  validation = 0.2,
@@ -309,3 +310,29 @@ ale_plots = ALE(model_boot, variable = "cvTemp", plot = FALSE)
 do.call(gridExtra::grid.arrange, ale_plots)
 
 ```
+
+
+## Advanced: Joint species distribution model
+
+In recent years, joint species distribution models (JSDM) have emerged as a new class of models capable of jointly modeling species. JSDM account for co-occurrences between species that cannot be explained by the environment alone with biotic associations [Pollock et al., 2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180). Technically, biotic associations are coded by a covariance matrix that absorbs the species co-occurrences "left over" in the residuals. Two common models for JSDMs are the latent variable model [Warton et al., 2015](https://doi.org/10.1016/j.tree.2015.09.007) and the multivariate probit model (MVP) ([Pollock et al., 2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180)).
+
+In 'cito' we provide an experimental likelihood for the multivariate probit model which is based on a Monte-Carlo approximation ([Chen et al., 2018](https://proceedings.mlr.press/v80/chen18o.html)). However, 'cito' is not a JSDM-focused package which means that many interesting features of JSDMs such as community assembly analyses are not available in 'cito'. If you want to perform an in-depth analysis with JSDM such as to reveal the internal metacommunity structure we recommend, for example, the [sjSDM package](https://cran.r-project.org/web/packages/sjSDM/index.html):
+
+```{r}
+jsdm = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+            data = df,
+            lr = 0.1,
+            epochs = 200L,
+            verbose = FALSE,
+            loss = "mvp")
+```
+
+Building the covariance matrix which corresponds to the biotic associations:
+```{r}
+L = jsdm$parameter$paramter
+biotic_association = cov2cor(L%*%t(L) + diag(1, 12))
+fields::image.plot(biotic_association)
+```
+
+For more information about community analyses with JSDMs see the [vignette of the sjSDM package](https://cran.r-project.org/web/packages/sjSDM/vignettes/sjSDM_Introduction.html)
+

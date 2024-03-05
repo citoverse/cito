@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "2024-02-21"
+date: "2024-03-05"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -52,7 +52,7 @@ Neural networks (NN) are built using the 'nn_sequential' object from the 'torch'
 
 Once the NN structure and data are prepared, the actual training starts (the baseline loss is also calculated before the training starts). The training consists of two loops. An outer loop for the number of epochs (one epoch means that the data has been used once to update the weights). And an inner loop for the stochastic gradient descent, i.e. for n = 100 observations and batch size = 20, it takes 5 batches of data to traverse the dataset once.
 
-At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the backpropagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
+At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the back-propagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
 
 If validation is turned on, after each epoch the model is evaluated on the validation holdout (which was separated from the data at the beginning).
 
@@ -67,7 +67,7 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
 |                 |                           |                                                                         |                                                             |
-|:--------------|:--------------|:--------------|---------------------------|
+|:-------------|:-------------|:------------------------|--------------------|
 | Name            | Explanation               | Example / Task                                                          | Meta-Code                                                   |
 | `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
 | `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
@@ -127,7 +127,7 @@ plot(nn.fit)
 
 <img src="A/A-plotnn-1.png" style="display: block; margin: auto;" />
 
-The neural network 5 input nodes (3 continoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
@@ -194,7 +194,7 @@ print(nn.fit)
 xAI can produce outputs that are similar to known outputs from statistical models:
 
 | xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
-|------------------|------------------------------------|------------------|
+|----------------|-----------------------------------------|---------------|
 | Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
 | Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
 | Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
@@ -211,22 +211,22 @@ summary(nn.fit)
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width     1.793638
-#> 2 Petal.Length     4.323855
-#> 3  Petal.Width     2.421526
-#> 4      Species     1.267314
+#> 1  Sepal.Width     1.614207
+#> 2 Petal.Length     3.854555
+#> 3  Petal.Width     2.161364
+#> 4      Species     1.147288
 #> 
 #> Average Conditional Effects:
 #>              Response_1
-#> Sepal.Width   0.3220045
-#> Petal.Length  0.5503410
-#> Petal.Width   0.2807902
+#> Sepal.Width   0.2443863
+#> Petal.Length  0.5085570
+#> Petal.Width   0.3216568
 #> 
 #> Standard Deviation of Conditional Effects:
 #>              Response_1
-#> Sepal.Width  0.10174691
-#> Petal.Length 0.20004053
-#> Petal.Width  0.08970355
+#> Sepal.Width  0.07628443
+#> Petal.Length 0.09923259
+#> Petal.Width  0.11358102
 ```
 
 
@@ -257,27 +257,27 @@ summary(nn.fit)
 #> Summary of Deep Neural Network Model
 #> 
 #> ── Feature Importance
-#>                 Importance Std.Err Z value Pr(>|z|)   
-#> Sepal.Width →        1.611   0.536    3.01   0.0026 **
-#> Petal.Length →      16.477   6.712    2.45   0.0141 * 
-#> Petal.Width →        0.602   0.499    1.21   0.2274   
-#> Species →            0.507   0.268    1.89   0.0588 . 
+#>                 Importance Std.Err Z value Pr(>|z|)    
+#> Sepal.Width →        1.570   0.392    4.00  6.3e-05 ***
+#> Petal.Length →      15.283   6.210    2.46    0.014 *  
+#> Petal.Width →        0.563   0.463    1.22    0.224    
+#> Species →            0.476   0.271    1.75    0.079 .  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Average Conditional Effects
 #>                     ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →    0.2946  0.0482    6.11  1.0e-09 ***
-#> Petal.Length →   1.1464  0.2047    5.60  2.1e-08 ***
-#> Petal.Width →   -0.0481  0.1657   -0.29     0.77    
+#> Sepal.Width →    0.2971  0.0565    5.26  1.4e-07 ***
+#> Petal.Length →   1.1058  0.1849    5.98  2.2e-09 ***
+#> Petal.Width →   -0.0215  0.1715   -0.13      0.9    
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Standard Deviation of Conditional Effects
 #>                    ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →   0.1392  0.0351    3.97  7.2e-05 ***
-#> Petal.Length →  0.3859  0.0941    4.10  4.1e-05 ***
-#> Petal.Width →   0.1227  0.0520    2.36    0.018 *  
+#> Sepal.Width →   0.1340  0.0328    4.08  4.5e-05 ***
+#> Petal.Length →  0.3528  0.1170    3.01   0.0026 ** 
+#> Petal.Width →   0.1222  0.0304    4.02  5.7e-05 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -317,7 +317,9 @@ PDP(nn.fit)
 ```r
 library(effects)
 #> Loading required package: carData
-#> lattice theme set by effectsTheme()
+#> Use the command
+#>     lattice::trellis.par.set(effectsTheme())
+#>   to customize lattice options for effects plots.
 #> See ?effectsTheme for details.
 plot(allEffects(lm(Sepal.Length~., data = df)))
 ```
@@ -456,7 +458,7 @@ We started to support automatic hyperparameter tuning under Cross Validation. Th
 We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
 
 | Hyperparameter | Example                                     | Details                                                                                                                                                                       |
-|:-----------------------|:-----------------------|:-----------------------|
+|:------------|:------------|:---------------------------------------------|
 | hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
 | lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |
@@ -475,10 +477,10 @@ Tune learning rate as it is one of the most important hyperparameters:
 
 
 ```r
-nn.fit_tuned = dnn(Species~., 
-                   data = iris, 
-                   lr = tune(0.0001, 0.1), 
-                   loss = "softmax", 
+nn.fit_tuned = dnn(Species~.,
+                   data = iris,
+                   lr = tune(0.0001, 0.1),
+                   loss = "softmax",
                    tuning = config_tuning(steps = 3L, CV = 3L))
 #> Starting hyperparameter tuning...
 #> Fitting final model...
@@ -496,12 +498,12 @@ You can continue the training process of an existing model with continue_trainin
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>            [,1]
-#> [1,] -0.9603820
-#> [2,] -1.3810974
-#> [3,] -1.3195368
-#> [4,] -1.2639360
-#> [5,] -0.8485602
-#> [6,] -0.4504386
+#> [1,] -1.0007209
+#> [2,] -1.3226014
+#> [3,] -1.2187723
+#> [4,] -1.2439288
+#> [5,] -0.9474713
+#> [6,] -0.6155921
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().

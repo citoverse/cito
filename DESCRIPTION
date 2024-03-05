@@ -43,6 +43,7 @@ Imports:
     lme4
 License: GPL (>= 3)
 Suggests:
+    spelling,
     rmarkdown,
     testthat,
     plotly,
@@ -54,3 +55,4 @@ Suggests:
 VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues
 URL: https://citoverse.github.io/cito/
+Language: en-US

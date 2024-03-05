@@ -72,7 +72,7 @@ The list consists of the following attributes:
 \item{call}{The original function call}
 \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 \item{data}{Contains data used for training the model}
-\item{weigths}{List of weights for each training epoch}
+\item{weights}{List of weights for each training epoch}
 \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
 \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
@@ -101,7 +101,7 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
-   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   Poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
 }
 }
 

@@ -16,7 +16,7 @@ transfer(
 \arguments{
 \item{name}{The name of the pretrained model}
 
-\item{pretrained}{if FALSE, random weights are used instead of the pretrained weigths}
+\item{pretrained}{if FALSE, random weights are used instead of the pretrained weights}
 
 \item{freeze}{if TRUE, the weights of the pretrained model (except the "classifier" part at the end) aren't changed in the training anymore. Only works if pretrained=TRUE}
 }

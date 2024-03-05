@@ -15,9 +15,9 @@ tune(
 \arguments{
 \item{lower}{numeric, numeric vector, character, lower boundaries of tuning space}
 
-\item{upper}{numeric, numeric vector, character, upper foundaries of tuning space}
+\item{upper}{numeric, numeric vector, character, upper boundaries of tuning space}
 
-\item{fixed}{charachter, used for multi-dimensional hyperparameters such as hidden, which dimensions should be fixed}
+\item{fixed}{character, used for multi-dimensional hyperparameters such as hidden, which dimensions should be fixed}
 
 \item{additional}{numeric, additional control parameter which sets the value of the fixed argument}
 

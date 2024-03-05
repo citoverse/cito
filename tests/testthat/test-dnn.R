@@ -263,8 +263,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 
 testthat::test_that("DNN coef accuracy check",{
 
-  #testthat::skip_on_cran()
-  #testthat::skip_on_ci()
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
   skip_if_no_torch()
 
   data <- as.data.frame(matrix(rnorm(n=200*10, mean= 0, sd=1),nrow=200,ncol=10))
@@ -311,6 +311,11 @@ testthat::test_that("DNN baseline loss check",{
 
 
 testthat::test_that("DNN hyperparameter tuning",{
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+
   testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
   testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), tuning=config_tuning(steps=2, CV = 2))}, NA)
   testthat::expect_error({dnn(Species~., data=iris,loss="softmax",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)

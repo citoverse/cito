@@ -3,8 +3,8 @@
 #' Control hyperparameter tuning
 #'
 #' @param lower numeric, numeric vector, character, lower boundaries of tuning space
-#' @param upper numeric, numeric vector, character, upper foundaries of tuning space
-#' @param fixed charachter, used for multi-dimensional hyperparameters such as hidden, which dimensions should be fixed
+#' @param upper numeric, numeric vector, character, upper boundaries of tuning space
+#' @param fixed character, used for multi-dimensional hyperparameters such as hidden, which dimensions should be fixed
 #' @param additional numeric, additional control parameter which sets the value of the fixed argument
 #' @param values custom values from which hyperparameters are sampled, must be a matrix for hidden layers (first column == nodes, second column == number of layers)
 #'
@@ -30,7 +30,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #' @param steps numeric, number of random tuning steps
 #' @param parallel numeric, number of parallel cores (tuning steps are parallelized)
 #' @param NGPU numeric, set if more than one GPU is available, tuning will be parallelized over CPU cores and GPUs, only works for NCPU > 1
-#' @param cancel CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss
+#' @param cancel CV/tuning for specific hyperparameter set if model cannot reduce loss below baseline after burnin or returns NA loss
 #' @param bootstrap_final bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the [dnn()] function
 #' @param bootstrap_parallel should the bootstrapping be parallelized or not
 #'
@@ -94,6 +94,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
             parameters[[colnames(tmp_hp)[j]]] = unlist(tmp_hp[1,j])
           }
         }
+
         # start CV
         # Stop if training is aborted
         for(cv in test_indices) {
@@ -131,6 +132,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2), clear=FALSE)
 
     tune_df <- parabar::par_lapply(backend, 1:steps, function(i) {
+
+      require(tibble)
+
       loss_obj <- get_loss(loss, device = device, X= X, Y = Y)
       loss.fkt <- loss_obj$loss
       targets <- format_targets(Y, loss_obj)
@@ -148,11 +152,12 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
       if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
 
       tmp_hp = tune_df[i,-(1:4)]
+      format_hp = format_hyperparameters(tmp_hp)
       for(j in 1:ncol(tmp_hp)) {
         if(colnames(tmp_hp)[j] == "hidden") {
-          parameters[[colnames(tmp_hp)[j] ]] = rep(tmp_hp[1,j][[1]][[1]], tmp_hp[1,j][[1]][[2]])
+          parameters[[colnames(tmp_hp)[j]]] = rep(tmp_hp[1,j][[1]][[1]][1], tmp_hp[1,j][[1]][[1]][2])
         } else {
-          parameters[[colnames(tmp_hp)[j] ]] = unlist(tmp_hp[1,j])
+          parameters[[colnames(tmp_hp)[j]]] = unlist(tmp_hp[1,j])
         }
       }
       # start CV

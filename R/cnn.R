@@ -46,7 +46,7 @@
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification|
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
-#' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
+#' | Poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
 #'
 #' # Training and convergence of neural networks
 #'
@@ -110,7 +110,7 @@
 #' \item{call}{The original function call}
 #' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 #' \item{data}{Contains data used for training the model}
-#' \item{weigths}{List of weights for each training epoch}
+#' \item{weights}{List of weights for each training epoch}
 #' \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
 #' \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 #' \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
@@ -657,7 +657,7 @@ maxPool <- function(kernel_size = NULL,
 #' creates a 'transfer' 'citolayer' object that is used by \code{\link{create_architecture}}.
 #'
 #' @param name The name of the pretrained model
-#' @param pretrained if FALSE, random weights are used instead of the pretrained weigths
+#' @param pretrained if FALSE, random weights are used instead of the pretrained weights
 #' @param freeze if TRUE, the weights of the pretrained model (except the "classifier" part at the end) aren't changed in the training anymore. Only works if pretrained=TRUE
 #'
 #' @details

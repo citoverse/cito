@@ -62,7 +62,7 @@ Neural networks (NN) are built using the 'nn_sequential' object from the 'torch'
 
 Once the NN structure and data are prepared, the actual training starts (the baseline loss is also calculated before the training starts). The training consists of two loops. An outer loop for the number of epochs (one epoch means that the data has been used once to update the weights). And an inner loop for the stochastic gradient descent, i.e. for n = 100 observations and batch size = 20, it takes 5 batches of data to traverse the dataset once.
 
-At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the backpropagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
+At each step of the inner loop, the optimizer is reset, a batch of data is returned from the data iterator (initialized at each epoch by the data loader), split into feature and response tensors, pushed to the GPU (if one is available), the feature matrix is passed to the NN for prediction, the average loss is computed based on the response tensor and the predictions, the average loss is backpropagated, and the weights are updated by the optimizer based on the back-propagated errors. This inner loop is repeated until the dataset has been used once, completing the epoch. The process is then repeated for n epochs.
 
 If validation is turned on, after each epoch the model is evaluated on the validation holdout (which was separated from the data at the beginning).
 
@@ -77,7 +77,7 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
 |                 |                           |                                                                         |                                                             |
-|:----------------|:--------------------------|:------------------------------------------------------------------------|-------------------------------------------------------------|
+|:-------------|:-------------|:------------------------|--------------------|
 | Name            | Explanation               | Example / Task                                                          | Meta-Code                                                   |
 | `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
 | `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
@@ -126,7 +126,7 @@ You can plot the network structure to give you a visual feedback of the created 
 plot(nn.fit)
 ```
 
-The neural network 5 input nodes (3 continoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
@@ -182,7 +182,7 @@ print(nn.fit)
 xAI can produce outputs that are similar to known outputs from statistical models:
 
 | xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
-|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
+|----------------|-----------------------------------------|---------------|
 | Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
 | Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
 | Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
@@ -355,7 +355,7 @@ We started to support automatic hyperparameter tuning under Cross Validation. Th
 We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
 
 | Hyperparameter | Example                                     | Details                                                                                                                                                                       |
-|:---------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|:------------|:------------|:---------------------------------------------|
 | hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
 | lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |

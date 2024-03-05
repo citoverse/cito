@@ -23,7 +23,7 @@ config_tuning(
 
 \item{NGPU}{numeric, set if more than one GPU is available, tuning will be parallelized over CPU cores and GPUs, only works for NCPU > 1}
 
-\item{cancel}{CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss}
+\item{cancel}{CV/tuning for specific hyperparameter set if model cannot reduce loss below baseline after burnin or returns NA loss}
 
 \item{bootstrap_final}{bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the \code{\link[=dnn]{dnn()}} function}
 

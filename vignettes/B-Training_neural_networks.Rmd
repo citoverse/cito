@@ -1,7 +1,7 @@
 ---
 title: "Training neural networks"
 author: "Maximilian Pichler"
-date: "2024-02-21"
+date: "2024-03-05"
 abstract: "This vignette helps to address certain problems that occur when training neural networks (NN) and gives hints on how to increase the likelihood of their convergence."
 output:
  rmarkdown::html_vignette:
@@ -120,71 +120,71 @@ nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)
-#> Loss at epoch 1: 1.087108, lr: 0.20000
+#> Loss at epoch 1: 1.021834, lr: 0.20000
 ```
 
 <img src="B/B-unnamed-chunk-8-1.png" style="display: block; margin: auto;" />
 
 ```
-#> Loss at epoch 2: 0.903815, lr: 0.20000
-#> Loss at epoch 3: 0.573949, lr: 0.20000
-#> Loss at epoch 4: 0.897187, lr: 0.20000
-#> Loss at epoch 5: 0.749726, lr: 0.20000
-#> Loss at epoch 6: 0.632035, lr: 0.20000
-#> Loss at epoch 7: 0.578772, lr: 0.20000
-#> Loss at epoch 8: 0.524611, lr: 0.20000
-#> Loss at epoch 9: 0.478397, lr: 0.20000
-#> Loss at epoch 10: 0.452353, lr: 0.20000
-#> Loss at epoch 11: 0.576571, lr: 0.20000
-#> Loss at epoch 12: 0.369899, lr: 0.20000
-#> Loss at epoch 13: 0.325961, lr: 0.20000
-#> Loss at epoch 14: 0.525180, lr: 0.20000
-#> Loss at epoch 15: 0.457416, lr: 0.20000
-#> Loss at epoch 16: 0.360753, lr: 0.20000
-#> Loss at epoch 17: 0.394748, lr: 0.20000
-#> Loss at epoch 18: 0.386267, lr: 0.20000
-#> Loss at epoch 19: 0.472987, lr: 0.10000
-#> Loss at epoch 20: 0.305213, lr: 0.10000
-#> Loss at epoch 21: 0.199477, lr: 0.10000
-#> Loss at epoch 22: 0.172473, lr: 0.10000
-#> Loss at epoch 23: 0.195197, lr: 0.10000
-#> Loss at epoch 24: 0.254813, lr: 0.10000
-#> Loss at epoch 25: 0.279079, lr: 0.10000
-#> Loss at epoch 26: 0.281923, lr: 0.10000
-#> Loss at epoch 27: 0.230909, lr: 0.10000
-#> Loss at epoch 28: 0.233069, lr: 0.05000
-#> Loss at epoch 29: 0.125458, lr: 0.05000
-#> Loss at epoch 30: 0.128728, lr: 0.05000
-#> Loss at epoch 31: 0.114669, lr: 0.05000
-#> Loss at epoch 32: 0.111258, lr: 0.05000
-#> Loss at epoch 33: 0.107564, lr: 0.05000
-#> Loss at epoch 34: 0.107815, lr: 0.05000
-#> Loss at epoch 35: 0.085994, lr: 0.05000
-#> Loss at epoch 36: 0.112124, lr: 0.05000
-#> Loss at epoch 37: 0.081247, lr: 0.05000
-#> Loss at epoch 38: 0.094082, lr: 0.05000
-#> Loss at epoch 39: 0.120218, lr: 0.05000
-#> Loss at epoch 40: 0.117239, lr: 0.05000
-#> Loss at epoch 41: 0.118780, lr: 0.05000
-#> Loss at epoch 42: 0.084812, lr: 0.05000
-#> Loss at epoch 43: 0.089787, lr: 0.02500
-#> Loss at epoch 44: 0.079257, lr: 0.02500
-#> Loss at epoch 45: 0.083253, lr: 0.02500
-#> Loss at epoch 46: 0.083143, lr: 0.02500
-#> Loss at epoch 47: 0.073754, lr: 0.02500
-#> Loss at epoch 48: 0.081439, lr: 0.02500
-#> Loss at epoch 49: 0.075276, lr: 0.02500
-#> Loss at epoch 50: 0.074044, lr: 0.02500
-#> Loss at epoch 51: 0.072283, lr: 0.02500
-#> Loss at epoch 52: 0.083920, lr: 0.02500
-#> Loss at epoch 53: 0.098379, lr: 0.02500
-#> Loss at epoch 54: 0.082494, lr: 0.02500
-#> Loss at epoch 55: 0.088671, lr: 0.02500
-#> Loss at epoch 56: 0.085296, lr: 0.02500
-#> Loss at epoch 57: 0.081099, lr: 0.01250
-#> Loss at epoch 58: 0.070063, lr: 0.01250
-#> Loss at epoch 59: 0.074567, lr: 0.01250
-#> Loss at epoch 60: 0.073408, lr: 0.01250
+#> Loss at epoch 2: 0.784247, lr: 0.20000
+#> Loss at epoch 3: 0.523949, lr: 0.20000
+#> Loss at epoch 4: 0.513148, lr: 0.20000
+#> Loss at epoch 5: 0.511179, lr: 0.20000
+#> Loss at epoch 6: 0.419983, lr: 0.20000
+#> Loss at epoch 7: 0.398057, lr: 0.20000
+#> Loss at epoch 8: 0.479610, lr: 0.20000
+#> Loss at epoch 9: 0.414423, lr: 0.20000
+#> Loss at epoch 10: 0.430415, lr: 0.20000
+#> Loss at epoch 11: 0.324195, lr: 0.20000
+#> Loss at epoch 12: 0.481322, lr: 0.20000
+#> Loss at epoch 13: 0.352256, lr: 0.20000
+#> Loss at epoch 14: 0.580036, lr: 0.20000
+#> Loss at epoch 15: 0.296640, lr: 0.20000
+#> Loss at epoch 16: 0.457924, lr: 0.20000
+#> Loss at epoch 17: 0.535021, lr: 0.20000
+#> Loss at epoch 18: 0.330827, lr: 0.20000
+#> Loss at epoch 19: 0.288825, lr: 0.20000
+#> Loss at epoch 20: 0.388286, lr: 0.20000
+#> Loss at epoch 21: 0.413969, lr: 0.20000
+#> Loss at epoch 22: 0.315708, lr: 0.20000
+#> Loss at epoch 23: 0.421718, lr: 0.20000
+#> Loss at epoch 24: 0.294159, lr: 0.20000
+#> Loss at epoch 25: 0.368195, lr: 0.10000
+#> Loss at epoch 26: 0.126924, lr: 0.10000
+#> Loss at epoch 27: 0.233660, lr: 0.10000
+#> Loss at epoch 28: 0.206882, lr: 0.10000
+#> Loss at epoch 29: 0.147535, lr: 0.10000
+#> Loss at epoch 30: 0.121023, lr: 0.10000
+#> Loss at epoch 31: 0.141637, lr: 0.10000
+#> Loss at epoch 32: 0.280258, lr: 0.10000
+#> Loss at epoch 33: 0.113553, lr: 0.10000
+#> Loss at epoch 34: 0.182583, lr: 0.10000
+#> Loss at epoch 35: 0.162140, lr: 0.10000
+#> Loss at epoch 36: 0.110794, lr: 0.10000
+#> Loss at epoch 37: 0.266870, lr: 0.10000
+#> Loss at epoch 38: 0.118162, lr: 0.10000
+#> Loss at epoch 39: 0.120619, lr: 0.10000
+#> Loss at epoch 40: 0.118278, lr: 0.10000
+#> Loss at epoch 41: 0.110401, lr: 0.10000
+#> Loss at epoch 42: 0.292702, lr: 0.10000
+#> Loss at epoch 43: 0.113928, lr: 0.10000
+#> Loss at epoch 44: 0.115036, lr: 0.10000
+#> Loss at epoch 45: 0.154610, lr: 0.10000
+#> Loss at epoch 46: 0.172704, lr: 0.10000
+#> Loss at epoch 47: 0.200501, lr: 0.05000
+#> Loss at epoch 48: 0.086275, lr: 0.05000
+#> Loss at epoch 49: 0.083288, lr: 0.05000
+#> Loss at epoch 50: 0.081173, lr: 0.05000
+#> Loss at epoch 51: 0.079097, lr: 0.05000
+#> Loss at epoch 52: 0.074330, lr: 0.05000
+#> Loss at epoch 53: 0.090034, lr: 0.05000
+#> Loss at epoch 54: 0.087791, lr: 0.05000
+#> Loss at epoch 55: 0.094438, lr: 0.05000
+#> Loss at epoch 56: 0.092987, lr: 0.05000
+#> Loss at epoch 57: 0.070762, lr: 0.05000
+#> Loss at epoch 58: 0.073787, lr: 0.05000
+#> Loss at epoch 59: 0.140457, lr: 0.05000
+#> Loss at epoch 60: 0.069994, lr: 0.05000
 ```
 
 At the end of the training, the learning rate is 0.025
@@ -200,40 +200,40 @@ nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)
-#> Loss at epoch 1: 6.736276, lr: 2.00000
+#> Loss at epoch 1: 3526205624246.549316, lr: 2.00000
 ```
 
 <img src="B/B-unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
 
 ```
-#> Loss at epoch 2: 1.129189, lr: 2.00000
-#> Loss at epoch 3: 1.159925, lr: 2.00000
-#> Loss at epoch 4: 1.197325, lr: 2.00000
-#> Loss at epoch 5: 1.123606, lr: 2.00000
-#> Loss at epoch 6: 1.123105, lr: 2.00000
-#> Loss at epoch 7: 1.155655, lr: 2.00000
-#> Loss at epoch 8: 1.147644, lr: 2.00000
-#> Loss at epoch 9: 1.172323, lr: 2.00000
-#> Loss at epoch 10: 1.127120, lr: 2.00000
-#> Loss at epoch 11: 1.126877, lr: 2.00000
-#> Loss at epoch 12: 1.166185, lr: 1.00000
-#> Loss at epoch 13: 1.115378, lr: 1.00000
-#> Loss at epoch 14: 1.104248, lr: 1.00000
-#> Loss at epoch 15: 1.127626, lr: 1.00000
-#> Loss at epoch 16: 1.117002, lr: 1.00000
-#> Loss at epoch 17: 1.122147, lr: 1.00000
-#> Loss at epoch 18: 1.109230, lr: 1.00000
-#> Loss at epoch 19: 1.102897, lr: 1.00000
-#> Loss at epoch 20: 1.105727, lr: 1.00000
-#> Loss at epoch 21: 1.113893, lr: 1.00000
-#> Loss at epoch 22: 1.114613, lr: 1.00000
-#> Loss at epoch 23: 1.103737, lr: 1.00000
-#> Loss at epoch 24: 1.127322, lr: 1.00000
-#> Loss at epoch 25: 1.114796, lr: 0.50000
-#> Loss at epoch 26: 1.104987, lr: 0.50000
-#> Loss at epoch 27: 1.104206, lr: 0.50000
-#> Loss at epoch 28: 1.113337, lr: 0.50000
-#> Loss at epoch 29: 1.110005, lr: 0.50000
+#> Loss at epoch 2: 48831025028505.601562, lr: 2.00000
+#> Loss at epoch 3: 41852271905996.796875, lr: 2.00000
+#> Loss at epoch 4: 32994145232486.398438, lr: 2.00000
+#> Loss at epoch 5: 25454932970700.800781, lr: 2.00000
+#> Loss at epoch 6: 18362799069593.601562, lr: 2.00000
+#> Loss at epoch 7: 11672021368832.000000, lr: 1.00000
+#> Loss at epoch 8: 6166342873907.200195, lr: 1.00000
+#> Loss at epoch 9: 3007619963289.600098, lr: 1.00000
+#> Loss at epoch 10: 622980843929.599976, lr: 1.00000
+#> Loss at epoch 11: 702466821324.800049, lr: 1.00000
+#> Loss at epoch 12: 758849321369.599976, lr: 1.00000
+#> Loss at epoch 13: 578470640025.599976, lr: 1.00000
+#> Loss at epoch 14: 769169827430.400024, lr: 1.00000
+#> Loss at epoch 15: 843194091929.599976, lr: 1.00000
+#> Loss at epoch 16: 598178904473.599976, lr: 1.00000
+#> Loss at epoch 17: 638339955916.800049, lr: 1.00000
+#> Loss at epoch 18: 634724427366.400024, lr: 1.00000
+#> Loss at epoch 19: 675600521625.599976, lr: 0.50000
+#> Loss at epoch 20: 461313003520.000000, lr: 0.50000
+#> Loss at epoch 21: 320872775680.000000, lr: 0.50000
+#> Loss at epoch 22: 273174328115.200012, lr: 0.50000
+#> Loss at epoch 23: 355574171238.400024, lr: 0.50000
+#> Loss at epoch 24: 300888318771.200012, lr: 0.50000
+#> Loss at epoch 25: 325603269017.599976, lr: 0.50000
+#> Loss at epoch 26: 290695089356.799988, lr: 0.50000
+#> Loss at epoch 27: 303663080243.200012, lr: 0.50000
+#> Loss at epoch 28: 304653051494.400024, lr: 0.25000
+#> Loss at epoch 29: 184628136601.600006, lr: 0.25000
 #> Cancel training because loss is still above baseline, please hyperparameters. See vignette('B-Training_neural_networks') for help.
 ```
 
