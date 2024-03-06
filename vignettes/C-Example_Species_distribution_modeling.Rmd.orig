@@ -38,6 +38,7 @@ options("progress_enabled" = FALSE)
 The goal is to build a SDM for the African elephant. A pre-processed dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be found in the EcoData package which is only available on github:
 
 ```{r}
+set.seed(1337)
 if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData",
                          dependencies = FALSE, build_vignettes = FALSE)
 
@@ -89,7 +90,7 @@ model = dnn(Presence~., data = df,
             verbose = FALSE)
 ```
 
-At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by adding a weak regularization (but we only want a L2 regularization, so we set alpha to 1.0):
+At the end of the training, the losses start to get jumpy, which can be a sign of potential overfitting. We can control that by adding a weak regularization (as we want a L2 regularization, we set alpha to 1.0):
 
 ```{r}
 model = dnn(Presence~., data = df,
@@ -176,7 +177,7 @@ library(sp)
 library(ggplot2)
 library(maptools)
 customPredictFun = function(model, data) {
-  return(apply(predict(model, data), 2:3, mean)[,1])
+  return(apply(predict(model, data, reduce = "none"), 2:3, mean)[,1])
 }
 
 normalized_raster = EcoData::elephant$predictionData
@@ -195,7 +196,7 @@ Moreover, we can visualize the uncertainty of our model, instead of calculating 
 
 ```{r}
 customPredictFun_sd = function(model, data) {
-  return(apply(predict(model, data), 2:3, sd)[,1])
+  return(apply(predict(model, data, reduce="none"), 2:3, sd)[,1])
 }
 predictions =
   raster::predict(normalized_raster,
