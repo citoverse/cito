@@ -33,6 +33,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #' @param cancel CV/tuning for specific hyperparameter set if model cannot reduce loss below baseline after burnin or returns NA loss
 #' @param bootstrap_final bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the [dnn()] function
 #' @param bootstrap_parallel should the bootstrapping be parallelized or not
+#' @param return_models return individual models
 #'
 #'
 #' @details
@@ -40,7 +41,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #'
 #'
 #' @export
-config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE) {
+config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE, return_models=FALSE) {
   out = list()
   out$CV = CV
   out$steps = steps
@@ -48,6 +49,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
   out$NGPU = NGPU
   out$bootstrap = bootstrap_final
   out$bootstrap_parallel = bootstrap_parallel
+  out$return_models = return_models
   return(out)
 }
 
@@ -57,6 +59,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
 
   parallel = tuning$parallel
   NGPU = tuning$NGPU
+  return_models = tuning$return_models
 
   cat("Starting hyperparameter tuning...\n")
 
@@ -103,7 +106,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           #else parameters$Y = Y[-cv]
           parameters$data = data[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
-          tune_df$models[[i]] = list(m)
+          if(return_models) tune_df$models[[i]] = list(m)
           #tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
           if(!m$successfull) {
             tune_df$test[i] = Inf
@@ -168,7 +171,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
         #else parameters$Y = Y[-cv]
         parameters$data = data[-cv,,drop=FALSE]
         m = do.call(dnn, parameters)
-        tune_df$models[[i]] = list(m)
+        if(return_models) tune_df$models[[i]] = list(m)
         tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[stats::complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
 
         if(!m$successfull) {

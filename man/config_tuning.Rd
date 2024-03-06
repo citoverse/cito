@@ -11,7 +11,8 @@ config_tuning(
   NGPU = 1,
   cancel = TRUE,
   bootstrap_final = NULL,
-  bootstrap_parallel = FALSE
+  bootstrap_parallel = FALSE,
+  return_models = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ config_tuning(
 \item{bootstrap_final}{bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the \code{\link[=dnn]{dnn()}} function}
 
 \item{bootstrap_parallel}{should the bootstrapping be parallelized or not}
+
+\item{return_models}{return individual models}
 }
 \description{
 Config hyperparameter tuning
