@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Maximilian
 Pichler</h4>
             
-            <h4 data-toc-skip class="date">2024-02-21</h4>
+            <h4 data-toc-skip class="date">2024-03-06</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/B-Training_neural_networks.Rmd" class="external-link"><code>vignettes/B-Training_neural_networks.Rmd</code></a></small>
       <div class="d-none name"><code>B-Training_neural_networks.Rmd</code></div>
@@ -99,16 +99,14 @@ Pichler</h4>
 <li>
 <p>Convergence issues, (often because of the learning rate),
 <strong>training loss above baseline loss</strong>:</p>
-<pre><code><span><span class="co">#&gt; Error in cito:::visualize.training(m$losses, epoch = 100, new = TRUE, : argument "main" is missing, with no default</span></span></code></pre>
 <p><img src="B/B-unnamed-chunk-2-1.png" style="display: block; margin: auto;"></p>
 <p>If it looks like that, go to the <a href="#lr">adjusting the learning
 rate section</a></p>
 </li>
 <li>
 <p>Overfitting, difference between training and testing/holdout/new
-data error is too high, or validation loss starts to increase again at
-some point during the training</p>
-<pre><code><span><span class="co">#&gt; Error in cito:::visualize.training(m$losses, epoch = 600L, new = TRUE, : argument "main" is missing, with no default</span></span></code></pre>
+data error is too high, or validation loss first decreases but then
+increases again:</p>
 <p><img src="B/B-unnamed-chunk-3-1.png" style="display: block; margin: auto;"></p>
 <p>if it loos like that, go to the <a href="#overfitting">overfitting
 section</a></p>
@@ -128,25 +126,28 @@ number of epochs (number of optimization steps).</p>
 </h3>
 <p>Give the neural network enough time to learn. The epochs should be
 high enough so that the training loss “stabilizes”:</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">iris</span>, epochs <span class="op">=</span> <span class="fl">10L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-4-1.png" style="display: block; margin: auto;"></p>
-<p>After 10 epochs the loss was still decreasing, let’s run the model
-for more epochs:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<p>After 10 epochs the loss was still decreasing, we should train the
+model longer (increase epochs):</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">iris</span>, epochs <span class="op">=</span> <span class="fl">200L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-5-1.png" style="display: block; margin: auto;"></p>
-<p>It takes around 190-200 epochs until the loss doesn’t decrease
+<p>Here, it takes around 190-200 epochs until the loss doesn’t decrease
 anymore. The “speed” of the learning depends also on the learning rate.
-Higher rates means larger steps into direction of the minima of the loss
-function:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+Higher rates means larger steps into direction of local minima in the
+loss function:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">iris</span>, epochs <span class="op">=</span> <span class="fl">200L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, lr <span class="op">=</span> <span class="fl">0.05</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-6-1.png" style="display: block; margin: auto;"></p>
 <p>Now it only takes about 100 epochs, but we also see that the training
 loss becomes wobbly. Larger learning rates increase the probability that
 local minima are skipped and the optimizer has problems to hit a
 minima.</p>
+<p>Note: But if the learning rate is high, or too high, the loss will
+get “jumpy”, the risk of the optimizer jumping over local minima
+increases (see next section).</p>
 </div>
 <div class="section level3">
 <h3 id="learning-rate">Learning rate<a class="anchor" aria-label="anchor" href="#learning-rate"></a>
@@ -155,18 +156,15 @@ minima.</p>
 neural networks (depth of the network and width of the hidden layers).
 We provide a baseline loss (intercept only model) that can give hints
 about an appropriate learning rate.</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit_good</span><span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>, lr <span class="op">=</span> <span class="fl">0.09</span>, epochs <span class="op">=</span> <span class="fl">20L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="va">nn.fit_high</span><span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>, lr <span class="op">=</span> <span class="fl">2.09</span>, epochs <span class="op">=</span> <span class="fl">20L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="va">nn.fit_low</span><span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>, lr <span class="op">=</span> <span class="fl">0.00000001</span>, epochs <span class="op">=</span> <span class="fl">20L</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">3</span>, <span class="fl">2</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_good</span><span class="op">$</span><span class="va">losses</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Error in cito:::visualize.training(nn.fit_good$losses, epoch = 20, new = TRUE, : argument "main" is missing, with no default</span></span>
-<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_high</span><span class="op">$</span><span class="va">losses</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Error in cito:::visualize.training(nn.fit_high$losses, epoch = 20, new = TRUE, : argument "main" is missing, with no default</span></span>
-<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_low</span><span class="op">$</span><span class="va">losses</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Error in cito:::visualize.training(nn.fit_low$losses, epoch = 20, new = TRUE, : argument "main" is missing, with no default</span></span></code></pre></div>
+<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_good</span><span class="op">$</span><span class="va">losses</span>,main<span class="op">=</span><span class="st">"Training loss"</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span>
+<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_high</span><span class="op">$</span><span class="va">losses</span>,main<span class="op">=</span><span class="st">"Training loss"</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span>
+<span><span class="fu">cito</span><span class="fu">:::</span><span class="fu">visualize.training</span><span class="op">(</span><span class="va">nn.fit_low</span><span class="op">$</span><span class="va">losses</span>,main<span class="op">=</span><span class="st">"Training loss"</span>, epoch <span class="op">=</span> <span class="fl">20</span>, new <span class="op">=</span> <span class="cn">TRUE</span>, baseline <span class="op">=</span> <span class="va">nn.fit_good</span><span class="op">$</span><span class="va">base_loss</span><span class="op">)</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-7-1.png" style="display: block; margin: auto;"></p>
 <p>If the training loss of the model doesn’t fall below the baseline
 loss, the learning rate is either too high or too low. If this happens,
@@ -184,7 +182,7 @@ learning rate is reduced according to a specific plan.</p>
 plateau isn’t resolved for a certain number of epochs (patience), the
 learning rate will be reduced (<span class="math inline">\(lr_{new} =
 factor * lr_{old}\)</span>):</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit_high</span><span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>,</span>
 <span>                  lr <span class="op">=</span> <span class="fl">0.2</span>,</span>
 <span>                  epochs <span class="op">=</span> <span class="fl">60L</span>,</span>
@@ -192,72 +190,72 @@ factor * lr_{old}\)</span>):</p>
 <span>                  lr_scheduler <span class="op">=</span> <span class="fu"><a href="../reference/config_lr_scheduler.html">config_lr_scheduler</a></span><span class="op">(</span><span class="st">"reduce_on_plateau"</span>, patience <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
 <span>                  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                  plot <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loss at epoch 1: 1.087108, lr: 0.20000</span></span></code></pre></div>
+<span><span class="co">#&gt; Loss at epoch 1: 0.868813, lr: 0.20000</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-8-1.png" style="display: block; margin: auto;"></p>
-<pre><code><span><span class="co">#&gt; Loss at epoch 2: 0.903815, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 3: 0.573949, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 4: 0.897187, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 5: 0.749726, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 6: 0.632035, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 7: 0.578772, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 8: 0.524611, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 9: 0.478397, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 10: 0.452353, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 11: 0.576571, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 12: 0.369899, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 13: 0.325961, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 14: 0.525180, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 15: 0.457416, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 16: 0.360753, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 17: 0.394748, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 18: 0.386267, lr: 0.20000</span></span>
-<span><span class="co">#&gt; Loss at epoch 19: 0.472987, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 20: 0.305213, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 21: 0.199477, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 22: 0.172473, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 23: 0.195197, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 24: 0.254813, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 25: 0.279079, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 26: 0.281923, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 27: 0.230909, lr: 0.10000</span></span>
-<span><span class="co">#&gt; Loss at epoch 28: 0.233069, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 29: 0.125458, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 30: 0.128728, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 31: 0.114669, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 32: 0.111258, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 33: 0.107564, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 34: 0.107815, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 35: 0.085994, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 36: 0.112124, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 37: 0.081247, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 38: 0.094082, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 39: 0.120218, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 40: 0.117239, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 41: 0.118780, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 42: 0.084812, lr: 0.05000</span></span>
-<span><span class="co">#&gt; Loss at epoch 43: 0.089787, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 44: 0.079257, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 45: 0.083253, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 46: 0.083143, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 47: 0.073754, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 48: 0.081439, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 49: 0.075276, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 50: 0.074044, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 51: 0.072283, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 52: 0.083920, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 53: 0.098379, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 54: 0.082494, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 55: 0.088671, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 56: 0.085296, lr: 0.02500</span></span>
-<span><span class="co">#&gt; Loss at epoch 57: 0.081099, lr: 0.01250</span></span>
-<span><span class="co">#&gt; Loss at epoch 58: 0.070063, lr: 0.01250</span></span>
-<span><span class="co">#&gt; Loss at epoch 59: 0.074567, lr: 0.01250</span></span>
-<span><span class="co">#&gt; Loss at epoch 60: 0.073408, lr: 0.01250</span></span></code></pre>
+<pre><code><span><span class="co">#&gt; Loss at epoch 2: 0.607227, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 3: 1.129801, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 4: 0.498109, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 5: 0.427480, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 6: 0.505962, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 7: 0.423542, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 8: 0.398008, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 9: 0.415886, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 10: 0.310365, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 11: 0.364727, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 12: 0.405762, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 13: 0.371685, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 14: 0.606758, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 15: 0.494564, lr: 0.20000</span></span>
+<span><span class="co">#&gt; Loss at epoch 16: 0.386717, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 17: 0.247253, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 18: 0.196016, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 19: 0.216442, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 20: 0.229231, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 21: 0.147426, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 22: 0.168880, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 23: 0.290900, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 24: 0.279733, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 25: 0.181382, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 26: 0.274826, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 27: 0.122269, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 28: 0.278979, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 29: 0.145546, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 30: 0.232280, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 31: 0.360600, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 32: 0.133818, lr: 0.10000</span></span>
+<span><span class="co">#&gt; Loss at epoch 33: 0.133925, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 34: 0.117416, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 35: 0.097019, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 36: 0.095766, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 37: 0.085271, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 38: 0.081865, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 39: 0.087199, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 40: 0.086238, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 41: 0.115600, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 42: 0.101273, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 43: 0.081162, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 44: 0.093478, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 45: 0.078520, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 46: 0.112726, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 47: 0.112692, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 48: 0.093684, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 49: 0.100669, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 50: 0.081393, lr: 0.05000</span></span>
+<span><span class="co">#&gt; Loss at epoch 51: 0.110707, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 52: 0.079502, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 53: 0.074759, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 54: 0.071895, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 55: 0.071452, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 56: 0.072424, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 57: 0.073547, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 58: 0.073571, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 59: 0.075333, lr: 0.02500</span></span>
+<span><span class="co">#&gt; Loss at epoch 60: 0.071900, lr: 0.02500</span></span></code></pre>
 <p>At the end of the training, the learning rate is 0.025</p>
 <p>Note: The learning rate scheduler is a powerful approach to improve
 the likeliness of convergence, BUT it cannot help with much too high
 learning rates!</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit_high</span><span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>,</span>
 <span>                  lr <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>                  epochs <span class="op">=</span> <span class="fl">60L</span>,</span>
@@ -265,36 +263,36 @@ learning rates!</p>
 <span>                  lr_scheduler <span class="op">=</span> <span class="fu"><a href="../reference/config_lr_scheduler.html">config_lr_scheduler</a></span><span class="op">(</span><span class="st">"reduce_on_plateau"</span>, patience <span class="op">=</span> <span class="fl">5</span>, factor <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
 <span>                  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                  plot <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loss at epoch 1: 6.736276, lr: 2.00000</span></span></code></pre></div>
+<span><span class="co">#&gt; Loss at epoch 1: 782.251417, lr: 2.00000</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-9-1.png" style="display: block; margin: auto;"></p>
-<pre><code><span><span class="co">#&gt; Loss at epoch 2: 1.129189, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 3: 1.159925, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 4: 1.197325, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 5: 1.123606, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 6: 1.123105, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 7: 1.155655, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 8: 1.147644, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 9: 1.172323, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 10: 1.127120, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 11: 1.126877, lr: 2.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 12: 1.166185, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 13: 1.115378, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 14: 1.104248, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 15: 1.127626, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 16: 1.117002, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 17: 1.122147, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 18: 1.109230, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 19: 1.102897, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 20: 1.105727, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 21: 1.113893, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 22: 1.114613, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 23: 1.103737, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 24: 1.127322, lr: 1.00000</span></span>
-<span><span class="co">#&gt; Loss at epoch 25: 1.114796, lr: 0.50000</span></span>
-<span><span class="co">#&gt; Loss at epoch 26: 1.104987, lr: 0.50000</span></span>
-<span><span class="co">#&gt; Loss at epoch 27: 1.104206, lr: 0.50000</span></span>
-<span><span class="co">#&gt; Loss at epoch 28: 1.113337, lr: 0.50000</span></span>
-<span><span class="co">#&gt; Loss at epoch 29: 1.110005, lr: 0.50000</span></span>
+<pre><code><span><span class="co">#&gt; Loss at epoch 2: 3298.952477, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 3: 258.680795, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 4: 90.482500, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 5: 25.033280, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 6: 14.902886, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 7: 14.502181, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 8: 11.076120, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 9: 12.562866, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 10: 11.093193, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 11: 9.510224, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 12: 12.989465, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 13: 13.282229, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 14: 9.262714, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 15: 9.705650, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 16: 14.090702, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 17: 12.523569, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 18: 12.015066, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 19: 14.319363, lr: 2.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 20: 9.328203, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 21: 7.450138, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 22: 5.726156, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 23: 5.152872, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 24: 6.538125, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 25: 4.690747, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 26: 4.736277, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 27: 6.920749, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 28: 6.986071, lr: 1.00000</span></span>
+<span><span class="co">#&gt; Loss at epoch 29: 4.831617, lr: 1.00000</span></span>
 <span><span class="co">#&gt; Cancel training because loss is still above baseline, please hyperparameters. See vignette('B-Training_neural_networks') for help.</span></span></code></pre>
 <p>Although the learning rate ended up being 0.01562, the loss never
 outperformed the baseline loss. The optimizer jumped right at the
@@ -310,7 +308,7 @@ generalizes poorly to new observations. We can use the validation
 argument to detect overfitting. If the validation loss starts to
 increase again at a certain point, it often means that the models are
 starting to overfit your training data:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/TheoreticalEcology/" class="external-link">EcoData</a></span><span class="op">)</span> <span class="co"># can be install from github using devtools::install_github(repo = "TheoreticalEcology/EcoData", dependencies = FALSE, build_vignettes = FALSE)</span></span>
 <span><span class="va">df</span> <span class="op">=</span> <span class="va">elephant</span><span class="op">$</span><span class="va">occurenceData</span></span>
 <span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, lr <span class="op">=</span> <span class="fl">0.03</span>, epochs <span class="op">=</span> <span class="fl">600L</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,  hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">350L</span>, <span class="fl">350L</span>, <span class="fl">350L</span><span class="op">)</span>, activation <span class="op">=</span> <span class="st">"relu"</span>, batchsize <span class="op">=</span> <span class="fl">150L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
@@ -332,7 +330,7 @@ improved for x epochs (if there is no validation split, the training
 loss is used).</p>
 <p>lambda = 0.001 is the regularization strength and alpha = 0.2 means
 that 20% L1 and 80% L2 weighting.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">m</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Presence</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, lr <span class="op">=</span> <span class="fl">0.03</span>, epochs <span class="op">=</span> <span class="fl">600L</span>, loss <span class="op">=</span> <span class="st">"binomial"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,  hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">350L</span>, <span class="fl">350L</span>, <span class="fl">350L</span><span class="op">)</span>, activation <span class="op">=</span> <span class="st">"relu"</span>, batchsize <span class="op">=</span> <span class="fl">150L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">TRUE</span>, early_stopping <span class="op">=</span> <span class="fl">10</span>, lambda <span class="op">=</span> <span class="fl">0.001</span>, alpha <span class="op">=</span> <span class="fl">0.2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="B/B-unnamed-chunk-11-1.png" style="display: block; margin: auto;"></p>
 <p>The training is aborted!</p>

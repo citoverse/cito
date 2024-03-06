@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2024-02-21</h4>
+            <h4 data-toc-skip class="date">2024-03-05</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -155,7 +155,7 @@ the data loader), split into feature and response tensors, pushed to the
 GPU (if one is available), the feature matrix is passed to the NN for
 prediction, the average loss is computed based on the response tensor
 and the predictions, the average loss is backpropagated, and the weights
-are updated by the optimizer based on the backpropagated errors. This
+are updated by the optimizer based on the back-propagated errors. This
 inner loop is repeated until the dataset has been used once, completing
 the epoch. The process is then repeated for n epochs.</p>
 <p>If validation is turned on, after each epoch the model is evaluated
@@ -183,10 +183,10 @@ freed and the pointers are meaningless.</p>
 from ML but also likelihoods for statistical models are supported:</p>
 <table class="table">
 <colgroup>
-<col width="20%">
-<col width="20%">
-<col width="20%">
-<col width="37%">
+<col width="19%">
+<col width="19%">
+<col width="34%">
+<col width="27%">
 </colgroup>
 <tbody>
 <tr class="odd">
@@ -292,9 +292,10 @@ networks.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-plotnn-1.png" style="display: block; margin: auto;"></p>
-<p>The neural network 5 input nodes (3 continoues features, Sepal.Width,
-Petal.Length, Petal.Width and the contrasts for the Species variable
-(n_classes - 1)) and 1 output node for the response (Sepal.Length).</p>
+<p>The neural network 5 input nodes (3 continuoues features,
+Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species
+variable (n_classes - 1)) and 1 output node for the response
+(Sepal.Length).</p>
 </div>
 <div class="section level3">
 <h3 id="baseline-loss">Baseline loss<a class="anchor" aria-label="anchor" href="#baseline-loss"></a>
@@ -357,9 +358,9 @@ packages:</p>
 statistical models:</p>
 <table class="table">
 <colgroup>
-<col width="25%">
-<col width="50%">
-<col width="25%">
+<col width="22%">
+<col width="56%">
+<col width="20%">
 </colgroup>
 <thead><tr class="header">
 <th>xAI Method</th>
@@ -412,22 +413,22 @@ SDCE:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width     1.793638</span></span>
-<span><span class="co">#&gt; 2 Petal.Length     4.323855</span></span>
-<span><span class="co">#&gt; 3  Petal.Width     2.421526</span></span>
-<span><span class="co">#&gt; 4      Species     1.267314</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width     1.614207</span></span>
+<span><span class="co">#&gt; 2 Petal.Length     3.854555</span></span>
+<span><span class="co">#&gt; 3  Petal.Width     2.161364</span></span>
+<span><span class="co">#&gt; 4      Species     1.147288</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width   0.3220045</span></span>
-<span><span class="co">#&gt; Petal.Length  0.5503410</span></span>
-<span><span class="co">#&gt; Petal.Width   0.2807902</span></span>
+<span><span class="co">#&gt; Sepal.Width   0.2443863</span></span>
+<span><span class="co">#&gt; Petal.Length  0.5085570</span></span>
+<span><span class="co">#&gt; Petal.Width   0.3216568</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Standard Deviation of Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.10174691</span></span>
-<span><span class="co">#&gt; Petal.Length 0.20004053</span></span>
-<span><span class="co">#&gt; Petal.Width  0.08970355</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width  0.07628443</span></span>
+<span><span class="co">#&gt; Petal.Length 0.09923259</span></span>
+<span><span class="co">#&gt; Petal.Width  0.11358102</span></span></code></pre></div>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -451,27 +452,27 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Feature Importance</span></span>
-<span><span class="co">#&gt;                 Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
-<span><span class="co">#&gt; Sepal.Width →        1.611   0.536    3.01   0.0026 **</span></span>
-<span><span class="co">#&gt; Petal.Length →      16.477   6.712    2.45   0.0141 * </span></span>
-<span><span class="co">#&gt; Petal.Width →        0.602   0.499    1.21   0.2274   </span></span>
-<span><span class="co">#&gt; Species →            0.507   0.268    1.89   0.0588 . </span></span>
+<span><span class="co">#&gt;                 Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width →        1.570   0.392    4.00  6.3e-05 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →      15.283   6.210    2.46    0.014 *  </span></span>
+<span><span class="co">#&gt; Petal.Width →        0.563   0.463    1.22    0.224    </span></span>
+<span><span class="co">#&gt; Species →            0.476   0.271    1.75    0.079 .  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Average Conditional Effects</span></span>
 <span><span class="co">#&gt;                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width →    0.2946  0.0482    6.11  1.0e-09 ***</span></span>
-<span><span class="co">#&gt; Petal.Length →   1.1464  0.2047    5.60  2.1e-08 ***</span></span>
-<span><span class="co">#&gt; Petal.Width →   -0.0481  0.1657   -0.29     0.77    </span></span>
+<span><span class="co">#&gt; Sepal.Width →    0.2971  0.0565    5.26  1.4e-07 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →   1.1058  0.1849    5.98  2.2e-09 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →   -0.0215  0.1715   -0.13      0.9    </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
 <span><span class="co">#&gt;                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width →   0.1392  0.0351    3.97  7.2e-05 ***</span></span>
-<span><span class="co">#&gt; Petal.Length →  0.3859  0.0941    4.10  4.1e-05 ***</span></span>
-<span><span class="co">#&gt; Petal.Width →   0.1227  0.0520    2.36    0.018 *  </span></span>
+<span><span class="co">#&gt; Sepal.Width →   0.1340  0.0328    4.08  4.5e-05 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →  0.3528  0.1170    3.01   0.0026 ** </span></span>
+<span><span class="co">#&gt; Petal.Width →   0.1222  0.0304    4.02  5.7e-05 ***</span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -500,7 +501,9 @@ important feature.</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://www.r-project.org" class="external-link">effects</a></span><span class="op">)</span></span>
 <span><span class="co">#&gt; Loading required package: carData</span></span>
-<span><span class="co">#&gt; lattice theme set by effectsTheme()</span></span>
+<span><span class="co">#&gt; Use the command</span></span>
+<span><span class="co">#&gt;     lattice::trellis.par.set(effectsTheme())</span></span>
+<span><span class="co">#&gt;   to customize lattice options for effects plots.</span></span>
 <span><span class="co">#&gt; See ?effectsTheme for details.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/effects/man/effect.html" class="external-link">allEffects</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-10-1.png" style="display: block; margin: auto;"></p>
@@ -668,9 +671,9 @@ following table lists the hyperparameters that can currently be
 tuned:</p>
 <table class="table">
 <colgroup>
-<col width="33%">
-<col width="33%">
-<col width="33%">
+<col width="18%">
+<col width="18%">
+<col width="63%">
 </colgroup>
 <thead><tr class="header">
 <th align="left">Hyperparameter</th>
@@ -747,10 +750,10 @@ process 5 models (in parallel).</p>
 <p>Tune learning rate as it is one of the most important
 hyperparameters:</p>
 <div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nn.fit_tuned</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, </span>
-<span>                   data <span class="op">=</span> <span class="va">iris</span>, </span>
-<span>                   lr <span class="op">=</span> <span class="fu"><a href="../reference/tune.html">tune</a></span><span class="op">(</span><span class="fl">0.0001</span>, <span class="fl">0.1</span><span class="op">)</span>, </span>
-<span>                   loss <span class="op">=</span> <span class="st">"softmax"</span>, </span>
+<code class="sourceCode R"><span><span class="va">nn.fit_tuned</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>,</span>
+<span>                   data <span class="op">=</span> <span class="va">iris</span>,</span>
+<span>                   lr <span class="op">=</span> <span class="fu"><a href="../reference/tune.html">tune</a></span><span class="op">(</span><span class="fl">0.0001</span>, <span class="fl">0.1</span><span class="op">)</span>,</span>
+<span>                   loss <span class="op">=</span> <span class="st">"softmax"</span>,</span>
 <span>                   tuning <span class="op">=</span> <span class="fu"><a href="../reference/config_tuning.html">config_tuning</a></span><span class="op">(</span>steps <span class="op">=</span> <span class="fl">3L</span>, CV <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Starting hyperparameter tuning...</span></span>
 <span><span class="co">#&gt; Fitting final model...</span></span></code></pre></div>
@@ -767,12 +770,12 @@ continue_training().</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            [,1]</span></span>
-<span><span class="co">#&gt; [1,] -0.9603820</span></span>
-<span><span class="co">#&gt; [2,] -1.3810974</span></span>
-<span><span class="co">#&gt; [3,] -1.3195368</span></span>
-<span><span class="co">#&gt; [4,] -1.2639360</span></span>
-<span><span class="co">#&gt; [5,] -0.8485602</span></span>
-<span><span class="co">#&gt; [6,] -0.4504386</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -1.0007209</span></span>
+<span><span class="co">#&gt; [2,] -1.3226014</span></span>
+<span><span class="co">#&gt; [3,] -1.2187723</span></span>
+<span><span class="co">#&gt; [4,] -1.2439288</span></span>
+<span><span class="co">#&gt; [5,] -0.9474713</span></span>
+<span><span class="co">#&gt; [6,] -0.6155921</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>

@@ -179,7 +179,7 @@ The list consists of the following attributes:</p>
 <dt>data</dt>
 <dd><p>Contains data used for training the model</p></dd>
 
-<dt>weigths</dt>
+<dt>weights</dt>
 <dd><p>List of weights for each training epoch</p></dd>
 
 <dt>use_model_epoch</dt>
@@ -207,7 +207,7 @@ The characterizing parts of the architecture are convolutional layers, pooling l
 </ul></div>
     <div class="section level2">
     <h2 id="loss-functions-likelihoods">Loss functions / Likelihoods<a class="anchor" aria-label="anchor" href="#loss-functions-likelihoods"></a></h2>
-    <p>We support loss functions and likelihoods for different tasks:</p><table class="table table"><tr><td>Name</td><td>Explanation</td><td>Example / Task</td></tr><tr><td>mse</td><td>mean squared error</td><td>Regression, predicting continuous values</td></tr><tr><td>mae</td><td>mean absolute error</td><td>Regression, predicting continuous values</td></tr><tr><td>softmax</td><td>categorical cross entropy</td><td>Multi-class, species classification</td></tr><tr><td>cross-entropy</td><td>categorical cross entropy</td><td>Multi-class, species classification</td></tr><tr><td>gaussian</td><td>Normal likelihood</td><td>Regression, residual error is also estimated (similar to <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code>)</td></tr><tr><td>binomial</td><td>Binomial likelihood</td><td>Classification/Logistic regression, mortality</td></tr><tr><td>poisson</td><td>Poisson likelihood</td><td>Regression, count data, e.g. species abundances</td></tr></table></div>
+    <p>We support loss functions and likelihoods for different tasks:</p><table class="table table"><tr><td>Name</td><td>Explanation</td><td>Example / Task</td></tr><tr><td>mse</td><td>mean squared error</td><td>Regression, predicting continuous values</td></tr><tr><td>mae</td><td>mean absolute error</td><td>Regression, predicting continuous values</td></tr><tr><td>softmax</td><td>categorical cross entropy</td><td>Multi-class, species classification</td></tr><tr><td>cross-entropy</td><td>categorical cross entropy</td><td>Multi-class, species classification</td></tr><tr><td>gaussian</td><td>Normal likelihood</td><td>Regression, residual error is also estimated (similar to <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code>)</td></tr><tr><td>binomial</td><td>Binomial likelihood</td><td>Classification/Logistic regression, mortality</td></tr><tr><td>Poisson</td><td>Poisson likelihood</td><td>Regression, count data, e.g. species abundances</td></tr></table></div>
     <div class="section level2">
     <h2 id="training-and-convergence-of-neural-networks">Training and convergence of neural networks<a class="anchor" aria-label="anchor" href="#training-and-convergence-of-neural-networks"></a></h2>
     <p>Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (amount of learnable parameters). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:</p>

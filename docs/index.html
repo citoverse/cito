@@ -116,53 +116,68 @@
 </ol>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<p><img src="README_files/figure-gfm/unnamed-chunk-7-1.png"><!-- --></p>
+<p><img src="reference/figures/README-unnamed-chunk-7-1.png"><!-- --></p>
 <ol start="4" style="list-style-type: decimal">
-<li>Return xAI effects (feature importances and average conditional effects) and their uncertainties:</li>
+<li>‘cito’ supports many advanced functionalities such as common explainable AI metrics that can be used for inference (i.e. to interpret the models). Variable importance (similar to a variation partitioning) and linear effects are directly returned by the <code>summary</code> function:</li>
 </ol>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="do">## Summary of Deep Neural Network Model</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a></span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a><span class="do">## ── Feature Importance</span></span>
-<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a></span>
-<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="do">##                             Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
-<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length       1.755   0.570    3.08   0.0021 **</span></span>
-<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length     18.027   8.809    2.05   0.0407 * </span></span>
-<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length       0.521   0.716    0.73   0.4666   </span></span>
-<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="do">## Species → Sepal.Length           0.392   0.218    1.80   0.0720 . </span></span>
-<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
-<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a></span>
-<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a></span>
-<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="do">## ── Average Conditional Effects</span></span>
-<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a></span>
-<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="do">##                                 ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length   0.7326  0.0497   14.74   &lt;2e-16 ***</span></span>
-<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length  0.6164  0.0901    6.84    8e-12 ***</span></span>
-<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length  -0.1181  0.1587   -0.74     0.46    </span></span>
-<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
-<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a></span>
-<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="do">## </span></span>
-<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a></span>
-<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="do">## ── Standard Deviation of Conditional Effects</span></span>
-<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a></span>
-<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="do">##                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="do">## Sepal.Width → Sepal.Length  0.1482  0.0432    3.43   0.0006 ***</span></span>
-<span id="cb8-32"><a href="#cb8-32" tabindex="-1"></a><span class="do">## Petal.Length → Sepal.Length 0.1167  0.0396    2.94   0.0032 ** </span></span>
-<span id="cb8-33"><a href="#cb8-33" tabindex="-1"></a><span class="do">## Petal.Width → Sepal.Length  0.0470  0.0268    1.76   0.0790 .  </span></span>
-<span id="cb8-34"><a href="#cb8-34" tabindex="-1"></a><span class="do">## ---</span></span>
-<span id="cb8-35"><a href="#cb8-35" tabindex="-1"></a><span class="do">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span>
+<span><span class="co">## Summary of Deep Neural Network Model</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── Feature Importance</span></span>
+<span><span class="co">##                 Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
+<span><span class="co">## Sepal.Width →        1.205   0.507    2.38   0.0175 * </span></span>
+<span><span class="co">## Petal.Length →      27.720  10.575    2.62   0.0088 **</span></span>
+<span><span class="co">## Petal.Width →        0.677   0.637    1.06   0.2876   </span></span>
+<span><span class="co">## Species →            1.270   1.096    1.16   0.2465   </span></span>
+<span><span class="co">## ---</span></span>
+<span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── Average Conditional Effects</span></span>
+<span><span class="co">##                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">## Sepal.Width →    0.5283  0.0828    6.38  1.8e-10 ***</span></span>
+<span><span class="co">## Petal.Length →   0.7253  0.0649   11.18  &lt; 2e-16 ***</span></span>
+<span><span class="co">## Petal.Width →   -0.1924  0.1396   -1.38     0.17    </span></span>
+<span><span class="co">## ---</span></span>
+<span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── Standard Deviation of Conditional Effects</span></span>
+<span><span class="co">##                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">## Sepal.Width →   0.1495  0.0409    3.66  0.00026 ***</span></span>
+<span><span class="co">## Petal.Length →  0.1291  0.0396    3.26  0.00111 ** </span></span>
+<span><span class="co">## Petal.Width →   0.0529  0.0311    1.70  0.08878 .  </span></span>
+<span><span class="co">## ---</span></span>
+<span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <ol start="5" style="list-style-type: decimal">
 <li>Predict (with confidence intervals):</li>
 </ol>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span>, newdata <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## [1] 150   1</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="hyperparameter-tuning">Hyperparameter tuning<a class="anchor" aria-label="anchor" href="#hyperparameter-tuning"></a>
+</h3>
+<p>Certain arguments/parameters such as the architecture, activation function, and the learning rate can be automatically tuned under crossvalidation (for a full list, see <code><a href="reference/dnn.html">?dnn</a></code>). Parameters that should be tuned, can be flagged by using the function <code><a href="reference/tune.html">tune()</a></code> instead of a hyperparameter value:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span>, newdata <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="do">## [1]  30 150   1</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>, lr <span class="op">=</span> <span class="fu"><a href="reference/tune.html">tune</a></span><span class="op">(</span><span class="fl">0.0001</span>, <span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">## Starting hyperparameter tuning...</span></span>
+<span><span class="co">## Fitting final model...</span></span>
+<span><span class="va">nn.fit</span><span class="op">$</span><span class="va">tuning</span></span>
+<span><span class="co">## # A tibble: 10 × 5</span></span>
+<span><span class="co">##    steps    test train models          lr</span></span>
+<span><span class="co">##    &lt;int&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;list&gt;       &lt;dbl&gt;</span></span>
+<span><span class="co">##  1     1 Inf         0 &lt;list [1]&gt; 0.0887 </span></span>
+<span><span class="co">##  2     2 Inf         0 &lt;list [1]&gt; 0.0264 </span></span>
+<span><span class="co">##  3     3   1.13      0 &lt;list [1]&gt; 0.0416 </span></span>
+<span><span class="co">##  4     4   0.757     0 &lt;list [1]&gt; 0.0373 </span></span>
+<span><span class="co">##  5     5 Inf         0 &lt;list [1]&gt; 0.0175 </span></span>
+<span><span class="co">##  6     6 Inf         0 &lt;list [1]&gt; 0.0581 </span></span>
+<span><span class="co">##  7     7   0.526     0 &lt;list [1]&gt; 0.00348</span></span>
+<span><span class="co">##  8     8 Inf         0 &lt;list [1]&gt; 0.0179 </span></span>
+<span><span class="co">##  9     9 Inf         0 &lt;list [1]&gt; 0.0687 </span></span>
+<span><span class="co">## 10    10 Inf         0 &lt;list [1]&gt; 0.0497</span></span></code></pre></div>
+<p>The tuning can be configured with <code>tuning=config_tuning()</code>. After tuning, a final model trained with the best hyperparameters is returned. Hyperparameter combinations that do not achieve a loss below the baseline loss will be aborted early and not fully cross-validated. These runs are given a test loss of infinity.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="advanced">Advanced<a class="anchor" aria-label="anchor" href="#advanced"></a>
@@ -173,9 +188,9 @@
 <li><p>We need one helper function, <code>create_cov()</code> that builds the covariance matrix based on a lower triangular matrix and the diagonals (low-rank approximation of the covariance matrix)</p></li>
 <li><p>We need our custom likelihood function which uses the <code>distr_multivariate_normal(…)</code> function from the torch package:</p></li>
 </ol>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_cov</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">L</span>, <span class="va">Diag</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_matmul.html" class="external-link">torch_matmul</a></span><span class="op">(</span><span class="va">L</span>, <span class="va">L</span><span class="op">$</span><span class="fu">t</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_diag.html" class="external-link">torch_diag</a></span><span class="op">(</span><span class="va">Diag</span><span class="op">+</span><span class="fl">0.01</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_matmul.html" class="external-link">torch_matmul</a></span><span class="op">(</span><span class="va">L</span>, <span class="va">L</span><span class="op">$</span><span class="fu">t</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_diag.html" class="external-link">torch_diag</a></span><span class="op">(</span><span class="va">Diag</span><span class="op">$</span><span class="fu">exp</span><span class="op">(</span><span class="op">)</span><span class="op">+</span><span class="fl">0.001</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
 <span></span>
 <span><span class="va">custom_loss_MVN</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">true</span>, <span class="va">pred</span><span class="op">)</span> <span class="op">{</span></span>
@@ -188,7 +203,7 @@
 <ol start="3" style="list-style-type: decimal">
 <li>We use “SigmaPar” and “SigmaDiag” as parameters that we want to optimize along the DNN. We will pass a named list with starting values to ‘cito’ and ‘cito’ will infer automatically (based on the R shape) the shape of the parameters:</li>
 </ol>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit</span><span class="op">&lt;-</span> <span class="fu"><a href="reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">Sepal.Length</span>, <span class="va">Sepal.Width</span>, <span class="va">Petal.Length</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>,</span>
 <span>             data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>,</span>
 <span>             lr <span class="op">=</span> <span class="fl">0.01</span>,</span>
@@ -197,24 +212,24 @@
 <span>             verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>             plot <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>             custom_parameters <span class="op">=</span></span>
-<span>               <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>SigmaDiag <span class="op">=</span>  <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">3</span><span class="op">)</span>, <span class="co"># Our parameters with starting values</span></span>
+<span>               <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>SigmaDiag <span class="op">=</span>  <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">3</span><span class="op">)</span>, <span class="co"># Our parameters with starting values</span></span>
 <span>                    SigmaPar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">6</span>, sd <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span>, <span class="fl">3</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span> <span class="co"># Our parameters with starting values</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Estimated covariance matrix:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">create_cov</span><span class="op">(</span><span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">SigmaPar</span>,</span>
-<span>                     <span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">SigmaDiag</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="do">##            [,1]       [,2]       [,3]</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="do">## [1,] 0.24824733 0.06395083 0.13815881</span></span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="do">## [2,] 0.06395083 0.11858207 0.03379684</span></span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="do">## [3,] 0.13815881 0.03379684 0.24378222</span></span></code></pre></div>
+<span>                     <span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameter</span><span class="op">$</span><span class="va">SigmaDiag</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">##            [,1]       [,2]       [,3]</span></span>
+<span><span class="co">## [1,] 0.29110381 0.06862528 0.13878071</span></span>
+<span><span class="co">## [2,] 0.06862528 0.10975803 0.04459281</span></span>
+<span><span class="co">## [3,] 0.13878071 0.04459281 0.16815922</span></span></code></pre></div>
 <p>Empirical covariance matrix:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span> <span class="op">-</span> <span class="va">nn.fit</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb16"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="do">##              Sepal.Length Sepal.Width Petal.Length</span></span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="do">## Sepal.Length   0.25081444  0.06944643   0.15270816</span></span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="do">## Sepal.Width    0.06944643  0.09439328   0.02924789</span></span>
-<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="do">## Petal.Length   0.15270816  0.02924789   0.16690478</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span> <span class="op">-</span> <span class="va">nn.fit</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span>
+<span><span class="co">##            [,1]       [,2]       [,3]</span></span>
+<span><span class="co">## [1,] 0.22410463 0.06030019 0.12087770</span></span>
+<span><span class="co">## [2,] 0.06030019 0.08968497 0.01781354</span></span>
+<span><span class="co">## [3,] 0.12087770 0.01781354 0.13009877</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

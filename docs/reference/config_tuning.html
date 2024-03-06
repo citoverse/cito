@@ -67,7 +67,8 @@
 <span>  NGPU <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  cancel <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  bootstrap_final <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  bootstrap_parallel <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  bootstrap_parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  return_models <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -90,7 +91,7 @@
 
 
 <dt>cancel</dt>
-<dd><p>CV/tuning for specific hyperparameterset if model cannot reduce loss below baseline after burnin or returns NA loss</p></dd>
+<dd><p>CV/tuning for specific hyperparameter set if model cannot reduce loss below baseline after burnin or returns NA loss</p></dd>
 
 
 <dt>bootstrap_final</dt>
@@ -99,6 +100,10 @@
 
 <dt>bootstrap_parallel</dt>
 <dd><p>should the bootstrapping be parallelized or not</p></dd>
+
+
+<dt>return_models</dt>
+<dd><p>return individual models</p></dd>
 
 </dl></div>
     <div class="section level2">
