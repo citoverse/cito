@@ -153,6 +153,46 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
         Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
         return((-log(Eprob) - maxlogprob)$mean())
       }
+    } else if(loss == "nbinom") {
+
+      if(is.matrix(Y)) out$parameter = torch::torch_tensor(rep(0.5, ncol(Y)), requires_grad=TRUE, device = device)
+      else out$parameter = torch::torch_tensor(0.5, requires_grad=TRUE, device = device)
+      out$invlink <- function(a) torch::torch_exp(a)
+      out$link <- function(a) log(as.matrix(a))
+      out$parameter_link = function() as.numeric(1.0/(torch::nnf_softplus(out$parameter)+0.0001))
+      out$simulate = function(pred) {
+        theta_tmp = out$parameter_link()
+        probs = 1.0 - theta_tmp/(theta_tmp + pred)
+        total_count = theta_tmp
+
+        if(is.matrix(pred)) {
+          sim = sapply(1:ncol(pred), function(i) {
+            logits = log(probs[,i]) - log1p(-probs[,i])
+            stats::rpois(length(logits), exp(-logits))
+            return( stats::rpois(length(logits), stats::rgamma(length(logits),total_count[i], exp(- logits ))) )
+          })
+        } else {
+          logits = log(probs) - log1p(-probs)
+          stats::rpois(length(pred), exp(-logits))
+          sim = stats::rpois(length(pred), stats::rgamma(length(pred),total_count, exp(- logits )))
+        }
+        return(sim)
+      }
+
+      out$loss = function(pred, true) {
+        eps = 0.0001
+        pred = pred$exp()
+        theta_tmp = 1.0/(torch::nnf_softplus(out$parameter)+eps)
+        probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred)+eps, 0.0, 1.0-eps)
+        total_count = theta_tmp
+        value = true
+        logits = torch::torch_log(probs) - torch::torch_log1p(-probs)
+        log_unnormalized_prob <- total_count * torch::torch_log(torch::torch_sigmoid(-logits)) + value * torch::torch_log(torch::torch_sigmoid(logits))
+        log_normalization <- -torch::torch_lgamma(total_count + value) + torch::torch_lgamma(1 + value) + torch::torch_lgamma(total_count)
+        log_normalization <- torch::torch_where(total_count + value == 0, torch::torch_tensor(0, dtype = log_normalization$dtype, device = out$parameter$device), log_normalization)
+        return( - (log_unnormalized_prob - log_normalization)$mean())
+      }
+
     }
     else{
       cat( "unidentified loss \n")

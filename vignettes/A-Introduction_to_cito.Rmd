@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "2024-03-05"
+date: "2024-03-14"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -27,7 +27,6 @@ Before using 'cito' make sure that the current version of 'torch' is installed a
 
 ```r
 if(!require(torch)) install.packages("torch")
-#> Loading required package: torch
 library(torch)
 if(!torch_is_installed()) install_torch()
 
@@ -66,17 +65,18 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
-|                 |                           |                                                                         |                                                             |
+|                 |                              |                                                                          |                                                             |
 |:-------------|:-------------|:------------------------|--------------------|
-| Name            | Explanation               | Example / Task                                                          | Meta-Code                                                   |
-| `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
-| `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
-| `softmax`       | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "softmax")`                     |
-| `cross-entropy` | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "cross-entropy")`               |
-| `gaussian`      | Normal likelihood         | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
-| `binomial`      | Binomial likelihood       | Classification/Logistic regression, mortality (0/1 data)                | `dnn(Presence~., ..., loss = "Binomial")`                   |
-| `poisson`       | Poisson likelihood        | Regression, count data, e.g. species abundances                         | `dnn(Abundance~., ..., loss = "Poisson")`                   |
-| `mvp`           | Multivariate probit model | Joint Species Distribution model                                        | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
+| Name            | Explanation                  | Example / Task                                                           | Meta-Code                                                   |
+| `mse`           | mean squared error           | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
+| `mae`           | mean absolute error          | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
+| `softmax`       | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "softmax")`                     |
+| `cross-entropy` | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "cross-entropy")`               |
+| `gaussian`      | Normal likelihood            | Regression, residual error is also estimated (similar to `stats::lm()`)  | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
+| `binomial`      | Binomial likelihood          | Classification/Logistic regression, mortality (0/1 data)                 | `dnn(Presence~., ..., loss = "Binomial")`                   |
+| `poisson`       | Poisson likelihood           | Regression, count data, e.g. species abundances                          | `dnn(Abundance~., ..., loss = "Poisson")`                   |
+| `nbinom`        | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")`                    |
+| `mvp`           | Multivariate probit model    | Joint Species Distribution model                                         | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
 
 Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
 
@@ -137,8 +137,6 @@ At the start of the training we calculate a baseline loss for an an intercept on
 ```r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.6, loss = "mse", verbose = FALSE) # lr too high
 ```
-
-<img src="A/A-unnamed-chunk-2-1.png" style="display: block; margin: auto;" />
 
 vs
 
@@ -211,22 +209,22 @@ summary(nn.fit)
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width     1.614207
-#> 2 Petal.Length     3.854555
-#> 3  Petal.Width     2.161364
-#> 4      Species     1.147288
+#> 1  Sepal.Width     2.244377
+#> 2 Petal.Length    12.032426
+#> 3  Petal.Width     1.097159
+#> 4      Species     1.032927
 #> 
 #> Average Conditional Effects:
-#>              Response_1
-#> Sepal.Width   0.2443863
-#> Petal.Length  0.5085570
-#> Petal.Width   0.3216568
+#>               Response_1
+#> Sepal.Width  0.370464792
+#> Petal.Length 0.912100988
+#> Petal.Width  0.002742112
 #> 
 #> Standard Deviation of Conditional Effects:
 #>              Response_1
-#> Sepal.Width  0.07628443
-#> Petal.Length 0.09923259
-#> Petal.Width  0.11358102
+#> Sepal.Width  0.04870084
+#> Petal.Length 0.09186123
+#> Petal.Width  0.04183386
 ```
 
 
@@ -258,26 +256,26 @@ summary(nn.fit)
 #> 
 #> ── Feature Importance
 #>                 Importance Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →        1.570   0.392    4.00  6.3e-05 ***
-#> Petal.Length →      15.283   6.210    2.46    0.014 *  
-#> Petal.Width →        0.563   0.463    1.22    0.224    
-#> Species →            0.476   0.271    1.75    0.079 .  
+#> Sepal.Width →        1.589   0.581    2.74   0.0062 ** 
+#> Petal.Length →      42.668  10.377    4.11  3.9e-05 ***
+#> Petal.Width →        1.756   1.454    1.21   0.2274    
+#> Species →            2.199   1.843    1.19   0.2327    
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Average Conditional Effects
 #>                     ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →    0.2971  0.0565    5.26  1.4e-07 ***
-#> Petal.Length →   1.1058  0.1849    5.98  2.2e-09 ***
-#> Petal.Width →   -0.0215  0.1715   -0.13      0.9    
+#> Sepal.Width →    0.2885  0.0518    5.56  2.6e-08 ***
+#> Petal.Length →   1.6155  0.1605   10.07  < 2e-16 ***
+#> Petal.Width →   -0.3189  0.1546   -2.06    0.039 *  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Standard Deviation of Conditional Effects
 #>                    ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →   0.1340  0.0328    4.08  4.5e-05 ***
-#> Petal.Length →  0.3528  0.1170    3.01   0.0026 ** 
-#> Petal.Width →   0.1222  0.0304    4.02  5.7e-05 ***
+#> Sepal.Width →   0.1024  0.0268    3.82  0.00013 ***
+#> Petal.Length →  0.2145  0.0496    4.32  1.6e-05 ***
+#> Petal.Width →   0.0768  0.0172    4.46  8.1e-06 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -316,11 +314,6 @@ PDP(nn.fit)
 
 ```r
 library(effects)
-#> Loading required package: carData
-#> Use the command
-#>     lattice::trellis.par.set(effectsTheme())
-#>   to customize lattice options for effects plots.
-#> See ?effectsTheme for details.
 plot(allEffects(lm(Sepal.Length~., data = df)))
 ```
 
@@ -498,12 +491,12 @@ You can continue the training process of an existing model with continue_trainin
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>            [,1]
-#> [1,] -1.0007209
-#> [2,] -1.3226014
-#> [3,] -1.2187723
-#> [4,] -1.2439288
-#> [5,] -0.9474713
-#> [6,] -0.6155921
+#> [1,] -0.9705824
+#> [2,] -1.4218482
+#> [3,] -1.3220458
+#> [4,] -1.2434552
+#> [5,] -0.8870381
+#> [6,] -0.4845728
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().
@@ -518,3 +511,101 @@ nn.fit <- continue_training(nn.fit,
                             changed_params = list(lr = 0.001, batchsize = 16),
                             verbose = FALSE)
 ```
+
+## The best of both worlds - combining statistical models and deep learning
+
+In addition to common loss functions, we also provide the option of using actual likelihoods - that is, we assume that the DNN approximates the underlying data generating model. An important consequence of this - also to ensure that the effects extracted by xAI are correct - is to check for model assumptions, such as whether the residuals are distributed as we would expect given our likelihood/probability distribution.
+
+Example: Simulate from a negative binomial distribution and fit with a poisson-DNN
+
+
+```r
+X = matrix(runif(500*3,-1,1), 500, 3)
+Y = rnbinom(500, mu = exp(2.5*X[,1]), size = 0.3)
+```
+
+Fit model with a poisson likelihood:
+
+
+```r
+df = data.frame(Y = Y, X)
+m1 = dnn(Y~., data = df, loss = "poisson", lr = 0.005, epochs = 300L, verbose = FALSE)
+```
+
+<img src="A/A-unnamed-chunk-14-1.png" style="display: block; margin: auto;" />
+
+We use the DHARMa package to check the residuals. DHARMa does not support cito, but has a general interface for residual checks. We have to simulate from our model ourselves:
+
+
+```r
+library(DHARMa)
+pred = predict(m1, type = "response")
+sims = sapply(1:100, function(i) rpois(length(pred), pred))
+
+res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
+plot(res)
+```
+
+<img src="A/A-unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
+
+```r
+testOverdispersion(res)
+#> testOverdispersion is deprecated, switch your code to using the testDispersion function
+```
+
+<img src="A/A-unnamed-chunk-15-2.png" style="display: block; margin: auto;" />
+
+```
+#> 
+#> 	DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
+#> 
+#> data:  simulationOutput
+#> dispersion = 29.052, p-value < 2.2e-16
+#> alternative hypothesis: two.sided
+```
+
+Overdispersion (biased effect estimates and inflated error rates could be a consequence of overdispersion) ! One solution (the only one implemented in cito) is to switch to negative binomial distribution that fits a variable dispersion parameter:
+
+
+```r
+m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE)
+```
+
+<img src="A/A-unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
+
+```r
+# Dispersion parameter:
+m2$loss$parameter_link()
+#> [1] 0.5389512
+```
+
+We have a custom implementation of the negative binomial distribution (which is similar to the "nbinom1" of glmmTMB (the nbinom converges to a poisson as the dispersion parameters approaches infinity)) which is why we provide a simulate function:
+
+
+```r
+pred = predict(m2, type = "response")
+sims = sapply(1:100, function(i) m2$loss$simulate(pred))
+
+res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
+plot(res)
+```
+
+<img src="A/A-unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+
+```r
+testOverdispersion(res)
+#> testOverdispersion is deprecated, switch your code to using the testDispersion function
+```
+
+<img src="A/A-unnamed-chunk-17-2.png" style="display: block; margin: auto;" />
+
+```
+#> 
+#> 	DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
+#> 
+#> data:  simulationOutput
+#> dispersion = 2.571, p-value < 2.2e-16
+#> alternative hypothesis: two.sided
+```
+
+Better!

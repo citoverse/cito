@@ -34,6 +34,10 @@
 #'
 #' @details
 #'
+#' # Activation functions
+#'
+#' Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
+#'
 #' # Loss functions / Likelihoods
 #'
 #' We support loss functions and likelihoods for different tasks:
@@ -47,6 +51,7 @@
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
 #' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
+#' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter |
 #' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) |
 #'
 #' # Training and convergence of neural networks
@@ -162,12 +167,10 @@
 dnn <- function(formula = NULL,
                 data = NULL,
                 hidden = c(50L, 50L),
-                activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
-                               "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
-                               "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"),
+                activation = "selu",
                 bias = TRUE,
                 dropout = 0.0,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp"),
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom"),
                 validation = 0,
                 lambda = 0.0,
                 alpha = 0.5,
@@ -190,11 +193,9 @@ dnn <- function(formula = NULL,
                 X = NULL,
                 Y = NULL) {
 
-  if(!inherits(activation, "tune")) {
-
-  }
 
   out <- list()
+
   class(out) <- "citodnn"
 
   tuner = check_hyperparameters(hidden = hidden ,
@@ -212,7 +213,20 @@ dnn <- function(formula = NULL,
 
   if(!is.function(loss) & !inherits(loss,"family")){
     loss <- match.arg(loss)
+
+    if((device == "mps") & (loss %in% c("poisson", "nbinom"))) {
+      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
   }
+
+  if(inherits(loss,"family")) {
+    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
+  }
+
   device_old = device
   device = check_device(device)
   tmp_data = get_X_Y(formula, X, Y, data)
@@ -268,7 +282,7 @@ dnn <- function(formula = NULL,
 
 
   loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
+  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")

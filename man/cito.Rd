@@ -132,7 +132,7 @@ print(nn.fit$tuning)
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)

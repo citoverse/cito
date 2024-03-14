@@ -76,17 +76,18 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
-|                 |                           |                                                                         |                                                             |
+|                 |                              |                                                                          |                                                             |
 |:-------------|:-------------|:------------------------|--------------------|
-| Name            | Explanation               | Example / Task                                                          | Meta-Code                                                   |
-| `mse`           | mean squared error        | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
-| `mae`           | mean absolute error       | Regression, predicting continuous values                                | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
-| `softmax`       | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "softmax")`                     |
-| `cross-entropy` | categorical cross entropy | Multi-class, species classification                                     | `dnn(Species~., ..., loss = "cross-entropy")`               |
-| `gaussian`      | Normal likelihood         | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
-| `binomial`      | Binomial likelihood       | Classification/Logistic regression, mortality (0/1 data)                | `dnn(Presence~., ..., loss = "Binomial")`                   |
-| `poisson`       | Poisson likelihood        | Regression, count data, e.g. species abundances                         | `dnn(Abundance~., ..., loss = "Poisson")`                   |
-| `mvp`           | Multivariate probit model | Joint Species Distribution model                                        | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
+| Name            | Explanation                  | Example / Task                                                           | Meta-Code                                                   |
+| `mse`           | mean squared error           | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
+| `mae`           | mean absolute error          | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
+| `softmax`       | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "softmax")`                     |
+| `cross-entropy` | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "cross-entropy")`               |
+| `gaussian`      | Normal likelihood            | Regression, residual error is also estimated (similar to `stats::lm()`)  | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
+| `binomial`      | Binomial likelihood          | Classification/Logistic regression, mortality (0/1 data)                 | `dnn(Presence~., ..., loss = "Binomial")`                   |
+| `poisson`       | Poisson likelihood           | Regression, count data, e.g. species abundances                          | `dnn(Abundance~., ..., loss = "Poisson")`                   |
+| `nbinom`        | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")`                    |
+| `mvp`           | Multivariate probit model    | Joint Species Distribution model                                         | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
 
 Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
 
@@ -403,3 +404,54 @@ nn.fit <- continue_training(nn.fit,
                             changed_params = list(lr = 0.001, batchsize = 16),
                             verbose = FALSE)
 ```
+
+## The best of both worlds - combining statistical models and deep learning
+
+In addition to common loss functions, we also provide the option of using actual likelihoods - that is, we assume that the DNN approximates the underlying data generating model. An important consequence of this - also to ensure that the effects extracted by xAI are correct - is to check for model assumptions, such as whether the residuals are distributed as we would expect given our likelihood/probability distribution.
+
+Example: Simulate from a negative binomial distribution and fit with a poisson-DNN
+
+```{r}
+X = matrix(runif(500*3,-1,1), 500, 3)
+Y = rnbinom(500, mu = exp(2.5*X[,1]), size = 0.3)
+```
+
+Fit model with a poisson likelihood:
+
+```{r}
+df = data.frame(Y = Y, X)
+m1 = dnn(Y~., data = df, loss = "poisson", lr = 0.005, epochs = 300L, verbose = FALSE)
+```
+
+We use the DHARMa package to check the residuals. DHARMa does not support cito, but has a general interface for residual checks. We have to simulate from our model ourselves:
+
+```{r}
+library(DHARMa)
+pred = predict(m1, type = "response")
+sims = sapply(1:100, function(i) rpois(length(pred), pred))
+
+res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
+plot(res)
+testOverdispersion(res)
+```
+
+Overdispersion (biased effect estimates and inflated error rates could be a consequence of overdispersion) ! One solution (the only one implemented in cito) is to switch to negative binomial distribution that fits a variable dispersion parameter:
+
+```{r}
+m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE)
+# Dispersion parameter:
+m2$loss$parameter_link()
+```
+
+We have a custom implementation of the negative binomial distribution (which is similar to the "nbinom1" of glmmTMB (the nbinom converges to a poisson as the dispersion parameters approaches infinity)) which is why we provide a simulate function:
+
+```{r}
+pred = predict(m2, type = "response")
+sims = sapply(1:100, function(i) m2$loss$simulate(pred))
+
+res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
+plot(res)
+testOverdispersion(res)
+```
+
+Better!

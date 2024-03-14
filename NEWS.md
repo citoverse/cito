@@ -5,6 +5,7 @@
 * burnin parameter
 * multivariate probit model
 * X and Y support (alternative interface)
+* negative binomial distribution
 
 ## Minor changes
 * Improved vignette

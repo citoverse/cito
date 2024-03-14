@@ -8,13 +8,11 @@ dnn(
   formula = NULL,
   data = NULL,
   hidden = c(50L, 50L),
-  activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
-    "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
-    "softshrink", "hardshrink", "log_sigmoid"),
+  activation = "selu",
   bias = TRUE,
   dropout = 0,
   loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp"),
+    "mvp", "nbinom"),
   validation = 0,
   lambda = 0,
   alpha = 0.5,
@@ -112,6 +110,10 @@ The list consists of the following attributes:
 \description{
 fits a custom deep neural network using the Multilayer Perceptron architecture. \code{dnn()} supports the formula syntax and allows to customize the neural network to a maximal degree.
 }
+\section{Activation functions}{
+Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
+}
+
 \section{Loss functions / Likelihoods}{
 We support loss functions and likelihoods for different tasks:\tabular{lll}{
    Name \tab Explanation \tab Example / Task \cr
@@ -122,6 +124,7 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
    poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
    mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
 }
 }
@@ -310,7 +313,7 @@ print(nn.fit$tuning)
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)

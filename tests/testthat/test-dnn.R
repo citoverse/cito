@@ -105,11 +105,15 @@ scenarios =
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L),
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L),
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "nbinom", epochs = 1L, verbose = FALSE),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L),
 
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L)
+    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L, verbose = FALSE),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L),
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L)
   )
 testthat::test_that("DNN rnorm/poisson", {
   testthat::skip_on_cran()
@@ -131,12 +135,9 @@ testthat::test_that("DNN rnorm/poisson", {
   if(  torch::backends_mps_is_available() ) {
     for(i in 1:length(scenarios)) {
 
-      ## Poisson not yet supported, skip for now
-      if(! (i %in% c(3, 4, 7,8))) {
         sc = scenarios[[i]]
         sc$device = "mps"
         .n = wrap_dnn(sc)
-      }
     }
   }
 })
