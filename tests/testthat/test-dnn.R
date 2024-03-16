@@ -206,7 +206,7 @@ testthat::test_that("DNN custom loss and custom parameters", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)
@@ -219,7 +219,7 @@ testthat::expect_error({
   skip_if_no_torch()
 
   nn.fit<- dnn(Sepal.Length~.,
-               data = datasets::iris[],
+               data = datasets::iris,
                loss = custom_loss,
                epochs = 2L,
                verbose = FALSE,
@@ -336,6 +336,9 @@ testthat::test_that("DNN hyperparameter tuning",{
 
   testthat::expect_error({dnn(Species~., data=iris,loss="softmax", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
                               tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({dnn(Sepal.Length~., data=iris,loss="gaussian", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+                              tuning=config_tuning(steps=2, CV = 2, parallel = 2L))}, NA)
 
   })
 

@@ -162,6 +162,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   model$use_model_epoch <- 1
   model$loaded_model_epoch <- 1
 
+  if(!is.null(model$loss$parameter)) {
+      model$loss$parameter_r = unlist(lapply(model$loss$parameter, function(p) as.numeric(p$cpu())))
+  }
+
   model$net$eval()
   return(model)
 }

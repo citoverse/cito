@@ -64,6 +64,7 @@ get_data_loader = function(X, Y, Z = NULL, batch_size=25L, shuffle=TRUE) {
 
 
 get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
+
   out <- list()
   out$parameter <- NULL
 
@@ -80,6 +81,7 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
   if(inherits(loss, "family")){
     if(loss$family == "gaussian") {
       out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE, device = device)
+      out$parameter_r = as.numeric(out$parameter$cpu())
       out$invlink <- function(a) a
       out$link <- function(a) a
       out$loss <- function(pred, true) {
@@ -140,7 +142,7 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
       df = floor(ncol(Y)/2)
       out$parameter <- torch::torch_tensor(matrix(stats::runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE, device = device)
       out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
-      out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
+      out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a$cpu()))
       out$loss <- function(pred, true) {
         sigma = out$parameter
         Ys = true
@@ -157,9 +159,13 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
 
       if(is.matrix(Y)) out$parameter = torch::torch_tensor(rep(0.5, ncol(Y)), requires_grad=TRUE, device = device)
       else out$parameter = torch::torch_tensor(0.5, requires_grad=TRUE, device = device)
+      out$parameter_r = as.numeric(out$parameter$cpu())
       out$invlink <- function(a) torch::torch_exp(a)
-      out$link <- function(a) log(as.matrix(a))
-      out$parameter_link = function() as.numeric(1.0/(torch::nnf_softplus(out$parameter)+0.0001))
+      out$link <- function(a) log(as.matrix(a$cpu()))
+      out$parameter_link = function() {
+        out$parameter = re_init(out$parameter, out$parameter_r)
+        as.numeric((1.0/(torch::nnf_softplus(out$parameter)+0.0001))$cpu())
+      }
       out$simulate = function(pred) {
         theta_tmp = out$parameter_link()
         probs = 1.0 - theta_tmp/(theta_tmp + pred)
@@ -181,7 +187,8 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
 
       out$loss = function(pred, true) {
         eps = 0.0001
-        pred = pred$exp()
+        pred = torch::torch_exp(pred)
+        if(pred$device != out$parameter$device) pred = pred$to(device = out$parameter$device)
         theta_tmp = 1.0/(torch::nnf_softplus(out$parameter)+eps)
         probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred)+eps, 0.0, 1.0-eps)
         total_count = theta_tmp
@@ -190,7 +197,7 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
         log_unnormalized_prob <- total_count * torch::torch_log(torch::torch_sigmoid(-logits)) + value * torch::torch_log(torch::torch_sigmoid(logits))
         log_normalization <- -torch::torch_lgamma(total_count + value) + torch::torch_lgamma(1 + value) + torch::torch_lgamma(total_count)
         log_normalization <- torch::torch_where(total_count + value == 0, torch::torch_tensor(0, dtype = log_normalization$dtype, device = out$parameter$device), log_normalization)
-        return( - (log_unnormalized_prob - log_normalization)$mean())
+        return( - (log_unnormalized_prob - log_normalization))
       }
 
     }
@@ -408,14 +415,20 @@ freeze_weights <- function(transfer_model) {
 
 
 
+re_init = function(param, param_r) {
+  pointer_check <- tryCatch(torch::as_array(param), error = function(e) e)
 
+  if(inherits(pointer_check,"error")){
+    param = torch::torch_tensor(param_r)
+  }
+  return(param)
+}
 
 
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
   if(!inherits(object, c("citodnn", "citocnn"))) stop("model not of class citodnn or citocnn")
-
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
     object$net <- build_model(object)

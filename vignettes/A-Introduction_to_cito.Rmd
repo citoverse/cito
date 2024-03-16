@@ -127,7 +127,7 @@ plot(nn.fit)
 
 <img src="A/A-plotnn-1.png" style="display: block; margin: auto;" />
 
-The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network 5 input nodes (3 continuous features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
@@ -516,7 +516,7 @@ nn.fit <- continue_training(nn.fit,
 
 In addition to common loss functions, we also provide the option of using actual likelihoods - that is, we assume that the DNN approximates the underlying data generating model. An important consequence of this - also to ensure that the effects extracted by xAI are correct - is to check for model assumptions, such as whether the residuals are distributed as we would expect given our likelihood/probability distribution.
 
-Example: Simulate from a negative binomial distribution and fit with a poisson-DNN
+Example: Simulate from a negative binomial distribution and fit with a Poisson-DNN
 
 
 ```r

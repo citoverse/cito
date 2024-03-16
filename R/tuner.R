@@ -54,7 +54,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
 }
 
 
-
+#' @import tibble
 tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, formula, tuning, Y_torch, loss, device) {
 
   parallel = tuning$parallel
@@ -106,6 +106,10 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           #else parameters$Y = Y[-cv]
           parameters$data = data[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
+
+          loss.fkt <- m$loss$loss
+          loss_obj = m$loss
+
           if(return_models) tune_df$models[[i]] = list(m)
           #tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
           if(!m$successfull) {
@@ -114,8 +118,8 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           } else {
             pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
             tune_df$test[i] = tune_df$test[i]+as.numeric(loss.fkt(loss_obj$link(
-              torch::torch_tensor(pred, dtype=torch::torch_float32())),
-              Y_torch[cv,,drop=FALSE])$sum())
+              torch::torch_tensor(pred, dtype=torch::torch_float32(), device = device)),
+              Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
           }
         }
       pb$tick(tokens = list(hp = format_hp, test_loss = round(tune_df$test[i], digits = 3)))
@@ -136,10 +140,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
 
     tune_df <- parabar::par_lapply(backend, 1:steps, function(i) {
 
-      require(tibble)
-
+      requireNamespace("tibble")
       loss_obj <- get_loss(loss, device = device, X= X, Y = Y)
-      loss.fkt <- loss_obj$loss
+
       targets <- format_targets(Y, loss_obj)
       Y_torch <- targets$Y
 
@@ -151,8 +154,6 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
         Sys.setenv(CUDA_VISIBLE_DEVICES=dev)
       }
 
-      if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(paramter = loss_obj$parameter)
-      if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
 
       tmp_hp = tune_df[i,-(1:4)]
       format_hp = format_hyperparameters(tmp_hp)
@@ -170,7 +171,13 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
         #if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
         #else parameters$Y = Y[-cv]
         parameters$data = data[-cv,,drop=FALSE]
+
+
         m = do.call(dnn, parameters)
+
+        loss.fkt <- m$loss$loss
+        loss_obj = m$loss
+
         if(return_models) tune_df$models[[i]] = list(m)
         tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[stats::complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
 
@@ -180,8 +187,8 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
         } else {
           pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
           tune_df$test[i] = tune_df$test[i]+as.numeric(loss.fkt(loss_obj$link(
-           torch::torch_tensor(pred, dtype=torch::torch_float32())),
-           Y_torch[cv,,drop=FALSE])$sum())
+            torch::torch_tensor(pred, dtype=torch::torch_float32(), device = device)),
+            Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
         }
       }
       return(tune_df[i,])
