@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2024-03-14</h4>
+            <h4 data-toc-skip class="date">2024-03-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -418,22 +418,22 @@ SDCE:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width     2.244377</span></span>
-<span><span class="co">#&gt; 2 Petal.Length    12.032426</span></span>
-<span><span class="co">#&gt; 3  Petal.Width     1.097159</span></span>
-<span><span class="co">#&gt; 4      Species     1.032927</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width     2.266942</span></span>
+<span><span class="co">#&gt; 2 Petal.Length    19.364085</span></span>
+<span><span class="co">#&gt; 3  Petal.Width     1.816410</span></span>
+<span><span class="co">#&gt; 4      Species     1.101089</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
-<span><span class="co">#&gt;               Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.370464792</span></span>
-<span><span class="co">#&gt; Petal.Length 0.912100988</span></span>
-<span><span class="co">#&gt; Petal.Width  0.002742112</span></span>
+<span><span class="co">#&gt;              Response_1</span></span>
+<span><span class="co">#&gt; Sepal.Width   0.3135183</span></span>
+<span><span class="co">#&gt; Petal.Length  1.1674297</span></span>
+<span><span class="co">#&gt; Petal.Width  -0.3144642</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Standard Deviation of Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.04870084</span></span>
-<span><span class="co">#&gt; Petal.Length 0.09186123</span></span>
-<span><span class="co">#&gt; Petal.Width  0.04183386</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width  0.05861976</span></span>
+<span><span class="co">#&gt; Petal.Length 0.11233247</span></span>
+<span><span class="co">#&gt; Petal.Width  0.05357466</span></span></code></pre></div>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -458,26 +458,26 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Feature Importance</span></span>
 <span><span class="co">#&gt;                 Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width →        1.589   0.581    2.74   0.0062 ** </span></span>
-<span><span class="co">#&gt; Petal.Length →      42.668  10.377    4.11  3.9e-05 ***</span></span>
-<span><span class="co">#&gt; Petal.Width →        1.756   1.454    1.21   0.2274    </span></span>
-<span><span class="co">#&gt; Species →            2.199   1.843    1.19   0.2327    </span></span>
+<span><span class="co">#&gt; Sepal.Width →         1.58    0.44    3.59  0.00033 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →       39.56    9.40    4.21  2.6e-05 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →         1.62    1.37    1.19  0.23477    </span></span>
+<span><span class="co">#&gt; Species →             2.02    1.66    1.22  0.22359    </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Average Conditional Effects</span></span>
 <span><span class="co">#&gt;                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width →    0.2885  0.0518    5.56  2.6e-08 ***</span></span>
-<span><span class="co">#&gt; Petal.Length →   1.6155  0.1605   10.07  &lt; 2e-16 ***</span></span>
-<span><span class="co">#&gt; Petal.Width →   -0.3189  0.1546   -2.06    0.039 *  </span></span>
+<span><span class="co">#&gt; Sepal.Width →    0.2834  0.0494    5.73  9.8e-09 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →   1.5751  0.1557   10.11  &lt; 2e-16 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →   -0.2994  0.1557   -1.92    0.054 .  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
 <span><span class="co">#&gt;                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width →   0.1024  0.0268    3.82  0.00013 ***</span></span>
-<span><span class="co">#&gt; Petal.Length →  0.2145  0.0496    4.32  1.6e-05 ***</span></span>
-<span><span class="co">#&gt; Petal.Width →   0.0768  0.0172    4.46  8.1e-06 ***</span></span>
+<span><span class="co">#&gt; Sepal.Width →   0.1105  0.0250    4.42  9.9e-06 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →  0.2062  0.0383    5.38  7.3e-08 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →   0.0743  0.0209    3.55  0.00039 ***</span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -770,12 +770,12 @@ continue_training().</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            [,1]</span></span>
-<span><span class="co">#&gt; [1,] -0.9705824</span></span>
-<span><span class="co">#&gt; [2,] -1.4218482</span></span>
-<span><span class="co">#&gt; [3,] -1.3220458</span></span>
-<span><span class="co">#&gt; [4,] -1.2434552</span></span>
-<span><span class="co">#&gt; [5,] -0.8870381</span></span>
-<span><span class="co">#&gt; [6,] -0.4845728</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -1.0259458</span></span>
+<span><span class="co">#&gt; [2,] -1.4077228</span></span>
+<span><span class="co">#&gt; [3,] -1.3449415</span></span>
+<span><span class="co">#&gt; [4,] -1.2816025</span></span>
+<span><span class="co">#&gt; [5,] -0.9411238</span></span>
+<span><span class="co">#&gt; [6,] -0.5879976</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>
@@ -809,9 +809,9 @@ a poisson-DNN</p>
 <code class="sourceCode R"><span><span class="va">df</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>Y <span class="op">=</span> <span class="va">Y</span>, <span class="va">X</span><span class="op">)</span></span>
 <span><span class="va">m1</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="st">"poisson"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">300L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-14-1.png" style="display: block; margin: auto;"></p>
-<p>We use the DHARMa package to check the residuals. DHARMa does not
-support cito, but has a general interface for residual checks. We have
-to simulate from our model ourselves:</p>
+<p>We can use the DHARMa package to check the residuals. DHARMa does not
+support cito directly, but we can use a general interface for residual
+checks. But first we need to simulate from our model:</p>
 <div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://florianhartig.github.io/DHARMa/" class="external-link">DHARMa</a></span><span class="op">)</span></span>
 <span><span class="va">pred</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m1</span>, type <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
@@ -828,19 +828,19 @@ to simulate from our model ourselves:</p>
 <span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; data:  simulationOutput</span></span>
-<span><span class="co">#&gt; dispersion = 29.052, p-value &lt; 2.2e-16</span></span>
+<span><span class="co">#&gt; dispersion = 15.45, p-value &lt; 2.2e-16</span></span>
 <span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
 <p>Overdispersion (biased effect estimates and inflated error rates
 could be a consequence of overdispersion) ! One solution (the only one
 implemented in cito) is to switch to negative binomial distribution that
 fits a variable dispersion parameter:</p>
 <div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">m2</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="st">"nbinom"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">300L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">m2</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="st">"nbinom"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">300L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, lambda <span class="op">=</span> <span class="fl">0.0</span>, alpha <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-16-1.png" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Dispersion parameter:</span></span>
 <span><span class="va">m2</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="fu">parameter_link</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.5389512</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.5323167</span></span></code></pre></div>
 <p>We have a custom implementation of the negative binomial distribution
 (which is similar to the “nbinom1” of glmmTMB (the nbinom converges to a
 poisson as the dispersion parameters approaches infinity)) which is why
@@ -850,7 +850,7 @@ we provide a simulate function:</p>
 <span><span class="va">sims</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="va">m2</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="fu">simulate</span><span class="op">(</span><span class="va">pred</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">res</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/createDHARMa.html" class="external-link">createDHARMa</a></span><span class="op">(</span><span class="va">sims</span>, <span class="va">Y</span>, <span class="va">pred</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>, integerResponse <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span>, rank <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-17-1.png" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testOverdispersion.html" class="external-link">testOverdispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
@@ -860,9 +860,21 @@ we provide a simulate function:</p>
 <span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; data:  simulationOutput</span></span>
-<span><span class="co">#&gt; dispersion = 2.571, p-value &lt; 2.2e-16</span></span>
+<span><span class="co">#&gt; dispersion = 1.1972, p-value = 0.5</span></span>
 <span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
-<p>Better!</p>
+<p>Better! But still not perfect, a challenge with maximum likelihood
+estimation and the negative binomial distribution is to get the theta
+estimate (disperson parameter) unbiased. The remaining pattern can
+probably be explained by the fact that the overdispersion was not
+perfectly estimated.</p>
+<p>However, it is still better than the Poisson distribution, so what do
+we get by switching to a negative binomial? The p-values of the xAI
+metrics may not be strongly as affected as in a statistical model
+because we are not estimating the standard errors (and thus the
+p-values) from the MLE surface. The bootstrap is independent of the
+likelihood. However, the negative binomial distribution better weights
+overdispersed values, so we can expect our model to make more accurate
+predictions.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>

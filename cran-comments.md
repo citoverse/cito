@@ -1,3 +1,26 @@
+# Version 1.1
+This is a major update. The update includes new loss/likelihood functions, 
+hyperparameter tuning, bug fixes, and improved documentation.
+
+Best,
+Max Pichler
+
+### Successfull R CMD checks under
+
+Locally: 
+* MacOS Monterey 14.1.2 (R aarch64-apple-darwin20) (CPU and mps devices)
+* Ubuntu 20.04 (for GPU device)
+
+Github actions:
+* macOS-latest (release)
+* Ubuntu 20.04 R-release, and R-development
+* Windows-latest R-release
+
+Win-builder 
+* R-release, R-development, and R-oldrelease
+
+
+
 # Version 1.0.2
 ## cito submission 5 2023/06/10
 Dear CRAN Team,

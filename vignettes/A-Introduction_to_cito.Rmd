@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "2024-03-14"
+date: "2024-03-16"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -18,14 +18,11 @@ editor_options:
   chunk_output_type: console
 ---
 
-
-
 ## Setup - Installing torch
 
 Before using 'cito' make sure that the current version of 'torch' is installed and running.
 
-
-```r
+``` r
 if(!require(torch)) install.packages("torch")
 library(torch)
 if(!torch_is_installed()) install_torch()
@@ -66,7 +63,7 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
 |                 |                              |                                                                          |                                                             |
-|:-------------|:-------------|:------------------------|--------------------|
+|:----------------|:-----------------------------|:-------------------------------------------------------------------------|-------------------------------------------------------------|
 | Name            | Explanation                  | Example / Task                                                           | Meta-Code                                                   |
 | `mse`           | mean squared error           | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
 | `mae`           | mean absolute error          | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
@@ -90,8 +87,7 @@ The likelihoods (Gaussian, Binomial, and Poisson) can be also passed as their st
 
 In this vignette, we will work with the irirs dataset and build a regression model.
 
-
-```r
+``` r
 data <- datasets::iris
 head(data)
 #>   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
@@ -110,8 +106,7 @@ data <- data.frame(scale(data[,-5]),Species = data[,5])
 
 In 'cito', neural networks are specified and fitted with the `dnn()` function. Models can also be trained on the GPU by setting `device = "cuda"`(but only if you have installed the CUDA dependencies). This is suggested if you are working with large data sets or networks.
 
-
-```r
+``` r
 library(cito)
 
 #fitting a regression model to predict Sepal.Length
@@ -120,32 +115,29 @@ nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 12, loss = "mse", verbose=F
 
 You can plot the network structure to give you a visual feedback of the created object. e aware that this may take some time for large networks.
 
-
-```r
+``` r
 plot(nn.fit)
 ```
 
-<img src="A/A-plotnn-1.png" style="display: block; margin: auto;" />
+<img src="A/A-plotnn-1.png" style="display: block; margin: auto;"/>
 
-The neural network 5 input nodes (3 continuous features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
 At the start of the training we calculate a baseline loss for an an intercept only model. It allows us to control the training because the goal is to beat the baseline loss. If we don't, we need to adjust the optimization parameters (epochs and lr (learning rate)):
 
-
-```r
+``` r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.6, loss = "mse", verbose = FALSE) # lr too high
 ```
 
 vs
 
-
-```r
+``` r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.01, loss = "mse", verbose = FALSE)
 ```
 
-<img src="A/A-unnamed-chunk-3-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-3-1.png" style="display: block; margin: auto;"/>
 
 See `vignette("B-Training_neural_networks"`) for more details on how to adjust the optimization procedure and increase the probability of convergence.
 
@@ -153,8 +145,7 @@ See `vignette("B-Training_neural_networks"`) for more details on how to adjust t
 
 In order to see where your model might suffer from overfitting the addition of a validation set can be useful. With `dnn()` you can put `validation = 0.x` and define a percentage that will not be used for training and only for validation after each epoch. During training, a loss plot will show you how the two losses behave (see `vignette("B-Training_neural_networks"`) for details on training NN and guaranteeing their convergence).
 
-
-```r
+``` r
 #20% of data set is used as validation set
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
               loss= "mse", validation = 0.2)
@@ -162,16 +153,14 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
 
 Weights oft the last and the epoch with the lowest validation loss are saved:
 
-
-```r
+``` r
 length(nn.fit$weights)
 #> [1] 2
 ```
 
 The default is to use the weights of the last epoch. But we can also tell the model to use the weights with the lowest validation loss:
 
-
-```r
+``` r
 nn.fit$use_model_epoch = 1 # Default, use last epoch
 nn.fit$use_model_epoch = 2 # Use weights from epoch with lowest validation loss
 ```
@@ -180,8 +169,7 @@ nn.fit$use_model_epoch = 2 # Use weights from epoch with lowest validation loss
 
 cito supports many of the well-known methods from other statistical packages:
 
-
-```r
+``` r
 predict(nn.fit)
 coef(nn.fit)
 print(nn.fit)
@@ -192,7 +180,7 @@ print(nn.fit)
 xAI can produce outputs that are similar to known outputs from statistical models:
 
 | xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
-|----------------|-----------------------------------------|---------------|
+|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
 | Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
 | Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
 | Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
@@ -201,34 +189,32 @@ xAI can produce outputs that are similar to known outputs from statistical model
 
 The `summary()` returns feature importance, ACE and SDCE:
 
-
-```r
+``` r
 # Calculate and return feature importance
 summary(nn.fit)
 #> Summary of Deep Neural Network Model
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width     2.244377
-#> 2 Petal.Length    12.032426
-#> 3  Petal.Width     1.097159
-#> 4      Species     1.032927
+#> 1  Sepal.Width     2.266942
+#> 2 Petal.Length    19.364085
+#> 3  Petal.Width     1.816410
+#> 4      Species     1.101089
 #> 
 #> Average Conditional Effects:
-#>               Response_1
-#> Sepal.Width  0.370464792
-#> Petal.Length 0.912100988
-#> Petal.Width  0.002742112
+#>              Response_1
+#> Sepal.Width   0.3135183
+#> Petal.Length  1.1674297
+#> Petal.Width  -0.3144642
 #> 
 #> Standard Deviation of Conditional Effects:
 #>              Response_1
-#> Sepal.Width  0.04870084
-#> Petal.Length 0.09186123
-#> Petal.Width  0.04183386
+#> Sepal.Width  0.05861976
+#> Petal.Length 0.11233247
+#> Petal.Width  0.05357466
 ```
 
-
-```r
+``` r
 #returns weights of neural network
 coef(nn.fit)
 ```
@@ -237,8 +223,7 @@ coef(nn.fit)
 
 We can use bootstrapping to obtain uncertainties for the xAI metrics (and also for the predictions). For that we have to retrain our model with enabled bootstrapping:
 
-
-```r
+``` r
 df = data
 df[,2:4] = scale(df[,2:4]) # scaling can help the NN to convergence faster
 nn.fit <- dnn(Sepal.Length~., data = df,
@@ -249,33 +234,32 @@ nn.fit <- dnn(Sepal.Length~., data = df,
               )
 ```
 
-
-```r
+``` r
 summary(nn.fit)
 #> Summary of Deep Neural Network Model
 #> 
 #> ── Feature Importance
 #>                 Importance Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →        1.589   0.581    2.74   0.0062 ** 
-#> Petal.Length →      42.668  10.377    4.11  3.9e-05 ***
-#> Petal.Width →        1.756   1.454    1.21   0.2274    
-#> Species →            2.199   1.843    1.19   0.2327    
+#> Sepal.Width →         1.58    0.44    3.59  0.00033 ***
+#> Petal.Length →       39.56    9.40    4.21  2.6e-05 ***
+#> Petal.Width →         1.62    1.37    1.19  0.23477    
+#> Species →             2.02    1.66    1.22  0.22359    
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Average Conditional Effects
 #>                     ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →    0.2885  0.0518    5.56  2.6e-08 ***
-#> Petal.Length →   1.6155  0.1605   10.07  < 2e-16 ***
-#> Petal.Width →   -0.3189  0.1546   -2.06    0.039 *  
+#> Sepal.Width →    0.2834  0.0494    5.73  9.8e-09 ***
+#> Petal.Length →   1.5751  0.1557   10.11  < 2e-16 ***
+#> Petal.Width →   -0.2994  0.1557   -1.92    0.054 .  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Standard Deviation of Conditional Effects
 #>                    ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width →   0.1024  0.0268    3.82  0.00013 ***
-#> Petal.Length →  0.2145  0.0496    4.32  1.6e-05 ***
-#> Petal.Width →   0.0768  0.0172    4.46  8.1e-06 ***
+#> Sepal.Width →   0.1105  0.0250    4.42  9.9e-06 ***
+#> Petal.Length →  0.2062  0.0383    5.38  7.3e-08 ***
+#> Petal.Width →   0.0743  0.0209    3.55  0.00039 ***
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -284,8 +268,7 @@ We find that Petal.Length and Sepal.Width are significant (categorical features 
 
 Let's compare the output to statistical outputs:
 
-
-```r
+``` r
 anova(lm(Sepal.Length~., data = df))
 #> Analysis of Variance Table
 #> 
@@ -304,20 +287,18 @@ Feature importance and the anova report Petal.Length as the most important featu
 
 Visualization of the effects:
 
-
-```r
+``` r
 PDP(nn.fit)
 ```
 
-<img src="A/A-unnamed-chunk-9-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-9-1.png" style="display: block; margin: auto;"/>
 
-
-```r
+``` r
 library(effects)
 plot(allEffects(lm(Sepal.Length~., data = df)))
 ```
 
-<img src="A/A-unnamed-chunk-10-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-10-1.png" style="display: block; margin: auto;"/>
 
 There are some differences between the statistical model and the NN - which is to be expected because the NN can fit the data more flexible. But at the same time the differences have large confidence intervals (e.g. the effect of Petal.Width)
 
@@ -325,17 +306,16 @@ There are some differences between the statistical model and the NN - which is t
 
 The architecture in NN usually refers to the width and depth of the hidden layers (the layers between the input and the output layer) and their activation functions. You can increase the complexity of the NN by adding layers and/or making them wider:
 
-
-```r
+``` r
 # "simple NN" - low complexity
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
               loss= "mse", validation = 0.2,
               hidden = c(5L), verbose=FALSE)
 ```
 
-<img src="A/A-unnamed-chunk-11-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-11-1.png" style="display: block; margin: auto;"/>
 
-```r
+``` r
 
 # "large NN" - high complexity
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
@@ -343,7 +323,7 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 100,
               hidden = c(100L, 100), verbose=FALSE)
 ```
 
-<img src="A/A-unnamed-chunk-11-2.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-11-2.png" style="display: block; margin: auto;"/>
 
 There is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in [Pichler & Hartig, 2023](https://arxiv.org/abs/2306.10551), we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the `selu` activation function outperforms `relu` for small data sizes (\<100 observations).
 
@@ -355,8 +335,7 @@ By default, all layers are fitted with SeLU as activation function. $$
 relu(x) = max (0,x)
 $$You can also adjust the activation function of each layer individually to build exactly the network you want. In this case you have to provide a vector the same length as there are hidden layers. The activation function of the output layer is chosen with the loss argument and does not have to be provided.
 
-
-```r
+``` r
 #selu as activation function for all layers:
 nn.fit <- dnn(Sepal.Length~., data = data, hidden = c(10,10,10,10), activation= "relu")
 #layer specific activation functions:
@@ -378,8 +357,7 @@ $$
  loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
 $$
 
-
-```r
+``` r
 #elastic net penalty in all layers:
 nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "softmax")
 ```
@@ -388,8 +366,7 @@ nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE,
 
 Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/papers/volume15/srivastava14a/srivastava14a.pdf?utm_content=buffer79b43&utm_medium=social&utm_source=twitter.com&utm_campaign=buffer,) can be controlled similar to elastic net regularization. In this approach, a percentage of different nodes gets left during each epoch.
 
-
-```r
+``` r
 #dropout of 35% on all layers:
 nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = 0.35, verbose=FALSE)
 ```
@@ -402,8 +379,7 @@ Learning rate scheduler allow you to start with a high learning rate and decreas
 
 The function config_lr_scheduler() helps you setup such a scheduler. See ?config_lr_scheduler() for more information
 
-
-```r
+``` r
 # Step Learning rate scheduler that reduces learning rate every 16 steps by a factor of 0.5
 scheduler <- config_lr_scheduler(type = "step",
                                  step_size = 16,
@@ -412,15 +388,14 @@ scheduler <- config_lr_scheduler(type = "step",
 nn.fit <- dnn(Sepal.Length~., data = data,lr = 0.01, lr_scheduler= scheduler, verbose = FALSE)
 ```
 
-<img src="A/A-lr_scheduler-1.png" style="display: block; margin: auto;" />
+<img src="A/A-lr_scheduler-1.png" style="display: block; margin: auto;"/>
 
 ### Optimizer
 
 Optimizer are responsible for fitting the neural network. The optimizer tries to minimize the loss function. As default the stochastic gradient descent is used. Custom optimizers can be used with `config_optimizer()`.\
 See `?config_optimizer()` for more information.
 
-
-```r
+``` r
 
 # adam optimizer with learning rate 0.002, betas to 0.95, 0.999 and eps to 1.5e-08
 opt <- config_optimizer(
@@ -429,20 +404,19 @@ opt <- config_optimizer(
 nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "softmax")
 ```
 
-<img src="A/A-optim-1.png" style="display: block; margin: auto;" />
+<img src="A/A-optim-1.png" style="display: block; margin: auto;"/>
 
 ### Early Stopping
 
 Adding early stopping criteria helps you save time by stopping the training process early, if the validation loss of the current epoch is bigger than the validation loss n epochs early. The n can be defined by the early_stopping argument. It is required to set validation \> 0.
 
-
-```r
+``` r
 # Stops training if validation loss at current epoch is bigger than that 15 epochs earlier
 nn.fit <- dnn(Sepal.Length~., data = data, epochs = 1000,
               validation = 0.2, early_stopping = 15, verbose=FALSE)
 ```
 
-<img src="A/A-early_stopping-1.png" style="display: block; margin: auto;" />
+<img src="A/A-early_stopping-1.png" style="display: block; margin: auto;"/>
 
 ## Automatic hyperparameter tuning (experimental)
 
@@ -451,7 +425,7 @@ We started to support automatic hyperparameter tuning under Cross Validation. Th
 We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
 
 | Hyperparameter | Example                                     | Details                                                                                                                                                                       |
-|:------------|:------------|:---------------------------------------------|
+|:---------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
 | lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |
@@ -468,8 +442,7 @@ Note that hyperparameter tuning can be expensive. We have implemented an option 
 
 Tune learning rate as it is one of the most important hyperparameters:
 
-
-```r
+``` r
 nn.fit_tuned = dnn(Species~.,
                    data = iris,
                    lr = tune(0.0001, 0.1),
@@ -485,24 +458,22 @@ After tuning, the final model is trained with the best set of hyperparameters an
 
 You can continue the training process of an existing model with continue_training().
 
-
-```r
+``` r
 # simple example, simply adding another 12 epochs to the training process
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>            [,1]
-#> [1,] -0.9705824
-#> [2,] -1.4218482
-#> [3,] -1.3220458
-#> [4,] -1.2434552
-#> [5,] -0.8870381
-#> [6,] -0.4845728
+#> [1,] -1.0259458
+#> [2,] -1.4077228
+#> [3,] -1.3449415
+#> [4,] -1.2816025
+#> [5,] -0.9411238
+#> [6,] -0.5879976
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().
 
-
-```r
+``` r
 
 # picking the model with the smalles validation loss
 # with changed parameters, in this case a smaller learning rate and a smaller batchsize
@@ -516,28 +487,25 @@ nn.fit <- continue_training(nn.fit,
 
 In addition to common loss functions, we also provide the option of using actual likelihoods - that is, we assume that the DNN approximates the underlying data generating model. An important consequence of this - also to ensure that the effects extracted by xAI are correct - is to check for model assumptions, such as whether the residuals are distributed as we would expect given our likelihood/probability distribution.
 
-Example: Simulate from a negative binomial distribution and fit with a Poisson-DNN
+Example: Simulate from a negative binomial distribution and fit with a poisson-DNN
 
-
-```r
+``` r
 X = matrix(runif(500*3,-1,1), 500, 3)
 Y = rnbinom(500, mu = exp(2.5*X[,1]), size = 0.3)
 ```
 
 Fit model with a poisson likelihood:
 
-
-```r
+``` r
 df = data.frame(Y = Y, X)
 m1 = dnn(Y~., data = df, loss = "poisson", lr = 0.005, epochs = 300L, verbose = FALSE)
 ```
 
-<img src="A/A-unnamed-chunk-14-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-14-1.png" style="display: block; margin: auto;"/>
 
-We use the DHARMa package to check the residuals. DHARMa does not support cito, but has a general interface for residual checks. We have to simulate from our model ourselves:
+We can use the DHARMa package to check the residuals. DHARMa does not support cito directly, but we can use a general interface for residual checks. But first we need to simulate from our model:
 
-
-```r
+``` r
 library(DHARMa)
 pred = predict(m1, type = "response")
 sims = sapply(1:100, function(i) rpois(length(pred), pred))
@@ -546,66 +514,66 @@ res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
 plot(res)
 ```
 
-<img src="A/A-unnamed-chunk-15-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-15-1.png" style="display: block; margin: auto;"/>
 
-```r
+``` r
 testOverdispersion(res)
 #> testOverdispersion is deprecated, switch your code to using the testDispersion function
 ```
 
-<img src="A/A-unnamed-chunk-15-2.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-15-2.png" style="display: block; margin: auto;"/>
 
-```
+```         
 #> 
-#> 	DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
+#>  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 29.052, p-value < 2.2e-16
+#> dispersion = 15.45, p-value < 2.2e-16
 #> alternative hypothesis: two.sided
 ```
 
 Overdispersion (biased effect estimates and inflated error rates could be a consequence of overdispersion) ! One solution (the only one implemented in cito) is to switch to negative binomial distribution that fits a variable dispersion parameter:
 
-
-```r
-m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE)
+``` r
+m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE, lambda = 0.0, alpha = 1.0)
 ```
 
-<img src="A/A-unnamed-chunk-16-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-16-1.png" style="display: block; margin: auto;"/>
 
-```r
+``` r
 # Dispersion parameter:
 m2$loss$parameter_link()
-#> [1] 0.5389512
+#> [1] 0.5323167
 ```
 
 We have a custom implementation of the negative binomial distribution (which is similar to the "nbinom1" of glmmTMB (the nbinom converges to a poisson as the dispersion parameters approaches infinity)) which is why we provide a simulate function:
 
-
-```r
+``` r
 pred = predict(m2, type = "response")
 sims = sapply(1:100, function(i) m2$loss$simulate(pred))
 
 res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
-plot(res)
+plot(res, rank = FALSE)
 ```
 
-<img src="A/A-unnamed-chunk-17-1.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-17-1.png" style="display: block; margin: auto;"/>
 
-```r
+``` r
 testOverdispersion(res)
 #> testOverdispersion is deprecated, switch your code to using the testDispersion function
 ```
 
-<img src="A/A-unnamed-chunk-17-2.png" style="display: block; margin: auto;" />
+<img src="A/A-unnamed-chunk-17-2.png" style="display: block; margin: auto;"/>
 
-```
+```         
 #> 
-#> 	DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
+#>  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 2.571, p-value < 2.2e-16
+#> dispersion = 1.1972, p-value = 0.5
 #> alternative hypothesis: two.sided
 ```
 
-Better!
+Better! But still not perfect, a challenge with maximum likelihood estimation and the negative binomial distribution is to get the theta estimate (disperson parameter) unbiased. The remaining pattern can probably be explained by the fact that the overdispersion was not perfectly estimated.
+
+However, it is still better than the Poisson distribution, so what do we get by switching to a negative binomial? The p-values of the xAI metrics may not be strongly as affected as in a statistical model because we are not estimating the standard errors (and thus the p-values) from the MLE surface. The bootstrap is independent of the likelihood. However, the negative binomial distribution better weights overdispersed values, so we can expect our model to make more accurate predictions.

@@ -127,7 +127,7 @@ You can plot the network structure to give you a visual feedback of the created 
 plot(nn.fit)
 ```
 
-The neural network 5 input nodes (3 continuous features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
@@ -409,21 +409,21 @@ nn.fit <- continue_training(nn.fit,
 
 In addition to common loss functions, we also provide the option of using actual likelihoods - that is, we assume that the DNN approximates the underlying data generating model. An important consequence of this - also to ensure that the effects extracted by xAI are correct - is to check for model assumptions, such as whether the residuals are distributed as we would expect given our likelihood/probability distribution.
 
-Example: Simulate from a negative binomial distribution and fit with a Poisson-DNN
+Example: Simulate from a negative binomial distribution and fit with a poisson-DNN
 
 ```{r}
 X = matrix(runif(500*3,-1,1), 500, 3)
 Y = rnbinom(500, mu = exp(2.5*X[,1]), size = 0.3)
 ```
 
-Fit model with a Poisson likelihood:
+Fit model with a poisson likelihood:
 
 ```{r}
 df = data.frame(Y = Y, X)
 m1 = dnn(Y~., data = df, loss = "poisson", lr = 0.005, epochs = 300L, verbose = FALSE)
 ```
 
-We use the DHARMa package to check the residuals. DHARMa does not support cito, but has a general interface for residual checks. We have to simulate from our model ourselves:
+We can use the DHARMa package to check the residuals. DHARMa does not support cito directly, but we can use a general interface for residual checks. But first we need to simulate from our model:
 
 ```{r}
 library(DHARMa)
@@ -438,7 +438,7 @@ testOverdispersion(res)
 Overdispersion (biased effect estimates and inflated error rates could be a consequence of overdispersion) ! One solution (the only one implemented in cito) is to switch to negative binomial distribution that fits a variable dispersion parameter:
 
 ```{r}
-m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE)
+m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = FALSE, lambda = 0.0, alpha = 1.0)
 # Dispersion parameter:
 m2$loss$parameter_link()
 ```
@@ -450,8 +450,10 @@ pred = predict(m2, type = "response")
 sims = sapply(1:100, function(i) m2$loss$simulate(pred))
 
 res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
-plot(res)
+plot(res, rank = FALSE)
 testOverdispersion(res)
 ```
 
-Better!
+Better! But still not perfect, a challenge with maximum likelihood estimation and the negative binomial distribution is to get the theta estimate (disperson parameter) unbiased. The remaining pattern can probably be explained by the fact that the overdispersion was not perfectly estimated.
+
+However, it is still better than the Poisson distribution, so what do we get by switching to a negative binomial? The p-values of the xAI metrics may not be strongly as affected as in a statistical model because we are not estimating the standard errors (and thus the p-values) from the MLE surface. The bootstrap is independent of the likelihood. However, the negative binomial distribution better weights overdispersed values, so we can expect our model to make more accurate predictions.
