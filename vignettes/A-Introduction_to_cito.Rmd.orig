@@ -77,7 +77,7 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
 |                 |                              |                                                                          |                                                             |
-|:-------------|:-------------|:------------------------|--------------------|
+|:----------------|:-----------------------------|:-------------------------------------------------------------------------|-------------------------------------------------------------|
 | Name            | Explanation                  | Example / Task                                                           | Meta-Code                                                   |
 | `mse`           | mean squared error           | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
 | `mae`           | mean absolute error          | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
@@ -183,7 +183,7 @@ print(nn.fit)
 xAI can produce outputs that are similar to known outputs from statistical models:
 
 | xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
-|----------------|-----------------------------------------|---------------|
+|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
 | Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
 | Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
 | Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
@@ -356,7 +356,7 @@ We started to support automatic hyperparameter tuning under Cross Validation. Th
 We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
 
 | Hyperparameter | Example                                     | Details                                                                                                                                                                       |
-|:------------|:------------|:---------------------------------------------|
+|:---------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
 | lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |

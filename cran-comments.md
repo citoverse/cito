@@ -1,4 +1,5 @@
 # Version 1.1
+## cito submission 1 2024/03/17
 This is a major update. The update includes new loss/likelihood functions, 
 hyperparameter tuning, bug fixes, and improved documentation.
 
@@ -18,6 +19,8 @@ Github actions:
 
 Win-builder 
 * R-release, R-development, and R-oldrelease
+
+Spelling has been checked (potential errors are intended).
 
 
 
