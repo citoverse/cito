@@ -1,4 +1,5 @@
 source("utils.R")
+set.seed(42)
 
 wrap_dnn = function(pars) {
   testthat::expect_error({model <<- do.call(dnn, pars)}, NA)
@@ -94,6 +95,7 @@ testthat::test_that("DNN softmax/binomial", {
     }
   }
 })
+
 
 
 X = matrix(runif(3*50), 50, 3)

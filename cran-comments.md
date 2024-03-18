@@ -1,4 +1,23 @@
 # Version 1.1
+## cito submission 2 2024/03/18
+
+Issues:
+
+Found the following (possibly) invalid URLs:
+URL: https://cran.r-project.org/web/packages/sjSDM/index.html
+From: inst/doc/C-Example_Species_distribution_modeling.html
+Status: 200
+Message: OK
+CRAN URL not in canonical form
+URL:
+https://cran.r-project.org/web/packages/sjSDM/vignettes/sjSDM_Introduction.html
+From: inst/doc/C-Example_Species_distribution_modeling.html
+Status: 200
+Message: OK
+CRAN URL not in canonical form
+
+
+# Version 1.1
 ## cito submission 1 2024/03/17
 This is a major update. The update includes new loss/likelihood functions, 
 hyperparameter tuning, bug fixes, and improved documentation.

@@ -908,7 +908,7 @@ conditionalEffects.citodnnBootstrap = function(object, interactions=FALSE, epsil
 
   for(b in 1:length(object$models)) {
     model_indv = object$models[[b]]
-    condEffs = conditionalEffects(model_indv, interactions=FALSE, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = NULL, data = NULL, type = "response",...)
+    condEffs = conditionalEffects(model_indv, interactions=interactions, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = indices, data = data, type = type,...)
     pb$tick()
     results_boot[[b]] = condEffs
   }
