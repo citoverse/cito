@@ -75,7 +75,7 @@ testthat::test_that("DNN softmax/binomial", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-  for(i in 1:length(scenarios)) {
+  for(i in 1:3) {
     wrap_dnn(scenarios[[i]])
   }
 

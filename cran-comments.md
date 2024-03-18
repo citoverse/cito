@@ -1,7 +1,9 @@
 # Version 1.1
 ## cito submission 2 2024/03/18
 
-Issues:
+Dear CRAN Team,
+
+the following issues have been addressed:
 
 Found the following (possibly) invalid URLs:
 URL: https://cran.r-project.org/web/packages/sjSDM/index.html
@@ -15,6 +17,12 @@ From: inst/doc/C-Example_Species_distribution_modeling.html
 Status: 200
 Message: OK
 CRAN URL not in canonical form
+
+Links were changed to https://cran.r-project.org/package=sjSDM
+
+Many thanks!
+Best,
+Max Pichler
 
 
 # Version 1.1
