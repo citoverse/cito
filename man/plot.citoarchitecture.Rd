@@ -4,7 +4,7 @@
 \alias{plot.citoarchitecture}
 \title{Plot the CNN architecture}
 \usage{
-\method{plot}{citoarchitecture}(x, input_shape, output_shape, ...)
+\method{plot}{citoarchitecture}(x, input_shape, output_shape = NULL, ...)
 }
 \arguments{
 \item{x}{an object of class citoarchitecture created by \code{\link{create_architecture}}}

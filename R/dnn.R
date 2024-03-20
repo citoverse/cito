@@ -185,14 +185,14 @@ dnn <- function(formula = NULL,
       if(!is.matrix(Y)) Y <- data.frame(Y)
       if(ncol(Y) == 1) {
         if(is.null(colnames(Y))) colnames(Y) <- "Y"
-        formula <- stats::as.formula(paste0(colnames(Y), " ~ . - 1"))
+        formula <- stats::formula(paste0(colnames(Y), " ~ ."))
       } else {
         if(is.null(colnames(Y))) colnames(Y) <- paste0("Y", 1:ncol(Y))
-        formula <- stats::as.formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ . - 1"))
+        formula <- stats::formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ ."))
       }
       data <- cbind(data.frame(Y), data.frame(X))
     } else {
-      formula <- stats::as.formula("~ . - 1")
+      formula <- stats::formula("~ .")
       data <- data.frame(X)
     }
     formula <- formula(stats::terms.formula(formula, data = data))
@@ -201,7 +201,7 @@ dnn <- function(formula = NULL,
       data <- data.frame(data)
     }
     formula <- formula(stats::terms.formula(formula, data = data))
-    formula <- stats::update.formula(formula, ~ . - 1)
+    formula <- stats::update.formula(formula, ~ . + 1)
   } else {
     stop("Either formula (and data) or X (and Y) have to be specified.")
   }
@@ -211,7 +211,9 @@ dnn <- function(formula = NULL,
     data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
   }
 
-  X <- stats::model.matrix(formula, data)
+  tmp <- stats::model.matrix(formula, data)
+  X <- tmp[, -1, drop=FALSE]
+  attr(X, "assign") <- attr(tmp, "assign")[-1]
   Y <- stats::model.response(stats::model.frame(formula, data))
 
   # Only return the model properties if no Y specified (Used in mmn())
@@ -659,9 +661,9 @@ predict.citodnn <- function(object, newdata = NULL, type=c("link", "response", "
     newdata = torch::torch_tensor(object$data$X, device = device)
   } else {
     if(is.data.frame(newdata)) {
-      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)
+      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)[,-1,drop=FALSE]
     } else {
-      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)
+      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)[,-1,drop=FALSE]
     }
     newdata <- torch::torch_tensor(newdata, device = device)
   }

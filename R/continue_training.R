@@ -54,7 +54,7 @@ continue_training.citodnn <- function(model,
   fm<- stats::as.formula(model$call$formula)
   if(is.null(data)) data <- model$data$data
 
-  X = stats::model.matrix(fm, data)
+  X = stats::model.matrix(fm, data)[, -1, drop=FALSE]
   Y = stats::model.response(stats::model.frame(fm, data))
 
   targets <- format_targets(Y, model$loss, model$data$ylvls)

@@ -205,20 +205,29 @@ format_input_data <- function(formula, dataList) {
       call <- match.call(dnn, term)
 
       if(!is.null(call$X)) {
-        input_data <- append(input_data, list(stats::model.matrix(stats::formula("~ . - 1"), data = data.frame(eval(call$X, envir = dataList)))))
+        tmp <- stats::model.matrix(stats::formula("~ ."), data = data.frame(eval(call$X, envir = dataList)))
+        X <- tmp[, -1, drop=FALSE]
+        attr(X, "assign") <- attr(tmp, "assign")[-1]
+
       } else if(!is.null(call$formula)) {
         if(!is.null(call$data)) {
           data <- data.frame(eval(call$data, envir = dataList))
           formula <- stats::formula(stats::terms(stats::formula(call$formula), data = data))
-          formula <- stats::update.formula(formula, ~ . - 1)
-          input_data <- append(input_data, list(stats::model.matrix(formula, data = data)))
+          formula <- stats::update.formula(formula, ~ . + 1)
+          tmp <- stats::model.matrix(formula, data = data)
+          X <- tmp[, -1, drop=FALSE]
+          attr(X, "assign") <- attr(tmp, "assign")[-1]
         } else {
-          formula <- stats::update.formula(stats::formula(call$formula), ~ . - 1)
-          input_data <- append(input_data, list(stats::model.matrix(formula, data = dataList)))
+          formula <- stats::update.formula(stats::formula(call$formula), ~ . + 1)
+          tmp <- stats::model.matrix(formula, data = dataList)
+          X <- tmp[, -1, drop=FALSE]
+          attr(X, "assign") <- attr(tmp, "assign")[-1]
         }
       } else {
         stop(paste0("In '", deparse(term), "' either 'formula' or 'X' must be specified."))
       }
+
+      input_data <- append(input_data, list(X))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
       input_data <- append(input_data, list(eval(call$X, envir = dataList)))

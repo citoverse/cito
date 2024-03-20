@@ -86,7 +86,7 @@ PDP.citodnn <- function(model,
   y <- NULL
   group <- NULL
 
-  perm_data <- stats::model.matrix(model$training_properties$formula, data)
+  perm_data <- stats::model.matrix(model$training_properties$formula, data)[, -1, drop=FALSE]
 
   link <- model$loss$invlink
 
@@ -172,7 +172,7 @@ PDP.citodnnBootstrap <- function(model,
   y <- NULL
   ci <- NULL
 
-  perm_data <- stats::model.matrix(model$models[[1]]$training_properties$formula, data)
+  perm_data <- stats::model.matrix(model$models[[1]]$training_properties$formula, data)[, -1, drop=FALSE]
 
   if(parallel == FALSE) {
   pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
@@ -293,14 +293,14 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
         }
 
         if(ice){
-          perm_dat<-stats::model.matrix(model$training_properties$formula, data)
+          perm_dat<-stats::model.matrix(model$training_properties$formula, data)[, -1, drop=FALSE]
           instances <- seq(from = min(perm_dat[,v]),
                            to = max(perm_dat[,v]),
                            length.out = resolution.ice + 1)
           #instances = sample(unique(perm_dat[,v]), resolution.ice)
 
           df_ice <- lapply(seq_len(length(instances)), function(i){
-            perm_dat<-stats::model.matrix(model$training_properties$formula, data)
+            perm_dat<-stats::model.matrix(model$training_properties$formula, data)[, -1, drop=FALSE]
             perm_dat[,v] <- instances[i]
             return(cbind(instances[i] ,as.numeric(link(model$net(torch::torch_tensor(perm_dat)))[,n_output,drop=FALSE] ), 1:nrow(perm_dat) ))
           })
