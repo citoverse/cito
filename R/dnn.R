@@ -153,7 +153,7 @@
 #' \item{call}{The original function call}
 #' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 #' \item{data}{Contains data used for training the model}
-#' \item{weigths}{List of weights for each training epoch}
+#' \item{weights}{List of weights for each training epoch}
 #' \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction. 1 = best model, 2 = last model}
 #' \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 #' \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}

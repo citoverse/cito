@@ -188,7 +188,7 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
       out$loss = function(pred, true) {
         eps = 0.0001
         pred = torch::torch_exp(pred)
-        if(pred$device != out$parameter$device) pred = pred$to(device = out$parameter$device)
+        if(pred$device$type != out$parameter$device$type) pred = pred$to(device = out$parameter$device)
         theta_tmp = 1.0/(torch::nnf_softplus(out$parameter)+eps)
         probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred)+eps, 0.0, 1.0-eps)
         total_count = theta_tmp
