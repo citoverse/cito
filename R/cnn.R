@@ -287,11 +287,16 @@ cnn <- function(X,
 #' @param newdata new data for predictions
 #' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
 #' @param device device on which network should be trained on.
+#' @param batchsize number of samples that are predicted at the same time
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
 #' @export
-predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"), ...) {
+predict.citocnn <- function(object,
+                            newdata = NULL,
+                            type=c("link", "response", "class"),
+                            device = c("cpu","cuda", "mps"),
+                            batchsize, ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
@@ -312,23 +317,28 @@ predict.citocnn <- function(object, newdata = NULL, type=c("link", "response", "
 
   object$net$to(device = device)
 
-
-  ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
-    newdata = torch::torch_tensor(object$data$X, device = device, dtype = torch::torch_float32())
+    newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
-    newdata <- torch::torch_tensor(newdata, device = device, dtype = torch::torch_float32())
+    newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
 
-  pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
+  dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE)
+
+  pred <- NULL
+  coro::loop(for(b in dl) {
+    if(is.null(pred)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu"))
+    else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
+  })
+
+  if(!is.null(dimnames(newdata))) rownames(pred) <- dimnames(newdata)[[1]]
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls
     if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
   }
-  if(!is.null(dimnames(newdata))) rownames(pred) <- dimnames(newdata)[[1]]
 
   return(pred)
 }

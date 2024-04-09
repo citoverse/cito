@@ -9,6 +9,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  batchsize,
   ...
 )
 }
@@ -20,6 +21,8 @@
 \item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
 
 \item{device}{device on which network should be trained on.}
+
+\item{batchsize}{number of samples that are predicted at the same time}
 
 \item{...}{additional arguments}
 }

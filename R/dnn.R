@@ -334,10 +334,19 @@ dnn <- function(formula = NULL,
       n_samples <- nrow(X)
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
-      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch[train,])
-      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch[valid,])
+      if(is.null(Z_torch)) {
+        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+      } else {
+        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], Z_torch[train,], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], Z_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+      }
     } else {
-      train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
+      if(is.null(Z_torch)) {
+        train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
+      } else {
+        train_dl <- get_data_loader(X_torch, Y_torch, Z_torch, batch_size = batchsize, shuffle = shuffle)
+      }
       valid_dl <- NULL
     }
 
@@ -720,6 +729,7 @@ coef.citodnnBootstrap <- function(object, ...) {
 #' @param newdata new data for predictions
 #' @param type type of predictions. The default is on the scale of the linear predictor, "response" is on the scale of the response, and "class" means that class predictions are returned (if it is a classification task)
 #' @param device device on which network should be trained on.
+#' @param batchsize number of samples that are predicted at the same time
 #' @param reduce predictions from bootstrapped model are by default reduced (mean, optional median or none)
 #' @param ... additional arguments
 #' @return prediction matrix
@@ -729,7 +739,7 @@ coef.citodnnBootstrap <- function(object, ...) {
 predict.citodnn <- function(object, newdata = NULL,
                             type=c("link", "response", "class"),
                             device = c("cpu","cuda", "mps"),
-                            reduce = c("mean", "median", "none"),...) {
+                            batchsize = 25L, ...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -753,36 +763,44 @@ predict.citodnn <- function(object, newdata = NULL,
 
   object$net$to(device = device)
 
-  ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
-    newdata = torch::torch_tensor(object$data$X, device = device)
+    X = torch::torch_tensor(object$data$X)
     if(!is.null(object$model_properties$embeddings)) {
-      Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long(), device = device)
+      Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long())
     }
   } else {
-    copy_newdata = newdata
-    if(is.data.frame(newdata)) {
-      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata,xlev = object$data$xlvls)
-    } else {
-      newdata <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata),xlev = object$data$xlvls)
-    }
-    newdata <- torch::torch_tensor(newdata, device = device)
+    if(is.data.frame(newdata)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls))
+    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls))
 
     if(!is.null(object$model_properties$embeddings)) {
-      tmp = do.call(cbind, lapply(object$Z_formula, function(term) copy_newdata[, term] ))
-      Z = torch::torch_tensor(tmp, dtype = torch::torch_long(), device = device)
+      tmp = do.call(cbind, lapply(object$Z_formula, function(term) newdata[, term]))
+      Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
     }
-
   }
 
-  if(is.null(object$model_properties$embeddings)) pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
-  else pred <- torch::as_array(link(object$net(newdata, Z))$to(device="cpu"))
+  if(is.null(Z)) {
+    dl <- get_data_loader(X, batch_size = batchsize, shuffle = FALSE)
+  } else {
+    dl <- get_data_loader(X, Z, batch_size = batchsize, shuffle = FALSE)
+  }
 
-  if(!is.null(object$data$ylvls)) colnames(pred) <- object$data$ylvls
-  if(type == "class") pred <- as.factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]))
+  pred <- NULL
+  coro::loop(for(b in dl) {
+    if(is.null(pred)) {
+      if(is.null(Z)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu"))
+      else pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE)))$to(device="cpu"))
+    } else {
+      if(is.null(Z)) pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
+      else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE)))$to(device="cpu")))
+    }
+  })
 
-  rownames(pred) <- rownames(newdata)
+  rownames(pred) <- rownames(X)
 
+  if(!is.null(object$data$ylvls)) {
+    colnames(pred) <- object$data$ylvls
+    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  }
 
   return(pred)
 }
@@ -796,6 +814,7 @@ predict.citodnnBootstrap <- function(object,
                                      newdata = NULL,
                                      type=c("link", "response", "class"),
                                      device = c("cpu","cuda", "mps"),
+                                     batchsize = 25L,
                                      reduce = c("mean", "median", "none"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
@@ -805,7 +824,7 @@ predict.citodnnBootstrap <- function(object,
 
   if(is.null(newdata)) newdata = object$data$X
 
-  predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device))
+  predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device, batchsize = batchsize))
   predictions = abind::abind(predictions, along = 0L)
   reduce <- match.arg(reduce)
   if(reduce == "mean") {

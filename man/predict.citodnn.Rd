@@ -10,7 +10,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
-  reduce = c("mean", "median", "none"),
+  batchsize = 25L,
   ...
 )
 
@@ -19,6 +19,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  batchsize = 25L,
   reduce = c("mean", "median", "none"),
   ...
 )
@@ -32,9 +33,11 @@
 
 \item{device}{device on which network should be trained on.}
 
-\item{reduce}{predictions from bootstrapped model are by default reduced (mean, optional median or none)}
+\item{batchsize}{number of samples that are predicted at the same time}
 
 \item{...}{additional arguments}
+
+\item{reduce}{predictions from bootstrapped model are by default reduced (mean, optional median or none)}
 }
 \value{
 prediction matrix
