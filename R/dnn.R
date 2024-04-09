@@ -334,8 +334,8 @@ dnn <- function(formula = NULL,
       n_samples <- nrow(X)
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
-      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
-      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
+      train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch[train,])
+      valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle, Z = Z_torch[valid,])
     } else {
       train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle, Z = Z_torch)
       valid_dl <- NULL
