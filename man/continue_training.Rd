@@ -28,6 +28,7 @@ continue_training(model, ...)
   verbose = TRUE,
   changed_params = NULL,
   parallel = FALSE,
+  init_optimizer = TRUE,
   ...
 )
 
@@ -39,6 +40,7 @@ continue_training(model, ...)
   device = c("cpu", "cuda", "mps"),
   verbose = TRUE,
   changed_params = NULL,
+  init_optimizer = TRUE,
   ...
 )
 }

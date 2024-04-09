@@ -95,6 +95,7 @@ continue_training.citodnnBootstrap <- function(model,
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       parallel = FALSE,
+                                      init_optimizer = TRUE,
                                       ...){
 
   if(parallel == FALSE) {
@@ -117,7 +118,7 @@ continue_training.citodnnBootstrap <- function(model,
 
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
     model$models <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
-      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL))
+      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL, init_optimizer = init_optimizer))
 
     })
     parabar::stop_backend(backend)
@@ -135,6 +136,7 @@ continue_training.citocnn <- function(model,
                                       device= c("cpu", "cuda", "mps"),
                                       verbose = TRUE,
                                       changed_params=NULL,
+                                      init_optimizer=TRUE,
                                       ...){
 
   checkmate::qassert(epochs, "X1[0,)")
@@ -185,7 +187,7 @@ continue_training.citocnn <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
 
   return(model)
 }
