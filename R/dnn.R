@@ -739,7 +739,7 @@ coef.citodnnBootstrap <- function(object, ...) {
 predict.citodnn <- function(object, newdata = NULL,
                             type=c("link", "response", "class"),
                             device = c("cpu","cuda", "mps"),
-                            batchsize = 25L, ...) {
+                            batchsize = 32L, ...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -814,7 +814,7 @@ predict.citodnnBootstrap <- function(object,
                                      newdata = NULL,
                                      type=c("link", "response", "class"),
                                      device = c("cpu","cuda", "mps"),
-                                     batchsize = 25L,
+                                     batchsize = 32L,
                                      reduce = c("mean", "median", "none"),...) {
 
   checkmate::assert( checkmate::checkNull(newdata),

@@ -296,7 +296,7 @@ predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = c("cpu","cuda", "mps"),
-                            batchsize, ...) {
+                            batchsize = 32L, ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))

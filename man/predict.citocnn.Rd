@@ -9,7 +9,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
-  batchsize,
+  batchsize = 32L,
   ...
 )
 }
