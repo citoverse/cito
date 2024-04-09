@@ -14,6 +14,7 @@
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
+#' @param init_optimizer re-initialize optimizer or not
 #' @return a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
@@ -31,6 +32,7 @@ continue_training.citodnn <- function(model,
                               device= NULL,
                               verbose = TRUE,
                               changed_params=NULL,
+                              init_optimizer=TRUE,
                               ...){
 
   if(is.null(device)) device = model$device
@@ -78,7 +80,7 @@ continue_training.citodnn <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
 
     return(model)
 }
@@ -93,6 +95,7 @@ continue_training.citodnnBootstrap <- function(model,
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       parallel = FALSE,
+                                      init_optimizer = TRUE,
                                       ...){
 
   if(parallel == FALSE) {
@@ -115,7 +118,7 @@ continue_training.citodnnBootstrap <- function(model,
 
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
     model$models <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
-      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL))
+      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL, init_optimizer = init_optimizer))
 
     })
     parabar::stop_backend(backend)
@@ -133,6 +136,7 @@ continue_training.citocnn <- function(model,
                                       device= c("cpu", "cuda", "mps"),
                                       verbose = TRUE,
                                       changed_params=NULL,
+                                      init_optimizer=TRUE,
                                       ...){
 
   checkmate::qassert(epochs, "X1[0,)")
@@ -183,7 +187,7 @@ continue_training.citocnn <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
 
   return(model)
 }
