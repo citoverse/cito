@@ -1,13 +1,16 @@
-train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE){
+train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE, init_optimizer=TRUE){
   model$net$to(device = device)
   model$net$train()
   model$successfull = 1
 
   ### Optimizer ###
-  optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
-                             parameters = c(model$net$parameters, unlist(model$loss$parameter)),
-                             lr = model$training_properties$lr)
-
+  if(init_optimizer) {
+    optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
+                               parameters = c(model$net$parameters, unlist(model$loss$parameter)),
+                               lr = model$training_properties$lr)
+  } else {
+    optimizer = model$optimizer # TODO check that optimizer exists
+  }
   ### LR Scheduler ###
   scheduler <- NULL
   if(!is.null(model$training_properties$lr_scheduler)){
@@ -166,7 +169,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       model$loss$parameter_r = unlist(lapply(model$loss$parameter, function(p) as.numeric(p$cpu())))
   }
 
+  model$optimizer = optimizer
+
   model$net$eval()
+
   return(model)
 }
 

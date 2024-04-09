@@ -16,6 +16,7 @@ continue_training(model, ...)
   device = NULL,
   verbose = TRUE,
   changed_params = NULL,
+  init_optimizer = TRUE,
   ...
 )
 
@@ -55,6 +56,8 @@ continue_training(model, ...)
 \item{verbose}{print training and validation loss of epochs}
 
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
+
+\item{init_optimizer}{re-initialize optimizer or not}
 
 \item{parallel}{train bootstrapped model in parallel}
 
