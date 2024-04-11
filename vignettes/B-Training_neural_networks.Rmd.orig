@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   #dpi=32,
   #out.width="400px",
+  fig.cap = "",
   fig.align="center",
   fig.path = 'B/B-'
 )
@@ -39,18 +40,18 @@ options("progress_enabled" = FALSE)
     ```{r,echo=FALSE}
     library(cito)
     m = dnn(Sepal.Length~., data = iris, lr = 0.0000001, verbose = FALSE, plot = FALSE)
-    cito:::visualize.training(m$losses, epoch = 100, new = TRUE, baseline = m$base_loss)
+    cito:::visualize.training(m$losses, main = "Training loss",epoch = 100, new = TRUE, baseline = m$base_loss)
     ```
 
     If it looks like that, go to the [adjusting the learning rate section](#lr)
 
--   Overfitting, difference between training and testing/holdout/new data error is too high, or validation loss starts to increase again at some point during the training
+-   Overfitting, difference between training and testing/holdout/new data error is too high, or validation loss first decreases but then increases again:
 
     ```{r, echo=FALSE}
     library(EcoData)
     df = elephant$occurenceData
     m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "binomial", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = FALSE)
-    cito:::visualize.training(m$losses, epoch = 600L, new = TRUE, baseline = m$base_loss)
+    cito:::visualize.training(m$losses, main = "Training loss",epoch = 600L, new = TRUE, baseline = m$base_loss)
     ```
 
     if it loos like that, go to the [overfitting section](#overfitting)
@@ -67,19 +68,21 @@ Give the neural network enough time to learn. The epochs should be high enough s
 m = dnn(Species~., data = iris, epochs = 10L, loss = "softmax", verbose=FALSE)
 ```
 
-After 10 epochs the loss was still decreasing, let's run the model for more epochs:
+After 10 epochs the loss was still decreasing, we should train the model longer (increase epochs):
 
 ```{r}
 m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", verbose=FALSE)
 ```
 
-It takes around 190-200 epochs until the loss doesn't decrease anymore. The "speed" of the learning depends also on the learning rate. Higher rates means larger steps into direction of the minima of the loss function:
+Here, it takes around 190-200 epochs until the loss doesn't decrease anymore. The "speed" of the learning depends also on the learning rate. Higher rates means larger steps into direction of local minima in the loss function:
 
 ```{r}
 m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", lr = 0.05, verbose=FALSE)
 ```
 
 Now it only takes about 100 epochs, but we also see that the training loss becomes wobbly. Larger learning rates increase the probability that local minima are skipped and the optimizer has problems to hit a minima.
+
+Note: But if the learning rate is high, or too high, the loss will get "jumpy", the risk of the optimizer jumping over local minima increases (see next section).
 
 ### Learning rate
 
@@ -91,9 +94,9 @@ nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, los
 nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
 
 par(mfrow = c(1, 3), mar = c(4, 3, 2, 2))
-cito:::visualize.training(nn.fit_good$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
-cito:::visualize.training(nn.fit_high$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
-cito:::visualize.training(nn.fit_low$losses, epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+cito:::visualize.training(nn.fit_good$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+cito:::visualize.training(nn.fit_high$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
+cito:::visualize.training(nn.fit_low$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$base_loss)
 ```
 
 If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.

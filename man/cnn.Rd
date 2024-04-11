@@ -15,6 +15,7 @@ cnn(
   lambda = 0,
   validation = 0,
   batchsize = 32L,
+  burnin = 10,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = NULL,
@@ -46,6 +47,8 @@ cnn(
 
 \item{batchsize}{number of samples that are used to calculate one learning rate step}
 
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
 \item{epochs}{epochs the training goes on for}
@@ -69,7 +72,7 @@ The list consists of the following attributes:
 \item{call}{The original function call}
 \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 \item{data}{Contains data used for training the model}
-\item{weigths}{List of weights for each training epoch}
+\item{weights}{List of weights for each training epoch}
 \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
 \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
@@ -98,7 +101,7 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
-   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   Poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
 }
 }
 
@@ -158,53 +161,6 @@ For detailed installation instructions and more information on utilizing GPUs fo
 Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 }
 
-\examples{
-\donttest{
-if(torch::torch_is_installed()){
-library(cito)
-
-# Example workflow in cito
-
-## Data
-### We generate our own data:
-### 320 images (3x50x50) of either rectangles or ellipsoids
-shapes <- simulate_shapes(n=320, size=50, channels=3)
-X <- shapes$data
-Y <- shapes$labels
-
-## Architecture
-### Declare the architecture of the CNN
-### Note that the output layer is added automatically by cnn()
-architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
-
-## Build and train network
-### softmax is used for classification
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
-
-## The training loss is below the baseline loss but at the end of the
-## training the loss was still decreasing, so continue training for another 50
-## epochs
-cnn.fit <- continue_training(cnn.fit, epochs = 50)
-
-# Structure of Neural Network
-print(cnn.fit)
-
-# Plot Neural Network
-plot(cnn.fit)
-
-## Convergence can be tested via the analyze_training function
-analyze_training(cnn.fit)
-
-## Transfer learning
-### With the transfer() function we can use predefined architectures with pretrained weights
-transfer_architecture <- create_architecture(transfer("resnet18"))
-resnet <- cnn(X, Y, transfer_architecture, loss = "softmax",
-              epochs = 10, validation = 0.1, lr = 0.05)
-print(resnet)
-plot(resnet)
-}
-}
-}
 \seealso{
 \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }

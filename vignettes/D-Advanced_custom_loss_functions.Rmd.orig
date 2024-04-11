@@ -24,6 +24,7 @@ knitr::opts_chunk$set(
   comment = "#>",
   #dpi=32,
   #out.width="400px",
+  fig.cap = "",
   fig.align="center",
   fig.path = 'D/D-'
 )
@@ -73,7 +74,7 @@ exp(m$parameter$scale_par) # true scale parameter: 0.4!
 
 ### Example 2: Quantile regression
 
-The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression (a form of conformal prediction), which has the advantage of providing constant prediction intervals, which can be beneficial in certain situations (e.g., heteroscedasticity):
+The bootstrapping approach provides confidence intervals, but not prediction intervals. We could use likelihoods, such as the Gaussian likelihood, to fit a constant prediction interval. However, we often use loss functions, such as the mean squared error in ML/DL, which don't have an intrinsic parametrization for prediction intervals. We can approximate prediction intervals with quantile regression, which has the advantage of providing non-constant prediction intervals (for example for heteroscedasticity):
 
 Simulate data:
 
@@ -126,7 +127,7 @@ lines(smooth.spline(data$X1, predict(m)[,2], spar = 0.01), col = "red")
 
 ### Example 3: Using cito for optimization / active learning
 
-Neural networks can be used in an unconventional way to optimize arbitrary functions (which is sometimes called active learning, it is related to reinforcement learning) - the only prerequiste is that the analytic derivative of the function using torch must be available. We provide the function to be optimized as a series of Torch operations. First, our model will predict the parameters (based on noise, the inputs don't matter) which are passed to the custom loss function and then we will then use the model function (which we optimize) to compute the loss and return it to the optimizer. In that way we overfit to the noisy inputs and the DNN will learn to predict the optimal set of parameters - independent of the input.
+Neural networks can be used in an unconventional way to optimize arbitrary functions (which is sometimes called active learning, it is related to reinforcement learning) - the only prerequisite is that the analytic derivative of the function using torch must be available. We provide the function to be optimized as a series of Torch operations. First, our model will predict the parameters (based on noise, the inputs don't matter) which are passed to the custom loss function and then we will then use the model function (which we optimize) to compute the loss and return it to the optimizer. In that way we overfit to the noisy inputs and the DNN will learn to predict the optimal set of parameters - independent of the input.
 
 ```{r}
 X = runif(200)

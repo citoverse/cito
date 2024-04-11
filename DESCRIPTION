@@ -22,7 +22,7 @@ Authors@R:
              role = "ctb",
              email = "armin.schenk99@gmail.com")
            )
-Description: Building and training custom neural networks in the typical R syntax. The 'torch' package is used for numerical calculations, which allows for training on CPU as well as on a graphics card. 
+Description: The 'cito' package provides a user-friendly interface for training and interpreting deep neural networks (DNN). 'cito' simplifies the fitting of DNNs by supporting the familiar formula syntax, hyperparameter tuning under cross-validation, and helps to detect and handle convergence problems.  DNNs can be trained on CPU, GPU and MacOS GPUs. In addition, 'cito' has many downstream functionalities such as various explainable AI (xAI) metrics (e.g. variable importance, partial dependence plots, accumulated local effect plots, and effect estimates) to interpret trained DNNs. 'cito' optionally provides confidence intervals (and p-values) for all xAI metrics and predictions. At the same time, 'cito' is computationally efficient because it is based on the deep learning framework 'torch'. The 'torch' package is native to R, so no Python installation or other API is required for this package.
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
@@ -38,9 +38,12 @@ Imports:
     abind,
     progress,
     cli,
-    torchvision
+    torchvision,
+    tibble,
+    lme4
 License: GPL (>= 3)
 Suggests:
+    spelling,
     rmarkdown,
     testthat,
     plotly,
@@ -52,3 +55,4 @@ Suggests:
 VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues
 URL: https://citoverse.github.io/cito/
+Language: en-US

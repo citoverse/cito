@@ -63,14 +63,34 @@ summary(nn.fit)
 
 ## Predictions with bootstrapping:
 dim(predict(nn.fit))
-## The first dim corresponds to the bootstrapping, if you want the average
-## predictions, you need to calculate the mean by your own:
-apply(predict(nn.fit), 2:3, mean)
+## predictions are by default averaged (over the bootstrap samples)
+
+
+
+# Hyperparameter tuning (experimental feature)
+hidden_values = matrix(c(5, 2,
+                         4, 2,
+                         10,2,
+                         15,2), 4, 2, byrow = TRUE)
+## Potential architectures we want to test, first column == number of nodes
+print(hidden_values)
+
+nn.fit = dnn(Species~.,
+             data = iris,
+             epochs = 30L,
+             loss = "softmax",
+             hidden = tune(values = hidden_values),
+             lr = tune(0.00001, 0.1) # tune lr between range 0.00001 and 0.1
+             )
+## Tuning results:
+print(nn.fit$tuning)
+
+# test = Inf means that tuning was cancelled after only one fit (within the CV)
 
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)
@@ -89,7 +109,7 @@ nn.fit$parameter$scale
 ## Sigma = L*L^t + D
 ## Helper function to build covariance matrix
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -107,7 +127,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              loss = custom_loss_MVN,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3),
+               list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,

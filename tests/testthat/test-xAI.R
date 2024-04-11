@@ -107,7 +107,6 @@ testthat::test_that("ALE", {
   testthat::expect_error({.n = ALE(model, variable = c("Sepal.Width",  "Petal.Length"))}, NA)
   testthat::expect_error({.n = ALE(model, variable = c("Sepal.Width",  "Petal.Length"), K = 4)}, NA)
 
-
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
   iris2$Species = as.integer(iris2$Species) - 1
@@ -118,3 +117,7 @@ testthat::test_that("ALE", {
   testthat::expect_error({.n = ALE(model, variable = c("Sepal.Width",  "Petal.Length"), K = 4)}, NA)
   })
 })
+
+
+
+

@@ -262,7 +262,3 @@ get_model_properties <- function(formula, dataList) {
 }
 
 
-
-
-
-

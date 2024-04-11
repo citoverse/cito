@@ -7,20 +7,20 @@
 dnn(
   formula = NULL,
   data = NULL,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp"),
   hidden = c(50L, 50L),
-  activation = c("relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus",
-    "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink",
-    "softshrink", "hardshrink", "log_sigmoid"),
-  validation = 0,
+  activation = "selu",
   bias = TRUE,
+  dropout = 0,
+  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
+    "mvp", "nbinom"),
+  validation = 0,
   lambda = 0,
   alpha = 0.5,
-  dropout = 0,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
-  batchsize = 32L,
+  batchsize = NULL,
+  burnin = 30,
+  baseloss = NULL,
   shuffle = TRUE,
   epochs = 100,
   bootstrap = NULL,
@@ -31,6 +31,7 @@ dnn(
   custom_parameters = NULL,
   device = c("cpu", "cuda", "mps"),
   early_stopping = FALSE,
+  tuning = config_tuning(),
   X = NULL,
   Y = NULL
 )
@@ -40,27 +41,31 @@ dnn(
 
 \item{data}{matrix or data.frame with features/predictors and response variable}
 
-\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
-
 \item{hidden}{hidden units in layers, length of hidden corresponds to number of layers}
 
 \item{activation}{activation functions, can be of length one, or a vector of different activation functions for each layer}
 
-\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
-
 \item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
+
+\item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
+
+\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
+
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
 
 \item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
 
 \item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
 
-\item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
-
 \item{optimizer}{which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}}
 
 \item{lr}{learning rate given to optimizer}
 
-\item{batchsize}{number of samples that are used to calculate one learning rate step}
+\item{batchsize}{number of samples that are used to calculate one learning rate step, default is 10\% of the training data}
+
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+
+\item{baseloss}{baseloss, if null baseloss corresponds to intercept only models}
 
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
@@ -82,6 +87,8 @@ dnn(
 
 \item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
 
+\item{tuning}{tuning options created with \code{\link{config_tuning}}}
+
 \item{X}{Feature matrix or data.frame, alternative data interface}
 
 \item{Y}{Response vector, factor, matrix or data.frame, alternative data interface}
@@ -93,7 +100,7 @@ The list consists of the following attributes:
 \item{call}{The original function call}
 \item{loss}{A list which contains relevant information for the target variable and the used loss function}
 \item{data}{Contains data used for training the model}
-\item{weigths}{List of weights for each training epoch}
+\item{weights}{List of weights for each training epoch}
 \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction. 1 = best model, 2 = last model}
 \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
 \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
@@ -103,6 +110,10 @@ The list consists of the following attributes:
 \description{
 fits a custom deep neural network using the Multilayer Perceptron architecture. \code{dnn()} supports the formula syntax and allows to customize the neural network to a maximal degree.
 }
+\section{Activation functions}{
+Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
+}
+
 \section{Loss functions / Likelihoods}{
 We support loss functions and likelihoods for different tasks:\tabular{lll}{
    Name \tab Explanation \tab Example / Task \cr
@@ -113,6 +124,8 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
    poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
+   mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
 }
 }
 
@@ -168,6 +181,30 @@ When training a network, you have the flexibility to customize the optimizer set
 \code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
 
 Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
+}
+
+\section{Hyperparameter tuning}{
+We have implemented experimental support for hyperparameter tuning. We can mark hyperparameters that should be tuned by cito by setting their values to \code{tune()}, for example \verb{dnn (..., lr = tune()}. \code{\link[=tune]{tune()}} is a function that creates a range of random values for the given hyperparameter. You can change the maximum and minimum range of the potential hyperparameters or pass custom values to the \code{tune(values = c(....))} function. The following table lists the hyperparameters that can currently be tuned:\tabular{lll}{
+   Hyperparameter \tab Example \tab Details \cr
+   hidden \tab \verb{dnn(…,hidden=tune(10, 20, fixed=’depth’))} \tab Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper #' boundaries must be provided (first = number of nodes) \cr
+   bias \tab \verb{dnn(…, bias=tune())} \tab Should the bias be turned on or off for all hidden layers \cr
+   lambda \tab \verb{dnn(…, lambda = tune(0.0001, 0.1))} \tab lambda will be tuned within the range (0.0001, 0.1) \cr
+   alpha \tab \verb{dnn(…, lambda = tune(0.2, 0.4))} \tab alpha will be tuned within the range (0.2, 0.4) \cr
+   activation \tab \verb{dnn(…, activation = tune())} \tab activation functions of the hidden layers will be tuned \cr
+   dropout \tab \verb{dnn(…, dropout = tune())} \tab Dropout rate will be tuned (globally for all layers) \cr
+   lr \tab \verb{dnn(…, lr = tune())} \tab Learning rate will be tuned \cr
+   batchsize \tab \verb{dnn(…, batchsize = tune())} \tab batch size will be tuned \cr
+   epochs \tab \verb{dnn(…, batchsize = tune())} \tab batchsize will be tuned \cr
+}
+
+
+The hyperparameters are tuned by random search (i.e., random values for the hyperparameters within a specified range) and by cross-validation. The exact tuning regime can be specified with \link{config_tuning}.
+
+Note that hyperparameter tuning can be expensive. We have implemented an option to parallelize hyperparameter tuning, including parallelization over one or more GPUs (the hyperparameter evaluation is parallelized, not the CV). This can be especially useful for small models. For example, if you have 4 GPUs, 20 CPU cores, and 20 steps (random samples from the random search), you could run \verb{dnn(..., device="cuda",lr = tune(), batchsize=tune(), tuning=config_tuning(parallel=20, NGPU=4)}, which will distribute 20 model fits across 4 GPUs, so that each GPU will process 5 models (in parallel).
+
+As this is an experimental feature, we welcome feature requests and bug reports on our github site.
+
+For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
 }
 
 \section{How neural networks work}{
@@ -249,14 +286,34 @@ summary(nn.fit)
 
 ## Predictions with bootstrapping:
 dim(predict(nn.fit))
-## The first dim corresponds to the bootstrapping, if you want the average
-## predictions, you need to calculate the mean by your own:
-apply(predict(nn.fit), 2:3, mean)
+## predictions are by default averaged (over the bootstrap samples)
+
+
+
+# Hyperparameter tuning (experimental feature)
+hidden_values = matrix(c(5, 2,
+                         4, 2,
+                         10,2,
+                         15,2), 4, 2, byrow = TRUE)
+## Potential architectures we want to test, first column == number of nodes
+print(hidden_values)
+
+nn.fit = dnn(Species~.,
+             data = iris,
+             epochs = 30L,
+             loss = "softmax",
+             hidden = tune(values = hidden_values),
+             lr = tune(0.00001, 0.1) # tune lr between range 0.00001 and 0.1
+             )
+## Tuning results:
+print(nn.fit$tuning)
+
+# test = Inf means that tuning was cancelled after only one fit (within the CV)
 
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)
@@ -275,7 +332,7 @@ nn.fit$parameter$scale
 ## Sigma = L*L^t + D
 ## Helper function to build covariance matrix
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -293,7 +350,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              loss = custom_loss_MVN,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3),
+               list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,

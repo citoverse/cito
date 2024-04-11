@@ -10,10 +10,11 @@
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X array. If not provided X from original training will be used
 #' @param Y vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used
-#' @param device device on which network should be trained on, either "cpu" or "cuda"
+#' @param device can be used to overwrite device used in previous training
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
+#' @param init_optimizer re-initialize optimizer or not
 #' @return a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
 #'
 #' @example /inst/examples/continue_training-example.R
@@ -28,16 +29,15 @@ continue_training <- function(model, ...){UseMethod("continue_training")}
 continue_training.citodnn <- function(model,
                               epochs = 32,
                               data=NULL,
-                              device= c("cpu","cuda", "mps"),
+                              device= NULL,
                               verbose = TRUE,
                               changed_params=NULL,
+                              init_optimizer=TRUE,
                               ...){
 
-  checkmate::qassert(device, "S+[3,)")
-  device <- match.arg(device)
-  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
-  device <- check_device(device)
+  if(is.null(device)) device = model$device
 
+  device <- check_device(device)
 
   model<- check_model(model)
 
@@ -63,6 +63,8 @@ continue_training.citodnn <- function(model,
   ylvls <- targets$ylvls
 
   X <- torch::torch_tensor(as.matrix(X))
+  Z = NULL
+  if(!is.null(model$data$Z)) Z = torch::torch_tensor(as.matrix(model$data$Z), dtype=torch::torch_long())
 
 
   ### dataloader  ###
@@ -70,15 +72,25 @@ continue_training.citodnn <- function(model,
     n_samples <- nrow(X)
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    if(is.null(Z)) {
+      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    } else {
+      train_dl <- get_data_loader(X[train,], Y[train,], Z[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid,], Y[valid,], Z[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    }
+
   } else {
-    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    if(is.null(Z)) {
+      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    } else {
+      train_dl <- get_data_loader(X, Y, Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    }
     valid_dl <- NULL
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
 
     return(model)
 }
@@ -89,10 +101,11 @@ continue_training.citodnn <- function(model,
 continue_training.citodnnBootstrap <- function(model,
                                       epochs = 32,
                                       data=NULL,
-                                      device= c("cpu","cuda", "mps"),
+                                      device= NULL,
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       parallel = FALSE,
+                                      init_optimizer = TRUE,
                                       ...){
 
   if(parallel == FALSE) {
@@ -115,7 +128,7 @@ continue_training.citodnnBootstrap <- function(model,
 
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
     model$models <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
-      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL))
+      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, verbose = FALSE, changed_params = NULL, init_optimizer = init_optimizer))
 
     })
     parabar::stop_backend(backend)
@@ -133,6 +146,7 @@ continue_training.citocnn <- function(model,
                                       device= c("cpu", "cuda", "mps"),
                                       verbose = TRUE,
                                       changed_params=NULL,
+                                      init_optimizer=TRUE,
                                       ...){
 
   checkmate::qassert(epochs, "X1[0,)")
@@ -183,7 +197,7 @@ continue_training.citocnn <- function(model,
   }
 
 
-  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE)
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
 
   return(model)
 }

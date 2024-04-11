@@ -6,7 +6,7 @@
 \alias{cito-package}
 \title{'cito': Building and training neural networks}
 \description{
-'cito' simplifies the building and training of (deep) neural networks by relying on standard R syntax and familiar methods from statistical packages. Model creation and training can be done with a single line of code. Furthermore, all generic R methods such as print or plot can be used on the fitted model. At the same time, 'cito' is computationally efficient because it is based on the deep learning framework 'torch' (with optional GPU support). The 'torch' package is native to R, so no Python installation or other API is required for this package.
+The 'cito' package provides a user-friendly interface for training and interpreting deep neural networks (DNN). 'cito' simplifies the fitting of DNNs by supporting the familiar formula syntax, hyperparameter tuning under cross-validation, and helps to detect and handle convergence problems.  DNNs can be trained on CPU, GPU and MacOS GPUs. In addition, 'cito' has many downstream functionalities such as various explainable AI (xAI) metrics (e.g. variable importance, partial dependence plots, accumulated local effect plots, and effect estimates) to interpret trained DNNs. 'cito' optionally provides confidence intervals (and p-values) for all xAI metrics and predictions. At the same time, 'cito' is computationally efficient because it is based on the deep learning framework 'torch'. The 'torch' package is native to R, so no Python installation or other API is required for this package.
 }
 \details{
 Cito is built around its main function \code{\link{dnn}}, which creates and trains a deep neural network. Various tools for analyzing the trained neural network are available.
@@ -105,14 +105,34 @@ summary(nn.fit)
 
 ## Predictions with bootstrapping:
 dim(predict(nn.fit))
-## The first dim corresponds to the bootstrapping, if you want the average
-## predictions, you need to calculate the mean by your own:
-apply(predict(nn.fit), 2:3, mean)
+## predictions are by default averaged (over the bootstrap samples)
+
+
+
+# Hyperparameter tuning (experimental feature)
+hidden_values = matrix(c(5, 2,
+                         4, 2,
+                         10,2,
+                         15,2), 4, 2, byrow = TRUE)
+## Potential architectures we want to test, first column == number of nodes
+print(hidden_values)
+
+nn.fit = dnn(Species~.,
+             data = iris,
+             epochs = 30L,
+             loss = "softmax",
+             hidden = tune(values = hidden_values),
+             lr = tune(0.00001, 0.1) # tune lr between range 0.00001 and 0.1
+             )
+## Tuning results:
+print(nn.fit$tuning)
+
+# test = Inf means that tuning was cancelled after only one fit (within the CV)
 
 
 # Advanced: Custom loss functions and additional parameters
 ## Normal Likelihood with sd parameter:
-custom_loss = function(true, pred) {
+custom_loss = function(pred, true) {
   logLik = torch::distr_normal(pred,
                                scale = torch::nnf_relu(scale)+
                                  0.001)$log_prob(true)
@@ -131,7 +151,7 @@ nn.fit$parameter$scale
 ## Sigma = L*L^t + D
 ## Helper function to build covariance matrix
 create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -149,7 +169,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              loss = custom_loss_MVN,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3),
+               list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,

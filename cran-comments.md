@@ -1,3 +1,56 @@
+# Version 1.1
+## cito submission 2 2024/03/18
+
+Dear CRAN Team,
+
+the following issues have been addressed:
+
+Found the following (possibly) invalid URLs:
+URL: https://cran.r-project.org/web/packages/sjSDM/index.html
+From: inst/doc/C-Example_Species_distribution_modeling.html
+Status: 200
+Message: OK
+CRAN URL not in canonical form
+URL:
+https://cran.r-project.org/web/packages/sjSDM/vignettes/sjSDM_Introduction.html
+From: inst/doc/C-Example_Species_distribution_modeling.html
+Status: 200
+Message: OK
+CRAN URL not in canonical form
+
+Links were changed to https://cran.r-project.org/package=sjSDM
+
+Many thanks!
+Best,
+Max Pichler
+
+
+# Version 1.1
+## cito submission 1 2024/03/17
+This is a major update. The update includes new loss/likelihood functions, 
+hyperparameter tuning, bug fixes, and improved documentation.
+
+Best,
+Max Pichler
+
+### Successfull R CMD checks under
+
+Locally: 
+* MacOS Monterey 14.1.2 (R aarch64-apple-darwin20) (CPU and mps devices)
+* Ubuntu 20.04 (for GPU device)
+
+Github actions:
+* macOS-latest (release)
+* Ubuntu 20.04 R-release, and R-development
+* Windows-latest R-release
+
+Win-builder 
+* R-release, R-development, and R-oldrelease
+
+Spelling has been checked (potential errors are intended).
+
+
+
 # Version 1.0.2
 ## cito submission 5 2023/06/10
 Dear CRAN Team,

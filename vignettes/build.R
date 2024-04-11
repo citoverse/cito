@@ -8,24 +8,27 @@
 #                   output_format = "html_document", output_file = "../vignettes/D-Advanced_custom_loss_functions.html")
 #
 #
-# paths =
-#   list.files("vignettes_build/", full.names = FALSE)[stringr::str_detect( list.files("vignettes_build/") , ".Rmd")]
-# file.remove(paste0("vignettes/", paths))
-# file.copy(paste0("vignettes_build/", paths), paste0("vignettes/", paths))
+paths =
+  list.files("vignettes_build/", full.names = FALSE)[stringr::str_detect( list.files("vignettes_build/") , ".Rmd")]
+file.remove(paste0("vignettes/", paths))
+file.copy(paste0("vignettes_build/", paths), paste0("vignettes/", paths))
 pkgdown::build_site()
-# file.remove(paste0("vignettes/", paths))
+file.remove(paste0("vignettes/", paths))
 
 
-# setwd("vignettes/")
-# knitr::knit("A-Introduction_to_cito.Rmd.orig",
-#             output = "A-Introduction_to_cito.Rmd"
-#             )
-# knitr::knit("B-Training_neural_networks.Rmd.orig",
-#             output = "B-Training_neural_networks.Rmd"
-# )
-# knitr::knit("C-Example_Species_distribution_modeling.Rmd.orig",
-#             output = "C-Example_Species_distribution_modeling.Rmd"
-# )
-# knitr::knit("D-Advanced_custom_loss_functions.Rmd.orig",
-#             output = "D-Advanced_custom_loss_functions.Rmd"
-# )
+setwd("vignettes/")
+knitr::knit("A-Introduction_to_cito.Rmd.orig",
+            output = "A-Introduction_to_cito.Rmd"
+            )
+knitr::knit("B-Training_neural_networks.Rmd.orig",
+            output = "B-Training_neural_networks.Rmd"
+)
+knitr::knit("C-Example_Species_distribution_modeling.Rmd.orig",
+            output = "C-Example_Species_distribution_modeling.Rmd"
+)
+knitr::knit("D-Advanced_custom_loss_functions.Rmd.orig",
+            output = "D-Advanced_custom_loss_functions.Rmd"
+)
+
+
+pkgdown::build_site()

@@ -10,6 +10,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  batchsize = 32L,
   ...
 )
 
@@ -18,6 +19,8 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
+  batchsize = 32L,
+  reduce = c("mean", "median", "none"),
   ...
 )
 }
@@ -26,11 +29,15 @@
 
 \item{newdata}{new data for predictions}
 
-\item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
+\item{type}{type of predictions. The default is on the scale of the linear predictor, "response" is on the scale of the response, and "class" means that class predictions are returned (if it is a classification task)}
 
 \item{device}{device on which network should be trained on.}
 
+\item{batchsize}{number of samples that are predicted at the same time}
+
 \item{...}{additional arguments}
+
+\item{reduce}{predictions from bootstrapped model are by default reduced (mean, optional median or none)}
 }
 \value{
 prediction matrix

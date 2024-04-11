@@ -26,7 +26,7 @@
     
     <a class="navbar-brand me-2" href="../index.html">cito</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.0.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">1.1</small>
 
     
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -78,7 +78,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2023-09-29</h4>
+            <h4 data-toc-skip class="date">2024-03-16</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -99,13 +99,78 @@ Amesoeder &amp; Maximilian Pichler</h4>
 installed and running.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://torch.mlverse.org/docs" class="external-link">torch</a></span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"torch"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loading required package: torch</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://torch.mlverse.org/docs" class="external-link">torch</a></span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://rdrr.io/pkg/torch/man/torch_is_installed.html" class="external-link">torch_is_installed</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/pkg/torch/man/install_torch.html" class="external-link">install_torch</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span> <span class="op">(</span><span class="va"><a href="https://citoverse.github.io/cito/" class="external-link">cito</a></span><span class="op">)</span></span></code></pre></div>
 <p>If you have problems installing Torch, check out the <a href="https://torch.mlverse.org/docs/articles/installation.html" class="external-link">installation
 help from the torch developer</a>.</p>
+</div>
+<div class="section level2">
+<h2 id="details-about-the-internal-implementation-of-cito">Details about the internal implementation of ‘cito’<a class="anchor" aria-label="anchor" href="#details-about-the-internal-implementation-of-cito"></a>
+</h2>
+<div class="section level3">
+<h3 id="internal-data-representation">Internal Data Representation<a class="anchor" aria-label="anchor" href="#internal-data-representation"></a>
+</h3>
+<p>Tabular data are typically supplied to cito as a data.frame in the
+usual encoding via the data argument. Categorical data are processed
+internally using the model.matrix functions from the R ‘stats’ package.
+Categorical features are automatically one-hot encoded (no reference
+level). The data are then split into a feature matrix (variables) and a
+response matrix.</p>
+<p>The training of the neural networks is based on stochastic gradient
+descent, which involves sampling random batches of data at each
+optimization step. To optimize the sampling and subsetting of the data,
+‘torch’ provides optimized data loader objects that create data
+iterators (objects that iterate once over the data set corresponding to
+an epoch). The feature and response matrices are passed to ‘torch’ data
+loaders that reside on the CPU (to avoid memory overflows on the GPU, if
+available).</p>
+</div>
+<div class="section level3">
+<h3 id="construction-of-the-neural-networks">Construction of the neural networks<a class="anchor" aria-label="anchor" href="#construction-of-the-neural-networks"></a>
+</h3>
+<p>Neural networks (NN) are built using the ‘nn_sequential’ object from
+the ‘torch’ package. nn_sequential’ expects a list of layers and then
+returns a fully functional neural network object. It also initializes
+all weights of the layers. The list of layers is built based on user
+input, in particular the hidden argument for the number and size of
+hidden layers, and the activation argument for the corresponding
+activation layers.</p>
+</div>
+<div class="section level3">
+<h3 id="training-and-evaluation">Training and Evaluation<a class="anchor" aria-label="anchor" href="#training-and-evaluation"></a>
+</h3>
+<p>Once the NN structure and data are prepared, the actual training
+starts (the baseline loss is also calculated before the training
+starts). The training consists of two loops. An outer loop for the
+number of epochs (one epoch means that the data has been used once to
+update the weights). And an inner loop for the stochastic gradient
+descent, i.e. for n = 100 observations and batch size = 20, it takes 5
+batches of data to traverse the dataset once.</p>
+<p>At each step of the inner loop, the optimizer is reset, a batch of
+data is returned from the data iterator (initialized at each epoch by
+the data loader), split into feature and response tensors, pushed to the
+GPU (if one is available), the feature matrix is passed to the NN for
+prediction, the average loss is computed based on the response tensor
+and the predictions, the average loss is backpropagated, and the weights
+are updated by the optimizer based on the back-propagated errors. This
+inner loop is repeated until the dataset has been used once, completing
+the epoch. The process is then repeated for n epochs.</p>
+<p>If validation is turned on, after each epoch the model is evaluated
+on the validation holdout (which was separated from the data at the
+beginning).</p>
+</div>
+<div class="section level3">
+<h3 id="transferability">Transferability<a class="anchor" aria-label="anchor" href="#transferability"></a>
+</h3>
+<p>To make the model portable (e.g. save and reload the model), the
+weights are stored as R matrices in the final object of the ‘dnn’
+function. This is necessary because the ‘torch’ objects are just
+pointers to the corresponding data structures. Naively, storing these
+pointers is pointless, because after the R session ends, the memory is
+freed and the pointers are meaningless.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="introduction-to-models-and-model-structures">Introduction to models and model structures<a class="anchor" aria-label="anchor" href="#introduction-to-models-and-model-structures"></a>
@@ -117,10 +182,10 @@ help from the torch developer</a>.</p>
 from ML but also likelihoods for statistical models are supported:</p>
 <table class="table">
 <colgroup>
-<col width="15%">
-<col width="15%">
 <col width="19%">
-<col width="48%">
+<col width="19%">
+<col width="34%">
+<col width="27%">
 </colgroup>
 <tbody>
 <tr class="odd">
@@ -173,6 +238,19 @@ data)</td>
 <td align="left">Regression, count data, e.g. species abundances</td>
 <td><code>dnn(Abundance~., ..., loss = "Poisson")</code></td>
 </tr>
+<tr class="odd">
+<td align="left"><code>nbinom</code></td>
+<td align="left">Negative Binomial Likelihood</td>
+<td align="left">Regression, count data, e.g. species abundances with
+variable dispersion</td>
+<td><code>dnn(Abundance~., ..., loss = "nbinom")</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>mvp</code></td>
+<td align="left">Multivariate probit model</td>
+<td align="left">Joint Species Distribution model</td>
+<td><code>dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")</code></td>
+</tr>
 </tbody>
 </table>
 <p>Moreover, all non multilabel losses (all except for softmax or
@@ -219,14 +297,11 @@ the created object. e aware that this may take some time for large
 networks.</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-plotnn-1.png" alt="plot of chunk plotnn"><p class="caption">
-plot of chunk plotnn
-</p>
-</div>
-<p>The neural network 5 input nodes (3 continoues features, Sepal.Width,
-Petal.Length, Petal.Width and the contrasts for the Species variable
-(n_classes - 1)) and 1 output node for the response (Sepal.Length).</p>
+<p><img src="A/A-plotnn-1.png" style="display: block; margin: auto;"></p>
+<p>The neural network 5 input nodes (3 continuoues features,
+Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species
+variable (n_classes - 1)) and 1 output node for the response
+(Sepal.Length).</p>
 </div>
 <div class="section level3">
 <h3 id="baseline-loss">Baseline loss<a class="anchor" aria-label="anchor" href="#baseline-loss"></a>
@@ -236,21 +311,11 @@ intercept only model. It allows us to control the training because the
 goal is to beat the baseline loss. If we don’t, we need to adjust the
 optimization parameters (epochs and lr (learning rate)):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span>
-<span><span class="co">#&gt; Error in eval_bare(loop, env): Loss is NA. Bad training, please check learning rate or regularization strength. See vignette('02_Troubleshooting') for help.</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"><p class="caption">
-plot of chunk unnamed-chunk-2
-</p>
-</div>
+<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span></code></pre></div>
 <p>vs</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.01</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-3-1.png" alt="plot of chunk unnamed-chunk-3"><p class="caption">
-plot of chunk unnamed-chunk-3
-</p>
-</div>
+<p><img src="A/A-unnamed-chunk-3-1.png" style="display: block; margin: auto;"></p>
 <p>See <code>vignette("B-Training_neural_networks"</code>) for more
 details on how to adjust the optimization procedure and increase the
 probability of convergence.</p>
@@ -298,9 +363,9 @@ packages:</p>
 statistical models:</p>
 <table class="table">
 <colgroup>
-<col width="30%">
-<col width="59%">
-<col width="10%">
+<col width="22%">
+<col width="56%">
+<col width="20%">
 </colgroup>
 <thead><tr class="header">
 <th>xAI Method</th>
@@ -318,7 +383,8 @@ variance in the data is explained by the features.</td>
 <td>Average conditional effects (ACE) (returned by
 <code>summary(nn.fit)</code>)</td>
 <td>Average of local derivatives, approximation of linear effects. See
-<a href="https://arxiv.org/abs/2306.10551" class="external-link">Pichler and Hartig
+<a href="https://arxiv.org/abs/2201.08837" class="external-link">Scholbeck et al. (2022)</a>
+and <a href="https://arxiv.org/abs/2306.10551" class="external-link">Pichler and Hartig
 (2023)</a>
 </td>
 <td><code>lm(Y~X)</code></td>
@@ -352,22 +418,22 @@ SDCE:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width     1.133617</span></span>
-<span><span class="co">#&gt; 2 Petal.Length     2.286806</span></span>
-<span><span class="co">#&gt; 3  Petal.Width     2.783383</span></span>
-<span><span class="co">#&gt; 4      Species     1.053672</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width     2.266942</span></span>
+<span><span class="co">#&gt; 2 Petal.Length    19.364085</span></span>
+<span><span class="co">#&gt; 3  Petal.Width     1.816410</span></span>
+<span><span class="co">#&gt; 4      Species     1.101089</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.06250046</span></span>
-<span><span class="co">#&gt; Petal.Length 0.35557117</span></span>
-<span><span class="co">#&gt; Petal.Width  0.39397602</span></span>
+<span><span class="co">#&gt; Sepal.Width   0.3135183</span></span>
+<span><span class="co">#&gt; Petal.Length  1.1674297</span></span>
+<span><span class="co">#&gt; Petal.Width  -0.3144642</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Standard Deviation of Conditional Effects:</span></span>
 <span><span class="co">#&gt;              Response_1</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.08405767</span></span>
-<span><span class="co">#&gt; Petal.Length 0.08007347</span></span>
-<span><span class="co">#&gt; Petal.Width  0.06509943</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width  0.05861976</span></span>
+<span><span class="co">#&gt; Petal.Length 0.11233247</span></span>
+<span><span class="co">#&gt; Petal.Width  0.05357466</span></span></code></pre></div>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -391,27 +457,27 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Feature Importance</span></span>
-<span><span class="co">#&gt;                             Importance Std.Err Z value Pr(&gt;|z|)   </span></span>
-<span><span class="co">#&gt; Sepal.Width → Sepal.Length       1.084   0.353    3.07   0.0022 **</span></span>
-<span><span class="co">#&gt; Petal.Length → Sepal.Length      6.778   2.649    2.56   0.0105 * </span></span>
-<span><span class="co">#&gt; Petal.Width → Sepal.Length       1.075   0.496    2.17   0.0301 * </span></span>
-<span><span class="co">#&gt; Species → Sepal.Length           0.209   0.119    1.76   0.0790 . </span></span>
+<span><span class="co">#&gt;                 Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width →         1.58    0.44    3.59  0.00033 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →       39.56    9.40    4.21  2.6e-05 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →         1.62    1.37    1.19  0.23477    </span></span>
+<span><span class="co">#&gt; Species →             2.02    1.66    1.22  0.22359    </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Average Conditional Effects</span></span>
-<span><span class="co">#&gt;                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width → Sepal.Length  0.2761  0.0578    4.77  1.8e-06 ***</span></span>
-<span><span class="co">#&gt; Petal.Length → Sepal.Length 0.7587  0.1142    6.64  3.1e-11 ***</span></span>
-<span><span class="co">#&gt; Petal.Width → Sepal.Length  0.2448  0.0857    2.86   0.0043 ** </span></span>
+<span><span class="co">#&gt;                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width →    0.2834  0.0494    5.73  9.8e-09 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →   1.5751  0.1557   10.11  &lt; 2e-16 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →   -0.2994  0.1557   -1.92    0.054 .  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Standard Deviation of Conditional Effects</span></span>
-<span><span class="co">#&gt;                                ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width → Sepal.Length  0.1161  0.0260    4.46  8.1e-06 ***</span></span>
-<span><span class="co">#&gt; Petal.Length → Sepal.Length 0.2134  0.0823    2.59  0.00953 ** </span></span>
-<span><span class="co">#&gt; Petal.Width → Sepal.Length  0.1021  0.0269    3.80  0.00015 ***</span></span>
+<span><span class="co">#&gt;                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">#&gt; Sepal.Width →   0.1105  0.0250    4.42  9.9e-06 ***</span></span>
+<span><span class="co">#&gt; Petal.Length →  0.2062  0.0383    5.38  7.3e-08 ***</span></span>
+<span><span class="co">#&gt; Petal.Width →   0.0743  0.0209    3.55  0.00039 ***</span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -436,22 +502,11 @@ important feature.</p>
 <p>Visualization of the effects:</p>
 <div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/PDP.html">PDP</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-9-1.png" alt="plot of chunk unnamed-chunk-9"><p class="caption">
-plot of chunk unnamed-chunk-9
-</p>
-</div>
+<p><img src="A/A-unnamed-chunk-9-1.png" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://www.r-project.org" class="external-link">effects</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Loading required package: carData</span></span>
-<span><span class="co">#&gt; lattice theme set by effectsTheme()</span></span>
-<span><span class="co">#&gt; See ?effectsTheme for details.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/effects/man/effect.html" class="external-link">allEffects</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10"><p class="caption">
-plot of chunk unnamed-chunk-10
-</p>
-</div>
+<p><img src="A/A-unnamed-chunk-10-1.png" style="display: block; margin: auto;"></p>
 <p>There are some differences between the statistical model and the NN -
 which is to be expected because the NN can fit the data more flexible.
 But at the same time the differences have large confidence intervals
@@ -470,22 +525,14 @@ adding layers and/or making them wider:</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>              loss<span class="op">=</span> <span class="st">"mse"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,</span>
 <span>              hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">5L</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-11-1.png" alt="plot of chunk unnamed-chunk-11"><p class="caption">
-plot of chunk unnamed-chunk-11
-</p>
-</div>
+<p><img src="A/A-unnamed-chunk-11-1.png" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># "large NN" - high complexity</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>              loss<span class="op">=</span> <span class="st">"mse"</span>, validation <span class="op">=</span> <span class="fl">0.2</span>,</span>
 <span>              hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">100L</span>, <span class="fl">100</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-unnamed-chunk-11-2.png" alt="plot of chunk unnamed-chunk-11"><p class="caption">
-plot of chunk unnamed-chunk-11
-</p>
-</div>
+<p><img src="A/A-unnamed-chunk-11-2.png" style="display: block; margin: auto;"></p>
 <p>There is no definitive guide to choosing the right architecture for
 the right task. However, there are some general rules/recommendations:
 In general, wider, and deeper neural networks can improve generalization
@@ -524,7 +571,7 @@ tasks. We don’t recommend tuning it.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="training-hyperparameters">Training hyperparameters<a class="anchor" aria-label="anchor" href="#training-hyperparameters"></a>
+<h2 id="tuning-hyperparameters">Tuning hyperparameters<a class="anchor" aria-label="anchor" href="#tuning-hyperparameters"></a>
 </h2>
 <div class="section level3">
 <h3 id="regularization">Regularization<a class="anchor" aria-label="anchor" href="#regularization"></a>
@@ -551,9 +598,7 @@ this approach, a percentage of different nodes gets left during each
 epoch.</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#dropout of 35% on all layers:</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fl">0.35</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#dropout of 35% only on last 2 layers:</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0</span>, <span class="fl">0.35</span>, <span class="fl">0.35</span><span class="op">)</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fl">0.35</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -576,11 +621,7 @@ See ?config_lr_scheduler() for more information</p>
 <span>                                 gamma <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,lr <span class="op">=</span> <span class="fl">0.01</span>, lr_scheduler<span class="op">=</span> <span class="va">scheduler</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-lr_scheduler-1.png" alt="plot of chunk lr_scheduler"><p class="caption">
-plot of chunk lr_scheduler
-</p>
-</div>
+<p><img src="A/A-lr_scheduler-1.png" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="optimizer">Optimizer<a class="anchor" aria-label="anchor" href="#optimizer"></a>
@@ -597,11 +638,7 @@ See <code>?config_optimizer()</code> for more information.</p>
 <span>  type <span class="op">=</span> <span class="st">"sgd"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,  optimizer <span class="op">=</span> <span class="va">opt</span>, lr<span class="op">=</span><span class="fl">0.002</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"softmax"</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-optim-1.png" alt="plot of chunk optim"><p class="caption">
-plot of chunk optim
-</p>
-</div>
+<p><img src="A/A-optim-1.png" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="early-stopping">Early Stopping<a class="anchor" aria-label="anchor" href="#early-stopping"></a>
@@ -615,33 +652,134 @@ the early_stopping argument. It is required to set validation &gt;
 <code class="sourceCode R"><span><span class="co"># Stops training if validation loss at current epoch is bigger than that 15 epochs earlier</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>              validation <span class="op">=</span> <span class="fl">0.2</span>, early_stopping <span class="op">=</span> <span class="fl">15</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
-<div class="figure" style="text-align: center">
-<img src="A/A-early_stopping-1.png" alt="plot of chunk early_stopping"><p class="caption">
-plot of chunk early_stopping
-</p>
+<p><img src="A/A-early_stopping-1.png" style="display: block; margin: auto;"></p>
 </div>
 </div>
+<div class="section level2">
+<h2 id="automatic-hyperparameter-tuning-experimental">Automatic hyperparameter tuning (experimental)<a class="anchor" aria-label="anchor" href="#automatic-hyperparameter-tuning-experimental"></a>
+</h2>
+<p>We started to support automatic hyperparameter tuning under Cross
+Validation. The tuning strategy is random search, i.e. potential
+hyperparameter values are sampled from uniform distributions, the
+boundaries can be specified by the user.</p>
+<p>We can mark hyperparameters that should be tuned by cito by setting
+their values to <code><a href="../reference/tune.html">tune()</a></code>, for example
+<code>dnn (..., lr = tune()</code>. <code><a href="../reference/tune.html">tune()</a></code> is a function
+that creates a range of random values for the given hyperparameter. You
+can also change the maximum and minimum range of these values. The
+following table lists the hyperparameters that can currently be
+tuned:</p>
+<table class="table">
+<colgroup>
+<col width="18%">
+<col width="18%">
+<col width="63%">
+</colgroup>
+<thead><tr class="header">
+<th align="left">Hyperparameter</th>
+<th align="left">Example</th>
+<th align="left">Details</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td align="left">hidden</td>
+<td align="left"><code>dnn(…,hidden=tune(10, 20, fixed=’depth’))</code></td>
+<td align="left">Depth and width can be both tuned or only one of them,
+if both of them should be tuned, vectors for lower and upper #’
+boundaries must be provided (first = number of nodes)</td>
+</tr>
+<tr class="even">
+<td align="left">bias</td>
+<td align="left"><code>dnn(…, bias=tune())</code></td>
+<td align="left">Should the bias be turned on or off for all hidden
+layers</td>
+</tr>
+<tr class="odd">
+<td align="left">lambda</td>
+<td align="left"><code>dnn(…, lambda = tune(0.0001, 0.1))</code></td>
+<td align="left">lambda will be tuned within the range (0.0001,
+0.1)</td>
+</tr>
+<tr class="even">
+<td align="left">alpha</td>
+<td align="left"><code>dnn(…, lambda = tune(0.2, 0.4))</code></td>
+<td align="left">alpha will be tuned within the range (0.2, 0.4)</td>
+</tr>
+<tr class="odd">
+<td align="left">activation</td>
+<td align="left"><code>dnn(…, activation = tune())</code></td>
+<td align="left">activation functions of the hidden layers will be
+tuned</td>
+</tr>
+<tr class="even">
+<td align="left">dropout</td>
+<td align="left"><code>dnn(…, dropout = tune())</code></td>
+<td align="left">Dropout rate will be tuned (globally for all
+layers)</td>
+</tr>
+<tr class="odd">
+<td align="left">lr</td>
+<td align="left"><code>dnn(…, lr = tune())</code></td>
+<td align="left">Learning rate will be tuned</td>
+</tr>
+<tr class="even">
+<td align="left">batchsize</td>
+<td align="left"><code>dnn(…, batchsize = tune())</code></td>
+<td align="left">batch size will be tuned</td>
+</tr>
+<tr class="odd">
+<td align="left">epochs</td>
+<td align="left"><code>dnn(…, batchsize = tune())</code></td>
+<td align="left">batchsize will be tuned</td>
+</tr>
+</tbody>
+</table>
+<p>The hyperparameters are tuned by random search (i.e., random values
+for the hyperparameters within a specified range) and by
+cross-validation. The exact tuning regime can be specified with
+[config_tuning].</p>
+<p>Note that hyperparameter tuning can be expensive. We have implemented
+an option to parallelize hyperparameter tuning, including
+parallelization over one or more GPUs (the hyperparameter evaluation is
+parallelized, not the CV). This can be especially useful for small
+models. For example, if you have 4 GPUs, 20 CPU cores, and 20 steps
+(random samples from the random search), you could run
+<code>dnn(..., device="cuda",lr = tune(), batchsize=tune(), tuning=config_tuning(parallel=20, NGPU=4)</code>,
+which will distribute 20 model fits across 4 GPUs, so that each GPU will
+process 5 models (in parallel).</p>
+<p>Tune learning rate as it is one of the most important
+hyperparameters:</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">nn.fit_tuned</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>,</span>
+<span>                   data <span class="op">=</span> <span class="va">iris</span>,</span>
+<span>                   lr <span class="op">=</span> <span class="fu"><a href="../reference/tune.html">tune</a></span><span class="op">(</span><span class="fl">0.0001</span>, <span class="fl">0.1</span><span class="op">)</span>,</span>
+<span>                   loss <span class="op">=</span> <span class="st">"softmax"</span>,</span>
+<span>                   tuning <span class="op">=</span> <span class="fu"><a href="../reference/config_tuning.html">config_tuning</a></span><span class="op">(</span>steps <span class="op">=</span> <span class="fl">3L</span>, CV <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Starting hyperparameter tuning...</span></span>
+<span><span class="co">#&gt; Fitting final model...</span></span></code></pre></div>
+<p>After tuning, the final model is trained with the best set of
+hyperparameters and returned.</p>
 </div>
 <div class="section level2">
 <h2 id="continue-training-process">Continue training process<a class="anchor" aria-label="anchor" href="#continue-training-process"></a>
 </h2>
 <p>You can continue the training process of an existing model with
 continue_training().</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># simple example, simply adding another 12 epochs to the training process</span></span>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;            [,1]</span></span>
-<span><span class="co">#&gt; [1,] -0.9836558</span></span>
-<span><span class="co">#&gt; [2,] -1.4395623</span></span>
-<span><span class="co">#&gt; [3,] -1.3351157</span></span>
-<span><span class="co">#&gt; [4,] -1.3388002</span></span>
-<span><span class="co">#&gt; [5,] -0.8847700</span></span>
-<span><span class="co">#&gt; [6,] -0.4809422</span></span></code></pre></div>
+<span><span class="co">#&gt; [1,] -1.0259458</span></span>
+<span><span class="co">#&gt; [2,] -1.4077228</span></span>
+<span><span class="co">#&gt; [3,] -1.3449415</span></span>
+<span><span class="co">#&gt; [4,] -1.2816025</span></span>
+<span><span class="co">#&gt; [5,] -0.9411238</span></span>
+<span><span class="co">#&gt; [6,] -0.5879976</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># picking the model with the smalles validation loss</span></span>
 <span><span class="co"># with changed parameters, in this case a smaller learning rate and a smaller batchsize</span></span>
@@ -649,6 +787,94 @@ analyze_training().</p>
 <span>                            epochs <span class="op">=</span> <span class="fl">32</span>,</span>
 <span>                            changed_params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>lr <span class="op">=</span> <span class="fl">0.001</span>, batchsize <span class="op">=</span> <span class="fl">16</span><span class="op">)</span>,</span>
 <span>                            verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="the-best-of-both-worlds---combining-statistical-models-and-deep-learning">The best of both worlds - combining statistical models and deep
+learning<a class="anchor" aria-label="anchor" href="#the-best-of-both-worlds---combining-statistical-models-and-deep-learning"></a>
+</h2>
+<p>In addition to common loss functions, we also provide the option of
+using actual likelihoods - that is, we assume that the DNN approximates
+the underlying data generating model. An important consequence of this -
+also to ensure that the effects extracted by xAI are correct - is to
+check for model assumptions, such as whether the residuals are
+distributed as we would expect given our likelihood/probability
+distribution.</p>
+<p>Example: Simulate from a negative binomial distribution and fit with
+a poisson-DNN</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">X</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">500</span><span class="op">*</span><span class="fl">3</span>,<span class="op">-</span><span class="fl">1</span>,<span class="fl">1</span><span class="op">)</span>, <span class="fl">500</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">Y</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/NegBinomial.html" class="external-link">rnbinom</a></span><span class="op">(</span><span class="fl">500</span>, mu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="fl">2.5</span><span class="op">*</span><span class="va">X</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span><span class="op">)</span>, size <span class="op">=</span> <span class="fl">0.3</span><span class="op">)</span></span></code></pre></div>
+<p>Fit model with a poisson likelihood:</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">df</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>Y <span class="op">=</span> <span class="va">Y</span>, <span class="va">X</span><span class="op">)</span></span>
+<span><span class="va">m1</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="st">"poisson"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">300L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-14-1.png" style="display: block; margin: auto;"></p>
+<p>We can use the DHARMa package to check the residuals. DHARMa does not
+support cito directly, but we can use a general interface for residual
+checks. But first we need to simulate from our model:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://florianhartig.github.io/DHARMa/" class="external-link">DHARMa</a></span><span class="op">)</span></span>
+<span><span class="va">pred</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m1</span>, type <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
+<span><span class="va">sims</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Poisson.html" class="external-link">rpois</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">pred</span><span class="op">)</span>, <span class="va">pred</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/createDHARMa.html" class="external-link">createDHARMa</a></span><span class="op">(</span><span class="va">sims</span>, <span class="va">Y</span>, <span class="va">pred</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>, integerResponse <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-15-1.png" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testOverdispersion.html" class="external-link">testOverdispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
+<span><span class="co">#&gt; testOverdispersion is deprecated, switch your code to using the testDispersion function</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-15-2.png" style="display: block; margin: auto;"></p>
+<pre><code><span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; data:  simulationOutput</span></span>
+<span><span class="co">#&gt; dispersion = 15.45, p-value &lt; 2.2e-16</span></span>
+<span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
+<p>Overdispersion (biased effect estimates and inflated error rates
+could be a consequence of overdispersion) ! One solution (the only one
+implemented in cito) is to switch to negative binomial distribution that
+fits a variable dispersion parameter:</p>
+<div class="sourceCode" id="cb34"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">m2</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span>, loss <span class="op">=</span> <span class="st">"nbinom"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">300L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span>, lambda <span class="op">=</span> <span class="fl">0.0</span>, alpha <span class="op">=</span> <span class="fl">1.0</span><span class="op">)</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-16-1.png" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb35"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Dispersion parameter:</span></span>
+<span><span class="va">m2</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="fu">parameter_link</span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 0.5323167</span></span></code></pre></div>
+<p>We have a custom implementation of the negative binomial distribution
+(which is similar to the “nbinom1” of glmmTMB (the nbinom converges to a
+poisson as the dispersion parameters approaches infinity)) which is why
+we provide a simulate function:</p>
+<div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pred</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">m2</span>, type <span class="op">=</span> <span class="st">"response"</span><span class="op">)</span></span>
+<span><span class="va">sims</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="kw">function</span><span class="op">(</span><span class="va">i</span><span class="op">)</span> <span class="va">m2</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="fu">simulate</span><span class="op">(</span><span class="va">pred</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">res</span> <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/createDHARMa.html" class="external-link">createDHARMa</a></span><span class="op">(</span><span class="va">sims</span>, <span class="va">Y</span>, <span class="va">pred</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span>, integerResponse <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span>, rank <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-17-1.png" style="display: block; margin: auto;"></p>
+<div class="sourceCode" id="cb37"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testOverdispersion.html" class="external-link">testOverdispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
+<span><span class="co">#&gt; testOverdispersion is deprecated, switch your code to using the testDispersion function</span></span></code></pre></div>
+<p><img src="A/A-unnamed-chunk-17-2.png" style="display: block; margin: auto;"></p>
+<pre><code><span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs. simulated</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; data:  simulationOutput</span></span>
+<span><span class="co">#&gt; dispersion = 1.1972, p-value = 0.5</span></span>
+<span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
+<p>Better! But still not perfect, a challenge with maximum likelihood
+estimation and the negative binomial distribution is to get the theta
+estimate (disperson parameter) unbiased. The remaining pattern can
+probably be explained by the fact that the overdispersion was not
+perfectly estimated.</p>
+<p>However, it is still better than the Poisson distribution, so what do
+we get by switching to a negative binomial? The p-values of the xAI
+metrics may not be strongly as affected as in a statistical model
+because we are not estimating the standard errors (and thus the
+p-values) from the MLE surface. The bootstrap is independent of the
+likelihood. However, the negative binomial distribution better weights
+overdispersed values, so we can expect our model to make more accurate
+predictions.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc"><h2>On this page</h2>
     </nav></aside>

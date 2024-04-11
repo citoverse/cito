@@ -4,8 +4,9 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
-options("progress_enabled" = FALSE)
+```{r, include = FALSE, echo=FALSE}
+options("progress_enabled" = TRUE)
+knitr::opts_chunk$set(fig.path = "man/figures/README-", collapse=TRUE)
 ```
 
 # cito
@@ -69,7 +70,7 @@ analyze_training(nn.fit)
 plot(nn.fit)
 ```
 
-4.  Return xAI effects (feature importances and average conditional effects) and their uncertainties:
+4.  'cito' supports many advanced functionalities such as common explainable AI metrics that can be used for inference (i.e. to interpret the models). Variable importance (similar to a variation partitioning) and linear effects are directly returned by the `summary` function:
 
 ```{r}
 summary(nn.fit)
@@ -80,6 +81,17 @@ summary(nn.fit)
 ```{r}
 dim(predict(nn.fit, newdata = datasets::iris))
 ```
+
+### Hyperparameter tuning
+
+Certain arguments/parameters such as the architecture, activation function, and the learning rate can be automatically tuned under crossvalidation (for a full list, see `?dnn`). Parameters that should be tuned, can be flagged by using the function `tune()` instead of a hyperparameter value:
+
+```{r}
+nn.fit <- dnn(Sepal.Length~., data = datasets::iris, lr = tune(0.0001, 0.1))
+nn.fit$tuning
+```
+
+The tuning can be configured with `tuning=config_tuning()`. After tuning, a final model trained with the best hyperparameters is returned. Hyperparameter combinations that do not achieve a loss below the baseline loss will be aborted early and not fully cross-validated. These runs are given a test loss of infinity.
 
 ## Advanced
 
@@ -93,7 +105,7 @@ We use a multivariate normal distribution as the likelihood function and we want
 
 ```{r}
 create_cov = function(L, Diag) {
-  return(torch::torch_matmul(L, L$t()) + torch::torch_diag(Diag+0.01))
+  return(torch::torch_matmul(L, L$t()) + torch::torch_diag(Diag$exp()+0.001))
 }
 
 custom_loss_MVN = function(true, pred) {
@@ -117,7 +129,7 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
              verbose = FALSE,
              plot = FALSE,
              custom_parameters =
-               list(SigmaDiag =  rep(1, 3), # Our parameters with starting values
+               list(SigmaDiag =  rep(0, 3), # Our parameters with starting values
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2)) # Our parameters with starting values
 )
 ```

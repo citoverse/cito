@@ -14,7 +14,6 @@
 
 #' @return array of dimension (n, 1, size, size)
 #' @author Armin Schenk
-#' @export
 simulate_shapes <- function(n, size, channels=1) {
 
   data <- array(0, dim = c(n,channels,size,size))

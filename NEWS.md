@@ -1,3 +1,24 @@
+# cito 1.1
+
+## New features
+* hyperparameter tuning (experimental)
+* burnin parameter
+* multivariate probit model
+* X and Y support (alternative interface)
+* negative binomial distribution
+
+## Minor changes
+* Improved vignette
+* Improved README
+
+## Bug fixes
+* dropout is turned off after training (into evaluation mode)
+* predict type was changed
+* small bug in the activation functions
+* extended support for mps devices
+
+
+
 # cito 1.0.2
 
 ## New features
