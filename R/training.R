@@ -138,7 +138,6 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     }
 
     ### create plot ###
-    main <- ifelse(inherits(model, "citocnn"), "Training of CNN", "Training of DNN")
     main <- switch (class(model),
       citodnn = "Training of DNN",
       citocnn = "Training of CNN",
