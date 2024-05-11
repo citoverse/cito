@@ -12,10 +12,12 @@ knitr::opts_chunk$set(fig.path = "man/figures/README-", collapse=TRUE)
 # cito
 
 [![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito) [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
+[![Publication](https://img.shields.io/badge/Publication-10.1111/ecog.07143-green.svg)](https://doi.org/10.1111/ecog.07143)
 
 <!-- badges: end -->
 
-'cito' simplifies the building and training of (deep) neural networks by relying on standard R syntax and familiar methods from statistical packages. Model creation and training can be done with a single line of code. Furthermore, all generic R methods such as print or plot can be used on the fitted model. At the same time, 'cito' is computationally efficient because it is based on the deep learning framework 'torch' (with optional GPU support). The 'torch' package is native to R, so no Python installation or other API is required for this package.
+The 'cito' package provides a user-friendly interface for training and interpreting deep neural networks (DNN). 'cito' simplifies the fitting of DNNs by supporting the familiar formula syntax, hyperparameter tuning under cross-validation, and helps to detect and handle convergence problems.  DNNs can be trained on CPU, GPU and MacOS GPUs. In addition, 'cito' has many downstream functionalities such as various explainable AI (xAI) metrics (e.g. variable importance, partial dependence plots, accumulated local effect plots, and effect estimates) to interpret trained DNNs. 'cito' optionally provides confidence intervals (and p-values) for all xAI metrics and predictions. At the same time, 'cito' is computationally efficient because it is based on the deep learning framework 'torch'. The 'torch' package is native to R, so no Python installation or other API is required for this package.
+
 
 ## Installation
 
@@ -146,3 +148,5 @@ Empirical covariance matrix:
 ```{r}
 cov(predict(nn.fit) - nn.fit$data$Y)
 ```
+
+
