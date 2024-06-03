@@ -24,7 +24,10 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     y_dim <- ncol(Y)
     Y_base <- torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
 
-  } else if(!is.function(loss_obj$call) && all(loss_obj$call == "softmax")) {
+
+    ##### TODO move Y preparation to loss objects!!!!
+
+  } else if(!is.function(loss_obj$call) && any(loss_obj$call == "softmax")) {
     if (is.character(Y)) {
       if (is.null(ylvls)) {
         Y <- factor(Y[,1])
@@ -39,7 +42,28 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     y_dim <- length(unique(Y))
     prop <- as.vector(table(Y)/sum(table(Y)))
     Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
-    Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
+    if(any(loss_obj$call == "softmax") ) Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
+    else Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
+  }  else if(!is.function(loss_obj$call) && any(loss_obj$call == "multinomial" || loss_obj$call == "clogit" )) {
+    if(is.character(Y)) {
+      if (is.null(ylvls)) {
+        Y <- factor(Y[,1])
+        ylvls <- levels(Y)
+      } else {
+        Y <- factor(Y[,1], levels = ylvls)
+      }
+      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
+
+    } else {
+      Y <- as.integer(Y[,1])
+      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
+    }
+    y_dim <- ncol(Y)
+    YY = apply(as.matrix(Y), 1, which.max)
+
+    prop <- as.vector(table(YY)/sum(table(YY)))
+    Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
+
   } else {
     y_dim <- ncol(Y)
     Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
@@ -60,6 +84,40 @@ get_data_loader = function(..., batch_size=25L, shuffle=TRUE) {
 
   return(dl)
 }
+
+
+#' Multinomial log likelihood
+#'
+#' @param probs probabilities
+#' @param value observed values
+#'
+#' Multinomial log likelihood
+#'
+#' @export
+multinomial_log_prob = function(probs, value) {
+  logits = probs$log()
+  log_factorial_n = torch::torch_lgamma(value$sum(-1) + 1)
+  log_factorial_xs = torch::torch_lgamma(value + 1)$sum(-1)
+  logits[(value == 0) & (logits == -Inf)] = 0
+  log_powers = (logits * value)$sum(-1)
+  return(log_factorial_n - log_factorial_xs + log_powers)
+}
+
+# binomial_log_prob = function(probs, value, total_count) {
+#   log_factorial_n = torch_lgamma(total_count + 1)
+#   log_factorial_k = torch_lgamma(value + 1)
+#   log_factorial_nmk = torch_lgamma(total_count - value + 1)
+#
+#   normalize_term = (
+#     self.total_count * _clamp_by_zero(self.logits)
+#     + self.total_count * torch.log1p(torch.exp(-torch.abs(self.logits)))
+#     - log_factorial_n
+#   )
+#   return (
+#     value * self.logits - log_factorial_k - log_factorial_nmk - normalize_term
+#   )
+#
+# }
 
 
 get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
@@ -199,8 +257,20 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
         return( - (log_unnormalized_prob - log_normalization))
       }
 
-    }
-    else{
+    } else if(loss == "multinomial") {
+      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
+      out$link <- function(a) log(a) + log(ncol(a))
+      out$loss <- function(pred, true) {
+        return(multinomial_log_prob(torch::nnf_softmax(pred, dim = 2), true)$negative())
+      }
+    } else if(loss == "clogit") {
+      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
+      out$link <- function(a) log(a) + log(ncol(a))
+      out$loss <- function(pred, true) {
+        # return(binomial_log_prob(torch::nnf_softmax(pred, dim = 2), true))
+        return(torch::distr_bernoulli(probs = torch::nnf_softmax(pred, dim = 2))$log_prob(true)$negative())
+      }
+    }else{
       cat( "unidentified loss \n")
     }
 

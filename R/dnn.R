@@ -53,6 +53,8 @@
 #' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
 #' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter |
 #' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) |
+#' | multinomial | Multinomial likelihood | step selection in animal movement models |
+#' | clogit | conditional binomial | step selection in animal movement models |
 #'
 #' # Training and convergence of neural networks
 #'
@@ -170,7 +172,7 @@ dnn <- function(formula = NULL,
                 activation = "selu",
                 bias = TRUE,
                 dropout = 0.0,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom"),
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
                 validation = 0,
                 lambda = 0.0,
                 alpha = 0.5,
