@@ -44,25 +44,34 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
     if(any(loss_obj$call == "softmax") ) Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
     else Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
+
+
   }  else if(!is.function(loss_obj$call) && any(loss_obj$call == "multinomial" || loss_obj$call == "clogit" )) {
-    if(is.character(Y)) {
-      if (is.null(ylvls)) {
-        Y <- factor(Y[,1])
-        ylvls <- levels(Y)
-      } else {
-        Y <- factor(Y[,1], levels = ylvls)
-      }
-      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
 
+    if(ncol(Y) > 1.5) {
+      Y_base = torch::torch_tensor(matrix(colMeans(Y), nrow = nrow(Y), ncol = ncol(Y), byrow = TRUE), dtype = torch::torch_float32())
+      Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
     } else {
-      Y <- as.integer(Y[,1])
-      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
-    }
-    y_dim <- ncol(Y)
-    YY = apply(as.matrix(Y), 1, which.max)
 
-    prop <- as.vector(table(YY)/sum(table(YY)))
-    Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
+      if(is.character(Y)) {
+        if (is.null(ylvls)) {
+          Y <- factor(Y[,1])
+          ylvls <- levels(Y)
+        } else {
+          Y <- factor(Y[,1], levels = ylvls)
+        }
+        Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
+
+      } else {
+        Y <- as.integer(Y[,1])
+        Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
+      }
+      y_dim <- ncol(Y)
+      YY = apply(as.matrix(Y), 1, which.max)
+
+      prop <- as.vector(table(YY)/sum(table(YY)))
+      Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
+    }
 
   } else {
     y_dim <- ncol(Y)
