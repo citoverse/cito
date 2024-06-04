@@ -216,8 +216,8 @@ dnn <- function(formula = NULL,
   if(!is.function(loss) & !inherits(loss,"family")){
     loss <- match.arg(loss)
 
-    if((device == "mps") & (loss %in% c("poisson", "nbinom"))) {
-      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
       device = "cpu"
     }
   }

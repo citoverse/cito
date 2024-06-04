@@ -1,4 +1,5 @@
 source("utils.R")
+library(cito)
 set.seed(42)
 
 wrap_dnn = function(pars) {
@@ -101,6 +102,10 @@ testthat::test_that("DNN softmax/binomial", {
 X = matrix(runif(3*50), 50, 3)
 Y = matrix(rpois(50*3,lambda = 2), 50, 3)
 data = data.frame(Y = Y, X = X)
+
+Ym = t(stats::rmultinom(100, 10, prob = c(0.2, 0.2, 0.5)))
+data2 = data.frame(Y, X.1 = stats::runif(100))
+
 scenarios =
   list(
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L , verbose = FALSE),
@@ -115,7 +120,14 @@ scenarios =
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L, verbose = FALSE),
     list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L)
+    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L),
+
+    list(formula = stats::as.formula("Species ~ ."), plot=FALSE, verbose = FALSE, data = iris, loss = "multinomial", epochs = 1L),
+    list(formula = stats::as.formula("Species ~ ."), plot=FALSE, verbose = FALSE, data = iris, loss = "multinomial", epochs = 1L, bootstrap = 2L),
+
+    list(formula = stats::as.formula("cbind(X1, X2, X3)~."), plot=FALSE, verbose = FALSE, data = data2, loss = "multinomial", epochs = 1L),
+    list(formula = stats::as.formula("cbind(X1, X2, X3)~."), plot=FALSE, verbose = FALSE, data = data2, loss = "multinomial", epochs = 1L, bootstrap = 2L)
+
   )
 testthat::test_that("DNN rnorm/poisson", {
   testthat::skip_on_cran()
@@ -131,12 +143,12 @@ testthat::test_that("DNN rnorm/poisson", {
       sc = scenarios[[i]]
       sc$device = "cuda"
       .n = wrap_dnn(sc)
+
     }
   }
 
   if(  torch::backends_mps_is_available() ) {
     for(i in 1:length(scenarios)) {
-
         sc = scenarios[[i]]
         sc$device = "mps"
         .n = wrap_dnn(sc)

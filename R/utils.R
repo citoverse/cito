@@ -1,5 +1,8 @@
 format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
+  if(is.vector(Y)) y_dim = 1
+  else y_dim = ncol(Y)
+
   if(is.null(ylvls) && is.factor(Y)) ylvls <- levels(Y)
   if(!inherits(Y, "matrix")) Y = as.matrix(Y)
   responses <- colnames(Y)
@@ -46,7 +49,7 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     else Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
 
 
-  }  else if(!is.function(loss_obj$call) && any(loss_obj$call == "multinomial" || loss_obj$call == "clogit" )) {
+  }  else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("multinomial", "clogit" ))) {
 
     if(ncol(Y) > 1.5) {
       Y_base = torch::torch_tensor(matrix(colMeans(Y), nrow = nrow(Y), ncol = ncol(Y), byrow = TRUE), dtype = torch::torch_float32())
