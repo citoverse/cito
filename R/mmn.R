@@ -1,3 +1,34 @@
+#' Train and evaluate a Multi-Modal Neural Network (MMN) model
+#'
+#' This function trains a Multi-Modal Neural Network (MMN) model on the provided data.
+#'
+#' @param formula A formula object specifying the model structure. See examples for more information
+#' @param dataList A list containing the data for training the model. The list should contain all variables used in the formula.
+#' @param fusion_hidden A numeric vector specifying the number of units in each hidden layer of the fusion network.
+#' @param fusion_activation A character vector specifying the activation function for each hidden layer of the fusion network. Available options are: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".
+#' @param fusion_bias A logical value or vector (length(fusion_hidden) + 1) indicating whether to include bias terms in the layers of the fusion network.
+#' @param fusion_dropout The dropout rate for the fusion network, a numeric value or vector (length(fusion_hidden)) between 0 and 1.
+#' @param loss The loss function to be optimized during training. Available options are: "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson".
+#' @param optimizer The optimization algorithm to be used during training. Available options are: "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop".
+#' @param lr The learning rate for the optimizer.
+#' @param alpha The alpha parameter for elastic net regularization. Should be a value between 0 and 1.
+#' @param lambda The lambda parameter for elastic net regularization. Should be a positive value.
+#' @param validation The proportion of the training data to use for validation. Should be a value between 0 and 1.
+#' @param batchsize The batch size used during training.
+#' @param shuffle A logical indicating whether to shuffle the training data in each epoch.
+#' @param epochs The number of epochs to train the model.
+#' @param early_stopping If provided, the training will stop if the validation loss does not improve for the specified number of epochs. If set to NULL, early stopping is disabled.
+#' @param lr_scheduler Learning rate scheduler created with \code{\link{config_lr_scheduler}}
+#' @param custom_parameters A list of parameters used by custom loss functions. See vignette for examples.
+#' @param device The device on which to perform computations. Available options are: "cpu", "cuda", "mps".
+#' @param plot A logical indicating whether to plot training and validation loss curves.
+#' @param verbose A logical indicating whether to display verbose output during training.
+#'
+#' @return An object of class "citommn" containing the trained MMN model and other information.
+#' @export
+#'
+#' @seealso \code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+#'
 #' @export
 mmn <- function(formula,
                 dataList = NULL,

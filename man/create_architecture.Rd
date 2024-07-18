@@ -54,6 +54,51 @@ All parameters of the 'citolayer' objects, that are still NULL because they have
 The default values can be changed by either passing a list with the values for specific layer types (in which case the defaults of layer types which aren't in the list remain the same)
 or by passing a single value (in which case the defaults for all layer types is set to that value).
 }
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+# Convolutional layers with different n_kernels and kernel_sizes
+c1 <- conv(n_kernels = 8, kernel_size = 5)
+c2 <- conv(n_kernels = 16, kernel_size = 3)
+
+# Linear layer
+l <- linear(n_neurons = 100)
+
+# MaxPooling layer
+mP <- maxPool(kernel_size = 2)
+
+# Create the architecture by using the created layers
+# Change the defaults with which the not assigned layer parameters will be filled e.g.
+# change default dropout to different values for linear and convolutional layer
+# only change the default normalization for linear layers
+# change default activation of both linear and convolutional layers to 'selu'
+architecture <- create_architecture(c1, c1, mP, c2, c2, mP, l,
+                                    default_dropout = list(linear=0.6, conv=0.4),
+                                    default_normalization = list(linear=TRUE),
+                                    default_activation = "selu")
+
+# See how the finished CNN would look like for specific input and output shapes
+print(architecture, c(3,128,128), 10)
+
+# To use predefined architectures  use the transfer() layer
+alexnet <- transfer("alexnet")
+
+# No other linear layers are used after the transfer layer:
+# The cnn() function will only replace the last linear layer of the architecture
+# to match the output dimensions of the data
+architecture <- create_architecture(alexnet)
+print(architecture, c(3,128,128), 10)
+
+# Some linear layers are used after the transfer layer:
+# The cnn() function will replace the whole "classifier" part of the architecture
+# with the specified linear layers + an output layer that matches the output dimensions
+architecture <- create_architecture(alexnet, linear(300), linear(100))
+print(architecture, c(3,128,128), 10)
+}
+}
+}
 \seealso{
 \code{\link{cnn}}, \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, \code{\link{transfer}}, \code{\link{print.citoarchitecture}}, \code{\link{plot.citoarchitecture}}
 }
