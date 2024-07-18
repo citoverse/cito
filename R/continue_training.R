@@ -76,15 +76,15 @@ continue_training.citodnn <- function(model,
       train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
       valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     } else {
-      train_dl <- get_data_loader(X[train,], Y[train,], Z[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], Z[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X[train,], Z[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid,], Z[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
 
   } else {
     if(is.null(Z)) {
       train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     } else {
-      train_dl <- get_data_loader(X, Y, Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X, Z, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
     valid_dl <- NULL
   }
