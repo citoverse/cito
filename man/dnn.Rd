@@ -12,7 +12,7 @@ dnn(
   bias = TRUE,
   dropout = 0,
   loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp", "nbinom"),
+    "mvp", "nbinom", "multinomial", "clogit"),
   validation = 0,
   lambda = 0,
   alpha = 0.5,
@@ -126,6 +126,8 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
    nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
    mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
+   multinomial \tab Multinomial likelihood \tab step selection in animal movement models \cr
+   clogit \tab conditional binomial \tab step selection in animal movement models \cr
 }
 }
 
@@ -288,6 +290,13 @@ summary(nn.fit)
 dim(predict(nn.fit))
 ## predictions are by default averaged (over the bootstrap samples)
 
+## Multinomial and conditional logit regression
+m = dnn(Species~., data = iris, loss = "clogit", lr = 0.01)
+m = dnn(Species~., data = iris, loss = "multinomial", lr = 0.01)
+
+Y = t(stats::rmultinom(100, 10, prob = c(0.2, 0.2, 0.5)))
+m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))), loss = "multinomial", lr = 0.01)
+## conditional logit for size > 1 is not supported yet
 
 
 # Hyperparameter tuning (experimental feature)

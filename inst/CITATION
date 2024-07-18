@@ -1,6 +1,6 @@
 bibentry(
   bibtype  = "Article",
-  title    = "cito: An R package for training neural networks using torch",
+  title    = "'cito': an R package for training neural networks using 'torch'",
   author   = c(person(given = "Christian",
                           family = "Amesoeder",
                           email = "christian.amesoeder@informatik.uni-regensburg.de"),
@@ -8,9 +8,11 @@ bibentry(
                           family = "Hartig"),
                person(given = "Maximilian",
                           family = "Pichler")),
-  journal  = "arXiv preprint arXiv:2303.09599",
-  year     = "2023",
-  doi      = "10.48550/arXiv.2303.09599",
+  journal  = "Ecography",
+  year     = "2024",
+  doi      = "10.1111/ecog.07143",
   header   = "To cite cito in publications use:",
-  textVersion = "Amesoeder, C., Hartig, F., and Pichler, M. (2023) cito: An R package for training neural networks using torch. arXiv preprint arXiv:2303.09599  doi:10.48550/arXiv.2303.09599."
+  textVersion = "Amesöder, C., Hartig, F. and Pichler, M. (2024), 'cito': an R package for training neural networks using 'torch'. Ecography e07143. https://doi.org/10.1111/ecog.07143"
 )
+
+

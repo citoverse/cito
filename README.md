@@ -10,17 +10,23 @@ developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.re
 v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito)
 [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
+[![Publication](https://img.shields.io/badge/Publication-10.1111/ecog.07143-green.svg)](https://doi.org/10.1111/ecog.07143)
 
 <!-- badges: end -->
 
-‘cito’ simplifies the building and training of (deep) neural networks by
-relying on standard R syntax and familiar methods from statistical
-packages. Model creation and training can be done with a single line of
-code. Furthermore, all generic R methods such as print or plot can be
-used on the fitted model. At the same time, ‘cito’ is computationally
-efficient because it is based on the deep learning framework ‘torch’
-(with optional GPU support). The ‘torch’ package is native to R, so no
-Python installation or other API is required for this package.
+The ‘cito’ package provides a user-friendly interface for training and
+interpreting deep neural networks (DNN). ‘cito’ simplifies the fitting
+of DNNs by supporting the familiar formula syntax, hyperparameter tuning
+under cross-validation, and helps to detect and handle convergence
+problems. DNNs can be trained on CPU, GPU and MacOS GPUs. In addition,
+‘cito’ has many downstream functionalities such as various explainable
+AI (xAI) metrics (e.g. variable importance, partial dependence plots,
+accumulated local effect plots, and effect estimates) to interpret
+trained DNNs. ‘cito’ optionally provides confidence intervals (and
+p-values) for all xAI metrics and predictions. At the same time, ‘cito’
+is computationally efficient because it is based on the deep learning
+framework ‘torch’. The ‘torch’ package is native to R, so no Python
+installation or other API is required for this package.
 
 ## Installation
 
@@ -98,27 +104,27 @@ summary(nn.fit)
 ## Summary of Deep Neural Network Model
 ## 
 ## ── Feature Importance
-##                 Importance Std.Err Z value Pr(>|z|)   
-## Sepal.Width →        1.205   0.507    2.38   0.0175 * 
-## Petal.Length →      27.720  10.575    2.62   0.0088 **
-## Petal.Width →        0.677   0.637    1.06   0.2876   
-## Species →            1.270   1.096    1.16   0.2465   
+##                 Importance Std.Err Z value Pr(>|z|)  
+## Sepal.Width →        0.897   0.443    2.02    0.043 *
+## Petal.Length →      20.428   8.032    2.54    0.011 *
+## Petal.Width →        0.695   0.690    1.01    0.314  
+## Species →            0.647   0.634    1.02    0.307  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## ── Average Conditional Effects
 ##                     ACE Std.Err Z value Pr(>|z|)    
-## Sepal.Width →    0.5283  0.0828    6.38  1.8e-10 ***
-## Petal.Length →   0.7253  0.0649   11.18  < 2e-16 ***
-## Petal.Width →   -0.1924  0.1396   -1.38     0.17    
+## Sepal.Width →    0.4838  0.0873    5.54    3e-08 ***
+## Petal.Length →   0.6485  0.0745    8.71   <2e-16 ***
+## Petal.Width →   -0.2264  0.1335   -1.70     0.09 .  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## ── Standard Deviation of Conditional Effects
 ##                    ACE Std.Err Z value Pr(>|z|)    
-## Sepal.Width →   0.1495  0.0409    3.66  0.00026 ***
-## Petal.Length →  0.1291  0.0396    3.26  0.00111 ** 
-## Petal.Width →   0.0529  0.0311    1.70  0.08878 .  
+## Sepal.Width →   0.0657  0.0176    3.73  0.00019 ***
+## Petal.Length →  0.0503  0.0178    2.83  0.00467 ** 
+## Petal.Width →   0.0382  0.0139    2.75  0.00596 ** 
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -144,18 +150,18 @@ nn.fit <- dnn(Sepal.Length~., data = datasets::iris, lr = tune(0.0001, 0.1))
 ## Fitting final model...
 nn.fit$tuning
 ## # A tibble: 10 × 5
-##    steps    test train models          lr
-##    <int>   <dbl> <dbl> <list>       <dbl>
-##  1     1 Inf         0 <list [1]> 0.0887 
-##  2     2 Inf         0 <list [1]> 0.0264 
-##  3     3   1.13      0 <list [1]> 0.0416 
-##  4     4   0.757     0 <list [1]> 0.0373 
-##  5     5 Inf         0 <list [1]> 0.0175 
-##  6     6 Inf         0 <list [1]> 0.0581 
-##  7     7   0.526     0 <list [1]> 0.00348
-##  8     8 Inf         0 <list [1]> 0.0179 
-##  9     9 Inf         0 <list [1]> 0.0687 
-## 10    10 Inf         0 <list [1]> 0.0497
+##    steps    test train models      lr
+##    <int>   <dbl> <dbl> <lgl>    <dbl>
+##  1     1 Inf         0 NA     0.0155 
+##  2     2 Inf         0 NA     0.0993 
+##  3     3   0.553     0 NA     0.00393
+##  4     4 Inf         0 NA     0.0817 
+##  5     5 Inf         0 NA     0.0179 
+##  6     6 Inf         0 NA     0.0947 
+##  7     7 Inf         0 NA     0.0176 
+##  8     8 Inf         0 NA     0.0241 
+##  9     9 Inf         0 NA     0.0817 
+## 10    10 Inf         0 NA     0.0337
 ```
 
 The tuning can be configured with `tuning=config_tuning()`. After
@@ -222,17 +228,17 @@ Estimated covariance matrix:
 as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
                      nn.fit$loss$parameter$SigmaDiag))
 ##            [,1]       [,2]       [,3]
-## [1,] 0.29110381 0.06862528 0.13878071
-## [2,] 0.06862528 0.10975803 0.04459281
-## [3,] 0.13878071 0.04459281 0.16815922
+## [1,] 0.26974857 0.06961995 0.11768616
+## [2,] 0.06961995 0.12192857 0.04327871
+## [3,] 0.11768616 0.04327871 0.15618347
 ```
 
 Empirical covariance matrix:
 
 ``` r
 cov(predict(nn.fit) - nn.fit$data$Y)
-##            [,1]       [,2]       [,3]
-## [1,] 0.22410463 0.06030019 0.12087770
-## [2,] 0.06030019 0.08968497 0.01781354
-## [3,] 0.12087770 0.01781354 0.13009877
+##            [,1]       [,2]      [,3]
+## [1,] 0.23646916 0.06383643 0.1227149
+## [2,] 0.06383643 0.08887552 0.0185613
+## [3,] 0.12271493 0.01856130 0.1308537
 ```

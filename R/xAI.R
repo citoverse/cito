@@ -105,7 +105,7 @@ PDP.citodnn <- function(model,
       p <- p + ggplot2::geom_line()
       p <- p + ggplot2::ggtitle(label = res$label)
       p <- p + ggplot2::xlab(label = res$v)
-      p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
+      p <- p + ggplot2::ylab(label = as.character(model$call$formula[[2]]))
       p <- p + ggplot2::geom_rug(sides = "b")
       if(ice) {
         p <- p + ggplot2::geom_line(data = res$df_ice, mapping = ggplot2::aes(x = x, y = y, group = group ))
@@ -119,8 +119,8 @@ PDP.citodnn <- function(model,
       p <- p + ggplot2::geom_text(ggplot2::aes(label=y), vjust=1.6)
       p <- p + ggplot2::ggtitle(label = res$label)
       p <- p + ggplot2::xlab(label = res$v)
-      p <- p + ggplot2::ylab(label = as.character(model$call$formula[2]))
-      p <- p + ggplot2::xlab(res$v) + ggplot2::ylab(model$call$formula[2])
+      p <- p + ggplot2::ylab(label = as.character(model$call$formula[[2]]))
+      p <- p + ggplot2::xlab(res$v) + ggplot2::ylab(model$call$formula[[2]])
       p <- p + ggplot2::theme_bw()
     }
     return(p)
@@ -861,7 +861,7 @@ conditionalEffects.citodnn =  function(object, interactions=FALSE, epsilon = 0.1
 
   object = check_model(object)
   Y_name = as.character( object$call$formula[[2]] )
-  data = data[,-which( colnames(data) %in% Y_name)]
+  data = data[,-which( colnames(data) %in% Y_name), drop=FALSE]
   # var_names = c(Y_name, colnames(data))
 
   out = NULL
