@@ -680,6 +680,12 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
   if(is.null(n_permute)) n_permute <- ceiling(sqrt(nrow(model$data$data))*3)
   model<- check_model(model)
   softmax = FALSE
+
+  if(is.function(model$loss$call)) {
+    #warning("Importance is not supported for custom loss functions")
+    return(NULL)
+    }
+
   if(inherits(model$loss$call, "character")) {
     if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(NULL)}
     if(model$loss$call  == "softmax") {
