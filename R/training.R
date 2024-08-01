@@ -151,12 +151,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
         model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
         counter = 0
       }
     } else {
       if(model$losses$train_l[epoch] < best_train_loss) {
         best_train_loss = model$losses$train_l[epoch]
         model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
         counter = 0
       }
     }
@@ -174,10 +176,12 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   model$net$to(device = "cpu")
 
   model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+  model$buffers[[2]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+
 
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, cast_to_r_keep_dim)
-  model$use_model_epoch <- 1
-  model$loaded_model_epoch <- 1
+  model$use_model_epoch <- 2
+  model$loaded_model_epoch$set_data(2)
 
   if(!is.null(model$loss$parameter)) {
       model$loss$parameter_r = unlist(lapply(model$loss$parameter, function(p) as.numeric(p$cpu())))

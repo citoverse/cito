@@ -230,6 +230,7 @@ build_cnn <- function(model_properties) {
 }
 
 build_mmn <- function(model_properties) {
+  self = NULL
   create_mmn <- torch::nn_module(
     initialize = function(subModules, fusion) {
       self$subModules <- torch::nn_module_list(subModules)

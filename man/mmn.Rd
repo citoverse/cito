@@ -20,6 +20,7 @@ mmn(
   lambda = 0,
   validation = 0,
   batchsize = 32L,
+  burnin = 10,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = NULL,
@@ -56,6 +57,8 @@ mmn(
 \item{validation}{The proportion of the training data to use for validation. Should be a value between 0 and 1.}
 
 \item{batchsize}{The batch size used during training.}
+
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
 
 \item{shuffle}{A logical indicating whether to shuffle the training data in each epoch.}
 

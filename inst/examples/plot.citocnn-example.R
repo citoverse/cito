@@ -5,7 +5,7 @@ library(cito)
 set.seed(222)
 
 ## Data
-shapes <- simulate_shapes(320, 28)
+shapes <- cito:::simulate_shapes(320, 28)
 X <- shapes$data
 Y <- shapes$labels
 

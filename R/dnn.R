@@ -381,8 +381,8 @@ dnn <- function(formula = NULL,
     }
     if(validation != 0) out$data <- append(out$data, list(validation = valid))
     out$weights <- list()
-    out$use_model_epoch <- 1
-    out$loaded_model_epoch <- 0
+    out$use_model_epoch <- 2
+    out$loaded_model_epoch <- torch::torch_tensor(0)
     out$model_properties <- model_properties
     out$training_properties <- training_properties
     out$device = device_old

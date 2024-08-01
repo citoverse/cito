@@ -7,7 +7,7 @@ library(cito)
 ## Data
 ### We generate our own data:
 ### 320 images (3x50x50) of either rectangles or ellipsoids
-shapes <- simulate_shapes(n=320, size=50, channels=3)
+shapes <- cito:::simulate_shapes(n=320, size=50, channels=3)
 X <- shapes$data
 Y <- shapes$labels
 

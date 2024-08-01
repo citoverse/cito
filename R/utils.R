@@ -494,35 +494,53 @@ check_model <- function(object) {
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
     object$net <- build_model(object)
-    object$loaded_model_epoch <- 0
+    object$loaded_model_epoch <- torch::torch_tensor(0)
     object$loss<- get_loss(object$loss$call)
-    }
+  }
 
-  if(object$loaded_model_epoch!= object$use_model_epoch){
 
-    module_params<- names(object$weights[[object$use_model_epoch]])
-    module_name<- sapply(module_params, function(x) {
-      period_indices <- which(strsplit(x,"")[[1]]==".")
-      last_period_index <- period_indices[length(period_indices)]
-      substr(x,1,last_period_index-1)
-    })
-    module_type<- sapply(module_params, function(x) {
-      period_indices <- which(strsplit(x,"")[[1]]==".")
-      last_period_index <- period_indices[length(period_indices)]
-      substring(x,last_period_index+1)
-    })
+  if(as.numeric(object$loaded_model_epoch)!= object$use_model_epoch){
 
-    for ( i in names(object$net$modules)){
-      if(i %in% module_name){
+    set_data <- function(params_buffers_names, mode) {
+      module_name <- sapply(params_buffers_names, function(x) {
+        period_indices <- which(strsplit(x,"")[[1]]==".")
+        last_period_index <- period_indices[length(period_indices)]
+        substr(x,1,last_period_index-1)
+      })
+
+      module_type <- sapply(params_buffers_names, function(x) {
+        period_indices <- which(strsplit(x,"")[[1]]==".")
+        last_period_index <- period_indices[length(period_indices)]
+        substring(x,last_period_index+1)
+      })
+
+      if(mode == 1) {
+        text1 <- "parameters"
+        text2 <- "weights"
+      } else {
+        text1 <- "buffers"
+        text2 <- "buffers"
+      }
+
+      for ( i in names(object$net$modules)){
+        if(i %in% module_name){
           k<- which(i == module_name)
-          sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$parameters$",module_type[k],"$set_data(object$weights[[object$use_model_epoch]]$`",module_params[k],"`)"))))
-
+          sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$",text1,"$",module_type[k],"$set_data(object$",text2,"[[object$use_model_epoch]]$`",params_buffers_names[k],"`)"))))
+        }
       }
     }
-    object$loaded_model_epoch <-  object$use_model_epoch
+
+    module_params <- names(object$weights[[object$use_model_epoch]])
+    if(!is.null(module_params)) set_data(module_params, mode = 1)
+    module_buffers <- names(object$buffers[[object$use_model_epoch]])
+    if(!is.null(module_buffers)) set_data(module_buffers, mode = 2)
+
+    object$loaded_model_epoch$set_data(object$use_model_epoch)
   }
 
   if(!is.null(object$parameter)) object$loss$parameter <- lapply(object$parameter, torch::torch_tensor)
+
+  object$net$eval()
 
   return(object)
 }

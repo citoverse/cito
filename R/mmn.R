@@ -15,6 +15,7 @@
 #' @param lambda The lambda parameter for elastic net regularization. Should be a positive value.
 #' @param validation The proportion of the training data to use for validation. Should be a value between 0 and 1.
 #' @param batchsize The batch size used during training.
+#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
 #' @param shuffle A logical indicating whether to shuffle the training data in each epoch.
 #' @param epochs The number of epochs to train the model.
 #' @param early_stopping If provided, the training will stop if the validation loss does not improve for the specified number of epochs. If set to NULL, early stopping is disabled.
@@ -45,6 +46,7 @@ mmn <- function(formula,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
+                burnin = 10,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = NULL,
@@ -160,11 +162,13 @@ mmn <- function(formula,
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$base_loss <- base_loss
   out$weights <- list()
-  out$use_model_epoch <- 1
-  out$loaded_model_epoch <- 0
+  out$buffers <- list()
+  out$use_model_epoch <- 2
+  out$loaded_model_epoch <- torch::torch_tensor(0)
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
+  out$burnin <- burnin
 
 
 
@@ -183,7 +187,6 @@ mmn <- function(formula,
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
-#' @example /inst/examples/predict.citommn-example.R
 #' @export
 predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"), ...) {
 
@@ -224,6 +227,34 @@ predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "
   }
 
   return(pred)
+}
+
+#' Print class citommn
+#'
+#' @param x a model created by \code{\link{mmn}}
+#' @param ... additional arguments
+#' @return original object x
+#'
+#' @export
+print.citommn <- function(x, ...){
+  x <- check_model(x)
+  print(x$call)
+  print(x$net)
+  return(invisible(x))
+}
+
+#' Summary citommn
+#' @description
+#'
+#' currently the same as the print.citommn method.
+#'
+#' @param object a model created by \code{\link{mmn}}
+#' @param ... additional arguments
+#' @return original object
+#'
+#' @export
+summary.citommn <- function(object, ...){
+  return(print(object))
 }
 
 format_input_data <- function(formula, dataList) {

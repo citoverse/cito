@@ -117,9 +117,10 @@
 #' \item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
 #' \item{losses}{A data.frame containing training and validation losses of each epoch}
 #' @import checkmate
+#' @example /inst/examples/cnn-example.R
 #' @author Armin Schenk, Maximilian Pichler
 #' @seealso \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
-#'
+#' @export
 cnn <- function(X,
                 Y = NULL,
                 architecture,
@@ -256,8 +257,9 @@ cnn <- function(X,
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$base_loss <- base_loss
   out$weights <- list()
-  out$use_model_epoch <- 1
-  out$loaded_model_epoch <- 0
+  out$buffers <- list()
+  out$use_model_epoch <- 2
+  out$loaded_model_epoch <- torch::torch_tensor(0)
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
@@ -282,6 +284,7 @@ cnn <- function(X,
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
+#' @example /inst/examples/predict.citocnn-example.R
 #' @export
 predict.citocnn <- function(object,
                             newdata = NULL,
@@ -339,7 +342,7 @@ predict.citocnn <- function(object,
 #' @param x a model created by \code{\link{cnn}}
 #' @param ... additional arguments
 #' @return original object x
-#'
+#' @example /inst/examples/print.citocnn-example.R
 #' @export
 print.citocnn <- function(x, ...){
   x <- check_model(x)
@@ -367,7 +370,7 @@ summary.citocnn <- function(object, ...){
 #' @param x a model created by \code{\link{cnn}}
 #' @param ... additional arguments
 #' @return original object x
-#'
+#' @example /inst/examples/plot.citocnn-example.R
 #' @export
 plot.citocnn <- function(x, ...){
   x <- check_model(x)
@@ -380,7 +383,7 @@ plot.citocnn <- function(x, ...){
 #' @param object a model created by \code{\link{cnn}}
 #' @param ... nothing implemented yet
 #' @return list of weights of neural network
-#'
+#' @example /inst/examples/coef.citocnn-example.R
 #' @export
 coef.citocnn <- function(object,...){
   return(object$weights[object$use_model_epoch])
