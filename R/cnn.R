@@ -294,7 +294,7 @@ cnn <- function(X,
 #'   \item \code{"class"}: The predicted class labels (for classification tasks).
 #' }
 #' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".
-#' @param batchsize An integer specifying the number of samples to be processed at the same time. Default is 32.
+#' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 #'
@@ -304,7 +304,7 @@ predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = NULL,
-                            batchsize = 32L, ...) {
+                            batchsize = NULL, ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
@@ -315,6 +315,9 @@ predict.citocnn <- function(object,
 
   if(is.null(device)) device <- object$device
   device <- check_device(device)
+
+  if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
+
 
   if(type %in% c("response","class")) {
     link <- object$loss$invlink

@@ -9,7 +9,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = NULL,
-  batchsize = 32L,
+  batchsize = NULL,
   ...
 )
 }
@@ -27,7 +27,7 @@
 
 \item{device}{Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 
-\item{batchsize}{An integer specifying the number of samples to be processed at the same time. Default is 32.}
+\item{batchsize}{An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.}
 
 \item{...}{Additional arguments (currently not used).}
 }
