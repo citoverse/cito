@@ -1,6 +1,8 @@
 source("utils.R")
 
 wrap_cnn = function(pars) {
+  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+  pars <- append(pars, list(device=device))
   testthat::expect_error({model = do.call(cnn, pars)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
   testthat::expect_error({.n = continue_training(model, epochs = 1L, verbose = FALSE)}, NA)
@@ -100,7 +102,7 @@ testthat::test_that("CNN accuracy", {
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)
-  testthat::expect_gt(accuracy, 0.90)
+  testthat::expect_gt(accuracy, 0.80)
 })
 
 

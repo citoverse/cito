@@ -2,35 +2,40 @@
 % Please edit documentation in R/cnn.R
 \name{predict.citocnn}
 \alias{predict.citocnn}
-\title{Predict from a fitted cnn model}
+\title{Predict with a fitted CNN model}
 \usage{
 \method{predict}{citocnn}(
   object,
   newdata = NULL,
   type = c("link", "response", "class"),
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   batchsize = 32L,
   ...
 )
 }
 \arguments{
-\item{object}{a model created by \code{\link{cnn}}}
+\item{object}{a model created by \code{\link{cnn}}.}
 
-\item{newdata}{new data for predictions}
+\item{newdata}{A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.}
 
-\item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
+\item{type}{A character string specifying the type of prediction to be made. Options are:
+\itemize{
+\item \code{"link"}: Scale of the linear predictor.
+\item \code{"response"}: Scale of the response.
+\item \code{"class"}: The predicted class labels (for classification tasks).
+}}
 
-\item{device}{device on which network should be trained on.}
+\item{device}{Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 
-\item{batchsize}{number of samples that are predicted at the same time}
+\item{batchsize}{An integer specifying the number of samples to be processed at the same time. Default is 32.}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-prediction matrix
+A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 }
 \description{
-Predict from a fitted cnn model
+This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 }
 \examples{
 \donttest{
@@ -38,6 +43,8 @@ if(torch::torch_is_installed()){
 library(cito)
 
 set.seed(222)
+
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
 
 ## Data
 shapes <- cito:::simulate_shapes(320, 28)
@@ -48,7 +55,7 @@ Y <- shapes$labels
 architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05, device=device)
 
 ## Get predictions of the validation set
 valid <- cnn.fit$data$validation

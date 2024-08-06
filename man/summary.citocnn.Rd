@@ -2,18 +2,18 @@
 % Please edit documentation in R/cnn.R
 \name{summary.citocnn}
 \alias{summary.citocnn}
-\title{Summary citocnn}
+\title{Summarize a fitted CNN model}
 \usage{
 \method{summary}{citocnn}(object, ...)
 }
 \arguments{
-\item{object}{a model created by \code{\link{cnn}}}
+\item{object}{A model created by \code{\link{cnn}}.}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-original object x
+The original model object \code{object}, returned invisibly.
 }
 \description{
-currently the same as the print.citocnn method.
+This function provides a summary of a Convolutional Neural Network (CNN) model created using the \code{\link{cnn}} function. It currently replicates the output of the \code{\link{print.citocnn}} method.
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/cnn.R
 \name{conv}
 \alias{conv}
-\title{Convolutional layer}
+\title{Create a Convolutional Layer for a CNN Architecture}
 \usage{
 conv(
   n_kernels = NULL,
@@ -17,33 +17,32 @@ conv(
 )
 }
 \arguments{
-\item{n_kernels}{(int) amount of kernels in this layer}
+\item{n_kernels}{(integer) The number of kernels (or filters) in this layer.}
 
-\item{kernel_size}{(int or tuple) size of the kernels in this layer. Use a tuple if the kernel size isn't equal in all dimensions}
+\item{kernel_size}{(integer or tuple) The size of the kernels in this layer. Use a tuple if the kernel size is different in each dimension.}
 
-\item{stride}{(int or tuple) stride of the kernels in this layer. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions}
+\item{stride}{(integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride is different in each dimension.}
 
-\item{padding}{(int or tuple) zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions}
+\item{padding}{(integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding is different in each dimension.}
 
-\item{dilation}{(int or tuple) dilation of the kernels in this layer. Use a tuple if the dilation isn't equal in all dimensions}
+\item{dilation}{(integer or tuple) The dilation of the kernels in this layer. Use a tuple if the dilation is different in each dimension.}
 
-\item{bias}{(boolean) if TRUE, adds a learnable bias to the kernels of this layer}
+\item{bias}{(boolean) If \code{TRUE}, a learnable bias is added to the kernels of this layer.}
 
-\item{activation}{(string) activation function that is used after this layer. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"}
+\item{activation}{(character) The activation function applied after this layer. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".}
 
-\item{normalization}{(boolean) if TRUE, batch normalization is used after this layer}
+\item{normalization}{(boolean) If \code{TRUE}, batch normalization is applied after this layer.}
 
-\item{dropout}{(float) dropout rate of this layer. Set to 0 for no dropout}
+\item{dropout}{(numeric) The dropout rate for this layer. Set to 0 to disable dropout.}
 }
 \value{
-S3 object of class \code{"conv" "citolayer"}
+An S3 object of class \code{"conv" "citolayer"}, representing a convolutional layer in the CNN architecture.
 }
 \description{
-creates a 'conv' 'citolayer' object that is used by \code{\link{create_architecture}}.
+This function creates a \code{conv} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 }
 \details{
-This function creates a 'conv' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
+This function creates a \code{conv} layer object, which is used to define a convolutional layer in a CNN architecture. Parameters that are not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
 }
 \examples{
 \donttest{

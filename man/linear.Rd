@@ -2,7 +2,7 @@
 % Please edit documentation in R/cnn.R
 \name{linear}
 \alias{linear}
-\title{Linear layer}
+\title{Create a Linear Layer for a CNN Architecture}
 \usage{
 linear(
   n_neurons = NULL,
@@ -13,25 +13,24 @@ linear(
 )
 }
 \arguments{
-\item{n_neurons}{(int) amount of hidden neurons in this layer}
+\item{n_neurons}{(integer) The number of hidden neurons in this layer.}
 
-\item{bias}{(boolean) if TRUE, adds a learnable bias to the neurons of this layer}
+\item{bias}{(boolean) If \code{TRUE}, a learnable bias is added to the neurons of this layer.}
 
-\item{activation}{(string) activation function that is used after this layer. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"}
+\item{activation}{(character) The activation function applied after this layer. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".}
 
-\item{normalization}{(boolean) if TRUE, batch normalization is used after this layer}
+\item{normalization}{(boolean) If \code{TRUE}, batch normalization is applied after this layer.}
 
-\item{dropout}{(float) dropout rate of this layer. Set to 0 for no dropout}
+\item{dropout}{(numeric) The dropout rate for this layer. Set to 0 to disable dropout.}
 }
 \value{
-S3 object of class \code{"linear" "citolayer"}
+An S3 object of class \code{"linear" "citolayer"}, representing a linear layer in the CNN architecture.
 }
 \description{
-creates a 'linear' 'citolayer' object that is used by \code{\link{create_architecture}}.
+This function creates a \code{linear} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 }
 \details{
-This function creates a 'linear' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
+This function creates a \code{linear} layer object, which is used to define a linear layer in a CNN architecture. Parameters not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
 }
 \examples{
 \donttest{

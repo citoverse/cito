@@ -2,24 +2,24 @@
 % Please edit documentation in R/cnn.R
 \name{plot.citoarchitecture}
 \alias{plot.citoarchitecture}
-\title{Plot the CNN architecture}
+\title{Plot method for citoarchitecture objects}
 \usage{
 \method{plot}{citoarchitecture}(x, input_shape, output_shape = NULL, ...)
 }
 \arguments{
-\item{x}{an object of class citoarchitecture created by \code{\link{create_architecture}}}
+\item{x}{An object of class \code{citoarchitecture}, created by \code{\link{create_architecture}}.}
 
-\item{input_shape}{a vector with the dimensions of a single sample (e.g. c(3,28,28))}
+\item{input_shape}{A numeric vector specifying the dimensions of a single sample (e.g., \code{c(3, 28, 28)} for an RGB image with height and width of 28 pixels). This argument is required for a detailed output.}
 
-\item{output_shape}{the number of nodes in the output layer}
+\item{output_shape}{An integer specifying the number of nodes in the output layer. If \code{NULL}, no output layer is printed.}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-nothing
+The original \code{citoarchitecture} object, returned invisibly.
 }
 \description{
-Plot the CNN architecture
+This method provides a visual representation of the network architecture defined by an object of class \code{citoarchitecture}, including information about each layer's configuration. It helps in understanding the structure of the architecture defined by \code{\link{create_architecture}}.
 }
 \examples{
 \donttest{

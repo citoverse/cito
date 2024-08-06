@@ -37,7 +37,7 @@ continue_training(model, ...)
   epochs = 32,
   X = NULL,
   Y = NULL,
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   verbose = TRUE,
   changed_params = NULL,
   init_optimizer = TRUE,

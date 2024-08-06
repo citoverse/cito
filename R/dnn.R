@@ -149,7 +149,7 @@
 #'
 #' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 #'
-#' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+#' @return an S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}

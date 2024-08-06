@@ -2,25 +2,31 @@
 % Please edit documentation in R/cnn.R
 \name{coef.citocnn}
 \alias{coef.citocnn}
-\title{Returns list of parameters the neural network model currently has in use}
+\title{Retrieve parameters of a fitted CNN model}
 \usage{
 \method{coef}{citocnn}(object, ...)
 }
 \arguments{
-\item{object}{a model created by \code{\link{cnn}}}
+\item{object}{A model created by \code{\link{cnn}}.}
 
-\item{...}{nothing implemented yet}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-list of weights of neural network
+A list with two components:
+\itemize{
+\item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
+\item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+}
 }
 \description{
-Returns list of parameters the neural network model currently has in use
+This function returns the list of parameters (weights and biases) and buffers (e.g. running mean and variance of batch normalization layers) currently in use by the neural network model created using the \code{\link{cnn}} function.
 }
 \examples{
 \donttest{
 if(torch::torch_is_installed()){
 library(cito)
+
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
 
 set.seed(222)
 
@@ -33,7 +39,7 @@ Y <- shapes$labels
 architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05, device=device)
 
 # Weights of neural network
 coef(cnn.fit)

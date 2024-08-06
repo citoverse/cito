@@ -2,20 +2,21 @@
 % Please edit documentation in R/cnn.R
 \name{cnn}
 \alias{cnn}
-\title{CNN}
+\title{Train a Convolutional Neural Network (CNN)}
 \usage{
 cnn(
   X,
   Y = NULL,
   architecture,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
+    "mvp", "nbinom", "multinomial", "clogit"),
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
   alpha = 0.5,
   lambda = 0,
   validation = 0,
   batchsize = 32L,
-  burnin = 10,
+  burnin = 30,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = NULL,
@@ -27,68 +28,70 @@ cnn(
 )
 }
 \arguments{
-\item{X}{predictor: array with dimension 3, 4 or 5 for 1D-, 2D- or 3D-convolutions, respectively. The first dimension are the samples, the second dimension the channels and the third - fifth dimension are the input dimensions}
+\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions.}
 
-\item{Y}{response: vector, factor, numerical matrix or logical matrix}
+\item{Y}{The target data. It can be a factor, numeric vector, or a numeric or logical matrix.}
 
-\item{architecture}{'citoarchitecture' object created by \code{\link{create_architecture}}}
+\item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.}
 
-\item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
+\item{loss}{The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 
-\item{optimizer}{which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}}
+\item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
 
-\item{lr}{learning rate given to optimizer}
+\item{lr}{Learning rate for the optimizer. Default is 0.01.}
 
-\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
+\item{alpha}{Alpha value for L1/L2 regularization. Default is 0.5.}
 
-\item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
+\item{lambda}{Lambda value for L1/L2 regularization. Default is 0.0.}
 
-\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
+\item{validation}{Proportion of the data to be used for validation. Default is 0.0.}
 
-\item{batchsize}{number of samples that are used to calculate one learning rate step}
+\item{batchsize}{Batch size for training. Default is 32.}
 
-\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.}
 
-\item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
+\item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
 
-\item{epochs}{epochs the training goes on for}
+\item{epochs}{Number of epochs to train the model. Default is 100.}
 
-\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss if available.}
+\item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is NULL.}
 
-\item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
+\item{lr_scheduler}{Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.}
 
-\item{custom_parameters}{List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.}
+\item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
 
-\item{device}{device on which network should be trained on.}
+\item{device}{Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 
-\item{plot}{plot training loss}
+\item{plot}{Whether to plot the training progress. Default is TRUE.}
 
-\item{verbose}{print training and validation loss of epochs}
+\item{verbose}{Whether to print detailed training progress. Default is TRUE.}
 }
 \value{
-an S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+An S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 The list consists of the following attributes:
 \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
-\item{call}{The original function call}
-\item{loss}{A list which contains relevant information for the target variable and the used loss function}
-\item{data}{Contains data used for training the model}
-\item{weights}{List of weights for each training epoch}
-\item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
-\item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
-\item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
-\item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
-\item{losses}{A data.frame containing training and validation losses of each epoch}
+\item{call}{The original function call.}
+\item{loss}{A list which contains relevant information for the target variable and the used loss function.}
+\item{data}{Contains the data used for the training of the model.}
+\item{base_loss}{The loss of the intercept-only model.}
+\item{weights}{List of parameters (weights and biases) of the models from the best and the last training epoch.}
+\item{buffers}{List of buffers (e.g. running mean and variance of batch normalization layers) of the models from the best and the last training epoch.}
+\item{use_model_epoch}{Integer, defines whether the model from the best (= 1) or the last (= 2) training epoch should be used for prediction.}
+\item{loaded_model_epoch}{Integer, shows whether the parameters and buffers of the model from the best (= 1) or the last (= 2) training epoch are currently loaded in \code{net}.}
+\item{model_properties}{A list of properties, that define the architecture of the model.}
+\item{training_properties}{A list of all the training parameters used the last time the model was trained.}
+\item{losses}{A data.frame containing training and validation losses of each epoch.}
 }
 \description{
-fits a custom convolutional neural network.
+This function trains a Convolutional Neural Network (CNN) on the provided input data \code{X} and the target data \code{Y} using the specified architecture, loss function, and optimizer.
 }
-\section{Convolutional neural networks:}{
-Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured grid data, such as images.
-The characterizing parts of the architecture are convolutional layers, pooling layers and fully-connected (linear) layers:
+\section{Convolutional Neural Networks:}{
+Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured data, such as images.
+The key components of a CNN are convolutional layers, pooling layers and fully-connected (linear) layers:
 \itemize{
-\item Convolutional layers are the core building blocks of CNNs. They consist of filters (also called kernels), which are small, learnable matrices. These filters slide over the input data to perform element-wise multiplication, producing feature maps that capture local patterns and features. Multiple filters are used to detect different features in parallel. They help the network learn hierarchical representations of the input data by capturing low-level features (edges, textures) and gradually combining them (in subsequent convolutional layers) to form higher-level features.
-\item Pooling layers are used to downsample the spatial dimensions of the feature maps while retaining important information. Max pooling is a common pooling operation, where the maximum value in a local region of the input is retained, reducing the size of the feature maps.
-\item Fully-connected (linear) layers connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
+\item \strong{Convolutional layers} are the core building blocks of CNNs. They consist of filters (also called kernels), which are small, learnable matrices. These filters slide over the input data to perform element-wise multiplication, producing feature maps that capture local patterns and features. Multiple filters are used to detect different features in parallel. They help the network learn hierarchical representations of the input data by capturing low-level features (edges, textures) and gradually combining them (in subsequent convolutional layers) to form higher-level features.
+\item \strong{Pooling layers} reduce the size of the feature maps created by convolutional layers, while retaining important information. A common type is max pooling, which keeps the highest value in a region, simplifying the data while preserving essential features.
+\item \strong{Fully-connected (linear) layers} connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
 }
 }
 
@@ -101,7 +104,11 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
-   Poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
+   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
+   mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
+   multinomial \tab Multinomial likelihood \tab step selection in animal movement models \cr
+   clogit \tab conditional binomial \tab step selection in animal movement models \cr
 }
 }
 
@@ -141,7 +148,6 @@ Overfitting means that the model fits the training data well, but generalizes po
 Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
 
 Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
-In the case of 2D and 3D inputs whole feature maps are disabled. Since the torch package doesn't currently support feature map-wise dropout for 1D inputs, instead random neurons in the feature maps are disabled similar to dropout in linear layers.
 
 By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
 }
@@ -168,6 +174,8 @@ library(cito)
 
 # Example workflow in cito
 
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
 ## Data
 ### We generate our own data:
 ### 320 images (3x50x50) of either rectangles or ellipsoids
@@ -182,7 +190,7 @@ architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), line
 
 ## Build and train network
 ### softmax is used for classification
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05, device=device)
 
 ## The training loss is below the baseline loss but at the end of the
 ## training the loss was still decreasing, so continue training for another 50
@@ -202,14 +210,14 @@ analyze_training(cnn.fit)
 ### With the transfer() function we can use predefined architectures with pretrained weights
 transfer_architecture <- create_architecture(transfer("resnet18"))
 resnet <- cnn(X, Y, transfer_architecture, loss = "softmax",
-              epochs = 10, validation = 0.1, lr = 0.05)
+              epochs = 10, validation = 0.1, lr = 0.05, device=device)
 print(resnet)
 plot(resnet)
 }
 }
 }
 \seealso{
-\code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+\code{\link{predict.citocnn}}, \code{\link{print.citocnn}}, \code{\link{plot.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{coef.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }
 \author{
 Armin Schenk, Maximilian Pichler
