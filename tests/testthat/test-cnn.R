@@ -93,12 +93,14 @@ testthat::test_that("CNN accuracy", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
+  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
   set.seed(123)
   n <- 1000
-  shapes <- simulate_shapes(n, 50)
+  shapes <- cito:::simulate_shapes(n, 50)
   test <- sample.int(n, 0.1*n)
   train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", validation=0.1, epochs=200, plot=FALSE, verbose=FALSE)
+  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", device=device, validation=0.1, epochs=200, plot=FALSE, verbose=FALSE)
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)
@@ -112,7 +114,7 @@ testthat::test_that("CNN transfer learning", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-  shapes <- simulate_shapes(10, 100, 3)
+  shapes <- cito:::simulate_shapes(10, 100, 3)
 
   models <- list(
     "alexnet",
@@ -151,13 +153,15 @@ testthat::test_that("CNN pretrained", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
+  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
   architecture <- create_architecture(transfer("alexnet"))
 
   n <- 500
-  shapes <- simulate_shapes(n, 100, 3)
+  shapes <- cito:::simulate_shapes(n, 100, 3)
   test <- sample.int(n, 0.1*n)
   train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", epochs=10)
+  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", device=device, epochs=10)
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)

@@ -185,15 +185,28 @@ cnn <- function(X,
   }
 
   device <- match.arg(device)
-  device_old <- device
-  device <- check_device(device)
 
   if(!is.function(loss) & !inherits(loss,"family")) {
     loss <- match.arg(loss)
+
+    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
   }
 
-  loss_obj <- get_loss(loss)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
+  if(inherits(loss,"family")) {
+    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
+  }
+
+  device_old <- device
+  device <- check_device(device)
+
+  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
+  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")
@@ -215,7 +228,7 @@ cnn <- function(X,
 
   loss.fkt <- loss_obj$loss
   if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
+  base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y$to(device = device))$mean()$cpu())
 
   if(validation != 0) {
     n_samples <- dim(X)[1]
