@@ -15,4 +15,3 @@ architecture <- create_architecture(c1, c1, mP, c2, c2, mP, l,
 print(architecture, c(3,128,128), 10)
 }
 }
-
