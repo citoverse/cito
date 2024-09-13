@@ -3,6 +3,9 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   model$net$train()
   model$successfull = 1
 
+  hooks = model$training_properties$hooks
+  model$hooks_result = list()
+
   ### Optimizer ###
   if(init_optimizer) {
     optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
@@ -78,6 +81,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       break
     }
 
+
     model$losses$train_l[epoch] <- mean(train_l)
 
     if(epoch >= model$burnin) {
@@ -88,6 +92,16 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       }
     }
 
+    if(!is.null(hooks)) {
+      model$use_model_epoch <- 1
+      model$loaded_model_epoch <- 1
+      class(model) = "citodnn"
+      model$net$eval()
+      ce = conditionalEffects(model)
+      ce_mean = lapply(ce, function(tmp) tmp$mean)
+      model$net$train()
+      model$hooks_result[epoch] = ce_mean
+    }
 
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){
       model$net$train(FALSE)

@@ -192,6 +192,7 @@ dnn <- function(formula = NULL,
                 device = c("cpu","cuda", "mps"),
                 early_stopping = FALSE,
                 tuning = config_tuning(),
+                hooks = NULL,
                 X = NULL,
                 Y = NULL) {
 
@@ -374,7 +375,8 @@ dnn <- function(formula = NULL,
                                batchsize = batchsize,
                                shuffle = shuffle,
                                formula = formula,
-                               embeddings = embeddings)
+                               embeddings = embeddings,
+                               hooks = hooks)
     out <- list()
     class(out) <- "citodnn"
     out$net <- net
@@ -418,7 +420,7 @@ dnn <- function(formula = NULL,
         indices <- sample(nrow(data),replace = TRUE)
         m = do.call(dnn, args = list(
           formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
+          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
           bootstrap_parallel = FALSE
@@ -442,7 +444,7 @@ dnn <- function(formula = NULL,
         indices <- sample(nrow(data),replace = TRUE)
         m = do.call(dnn, args = list(
           formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout,
+          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
           bootstrap_parallel = FALSE
