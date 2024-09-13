@@ -1,8 +1,8 @@
 source("utils.R")
+library(cito)
+set.seed(42)
 
 wrap_cnn = function(pars) {
-  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
-  pars <- append(pars, list(device=device))
   testthat::expect_error({model = do.call(cnn, pars)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
   testthat::expect_error({.n = continue_training(model, epochs = 1L, verbose = FALSE)}, NA)
@@ -36,22 +36,37 @@ testthat::test_that("CNN softmax", {
             factor(Y))
   for(i in 1:length(X)) {
     for(j in 1:length(Y)) {
-      wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="softmax", plot=FALSE, verbose=FALSE))
+      .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="softmax", plot=FALSE, verbose=FALSE, device="cpu"))
+      if(torch::cuda_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="softmax", plot=FALSE, verbose=FALSE, device="cuda"))
+      }
+      if(torch::backends_mps_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="softmax", plot=FALSE, verbose=FALSE, device="mps"))
+      }
     }
   }
 })
 
-testthat::test_that("CNN poisson", {
+testthat::test_that("CNN poisson/nbinom", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-  Y <- rpois(100, 10)
-  Y <- list(Y,
-            matrix(Y, nrow=100, ncol=1))
+  Y <- list(rpois(100, 10),
+            matrix(rpois(100, 10), nrow=100, ncol=1),
+            matrix(rpois(300, 10), nrow=100, ncol=3))
   for(i in 1:length(X)) {
     for(j in 1:length(Y)) {
-      wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="poisson", plot=FALSE, verbose=FALSE))
+      .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="poisson", plot=FALSE, verbose=FALSE, device="cpu"))
+      .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="nbinom", plot=FALSE, verbose=FALSE, device="cpu"))
+      if(torch::cuda_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="poisson", plot=FALSE, verbose=FALSE, device="cuda"))
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="nbinom", plot=FALSE, verbose=FALSE, device="cuda"))
+      }
+      if(torch::backends_mps_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="poisson", plot=FALSE, verbose=FALSE, device="mps"))
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="nbinom", plot=FALSE, verbose=FALSE, device="mps"))
+      }
     }
   }
 })
@@ -66,7 +81,34 @@ testthat::test_that("CNN binomial", {
             matrix(sample(c(FALSE,TRUE), 300, replace=TRUE), nrow=100, ncol=3))
   for(i in 1:length(X)) {
     for(j in 1:length(Y)) {
-      wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="binomial", plot=FALSE, verbose=FALSE))
+      .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="binomial", plot=FALSE, verbose=FALSE, device="cpu"))
+      if(torch::cuda_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="binomial", plot=FALSE, verbose=FALSE, device="cuda"))
+      }
+      if(torch::backends_mps_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="binomial", plot=FALSE, verbose=FALSE, device="mps"))
+      }
+    }
+  }
+})
+
+testthat::test_that("CNN multinomial", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)),
+            #matrix(rpois(100,10),100,1),
+            matrix(rpois(300,10),100,3))
+  for(i in 1:length(X)) {
+    for(j in 1:length(Y)) {
+      .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="multinomial", plot=FALSE, verbose=FALSE, device="cpu"))
+      if(torch::cuda_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="multinomial", plot=FALSE, verbose=FALSE, device="cuda"))
+      }
+      if(torch::backends_mps_is_available()) {
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss="multinomial", plot=FALSE, verbose=FALSE, device="mps"))
+      }
     }
   }
 })
@@ -82,7 +124,13 @@ testthat::test_that("CNN mse/mae/gaussian", {
   for(i in 1:length(X)) {
     for(j in 1:length(Y)) {
       for (loss in c("mse", "mae", "gaussian")) {
-        wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss=loss, plot=FALSE, verbose=FALSE))
+        .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss=loss, plot=FALSE, verbose=FALSE, device="cpu"))
+        if(torch::cuda_is_available()) {
+          .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss=loss, plot=FALSE, verbose=FALSE, device="cuda"))
+        }
+        if(torch::backends_mps_is_available()) {
+          .n <- wrap_cnn(list(X=X[[i]], Y=Y[[j]], architecture=architecture, epochs=1, loss=loss, plot=FALSE, verbose=FALSE, device="mps"))
+        }
       }
     }
   }
@@ -93,9 +141,15 @@ testthat::test_that("CNN accuracy", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+  if(torch::cuda_is_available()) {
+    device <- "cuda"
+  } else if(torch::backends_mps_is_available()) {
+    device <- "mps"
+  } else {
+    device <- "cpu"
+  }
 
-  set.seed(123)
+  set.seed(42)
   n <- 1000
   shapes <- cito:::simulate_shapes(n, 50)
   test <- sample.int(n, 0.1*n)
@@ -114,6 +168,15 @@ testthat::test_that("CNN transfer learning", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
+  if(torch::cuda_is_available()) {
+    device <- "cuda"
+  } else if(torch::backends_mps_is_available()) {
+    device <- "mps"
+  } else {
+    device <- "cpu"
+  }
+
+  set.seed(42)
   shapes <- cito:::simulate_shapes(10, 100, 3)
 
   models <- list(
@@ -141,10 +204,10 @@ testthat::test_that("CNN transfer learning", {
 
   for (transfer_model in models) {
     architecture <- create_architecture(transfer(transfer_model, pretrained=FALSE))
-    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="softmax", plot=FALSE, verbose=FALSE))
+    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="softmax", plot=FALSE, verbose=FALSE, device=device))
 
     architecture <- create_architecture(transfer(transfer_model, pretrained=FALSE), linear(), linear())
-    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="softmax", plot=FALSE, verbose=FALSE))
+    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="softmax", plot=FALSE, verbose=FALSE, device=device))
   }
 })
 
@@ -153,10 +216,17 @@ testthat::test_that("CNN pretrained", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-  device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+  if(torch::cuda_is_available()) {
+    device <- "cuda"
+  } else if(torch::backends_mps_is_available()) {
+    device <- "mps"
+  } else {
+    device <- "cpu"
+  }
 
-  architecture <- create_architecture(transfer("alexnet"))
+  architecture <- create_architecture(transfer("alexnet", pretrained=TRUE, freeze=TRUE))
 
+  set.seed(42)
   n <- 500
   shapes <- cito:::simulate_shapes(n, 100, 3)
   test <- sample.int(n, 0.1*n)
@@ -167,11 +237,3 @@ testthat::test_that("CNN pretrained", {
   accuracy <- length(which(pred==true))/length(test)
   testthat::expect_gt(accuracy, 0.95)
 })
-
-
-
-
-
-
-
-
