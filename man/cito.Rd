@@ -185,3 +185,26 @@ as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
 }
 }
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://citoverse.github.io/cito/}
+  \item Report bugs at \url{https://github.com/citoverse/cito/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Maximilian Pichler \email{maximilian.pichler@biologie.uni-regensburg.de} (\href{https://orcid.org/0000-0003-2252-8327}{ORCID})
+
+Authors:
+\itemize{
+  \item Christian Amesöder \email{Christian.Amesoeder@informatik.uni-regensburg.de}
+}
+
+Other contributors:
+\itemize{
+  \item Florian Hartig \email{florian.hartig@biologie.uni-regensburg.de} (\href{https://orcid.org/0000-0002-6255-9059}{ORCID}) [contributor]
+  \item Armin Schenk \email{armin.schenk99@gmail.com} [contributor]
+}
+
+}

@@ -32,6 +32,7 @@ dnn(
   device = c("cpu", "cuda", "mps"),
   early_stopping = FALSE,
   tuning = config_tuning(),
+  hooks = NULL,
   X = NULL,
   Y = NULL
 )
