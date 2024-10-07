@@ -26,7 +26,7 @@ Description: The 'cito' package provides a user-friendly interface for training 
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Depends:
     R (>= 3.5)
 Imports:
@@ -40,7 +40,8 @@ Imports:
     cli,
     torchvision,
     tibble,
-    lme4
+    lme4,
+    rlang
 License: GPL (>= 3)
 Suggests:
     spelling,

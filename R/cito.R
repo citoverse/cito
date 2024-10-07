@@ -30,7 +30,6 @@
 #' @example /inst/examples/dnn-example.R
 #'
 #' @aliases cito-package
-#' @docType package
 #' @name cito
-NULL
+"_PACKAGE"
 #> NULL

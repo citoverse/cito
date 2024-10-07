@@ -10,7 +10,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
-  batchsize = 32L,
+  batchsize = NULL,
   ...
 )
 
@@ -19,7 +19,7 @@
   newdata = NULL,
   type = c("link", "response", "class"),
   device = c("cpu", "cuda", "mps"),
-  batchsize = 32L,
+  batchsize = NULL,
   reduce = c("mean", "median", "none"),
   ...
 )

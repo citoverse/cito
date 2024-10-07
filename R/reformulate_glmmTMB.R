@@ -164,10 +164,17 @@ expandAllGrpVar <- function(bb) {
   }
 }
 
-head.formula <- head.call <- function(x, ...) {
+#' @export
+head.formula <- function(x, ...) {
   x[[1]]
 }
 
+#' @export
+head.call <- function(x, ...) {
+  x[[1]]
+}
+
+#' @export
 head.name <- function(x, ...) { x }
 
 findbars_x <- function(term,
