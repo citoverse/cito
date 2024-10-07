@@ -2,18 +2,43 @@
 % Please edit documentation in R/cnn.R
 \name{plot.citocnn}
 \alias{plot.citocnn}
-\title{Plot the CNN architecture}
+\title{Plot a fitted CNN model}
 \usage{
 \method{plot}{citocnn}(x, ...)
 }
 \arguments{
-\item{x}{a model created by \code{\link{cnn}}}
+\item{x}{A model created by \code{\link{cnn}}.}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-original object x
+The original model object \code{x}, returned invisibly.
 }
 \description{
-Plot the CNN architecture
+This function plots the architecture of a Convolutional Neural Network (CNN) model created using the \code{\link{cnn}} function.
+}
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+set.seed(222)
+
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
+## Data
+shapes <- cito:::simulate_shapes(320, 28)
+X <- shapes$data
+Y <- shapes$labels
+
+## Architecture
+architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
+
+## Build and train network
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05, device=device)
+
+## Structure of Neural Network
+plot(cnn.fit)
+}
+}
 }

@@ -399,15 +399,19 @@ get_transfer_output_shape <- function(name) {
 }
 
 # Load the pretrained models.
-# In inception_v3 the auxiliary part is omitted since we don't use it, and the input transformation is moved to the forward function since we always use pretrained weights.
+# In inception_v3 the auxiliary part is omitted since we don't use it and the input transformation is moved to the forward function (if pretrained=TRUE)
 # In mobilenet_v2 the global average pool is moved from the forward function to a module, so the last 2 modules of all models are avgpool and classifier, respectively.
 get_pretrained_model <- function(transfer, pretrained) {
   if(transfer == "inception_v3") {
     inception_v3 <- torchvision::model_inception_v3(pretrained = pretrained)
 
-    forward <- c(sub("        ", "    ", deparse(inception_v3$.transform_input)[c(1,2,4:9)]),
-                 "    x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)",
-                 deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
+
+    forward <- deparse(inception_v3$.forward)[1:2]
+    if(pretrained) {
+      forward <- c(forward, deparse(inception_v3$.transform_input)[c(4:9)], "        x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)")
+    }
+
+    forward <- c(forward, deparse(inception_v3$.forward)[c(3:17, 24:30)], "    x", "}")
 
     torch_model <- torch::nn_module(
       classname = "inception_v3",
@@ -418,7 +422,8 @@ get_pretrained_model <- function(transfer, pretrained) {
           }
         }
       },
-      forward = eval(parse(text=forward))
+      forward = eval(parse(text=forward)),
+      transform_input = pretrained
     )(inception_v3)
 
   } else if(transfer == "mobilenet_v2") {
@@ -443,40 +448,17 @@ get_pretrained_model <- function(transfer, pretrained) {
   return(torch_model)
 }
 
-replace_output_layer <- function(transfer_model, output_shape) {
-  n <- length(transfer_model$children)
-  if(names(transfer_model$children)[n] == "fc") {
-    if(is.null(output_shape)) {
-      transfer_model$fc <- torch::nn_identity()
-    } else {
-      transfer_model$fc <- torch::nn_linear(transfer_model$fc$in_features, output_shape)
-    }
-  } else if(names(transfer_model$children)[n] == "classifier") {
-    classifier <- transfer_model$classifier
-    k <- length(classifier$children)
-    if(is.null(output_shape)) {
-      classifier[[names(classifier$children)[k]]] <- torch::nn_identity()
-    } else {
-      classifier[[names(classifier$children)[k]]] <- torch::nn_linear(classifier[[names(classifier$children)[k]]]$in_features, output_shape)
-    }
-    transfer_model$classifier <- classifier
-  } else {
-    stop("Error in replacing output layer of pretrained model")
-  }
-  return(transfer_model)
-}
-
 replace_classifier <- function(transfer_model, cito_model) {
 
   forward <- deparse(transfer_model$forward)
-  forward <- c(forward[1:(which(grepl("flatten", forward))-1)], "    x <- self$cito(x)", "    x", "}")
+  forward <- c(forward[1:(which(grepl("flatten", forward))-1)], "    x <- self$classifier(x)", "    x", "}")
 
   net <- torch::nn_module(
     initialize = function(transfer_model, cito_model) {
       for (child in names(transfer_model$children)[-length(transfer_model$children)]) {
         eval(parse(text=paste0("self$", child, " <- transfer_model$", child)))
       }
-      self$cito <- cito_model
+      self$classifier <- cito_model
     },
     forward = eval(parse(text=forward))
   )
@@ -485,10 +467,8 @@ replace_classifier <- function(transfer_model, cito_model) {
 }
 
 freeze_weights <- function(transfer_model) {
-  for(child in transfer_model$children[-length(transfer_model$children)]) {
-    for(parameter in child$parameters) {
-      parameter$requires_grad_(FALSE)
-    }
+  for(parameter in transfer_model$parameters) {
+    parameter$requires_grad_(FALSE)
   }
   return(transfer_model)
 }
@@ -509,39 +489,58 @@ re_init = function(param, param_r) {
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
-  if(!inherits(object, c("citodnn", "citocnn"))) stop("model not of class citodnn or citocnn")
+  if(!inherits(object, c("citodnn", "citocnn", "citommn"))) stop("model not of class citodnn, citocnn or citommn")
+
   pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
   if(inherits(pointer_check,"error")){
     object$net <- build_model(object)
-    object$loaded_model_epoch <- 0
+    object$loaded_model_epoch <- torch::torch_tensor(0)
     object$loss<- get_loss(object$loss$call)
-    }
+  }
 
-  if(object$loaded_model_epoch!= object$use_model_epoch){
 
-    module_params<- names(object$weights[[object$use_model_epoch]])
-    module_name<- sapply(module_params, function(x) {
-      period_indices <- which(strsplit(x,"")[[1]]==".")
-      last_period_index <- period_indices[length(period_indices)]
-      substr(x,1,last_period_index-1)
-    })
-    module_type<- sapply(module_params, function(x) {
-      period_indices <- which(strsplit(x,"")[[1]]==".")
-      last_period_index <- period_indices[length(period_indices)]
-      substring(x,last_period_index+1)
-    })
+  if(as.numeric(object$loaded_model_epoch)!= object$use_model_epoch){
 
-    for ( i in names(object$net$modules)){
-      if(i %in% module_name){
+    set_data <- function(params_buffers_names, mode) {
+      module_name <- sapply(params_buffers_names, function(x) {
+        period_indices <- which(strsplit(x,"")[[1]]==".")
+        last_period_index <- period_indices[length(period_indices)]
+        substr(x,1,last_period_index-1)
+      })
+
+      module_type <- sapply(params_buffers_names, function(x) {
+        period_indices <- which(strsplit(x,"")[[1]]==".")
+        last_period_index <- period_indices[length(period_indices)]
+        substring(x,last_period_index+1)
+      })
+
+      if(mode == 1) {
+        text1 <- "parameters"
+        text2 <- "weights"
+      } else {
+        text1 <- "buffers"
+        text2 <- "buffers"
+      }
+
+      for ( i in names(object$net$modules)){
+        if(i %in% module_name){
           k<- which(i == module_name)
-          sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$parameters$",module_type[k],"$set_data(object$weights[[object$use_model_epoch]]$`",module_params[k],"`)"))))
-
+          sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$",text1,"$",module_type[k],"$set_data(object$",text2,"[[object$use_model_epoch]]$`",params_buffers_names[k],"`)"))))
+        }
       }
     }
-    object$loaded_model_epoch <-  object$use_model_epoch
+
+    module_params <- names(object$weights[[object$use_model_epoch]])
+    if(!is.null(module_params)) set_data(module_params, mode = 1)
+    module_buffers <- names(object$buffers[[object$use_model_epoch]])
+    if(!is.null(module_buffers)) set_data(module_buffers, mode = 2)
+
+    object$loaded_model_epoch$set_data(object$use_model_epoch)
   }
 
   if(!is.null(object$parameter)) object$loss$parameter <- lapply(object$parameter, torch::torch_tensor)
+
+  object$net$eval()
 
   return(object)
 }
@@ -626,14 +625,14 @@ get_X_Y = function(formula, X, Y, data) {
       if(!is.matrix(Y)) Y <- data.frame(Y)
       if(ncol(Y) == 1) {
         if(is.null(colnames(Y))) colnames(Y) <- "Y"
-        formula <- stats::as.formula(paste0(colnames(Y), " ~ . - 1"))
+        formula <- stats::formula(paste0(colnames(Y), " ~ ."))
       } else {
         if(is.null(colnames(Y))) colnames(Y) <- paste0("Y", 1:ncol(Y))
-        formula <- stats::as.formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ . - 1"))
+        formula <- stats::formula(paste0("cbind(", paste(colnames(Y), collapse=","), ") ~ ."))
       }
       data <- cbind(data.frame(Y), data.frame(X))
     } else {
-      formula <- stats::as.formula("~ . - 1")
+      formula <- stats::formula("~ .")
       old_formula = formula
       data <- data.frame(X)
     }
@@ -650,7 +649,7 @@ get_X_Y = function(formula, X, Y, data) {
     formula = parsed_formula$fixedFormula
     Specials = list(terms = parsed_formula$reTrmFormulas, types = parsed_formula$reTrmClasses, args = parsed_formula$reTrmAddArgs)
     formula <- formula(stats::terms.formula(formula, data = data))
-    formula <- stats::update.formula(formula, ~ . - 1)
+    formula <- stats::update.formula(formula, ~ . + 1)
   } else {
     stop("Either formula (and data) or X (and Y) have to be specified.")
   }
@@ -659,8 +658,12 @@ get_X_Y = function(formula, X, Y, data) {
     char_cols <- sapply(data, is.character)
     data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
   }
-  X <- stats::model.matrix(formula, data)
+
+  tmp <- stats::model.matrix(formula, data)
+  X <- tmp[, -1, drop=FALSE]
+  attr(X, "assign") <- attr(tmp, "assign")[-1]
   Y <- stats::model.response(stats::model.frame(formula, data))
+
   if(is.null(Specials$terms)) {
     out = list(X = X, Y = Y, formula = formula, data = data, Z = NULL, Z_terms = NULL)
   } else {

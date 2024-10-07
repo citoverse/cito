@@ -4,10 +4,12 @@ library(cito)
 
 # Example workflow in cito
 
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
 ## Data
 ### We generate our own data:
 ### 320 images (3x50x50) of either rectangles or ellipsoids
-shapes <- simulate_shapes(n=320, size=50, channels=3)
+shapes <- cito:::simulate_shapes(n=320, size=50, channels=3)
 X <- shapes$data
 Y <- shapes$labels
 
@@ -18,7 +20,7 @@ architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), line
 
 ## Build and train network
 ### softmax is used for classification
-cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05)
+cnn.fit <- cnn(X, Y, architecture, loss = "softmax", epochs = 50, validation = 0.1, lr = 0.05, device=device)
 
 ## The training loss is below the baseline loss but at the end of the
 ## training the loss was still decreasing, so continue training for another 50
@@ -38,7 +40,7 @@ analyze_training(cnn.fit)
 ### With the transfer() function we can use predefined architectures with pretrained weights
 transfer_architecture <- create_architecture(transfer("resnet18"))
 resnet <- cnn(X, Y, transfer_architecture, loss = "softmax",
-              epochs = 10, validation = 0.1, lr = 0.05)
+              epochs = 10, validation = 0.1, lr = 0.05, device=device)
 print(resnet)
 plot(resnet)
 }

@@ -44,9 +44,16 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     ### Batch evaluation ###
     coro::loop(for (b in train_dl) {
       optimizer$zero_grad()
-      if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
-      else output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[3]]$to(device = device, non_blocking = TRUE))
-      loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
+
+      b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
+      if(inherits(model, "citommn")) {
+        output <- model$net(b[-length(b)])
+      } else {
+        if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]])
+        else output <- model$net(b[[1]], b[[2]])
+      }
+      loss <- loss.fkt(output, b[[length(b)]])$mean()
+
       if(regularize){
         regularization_loss <- regularize_weights(parameters = model$net$parameters,
                                    alpha = model$training_properties$alpha,
@@ -124,11 +131,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       valid_l <- c()
 
       coro::loop(for (b in valid_dl) {
-        #output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
-        if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE))
-        else output <- model$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[3]]$to(device = device, non_blocking = TRUE))
-        loss <- loss.fkt(output, b[[2]]$to(device = device, non_blocking= TRUE))$mean()
-
+        b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
+        if(inherits(model, "citommn")) {
+          output <- model$net(b[-length(b)])
+        } else {
+          if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]])
+          else output <- model$net(b[[1]], b[[2]])
+        }
+        loss <- loss.fkt(output, b[[length(b)]])$mean()
         valid_l <- c(valid_l, loss$item())
       })
       model$losses$valid_l[epoch] <- mean(valid_l)
@@ -157,7 +167,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     }
 
     ### create plot ###
-    main <- ifelse(inherits(model, "citocnn"), "Training of CNN", "Training of DNN")
+    main <- switch (class(model),
+      citodnn = "Training of DNN",
+      citocnn = "Training of CNN",
+      citommn = "Training of MMN"
+    )
     if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$base_loss)
     plot_new <- FALSE
 
@@ -166,12 +180,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
         model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
         counter = 0
       }
     } else {
       if(model$losses$train_l[epoch] < best_train_loss) {
         best_train_loss = model$losses$train_l[epoch]
         model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
         counter = 0
       }
     }
@@ -189,10 +205,12 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   model$net$to(device = "cpu")
 
   model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
+  model$buffers[[2]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+
 
   if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, cast_to_r_keep_dim)
-  model$use_model_epoch <- 1
-  model$loaded_model_epoch <- 1
+  model$use_model_epoch <- 2
+  model$loaded_model_epoch$set_data(2)
 
   if(!is.null(model$loss$parameter)) {
       model$loss$parameter_r = unlist(lapply(model$loss$parameter, function(p) as.numeric(p$cpu())))

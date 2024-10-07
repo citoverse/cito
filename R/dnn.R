@@ -149,7 +149,7 @@
 #'
 #' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 #'
-#' @return an S3 object of class \code{"cito.dnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+#' @return an S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call}
@@ -258,31 +258,17 @@ dnn <- function(formula = NULL,
 
   if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
 
-  # No training if no Y specified (E.g. used in mmn())
-
-  # TODO: check for redundancy
+  # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
-    net <- build_dnn(input = ncol(X), output = NULL,
-                     hidden = hidden, activation = activation,
-                     bias = bias, dropout = dropout, embeddings = embeddings)
     model_properties <- list(input = ncol(X),
-                             output = NULL,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
                              dropout = dropout,
                              embeddings = embeddings)
-
-    out$net <- net
-    out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula, data=data)
-    out$Z_formula = Z_formula
-    out$data <- list(X = X, Y = NULL, data = data, Z = Z)
-    out$data$xlvls <- lapply(data[,sapply(data, is.factor), drop = F], function(j) levels(j))
-    out$model_properties <- model_properties
-    return(out)
+    class(model_properties) <- "citodnn_properties"
+    return(model_properties)
   }
-
 
   loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
@@ -341,21 +327,18 @@ dnn <- function(formula = NULL,
         train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
         valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
       } else {
-        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], Z_torch[train,], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], Z_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+        train_dl <- get_data_loader(X_torch[train,], Z_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid,], Z_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
       }
     } else {
       if(is.null(Z_torch)) {
         train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
       } else {
-        train_dl <- get_data_loader(X_torch, Y_torch, Z_torch, batch_size = batchsize, shuffle = shuffle)
+        train_dl <- get_data_loader(X_torch, Z_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
       }
       valid_dl <- NULL
     }
 
-    net <- build_dnn(input = ncol(X), output = y_dim,
-                      hidden = hidden, activation = activation,
-                      bias = bias, dropout = dropout, embeddings = embeddings)
     model_properties <- list(input = ncol(X),
                              output = y_dim,
                              hidden = hidden,
@@ -363,6 +346,10 @@ dnn <- function(formula = NULL,
                              bias = bias,
                              dropout = dropout,
                              embeddings = embeddings)
+    class(model_properties) <- "citodnn_properties"
+
+    net <- build_dnn(model_properties)
+
     training_properties <- list(lr = lr,
                                lr_scheduler = lr_scheduler,
                                optimizer = optimizer,
@@ -396,8 +383,8 @@ dnn <- function(formula = NULL,
     }
     if(validation != 0) out$data <- append(out$data, list(validation = valid))
     out$weights <- list()
-    out$use_model_epoch <- 1
-    out$loaded_model_epoch <- 0
+    out$use_model_epoch <- 2
+    out$loaded_model_epoch <- torch::torch_tensor(0)
     out$model_properties <- model_properties
     out$training_properties <- training_properties
     out$device = device_old
@@ -777,8 +764,8 @@ predict.citodnn <- function(object, newdata = NULL,
       Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long())
     }
   } else {
-    if(is.data.frame(newdata)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls))
-    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls))
+    if(is.data.frame(newdata)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE])
+    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls)[,-1,drop=FALSE])
 
     if(!is.null(object$model_properties$embeddings)) {
       tmp = do.call(cbind, lapply(object$Z_formula, function(term) newdata[, term]))

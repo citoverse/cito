@@ -1,37 +1,37 @@
-#' CNN
+#' Train a Convolutional Neural Network (CNN)
 #'
-#' @description
+#' This function trains a Convolutional Neural Network (CNN) on the provided input data `X` and the target data `Y` using the specified architecture, loss function, and optimizer.
 #'
-#' fits a custom convolutional neural network.
-#' @param X predictor: array with dimension 3, 4 or 5 for 1D-, 2D- or 3D-convolutions, respectively. The first dimension are the samples, the second dimension the channels and the third - fifth dimension are the input dimensions
-#' @param Y response: vector, factor, numerical matrix or logical matrix
-#' @param architecture 'citoarchitecture' object created by \code{\link{create_architecture}}
-#' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
-#' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
-#' @param lr learning rate given to optimizer
-#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
-#' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
-#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
-#' @param batchsize number of samples that are used to calculate one learning rate step
-#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
-#' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
-#' @param epochs epochs the training goes on for
-#' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss if available.
-#' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
-#' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
-#' @param device device on which network should be trained on.
-#' @param plot plot training loss
-#' @param verbose print training and validation loss of epochs
+#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions.
+#' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
+#' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
+#' @param loss The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
+#' @param lr Learning rate for the optimizer. Default is 0.01.
+#' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
+#' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
+#' @param validation Proportion of the data to be used for validation. Default is 0.0.
+#' @param batchsize Batch size for training. Default is 32.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.
+#' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
+#' @param epochs Number of epochs to train the model. Default is 100.
+#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
+#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
+#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
+#' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
+#' @param plot Whether to plot the training progress. Default is TRUE.
+#' @param verbose Whether to print detailed training progress. Default is TRUE.
+#'
 #'
 #' @details
 #'
-#' # Convolutional neural networks:
-#' Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured grid data, such as images.
-#' The characterizing parts of the architecture are convolutional layers, pooling layers and fully-connected (linear) layers:
+#' # Convolutional Neural Networks:
+#' Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured data, such as images.
+#' The key components of a CNN are convolutional layers, pooling layers and fully-connected (linear) layers:
 #' \itemize{
-#'    \item Convolutional layers are the core building blocks of CNNs. They consist of filters (also called kernels), which are small, learnable matrices. These filters slide over the input data to perform element-wise multiplication, producing feature maps that capture local patterns and features. Multiple filters are used to detect different features in parallel. They help the network learn hierarchical representations of the input data by capturing low-level features (edges, textures) and gradually combining them (in subsequent convolutional layers) to form higher-level features.
-#'    \item Pooling layers are used to downsample the spatial dimensions of the feature maps while retaining important information. Max pooling is a common pooling operation, where the maximum value in a local region of the input is retained, reducing the size of the feature maps.
-#'    \item Fully-connected (linear) layers connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
+#'    \item **Convolutional layers** are the core building blocks of CNNs. They consist of filters (also called kernels), which are small, learnable matrices. These filters slide over the input data to perform element-wise multiplication, producing feature maps that capture local patterns and features. Multiple filters are used to detect different features in parallel. They help the network learn hierarchical representations of the input data by capturing low-level features (edges, textures) and gradually combining them (in subsequent convolutional layers) to form higher-level features.
+#'    \item **Pooling layers** reduce the size of the feature maps created by convolutional layers, while retaining important information. A common type is max pooling, which keeps the highest value in a region, simplifying the data while preserving essential features.
+#'    \item **Fully-connected (linear) layers** connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
 #' }
 #'
 #' # Loss functions / Likelihoods
@@ -46,7 +46,12 @@
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification|
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
-#' | Poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
+#' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
+#' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter |
+#' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) |
+#' | multinomial | Multinomial likelihood | step selection in animal movement models |
+#' | clogit | conditional binomial | step selection in animal movement models |
+#'
 #'
 #' # Training and convergence of neural networks
 #'
@@ -85,7 +90,6 @@
 #' Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
 #'
 #' Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
-#' In the case of 2D and 3D inputs whole feature maps are disabled. Since the torch package doesn't currently support feature map-wise dropout for 1D inputs, instead random neurons in the feature maps are disabled similar to dropout in linear layers.
 #'
 #' By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
 #'
@@ -104,33 +108,37 @@
 #'
 #' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 #'
-#' @return an S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+#'
+#' @return An S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
-#' \item{call}{The original function call}
-#' \item{loss}{A list which contains relevant information for the target variable and the used loss function}
-#' \item{data}{Contains data used for training the model}
-#' \item{weights}{List of weights for each training epoch}
-#' \item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction.}
-#' \item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
-#' \item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
-#' \item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
-#' \item{losses}{A data.frame containing training and validation losses of each epoch}
+#' \item{call}{The original function call.}
+#' \item{loss}{A list which contains relevant information for the target variable and the used loss function.}
+#' \item{data}{Contains the data used for the training of the model.}
+#' \item{base_loss}{The loss of the intercept-only model.}
+#' \item{weights}{List of parameters (weights and biases) of the models from the best and the last training epoch.}
+#' \item{buffers}{List of buffers (e.g. running mean and variance of batch normalization layers) of the models from the best and the last training epoch.}
+#' \item{use_model_epoch}{Integer, defines whether the model from the best (= 1) or the last (= 2) training epoch should be used for prediction.}
+#' \item{loaded_model_epoch}{Integer, shows whether the parameters and buffers of the model from the best (= 1) or the last (= 2) training epoch are currently loaded in \code{net}.}
+#' \item{model_properties}{A list of properties, that define the architecture of the model.}
+#' \item{training_properties}{A list of all the training parameters used the last time the model was trained.}
+#' \item{losses}{A data.frame containing training and validation losses of each epoch.}
 #' @import checkmate
+#' @example /inst/examples/cnn-example.R
 #' @author Armin Schenk, Maximilian Pichler
-#' @seealso \code{\link{predict.citocnn}}, \code{\link{plot.citocnn}},  \code{\link{coef.citocnn}}, \code{\link{print.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
-#'
+#' @seealso \code{\link{predict.citocnn}}, \code{\link{print.citocnn}}, \code{\link{plot.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{coef.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+#' @export
 cnn <- function(X,
                 Y = NULL,
                 architecture,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson"),
+                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
                 optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 alpha = 0.5,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
-                burnin = 10,
+                burnin = 30,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = NULL,
@@ -163,40 +171,42 @@ cnn <- function(X,
   checkmate::qassert(device, "S+[3,)")
 
 
-  # No training if no Y specified (E.g. used in mmn())
+  # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
 
     input_shape <- dim(X)[-1]
 
     architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-    net <- build_cnn(input_shape = input_shape,
-                     output_shape = NULL,
-                     architecture = architecture)
-
     model_properties <- list(input = input_shape,
-                             output = NULL,
                              architecture = architecture)
-
-    out <- list()
-    class(out) <- "citocnn"
-    out$net <- net
-    out$call <- match.call()
-    out$data <- list(X = X, Y = NULL)
-    out$model_properties <- model_properties
-    return(out)
+    class(model_properties) <- "citocnn_properties"
+    return(model_properties)
   }
 
   device <- match.arg(device)
-  device_old <- device
-  device <- check_device(device)
 
   if(!is.function(loss) & !inherits(loss,"family")) {
     loss <- match.arg(loss)
+
+    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
   }
 
-  loss_obj <- get_loss(loss)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(scale = loss_obj$parameter)
+  if(inherits(loss,"family")) {
+    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+      device = "cpu"
+    }
+  }
+
+  device_old <- device
+  device <- check_device(device)
+
+  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
+  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
       warning("custom_parameters has to be list")
@@ -218,7 +228,7 @@ cnn <- function(X,
 
   loss.fkt <- loss_obj$loss
   if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(loss_obj$link(Y_base), Y)$mean())
+  base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y$to(device = device))$mean()$cpu())
 
   if(validation != 0) {
     n_samples <- dim(X)[1]
@@ -235,13 +245,15 @@ cnn <- function(X,
 
   architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-  net <- build_cnn(input_shape = input_shape,
-                   output_shape = y_dim,
-                   architecture = architecture)
+
 
   model_properties <- list(input = input_shape,
                            output = y_dim,
                            architecture = architecture)
+  class(model_properties) <- "citocnn_properties"
+
+  net <- build_cnn(model_properties)
+
 
   training_properties <- list(lr = lr,
                               lr_scheduler = lr_scheduler,
@@ -265,8 +277,9 @@ cnn <- function(X,
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$base_loss <- base_loss
   out$weights <- list()
-  out$use_model_epoch <- 1
-  out$loaded_model_epoch <- 0
+  out$buffers <- list()
+  out$use_model_epoch <- 2
+  out$loaded_model_epoch <- torch::torch_tensor(0)
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
@@ -281,22 +294,30 @@ cnn <- function(X,
   return(out)
 }
 
-#' Predict from a fitted cnn model
+#' Predict with a fitted CNN model
 #'
-#' @param object a model created by \code{\link{cnn}}
-#' @param newdata new data for predictions
-#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
-#' @param device device on which network should be trained on.
-#' @param batchsize number of samples that are predicted at the same time
-#' @param ... additional arguments
-#' @return prediction matrix
+#' This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 #'
+#' @param object a model created by \code{\link{cnn}}.
+#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.
+#' @param type A character string specifying the type of prediction to be made. Options are:
+#' \itemize{
+#'   \item \code{"link"}: Scale of the linear predictor.
+#'   \item \code{"response"}: Scale of the response.
+#'   \item \code{"class"}: The predicted class labels (for classification tasks).
+#' }
+#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".
+#' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
+#' @param ... Additional arguments (currently not used).
+#' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
+#'
+#' @example /inst/examples/predict.citocnn-example.R
 #' @export
 predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
-                            device = c("cpu","cuda", "mps"),
-                            batchsize = 32L, ...) {
+                            device = NULL,
+                            batchsize = NULL, ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
@@ -305,15 +326,17 @@ predict.citocnn <- function(object,
 
   type <- match.arg(type)
 
-  device <- match.arg(device)
+  if(is.null(device)) device <- object$device
+  device <- check_device(device)
 
-  if(type %in% c("link", "class")) {
+  if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
+
+
+  if(type %in% c("response","class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
   }
-
-  device <- check_device(device)
 
   object$net$to(device = device)
 
@@ -343,12 +366,14 @@ predict.citocnn <- function(object,
   return(pred)
 }
 
-#' Print class citocnn
+#' Print a fitted CNN model
 #'
-#' @param x a model created by \code{\link{cnn}}
-#' @param ... additional arguments
-#' @return original object x
+#' This function prints the architecture of a Convolutional Neural Network (CNN) model created using the \code{\link{cnn}} function.
 #'
+#' @param x A model created by \code{\link{cnn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return The original model object \code{x}, returned invisibly.
+#' @example /inst/examples/print.citocnn-example.R
 #' @export
 print.citocnn <- function(x, ...){
   x <- check_model(x)
@@ -357,26 +382,26 @@ print.citocnn <- function(x, ...){
   return(invisible(x))
 }
 
-#' Summary citocnn
-#' @description
+#' Summarize a fitted CNN model
 #'
-#' currently the same as the print.citocnn method.
+#' This function provides a summary of a Convolutional Neural Network (CNN) model created using the \code{\link{cnn}} function. It currently replicates the output of the \code{\link{print.citocnn}} method.
 #'
-#' @param object a model created by \code{\link{cnn}}
-#' @param ... additional arguments
-#' @return original object x
-#'
+#' @param object A model created by \code{\link{cnn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return The original model object \code{object}, returned invisibly.
 #' @export
 summary.citocnn <- function(object, ...){
   return(print(object))
 }
 
-#' Plot the CNN architecture
+#' Plot a fitted CNN model
 #'
-#' @param x a model created by \code{\link{cnn}}
-#' @param ... additional arguments
-#' @return original object x
+#' This function plots the architecture of a Convolutional Neural Network (CNN) model created using the \code{\link{cnn}} function.
 #'
+#' @param x A model created by \code{\link{cnn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return The original model object \code{x}, returned invisibly.
+#' @example /inst/examples/plot.citocnn-example.R
 #' @export
 plot.citocnn <- function(x, ...){
   x <- check_model(x)
@@ -384,50 +409,54 @@ plot.citocnn <- function(x, ...){
   return(invisible(x))
 }
 
-#' Returns list of parameters the neural network model currently has in use
+#' Retrieve parameters of a fitted CNN model
 #'
-#' @param object a model created by \code{\link{cnn}}
-#' @param ... nothing implemented yet
-#' @return list of weights of neural network
+#' This function returns the list of parameters (weights and biases) and buffers (e.g. running mean and variance of batch normalization layers) currently in use by the neural network model created using the \code{\link{cnn}} function.
 #'
+#' @param object A model created by \code{\link{cnn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return A list with two components:
+#' \itemize{
+#'   \item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
+#'   \item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#' }
+#' @example /inst/examples/coef.citocnn-example.R
 #' @export
 coef.citocnn <- function(object,...){
-  return(object$weights[object$use_model_epoch])
+  coefs <- list()
+  coefs$parameters <- object$weights[object$use_model_epoch]
+  coefs$buffers <- object$buffers[object$use_model_epoch]
+  return(coefs)
 }
 
 
 
 
-#' CNN architecture
+#' Create a CNN Architecture
 #'
-#' @description
+#' This function constructs a \code{citoarchitecture} object that defines the architecture of a Convolutional Neural Network (CNN). The \code{citoarchitecture} object can be used by the \code{\link{cnn}} function to specify the structure of the network, including layer types, parameters, and default values.
 #'
-#' creates a 'citoarchitecture' object that is used by \code{\link{cnn}}.
-#'
-#' @param ... objects of class 'citolayer' created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}} or \code{\link{transfer}}
-#' @param default_n_neurons (int) default value: amount of neurons in a linear layer
-#' @param default_n_kernels (int) default value: amount of kernels in a convolutional layer
-#' @param default_kernel_size (int or tuple) default value: size of the kernels in convolutional and pooling layers. Use a tuple if the kernel size isn't equal in all dimensions
-#' @param default_stride (int or tuple) default value: stride of the kernels in convolutional and pooling layers. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions
-#' @param default_padding (int or tuple) default value: zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions
-#' @param default_dilation (int or tuple) default value: dilation of the kernels in convolutional and maxPooling layers. Use a tuple if the dilation isn't equal in all dimensions
-#' @param default_bias (boolean) default value: if TRUE, adds a learnable bias to neurons of linear and kernels of convolutional layers
-#' @param default_activation (string) default value: activation function that is used after linear and convolutional layers. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
-#' @param default_normalization (boolean) default value: if TRUE, batch normalization is used after linear and convolutional layers
-#' @param default_dropout (float) default value: dropout rate of linear and convolutional layers. Set to 0 for no dropout
+#' @param ... Objects of class \code{citolayer} created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, or \code{\link{transfer}}. These layers define the architecture of the CNN.
+#' @param default_n_neurons (integer) Default number of neurons in a linear layer. Default is 10.
+#' @param default_n_kernels (integer) Default number of kernels in a convolutional layer. Default is 10.
+#' @param default_kernel_size (integer or tuple) Default size of kernels in convolutional and pooling layers. Can be a single integer or a tuple if sizes differ across dimensions. Default is \code{list(conv = 3, maxPool = 2, avgPool = 2)}.
+#' @param default_stride (integer or tuple) Default stride of kernels in convolutional and pooling layers. Can be a single integer, a tuple if strides differ across dimensions, or \code{NULL} to use the kernel size. Default is \code{list(conv = 1, maxPool = NULL, avgPool = NULL)}.
+#' @param default_padding (integer or tuple) Default zero-padding added to both sides of the input. Can be a single integer or a tuple if padding differs across dimensions. Default is \code{list(conv = 0, maxPool = 0, avgPool = 0)}.
+#' @param default_dilation (integer or tuple) Default dilation of kernels in convolutional and max pooling layers. Can be a single integer or a tuple if dilation differs across dimensions. Default is \code{list(conv = 1, maxPool = 1)}.
+#' @param default_bias (boolean) Default value indicating if a learnable bias should be added to neurons of linear layers and kernels of convolutional layers. Default is \code{list(conv = TRUE, linear = TRUE)}.
+#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "relu", linear = "relu")}.
+#' @param default_normalization (boolean) Default value indicating if batch normalization should be applied after linear and convolutional layers. Default is \code{list(conv = FALSE, linear = FALSE)}.
+#' @param default_dropout (numeric) Default dropout rate for linear and convolutional layers. Set to 0 for no dropout. Default is \code{list(conv = 0.0, linear = 0.0)}.
 #'
 #' @details
-#' This function creates a 'citoarchitecture' object that provides the \code{\link{cnn}} function with all information about the architecture of the CNN that will be created and trained.
-#' The final architecture consists of the layers in the sequence they were passed to this function.
-#' All parameters of the 'citolayer' objects, that are still NULL because they haven't been specified at the creation of the layer, are filled with the given default parameters for their specific layer type (linear, conv, maxPool, avgPool).
-#' The default values can be changed by either passing a list with the values for specific layer types (in which case the defaults of layer types which aren't in the list remain the same)
-#' or by passing a single value (in which case the defaults for all layer types is set to that value).
-
-#' @return S3 object of class \code{"citoarchitecture"}
+#' This function creates a \code{citoarchitecture} object that outlines the CNN's architecture based on the provided layers and default parameters. The final architecture consists of layers in the order they are provided. Any unspecified parameters in the \code{citolayer} objects are filled with the provided default values for their respective layer types. Defaults can be specified for each layer type individually or for all layers at once.
+#'
+#' @return An S3 object of class \code{"citoarchitecture"} that encapsulates the architecture of the CNN.
 #' @import checkmate
+#' @example /inst/examples/cnnarchitecture-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{cnn}}, \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, \code{\link{transfer}}, \code{\link{print.citoarchitecture}}, \code{\link{plot.citoarchitecture}}
-
+#' @export
 create_architecture <- function(...,
                                 default_n_neurons = 10,
                                 default_n_kernels = 10,
@@ -480,7 +509,6 @@ create_architecture <- function(...,
     if(!inherits(layer, "citolayer")) stop("Objects must be of class citolayer")
     if(inherits(layer, "transfer")) {
       if(length(architecture) != 0) stop("There mustn't be any layers before a transfer layer")
-      layer$replace_classifier <- length(list(...)) > 1
       architecture <- append(architecture, list(layer))
       transfer <- TRUE
     } else {
@@ -517,26 +545,26 @@ fill_defaults <- function(passed_defaults, default_defaults) {
 }
 
 
-#' Linear layer
+#' Create a Linear Layer for a CNN Architecture
 #'
-#' @description
+#' This function creates a \code{linear} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 #'
-#' creates a 'linear' 'citolayer' object that is used by \code{\link{create_architecture}}.
-#'
-#' @param n_neurons (int) amount of hidden neurons in this layer
-#' @param bias (boolean) if TRUE, adds a learnable bias to the neurons of this layer
-#' @param activation (string) activation function that is used after this layer. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
-#' @param normalization (boolean) if TRUE, batch normalization is used after this layer
-#' @param dropout (float) dropout rate of this layer. Set to 0 for no dropout
+#' @param n_neurons (integer) The number of hidden neurons in this layer.
+#' @param bias (boolean) If \code{TRUE}, a learnable bias is added to the neurons of this layer.
+#' @param activation (character) The activation function applied after this layer. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".
+#' @param normalization (boolean) If \code{TRUE}, batch normalization is applied after this layer.
+#' @param dropout (numeric) The dropout rate for this layer. Set to 0 to disable dropout.
 #'
 #' @details
-#' This function creates a 'linear' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-#' The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
-
-#' @return S3 object of class \code{"linear" "citolayer"}
+#' This function creates a \code{linear} layer object, which is used to define a linear layer in a CNN architecture. Parameters not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
+#'
+#' @return An S3 object of class \code{"linear" "citolayer"}, representing a linear layer in the CNN architecture.
+#'
 #' @import checkmate
+#' @example /inst/examples/linear-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{create_architecture}}
+#' @export
 linear <- function(n_neurons = NULL,
                    bias = NULL,
                    activation = NULL,
@@ -552,30 +580,30 @@ linear <- function(n_neurons = NULL,
   return(layer)
 }
 
-#' Convolutional layer
+#' Create a Convolutional Layer for a CNN Architecture
 #'
-#' @description
+#' This function creates a \code{conv} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 #'
-#' creates a 'conv' 'citolayer' object that is used by \code{\link{create_architecture}}.
-#'
-#' @param n_kernels (int) amount of kernels in this layer
-#' @param kernel_size (int or tuple) size of the kernels in this layer. Use a tuple if the kernel size isn't equal in all dimensions
-#' @param stride (int or tuple) stride of the kernels in this layer. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions
-#' @param padding (int or tuple) zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions
-#' @param dilation (int or tuple) dilation of the kernels in this layer. Use a tuple if the dilation isn't equal in all dimensions
-#' @param bias (boolean) if TRUE, adds a learnable bias to the kernels of this layer
-#' @param activation (string) activation function that is used after this layer. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
-#' @param normalization (boolean) if TRUE, batch normalization is used after this layer
-#' @param dropout (float) dropout rate of this layer. Set to 0 for no dropout
+#' @param n_kernels (integer) The number of kernels (or filters) in this layer.
+#' @param kernel_size (integer or tuple) The size of the kernels in this layer. Use a tuple if the kernel size is different in each dimension.
+#' @param stride (integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride is different in each dimension.
+#' @param padding (integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding is different in each dimension.
+#' @param dilation (integer or tuple) The dilation of the kernels in this layer. Use a tuple if the dilation is different in each dimension.
+#' @param bias (boolean) If \code{TRUE}, a learnable bias is added to the kernels of this layer.
+#' @param activation (character) The activation function applied after this layer. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".
+#' @param normalization (boolean) If \code{TRUE}, batch normalization is applied after this layer.
+#' @param dropout (numeric) The dropout rate for this layer. Set to 0 to disable dropout.
 #'
 #' @details
-#' This function creates a 'conv' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-#' The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
-
-#' @return S3 object of class \code{"conv" "citolayer"}
+#' This function creates a \code{conv} layer object, which is used to define a convolutional layer in a CNN architecture. Parameters that are not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
+#'
+#' @return An S3 object of class \code{"conv" "citolayer"}, representing a convolutional layer in the CNN architecture.
+#'
 #' @import checkmate
+#' @example /inst/examples/conv-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{create_architecture}}
+#' @export
 conv <- function(n_kernels = NULL,
                  kernel_size = NULL,
                  stride = NULL,
@@ -599,24 +627,24 @@ conv <- function(n_kernels = NULL,
   return(layer)
 }
 
-#' Average pooling layer
+' Create an Average Pooling Layer for a CNN Architecture
 #'
-#' @description
+#' This function creates an \code{avgPool} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 #'
-#' creates a 'avgPool' 'citolayer' object that is used by \code{\link{create_architecture}}.
-#'
-#' @param kernel_size (int or tuple) size of the kernel in this layer. Use a tuple if the kernel size isn't equal in all dimensions
-#' @param stride (int or tuple) stride of the kernel in this layer. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions
-#' @param padding (int or tuple) zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions
+#' @param kernel_size (integer or tuple) The size of the kernel in this layer. Use a tuple if the kernel size differs across dimensions.
+#' @param stride (integer or tuple) The stride of the kernel in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride differs across dimensions.
+#' @param padding (integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding differs across dimensions.
 #'
 #' @details
-#' This function creates a 'avgPool' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-#' The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
-
-#' @return S3 object of class \code{"avgPool" "citolayer"}
+#' This function creates an \code{avgPool} layer object, which represents an average pooling layer in a CNN architecture. Parameters not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
+#'
+#' @return An S3 object of class \code{"avgPool" "citolayer"}, representing an average pooling layer in the CNN architecture.
+#'
 #' @import checkmate
+#' @example /inst/examples/avgPool-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{create_architecture}}
+#' @export
 avgPool <- function(kernel_size = NULL,
                     stride = NULL,
                     padding = NULL) {
@@ -628,25 +656,25 @@ avgPool <- function(kernel_size = NULL,
   return(layer)
 }
 
-#' Maximum pooling layer
+#' Create a Maximum Pooling Layer for a CNN Architecture
 #'
-#' @description
+#' This function creates a \code{maxPool} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 #'
-#' creates a 'maxPool' 'citolayer' object that is used by \code{\link{create_architecture}}.
-#'
-#' @param kernel_size (int or tuple) size of the kernel in this layer. Use a tuple if the kernel size isn't equal in all dimensions
-#' @param stride (int or tuple) stride of the kernel in this layer. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions
-#' @param padding (int or tuple) zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions
-#' @param dilation (int or tuple) dilation of the kernel in this layer. Use a tuple if the dilation isn't equal in all dimensions
+#' @param kernel_size (integer or tuple) The size of the kernel in this layer. Use a tuple if the kernel size varies across dimensions.
+#' @param stride (integer or tuple) The stride of the kernel in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride differs across dimensions.
+#' @param padding (integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding differs across dimensions.
+#' @param dilation (integer or tuple) The dilation of the kernel in this layer. Use a tuple if the dilation varies across dimensions.
 #'
 #' @details
-#' This function creates a 'maxPool' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-#' The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
-
-#' @return S3 object of class \code{"maxPool" "citolayer"}
+#' This function creates a \code{maxPool} layer object, which represents a maximum pooling layer in a CNN architecture. Parameters not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
+#'
+#' @return An S3 object of class \code{"maxPool" "citolayer"}, representing a maximum pooling layer in the CNN architecture.
+#'
 #' @import checkmate
+#' @example /inst/examples/maxPool-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{create_architecture}}
+#' @export
 maxPool <- function(kernel_size = NULL,
                     stride = NULL,
                     padding = NULL,
@@ -660,27 +688,26 @@ maxPool <- function(kernel_size = NULL,
   return(layer)
 }
 
-#' Transfer learning
+#' Include a Pretrained Model in a CNN Architecture
 #'
-#' @description
+#' This function creates a \code{transfer} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object allows the use of pretrained models available in the 'torchvision' package within cito.
 #'
-#' creates a 'transfer' 'citolayer' object that is used by \code{\link{create_architecture}}.
-#'
-#' @param name The name of the pretrained model
-#' @param pretrained if FALSE, random weights are used instead of the pretrained weights
-#' @param freeze if TRUE, the weights of the pretrained model (except the "classifier" part at the end) aren't changed in the training anymore. Only works if pretrained=TRUE
+#' @param name (character) The name of the pretrained model. Available options include: "alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2".
+#' @param pretrained (boolean) If \code{TRUE}, the model uses its pretrained weights. If \code{FALSE}, random weights are initialized.
+#' @param freeze (boolean) If \code{TRUE}, the weights of the pretrained model (except the "classifier" part at the end) are not updated during training. This setting only applies if \code{pretrained = TRUE}.
 #'
 #' @details
-#' This function creates a 'transfer' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-#' With this object the pretrained models that are available in the 'torchvision' package can be used in cito.
-#' When 'freeze' is set to TRUE, only the weights of the last part of the network (consisting of one or more linear layers) are adjusted in the training.
-#' There mustn't be any other citolayers before the transfer citolayer object when calling \code{\link{create_architecture}}.
-#' If there are any citolayers after the transfer citolayer, the linear classifier part of the pretrained model is replaced with the specified citolayers.
-
-#' @return S3 object of class \code{"transfer" "citolayer"}
+#' This function creates a \code{transfer} layer object, which represents a pretrained model of the \code{torchvision} package with the linear "classifier" part removed. This allows the pretrained features of the model to be utilized while enabling customization of the classifier. When using this function with \code{\link{create_architecture}}, only linear layers can be added after the \code{transfer} layer. These linear layers define the "classifier" part of the network. If no linear layers are provided following the \code{transfer} layer, the default classifier will consist of a single output layer.
+#'
+#' Additionally, the \code{pretrained} argument specifies whether to use the pretrained weights or initialize the model with random weights. If \code{freeze} is set to \code{TRUE}, only the weights of the final linear layers (the "classifier") are updated during training, while the rest of the pretrained model remains unchanged. Note that \code{freeze} has no effect unless \code{pretrained} is set to \code{TRUE}.
+#'
+#' @return An S3 object of class \code{"transfer" "citolayer"}, representing a pretrained model of the \code{torchvision} package in the CNN architecture.
+#'
 #' @import checkmate
+#' @example /inst/examples/transfer-example.R
 #' @author Armin Schenk
 #' @seealso \code{\link{create_architecture}}
+#' @export
 transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"),
                      pretrained = TRUE,
                      freeze = TRUE) {
@@ -693,114 +720,109 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 
   layer <- list(name = name,
                 pretrained = pretrained,
-                freeze = pretrained & freeze,
-                replace_classifier = FALSE)
+                freeze = pretrained & freeze)
   class(layer) <- c("transfer", "citolayer")
   return(layer)
 }
 
-#' Print class citoarchitecture
+#' Print method for citoarchitecture objects
 #'
-#' @param x an object created by \code{\link{create_architecture}}
-#' @param input_shape a vector with the dimensions of a single sample (e.g. c(3,28,28))
-#' @param output_shape the number of nodes in the output layer
-#' @param ... additional arguments
-#' @return original object
-print.citoarchitecture <- function(x, input_shape, output_shape, ...) {
-  x <- adjust_architecture(x, length(input_shape)-1)
-  need_output_layer <- TRUE
+#' This method provides a visual representation of the network architecture defined by an object of class \code{citoarchitecture}, including information about each layer's configuration. It helps in understanding the structure of the architecture defined by \code{\link{create_architecture}}.
+#'
+#' @param x An object of class \code{citoarchitecture}, created by \code{\link{create_architecture}}.
+#' @param input_shape A numeric vector specifying the dimensions of a single sample (e.g., \code{c(3, 28, 28)} for an RGB image with height and width of 28 pixels). This argument is required for a detailed output.
+#' @param output_shape An integer specifying the number of nodes in the output layer. If \code{NULL}, no output layer is printed.
+#' @param ... Additional arguments (currently not used).
+#'
+#' @return The original \code{citoarchitecture} object, returned invisibly.
+#'
+#' @example /inst/examples/print.citoarchitecture-example.R
+#' @export
+print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
-  for(layer in x) {
-    if(inherits(layer, "transfer")) {
-      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
-      need_output_layer <- layer$replace_classifier
+  if (missing(input_shape)) {
+    message("For a more detailed output specify the input_shape (and output_shape) argument(s)! See ?print.citoarchitecture for more information!")
+    class(x) <- "list"
+    print(x)
+  } else {
+    x <- adjust_architecture(x, length(input_shape)-1)
+
+    for(layer in x) {
+      if(inherits(layer, "transfer")) {
+        if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+      }
+      input_shape <- print(layer, input_shape)
     }
-    input_shape <- print(layer, input_shape, output_shape)
-  }
 
-  if(need_output_layer) {
-    output_layer <- linear(n_neurons=output_shape, bias = TRUE,
-                           activation="Depends on loss", normalization=FALSE, dropout=0)
-    print(output_layer, input_shape)
+    if(!is.null(output_shape)) {
+      output_layer <- linear(n_neurons=output_shape, bias = TRUE,
+                             activation="Depends on loss", normalization=FALSE, dropout=0)
+      print(output_layer, input_shape)
+    }
+    cat("-------------------------------------------------------------------------------\n")
+    return(invisible(x))
   }
-  cat("-------------------------------------------------------------------------------\n")
 }
 
-#' Print linear layer
-#'
-#' @param x an object of class linear
-#' @param input_shape input shape
-#' @param ... further arguments, not supported yet
-print.linear <- function(x, input_shape, ...) {
+print.linear <- function(layer, input_shape, ...) {
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("Linear     |Input: ", prod(input_shape), "\n"))
-  cat(paste0("           |Output: ", x[["n_neurons"]], "\n"))
-  cat(paste0("           |Bias: ", x[["bias"]], "\n"))
-  if(x[["normalization"]]) {
+  cat(paste0("           |Output: ", layer[["n_neurons"]], "\n"))
+  cat(paste0("           |Bias: ", layer[["bias"]], "\n"))
+  if(layer[["normalization"]]) {
     cat(paste0("           |Batch normalization\n"))
   }
-  cat(paste0("           |Activation: ", x[["activation"]], "\n"))
-  if(x[["dropout"]]>0) {
-    cat(paste0("           |Dropout: rate=", x[["dropout"]], "\n"))
+  cat(paste0("           |Activation: ", layer[["activation"]], "\n"))
+  if(layer[["dropout"]]>0) {
+    cat(paste0("           |Dropout: rate=", layer[["dropout"]], "\n"))
   }
 
-  return(invisible(x[["n_neurons"]]))
+  return(invisible(layer[["n_neurons"]]))
 }
 
-#' Print conv layer
-#'
-#' @param x an object of class conv
-#' @param input_shape input shape
-#' @param ... further arguments, not supported yet
-print.conv <- function(x, input_shape, ...) {
+print.conv <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
-                                   n_kernels = x[["n_kernels"]],
-                                   kernel_size = x[["kernel_size"]],
-                                   stride = x[["stride"]],
-                                   padding = x[["padding"]],
-                                   dilation = x[["dilation"]])
+                                   n_kernels = layer[["n_kernels"]],
+                                   kernel_size = layer[["kernel_size"]],
+                                   stride = layer[["stride"]],
+                                   padding = layer[["padding"]],
+                                   dilation = layer[["dilation"]])
 
-  kernel_size <- paste(x[["kernel_size"]], collapse = "x")
-  stride <- paste(x[["stride"]], collapse = "x")
-  padding <- paste(x[["padding"]], collapse = "x")
-  dilation <- paste(x[["dilation"]], collapse = "x")
+  kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+  stride <- paste(layer[["stride"]], collapse = "x")
+  padding <- paste(layer[["padding"]], collapse = "x")
+  dilation <- paste(layer[["dilation"]], collapse = "x")
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("Convolution|Input: ", paste(input_shape, collapse = "x"), "\n"))
   cat(paste0("           |Output: ", paste(output_shape, collapse = "x"), "\n"))
   cat(paste0("           |Kernel: ", kernel_size, " (stride=", stride, ", padding=", padding, ", dilation=", dilation, ")\n"))
-  cat(paste0("           |Bias: ", x[["bias"]], "\n"))
-  if(x[["normalization"]]) {
+  cat(paste0("           |Bias: ", layer[["bias"]], "\n"))
+  if(layer[["normalization"]]) {
     cat(paste0("           |Batch normalization\n"))
   }
-  cat(paste0("           |Activation: ", x[["activation"]], "\n"))
-  if(x[["dropout"]]>0) {
-    cat(paste0("           |Dropout: rate=", x[["dropout"]], "\n"))
+  cat(paste0("           |Activation: ", layer[["activation"]], "\n"))
+  if(layer[["dropout"]]>0) {
+    cat(paste0("           |Dropout: rate=", layer[["dropout"]], "\n"))
   }
 
   return(invisible(output_shape))
 }
 
-
-#' Print pooling layer
-#'
-#' @param x an object of class avgPool
-#' @param input_shape input shape
-#' @param ... further arguments, not supported yet
-print.avgPool <- function(x, input_shape, ...) {
+print.avgPool <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
                                    n_kernels = input_shape[1],
-                                   kernel_size = x[["kernel_size"]],
-                                   stride = x[["stride"]],
-                                   padding = x[["padding"]],
+                                   kernel_size = layer[["kernel_size"]],
+                                   stride = layer[["stride"]],
+                                   padding = layer[["padding"]],
                                    dilation = rep(1,length(input_shape)-1))
 
-  kernel_size <- paste(x[["kernel_size"]], collapse = "x")
-  stride <- paste(x[["stride"]], collapse = "x")
-  padding <- paste(x[["padding"]], collapse = "x")
+  kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+  stride <- paste(layer[["stride"]], collapse = "x")
+  padding <- paste(layer[["padding"]], collapse = "x")
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("AvgPool    |Input: ", paste(input_shape, collapse = "x"), "\n"))
@@ -810,24 +832,19 @@ print.avgPool <- function(x, input_shape, ...) {
   return(invisible(output_shape))
 }
 
-#' Print pooling layer
-#'
-#' @param x an object of class maxPool
-#' @param input_shape input shape
-#' @param ... further arguments, not supported yet
-print.maxPool <- function(x, input_shape, ...) {
+print.maxPool <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
                                    n_kernels = input_shape[1],
-                                   kernel_size = x[["kernel_size"]],
-                                   stride = x[["stride"]],
-                                   padding = x[["padding"]],
-                                   dilation = x[["dilation"]])
+                                   kernel_size = layer[["kernel_size"]],
+                                   stride = layer[["stride"]],
+                                   padding = layer[["padding"]],
+                                   dilation = layer[["dilation"]])
 
-  kernel_size <- paste(x[["kernel_size"]], collapse = "x")
-  stride <- paste(x[["stride"]], collapse = "x")
-  padding <- paste(x[["padding"]], collapse = "x")
-  dilation <- paste(x[["dilation"]], collapse = "x")
+  kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
+  stride <- paste(layer[["stride"]], collapse = "x")
+  padding <- paste(layer[["padding"]], collapse = "x")
+  dilation <- paste(layer[["dilation"]], collapse = "x")
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("MaxPool    |Input: ", paste(input_shape, collapse = "x"), "\n"))
@@ -837,41 +854,37 @@ print.maxPool <- function(x, input_shape, ...) {
   return(invisible(output_shape))
 }
 
+print.transfer <- function(layer, input_shape, ...) {
 
-#' Print transfer model
-#'
-#' @param x an object of class transfer
-#' @param input_shape input shape
-#' @param output_shape output shape
-#' @param ... further arguments, not supported yet
-print.transfer <- function(x, input_shape, output_shape, ...) {
-
-  if(x$replace_classifier) {
-    output_shape <- get_transfer_output_shape(x$name)
-  }
+  output_shape <- get_transfer_output_shape(layer$name)
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("Transfer   |Input: ", paste(input_shape, collapse = "x"), "\n"))
   cat(paste0("           |Output: ", paste(output_shape, collapse = "x"), "\n"))
-  cat(paste0("           |Network: ", x[["name"]] , "\n"))
-  cat(paste0("           |Pretrained: ", x[["pretrained"]] , "\n"))
-  if(x[["pretrained"]]) cat(paste0("           |Weights frozen: ", x[["freeze"]] , "\n"))
+  cat(paste0("           |Network: ", layer[["name"]] , "\n"))
+  cat(paste0("           |Pretrained: ", layer[["pretrained"]] , "\n"))
+  if(layer[["pretrained"]]) cat(paste0("           |Weights frozen: ", layer[["freeze"]] , "\n"))
 
   return(invisible(output_shape))
 }
 
 
-#' Plot the CNN architecture
+#' Plot method for citoarchitecture objects
 #'
-#' @param x an object of class citoarchitecture created by \code{\link{create_architecture}}
-#' @param input_shape a vector with the dimensions of a single sample (e.g. c(3,28,28))
-#' @param output_shape the number of nodes in the output layer
-#' @param ... additional arguments
-#' @return nothing
-plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
+#' This method provides a visual representation of the network architecture defined by an object of class \code{citoarchitecture}, including information about each layer's configuration. It helps in understanding the structure of the architecture defined by \code{\link{create_architecture}}.
+#'
+#' @param x An object of class \code{citoarchitecture}, created by \code{\link{create_architecture}}.
+#' @param input_shape A numeric vector specifying the dimensions of a single sample (e.g., \code{c(3, 28, 28)} for an RGB image with height and width of 28 pixels). This argument is required for a detailed output.
+#' @param output_shape An integer specifying the number of nodes in the output layer. If \code{NULL}, no output layer is printed.
+#' @param ... Additional arguments (currently not used).
+#'
+#' @return The original \code{citoarchitecture} object, returned invisibly.
+#'
+#'
+#' @example /inst/examples/plot.citoarchitecture-example.R
+#' @export
+plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
   x <- adjust_architecture(x, length(input_shape)-1)
-
-  transfer_only <- length(x) == 1 && inherits(x[[1]], "transfer")
 
   text <- c(paste0("Input size: ", paste(input_shape, collapse = "x")), "")
   type <- c("data", "arrow")
@@ -887,14 +900,11 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
       }
       text <- c(text, tmp)
       type <- c(type, "transfer")
-      if(!transfer_only) {
-        input_shape <- get_transfer_output_shape(layer[["name"]])
-        text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
-        type <- c(type, "arrow")
-      } else {
-        text <- c(text, "")
-        type <- c(type, "arrow")
-      }
+
+      input_shape <- get_transfer_output_shape(layer[["name"]])
+      text <- c(text, paste0("Output size: ", paste(input_shape, collapse = "x")))
+      type <- c(type, "arrow")
+
     } else if(inherits(layer, "linear")) {
       text <- c(text, paste0("Linear layer with ", layer[["n_neurons"]], " neurons"))
       type <- c(type, "linear")
@@ -908,6 +918,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
         text <- c(text, paste0("Dropout rate: ", layer[["dropout"]]))
         type <- c(type, "arrow")
       }
+      input_shape <- layer[["n_neurons"]]
     } else if(inherits(layer, "conv")) {
       kernel_size <- paste(layer[["kernel_size"]], collapse = "x")
       stride <- paste(layer[["stride"]], collapse = "x")
@@ -965,12 +976,14 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
     }
   }
 
-  if(!transfer_only) {
+  if(!is.null(output_shape)) {
     text <- c(text, paste0("Linear layer with ", output_shape, " neurons"), "")
     type <- c(type, "linear", "arrow")
+    input_shape <- output_shape
   }
 
-  text <- c(text, paste0("Output size: ", paste(output_shape, collapse = "x")))
+
+  text <- c(text, paste0("Output size: ", prod(input_shape)))
   type <- c(type, "data")
 
 
@@ -997,4 +1010,3 @@ plot.citoarchitecture <- function(x, input_shape, output_shape, ...) {
     ytop <- ytop-height
   }
 }
-
