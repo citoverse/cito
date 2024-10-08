@@ -54,7 +54,7 @@ continue_training.citodnn <- function(model,
   fm<- stats::as.formula(model$call$formula)
   if(is.null(data)) data <- model$data$data
 
-  X = stats::model.matrix(fm, data)
+  X = stats::model.matrix(fm, data)[, -1, drop=FALSE]
   Y = stats::model.response(stats::model.frame(fm, data))
 
   targets <- format_targets(Y, model$loss, model$data$ylvls)
@@ -76,15 +76,15 @@ continue_training.citodnn <- function(model,
       train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
       valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     } else {
-      train_dl <- get_data_loader(X[train,], Y[train,], Z[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], Z[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X[train,], Z[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid,], Z[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
 
   } else {
     if(is.null(Z)) {
       train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     } else {
-      train_dl <- get_data_loader(X, Y, Z, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X, Z, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
     valid_dl <- NULL
   }
@@ -143,16 +143,15 @@ continue_training.citocnn <- function(model,
                                       epochs = 32,
                                       X=NULL,
                                       Y=NULL,
-                                      device= c("cpu", "cuda", "mps"),
+                                      device= NULL,
                                       verbose = TRUE,
                                       changed_params=NULL,
                                       init_optimizer=TRUE,
                                       ...){
 
   checkmate::qassert(epochs, "X1[0,)")
-  checkmate::qassert(device, "S+[3,)")
-  device <- match.arg(device)
-  if(device == "cpu" && device != model$device) print(paste0("Original training was performed on ", model$device, ". This training is performed on cpu. If this is not intended, use the parameter 'device'!"))
+
+  if(is.null(device)) device <- model$device
   device <- check_device(device)
 
   if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL")

@@ -2,28 +2,43 @@
 % Please edit documentation in R/cnn.R
 \name{maxPool}
 \alias{maxPool}
-\title{Maximum pooling layer}
+\title{Create a Maximum Pooling Layer for a CNN Architecture}
 \usage{
 maxPool(kernel_size = NULL, stride = NULL, padding = NULL, dilation = NULL)
 }
 \arguments{
-\item{kernel_size}{(int or tuple) size of the kernel in this layer. Use a tuple if the kernel size isn't equal in all dimensions}
+\item{kernel_size}{(integer or tuple) The size of the kernel in this layer. Use a tuple if the kernel size varies across dimensions.}
 
-\item{stride}{(int or tuple) stride of the kernel in this layer. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions}
+\item{stride}{(integer or tuple) The stride of the kernel in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride differs across dimensions.}
 
-\item{padding}{(int or tuple) zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions}
+\item{padding}{(integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding differs across dimensions.}
 
-\item{dilation}{(int or tuple) dilation of the kernel in this layer. Use a tuple if the dilation isn't equal in all dimensions}
+\item{dilation}{(integer or tuple) The dilation of the kernel in this layer. Use a tuple if the dilation varies across dimensions.}
 }
 \value{
-S3 object of class \code{"maxPool" "citolayer"}
+An S3 object of class \code{"maxPool" "citolayer"}, representing a maximum pooling layer in the CNN architecture.
 }
 \description{
-creates a 'maxPool' 'citolayer' object that is used by \code{\link{create_architecture}}.
+This function creates a \code{maxPool} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 }
 \details{
-This function creates a 'maxPool' 'citolayer' object that is passed to the \code{\link{create_architecture}} function.
-The parameters that aren't assigned here (and are therefore still NULL) are filled with the default values passed to \code{\link{create_architecture}}.
+This function creates a \code{maxPool} layer object, which represents a maximum pooling layer in a CNN architecture. Parameters not specified (and thus set to \code{NULL}) will be filled with default values provided to the \code{\link{create_architecture}} function.
+}
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+# A maximum pooling layer where all available parameters are assigned
+# No value will be overwritten by 'create_architecture()'
+layer1 <- maxPool(3, 1, 0, 1)
+
+# A maximum pooling layer where only the kernel size is assigned
+# stride, padding and dilation are filled with the defaults
+# passed to the 'create_architecture()' function
+layer2 <- maxPool(kernel_size=4)
+}
+}
 }
 \seealso{
 \code{\link{create_architecture}}

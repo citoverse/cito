@@ -2,7 +2,7 @@
 % Please edit documentation in R/cnn.R
 \name{create_architecture}
 \alias{create_architecture}
-\title{CNN architecture}
+\title{Create a CNN Architecture}
 \usage{
 create_architecture(
   ...,
@@ -19,40 +19,81 @@ create_architecture(
 )
 }
 \arguments{
-\item{...}{objects of class 'citolayer' created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}} or \code{\link{transfer}}}
+\item{...}{Objects of class \code{citolayer} created by \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, or \code{\link{transfer}}. These layers define the architecture of the CNN.}
 
-\item{default_n_neurons}{(int) default value: amount of neurons in a linear layer}
+\item{default_n_neurons}{(integer) Default number of neurons in a linear layer. Default is 10.}
 
-\item{default_n_kernels}{(int) default value: amount of kernels in a convolutional layer}
+\item{default_n_kernels}{(integer) Default number of kernels in a convolutional layer. Default is 10.}
 
-\item{default_kernel_size}{(int or tuple) default value: size of the kernels in convolutional and pooling layers. Use a tuple if the kernel size isn't equal in all dimensions}
+\item{default_kernel_size}{(integer or tuple) Default size of kernels in convolutional and pooling layers. Can be a single integer or a tuple if sizes differ across dimensions. Default is \code{list(conv = 3, maxPool = 2, avgPool = 2)}.}
 
-\item{default_stride}{(int or tuple) default value: stride of the kernels in convolutional and pooling layers. NULL sets the stride equal to the kernel size. Use a tuple if the stride isn't equal in all dimensions}
+\item{default_stride}{(integer or tuple) Default stride of kernels in convolutional and pooling layers. Can be a single integer, a tuple if strides differ across dimensions, or \code{NULL} to use the kernel size. Default is \code{list(conv = 1, maxPool = NULL, avgPool = NULL)}.}
 
-\item{default_padding}{(int or tuple) default value: zero-padding added to both sides of the input. Use a tuple if the padding isn't equal in all dimensions}
+\item{default_padding}{(integer or tuple) Default zero-padding added to both sides of the input. Can be a single integer or a tuple if padding differs across dimensions. Default is \code{list(conv = 0, maxPool = 0, avgPool = 0)}.}
 
-\item{default_dilation}{(int or tuple) default value: dilation of the kernels in convolutional and maxPooling layers. Use a tuple if the dilation isn't equal in all dimensions}
+\item{default_dilation}{(integer or tuple) Default dilation of kernels in convolutional and max pooling layers. Can be a single integer or a tuple if dilation differs across dimensions. Default is \code{list(conv = 1, maxPool = 1)}.}
 
-\item{default_bias}{(boolean) default value: if TRUE, adds a learnable bias to neurons of linear and kernels of convolutional layers}
+\item{default_bias}{(boolean) Default value indicating if a learnable bias should be added to neurons of linear layers and kernels of convolutional layers. Default is \code{list(conv = TRUE, linear = TRUE)}.}
 
-\item{default_activation}{(string) default value: activation function that is used after linear and convolutional layers. The following activation functions are supported: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"}
+\item{default_activation}{(character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "relu", linear = "relu")}.}
 
-\item{default_normalization}{(boolean) default value: if TRUE, batch normalization is used after linear and convolutional layers}
+\item{default_normalization}{(boolean) Default value indicating if batch normalization should be applied after linear and convolutional layers. Default is \code{list(conv = FALSE, linear = FALSE)}.}
 
-\item{default_dropout}{(float) default value: dropout rate of linear and convolutional layers. Set to 0 for no dropout}
+\item{default_dropout}{(numeric) Default dropout rate for linear and convolutional layers. Set to 0 for no dropout. Default is \code{list(conv = 0.0, linear = 0.0)}.}
 }
 \value{
-S3 object of class \code{"citoarchitecture"}
+An S3 object of class \code{"citoarchitecture"} that encapsulates the architecture of the CNN.
 }
 \description{
-creates a 'citoarchitecture' object that is used by \code{\link{cnn}}.
+This function constructs a \code{citoarchitecture} object that defines the architecture of a Convolutional Neural Network (CNN). The \code{citoarchitecture} object can be used by the \code{\link{cnn}} function to specify the structure of the network, including layer types, parameters, and default values.
 }
 \details{
-This function creates a 'citoarchitecture' object that provides the \code{\link{cnn}} function with all information about the architecture of the CNN that will be created and trained.
-The final architecture consists of the layers in the sequence they were passed to this function.
-All parameters of the 'citolayer' objects, that are still NULL because they haven't been specified at the creation of the layer, are filled with the given default parameters for their specific layer type (linear, conv, maxPool, avgPool).
-The default values can be changed by either passing a list with the values for specific layer types (in which case the defaults of layer types which aren't in the list remain the same)
-or by passing a single value (in which case the defaults for all layer types is set to that value).
+This function creates a \code{citoarchitecture} object that outlines the CNN's architecture based on the provided layers and default parameters. The final architecture consists of layers in the order they are provided. Any unspecified parameters in the \code{citolayer} objects are filled with the provided default values for their respective layer types. Defaults can be specified for each layer type individually or for all layers at once.
+}
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+# Convolutional layers with different n_kernels and kernel_sizes
+c1 <- conv(n_kernels = 8, kernel_size = 5)
+c2 <- conv(n_kernels = 16, kernel_size = 3)
+
+# Linear layer
+l <- linear(n_neurons = 100)
+
+# MaxPooling layer
+mP <- maxPool(kernel_size = 2)
+
+# Create the architecture by using the created layers
+# Change the defaults with which the not assigned layer parameters will be filled e.g.
+# change default dropout to different values for linear and convolutional layer
+# only change the default normalization for linear layers
+# change default activation of both linear and convolutional layers to 'selu'
+architecture <- create_architecture(c1, c1, mP, c2, c2, mP, l,
+                                    default_dropout = list(linear=0.6, conv=0.4),
+                                    default_normalization = list(linear=TRUE),
+                                    default_activation = "selu")
+
+# See how the finished CNN would look like for specific input and output shapes
+print(architecture, c(3,128,128), 10)
+
+# To use predefined architectures  use the transfer() layer
+alexnet <- transfer("alexnet")
+
+# No other linear layers are used after the transfer layer:
+# The cnn() function will only replace the last linear layer of the architecture
+# to match the output dimensions of the data
+architecture <- create_architecture(alexnet)
+print(architecture, c(3,128,128), 10)
+
+# Some linear layers are used after the transfer layer:
+# The cnn() function will replace the whole "classifier" part of the architecture
+# with the specified linear layers + an output layer that matches the output dimensions
+architecture <- create_architecture(alexnet, linear(300), linear(100))
+print(architecture, c(3,128,128), 10)
+}
+}
 }
 \seealso{
 \code{\link{cnn}}, \code{\link{linear}}, \code{\link{conv}}, \code{\link{maxPool}}, \code{\link{avgPool}}, \code{\link{transfer}}, \code{\link{print.citoarchitecture}}, \code{\link{plot.citoarchitecture}}
