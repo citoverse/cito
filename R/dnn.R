@@ -536,16 +536,18 @@ residuals.citodnn <- function(object,...){
 #' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
 #' @param device for calculating variable importance and conditional effects
 #' @param adjust_se adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )
+#' @param type on what scale should the average conditional effects be calculated ("response" or "link")
 #' @param ... additional arguments
 #' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnn <- function(object, n_permute = NULL, device = NULL, ...){
+summary.citodnn <- function(object, n_permute = NULL, device = NULL, type = "response", ...){
   object <- check_model(object)
   out <- list()
   class(out) <- "summary.citodnn"
   if(is.null(device)) device = object$device
   out$importance <- get_importance(object, n_permute, device)
-  out$conditionalEffects = conditionalEffects(object, device = device)
+  for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
+  out$conditionalEffects = conditionalEffects(object, device = device, type = type)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
   if(!is.matrix(out$ACE )) out$ACE= matrix(out$ACE , ncol = 1L)
   colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
@@ -583,13 +585,13 @@ print.summary.citodnn <- function(x, ... ){
 
 #' @rdname summary.citodnn
 #' @export
-summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, adjust_se = FALSE,...){
+summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, adjust_se = FALSE, type = "response", ...){
   object$models <- lapply(object$models, check_model)
   out <- list()
   class(out) <- "summary.citodnnBootstrap"
   if(is.null(device)) device = object$device
   out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device, ...))
-  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device))
+  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device, type = type))
 
   if(!is.null(out$importance[[1]])){
     res_imps = list()
