@@ -5,9 +5,16 @@
 \alias{summary.citodnnBootstrap}
 \title{Summarize Neural Network of class citodnn}
 \usage{
-\method{summary}{citodnn}(object, n_permute = NULL, device = NULL, ...)
+\method{summary}{citodnn}(object, n_permute = NULL, device = NULL, type = "response", ...)
 
-\method{summary}{citodnnBootstrap}(object, n_permute = NULL, device = NULL, adjust_se = FALSE, ...)
+\method{summary}{citodnnBootstrap}(
+  object,
+  n_permute = NULL,
+  device = NULL,
+  adjust_se = FALSE,
+  type = "response",
+  ...
+)
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}
@@ -15,6 +22,8 @@
 \item{n_permute}{number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set}
 
 \item{device}{for calculating variable importance and conditional effects}
+
+\item{type}{on what scale should the average conditional effects be calculated ("response" or "link")}
 
 \item{...}{additional arguments}
 

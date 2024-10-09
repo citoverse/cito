@@ -764,6 +764,7 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
   }
 }
 
+#' @export
 print.linear <- function(layer, input_shape, ...) {
 
   cat("-------------------------------------------------------------------------------\n")
@@ -781,6 +782,7 @@ print.linear <- function(layer, input_shape, ...) {
   return(invisible(layer[["n_neurons"]]))
 }
 
+#' @export
 print.conv <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
@@ -811,6 +813,7 @@ print.conv <- function(layer, input_shape, ...) {
   return(invisible(output_shape))
 }
 
+#' @export
 print.avgPool <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
@@ -832,6 +835,7 @@ print.avgPool <- function(layer, input_shape, ...) {
   return(invisible(output_shape))
 }
 
+#' @export
 print.maxPool <- function(layer, input_shape, ...) {
 
   output_shape <- get_output_shape(input_shape = input_shape,
@@ -854,6 +858,7 @@ print.maxPool <- function(layer, input_shape, ...) {
   return(invisible(output_shape))
 }
 
+#' @export
 print.transfer <- function(layer, input_shape, ...) {
 
   output_shape <- get_transfer_output_shape(layer$name)
