@@ -425,13 +425,15 @@ dnn <- function(formula = NULL,
       if(is.numeric(bootstrap_parallel)) {
         backend = parabar::start_backend(bootstrap_parallel)
         parabar::export(backend, ls(environment()), environment())
+        parabar::evaluate(backend, {
+          require(torch)
+          torch::torch_set_num_threads(2L)
+          torch::torch_set_num_interop_threads(2L)
+        })
       }
       parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
         indices <- sample(nrow(data),replace = TRUE)
-        require(torch)
-        torch::torch_set_num_threads(2L)
-        torch::torch_set_num_interop_threads(2L)
         m = do.call(dnn, args = list(
           formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
