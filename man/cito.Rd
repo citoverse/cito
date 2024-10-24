@@ -3,6 +3,7 @@
 \docType{package}
 \name{cito}
 \alias{cito}
+\alias{_PACKAGE}
 \alias{cito-package}
 \title{'cito': Building and training neural networks}
 \description{
