@@ -12,7 +12,7 @@
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
 #' @param validation Proportion of the data to be used for validation. Default is 0.0.
 #' @param batchsize Batch size for training. Default is 32.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
@@ -138,7 +138,7 @@ cnn <- function(X,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
-                burnin = 30,
+                burnin = Inf,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = NULL,
