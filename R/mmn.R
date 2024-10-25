@@ -172,7 +172,7 @@ mmn <- function(formula,
   class(out) <- "citommn"
   out$net <- net
   out$call <- match.call()
-  out$call$formula <- formula
+  out$call$formula <- formula #necessary?
   out$loss <- loss_obj
   out$data <- list(dataList=dataList)
   if(!is.null(ylvls)) out$data$ylvls <- ylvls
@@ -185,7 +185,7 @@ mmn <- function(formula,
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
-  out$burnin <- burnin
+  out$burnin <- burnin #Add to training_properties
 
 
 
