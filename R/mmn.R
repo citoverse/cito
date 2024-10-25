@@ -228,6 +228,7 @@ predict.citommn <- function(object,
                             device = NULL,
                             batchsize = NULL,
                             ...) {
+
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkList(newdata))
 
@@ -240,6 +241,7 @@ predict.citommn <- function(object,
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
+
   if(type %in% c("response", "class")) {
     link <- object$loss$invlink
   }else{
@@ -248,11 +250,10 @@ predict.citommn <- function(object,
 
   object$net$to(device = device)
 
-
-  ### TO DO: use dataloaders via get_data_loader function
   if(is.null(newdata)){
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList)
   } else {
+    #TODO check whether elements in newdata have the same dimensions as they had in object$data$dataList
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
   from_folder = FALSE
