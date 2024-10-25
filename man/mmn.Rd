@@ -95,7 +95,7 @@ The list consists of the following attributes:
 This function trains a Multi-Modal Neural Network (MMN) which consists of a combination of DNNs and CNNs.
 }
 \seealso{
-\code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+\code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{coef.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }
 \author{
 Armin Schenk

@@ -2,18 +2,18 @@
 % Please edit documentation in R/mmn.R
 \name{print.citommn}
 \alias{print.citommn}
-\title{Print class citommn}
+\title{Print a fitted MMN model}
 \usage{
 \method{print}{citommn}(x, ...)
 }
 \arguments{
-\item{x}{a model created by \code{\link{mmn}}}
+\item{x}{A model created by \code{\link{mmn}}.}
 
-\item{...}{additional arguments}
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-original object x
+The original model object \code{x}, returned invisibly.
 }
 \description{
-Print class citommn
+This function prints the architecture of a Multi-Modal Neural Network (MMN) model created using the \code{\link{mmn}} function.
 }

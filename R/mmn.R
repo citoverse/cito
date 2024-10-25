@@ -42,7 +42,7 @@
 #' @import checkmate
 #' @example /inst/examples/mmn-example.R
 #' @author Armin Schenk
-#' @seealso \code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
+#' @seealso \code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{coef.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 #' @export
 mmn <- function(formula,
                 dataList = NULL,
@@ -267,12 +267,14 @@ predict.citommn <- function(object,
   return(pred)
 }
 
-#' Print class citommn
+#' Print a fitted MMN model
 #'
-#' @param x a model created by \code{\link{mmn}}
-#' @param ... additional arguments
-#' @return original object x
+#' This function prints the architecture of a Multi-Modal Neural Network (MMN) model created using the \code{\link{mmn}} function.
 #'
+#' @param x A model created by \code{\link{mmn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return The original model object \code{x}, returned invisibly.
+#' @example /inst/examples/print.citommn-example.R
 #' @export
 print.citommn <- function(x, ...){
   x <- check_model(x)
@@ -281,18 +283,36 @@ print.citommn <- function(x, ...){
   return(invisible(x))
 }
 
-#' Summary citommn
-#' @description
+#' Summarize a fitted MMN model
 #'
-#' currently the same as the print.citommn method.
+#' This function provides a summary of a Multi-Modal Neural Network (MMN) model created using the \code{\link{mmn}} function. It currently replicates the output of the \code{\link{print.citommn}} method.
 #'
-#' @param object a model created by \code{\link{mmn}}
-#' @param ... additional arguments
-#' @return original object
-#'
+#' @param object A model created by \code{\link{mmn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return The original model object \code{object}, returned invisibly.
 #' @export
 summary.citommn <- function(object, ...){
   return(print(object))
+}
+
+#' Retrieve parameters of a fitted MMN model
+#'
+#' This function returns the list of parameters (weights and biases) and buffers (e.g. running mean and variance of batch normalization layers) currently in use by the neural network model created using the \code{\link{mmn}} function.
+#'
+#' @param object A model created by \code{\link{mmn}}.
+#' @param ... Additional arguments (currently not used).
+#' @return A list with two components:
+#' \itemize{
+#'   \item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
+#'   \item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#' }
+#' @example /inst/examples/coef.citommn-example.R
+#' @export
+coef.citommn <- function(object,...){
+  coefs <- list()
+  coefs$parameters <- object$weights[object$use_model_epoch]
+  coefs$buffers <- object$buffers[object$use_model_epoch]
+  return(coefs)
 }
 
 format_input_data <- function(formula, dataList) {
