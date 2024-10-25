@@ -370,40 +370,55 @@ get_model_properties <- function(formula, dataList) {
 check_mmn_formula <- function(formula) {
 
   inner <- function(term) {
+    if(length(term) == 1) {
+      stop(paste0("In '", deparse1(formula), "': 'formula' in mmn() must not contain symbols outside of dnn() or cnn() structures. Therefore, '", deparse1(term), "' is not allowed."))
+    }
     if(term[[1]] == "+") {
       inner(term[[2]])
       inner(term[[3]])
     } else if(term[[1]] == "dnn") {
       call <- match.call(dnn, term)
-      if(is.null(call$formula) & is.null(call$X)) stop(paste0("In '", deparse(term), "': Either 'formula' or 'X' must be specified."))
-      if(!is.null(call$Y)) stop(paste0("In '", deparse(term), "': 'Y' must not be specified."))
+      if(is.null(call$formula) & is.null(call$X)) stop(paste0("In '", deparse1(term), "': Either 'formula' or 'X' must be specified."))
+      if(!is.null(call$Y)) stop(paste0("In '", deparse1(term), "': 'Y' must not be specified."))
       if(!is.null(call$formula)) {
-        if(call$formula[[1]] != "~") stop(paste0("In '", deparse(term), "': ~ missing in 'formula'."))
-        if(length(call$formula) != 2) stop(paste0("In '", deparse(term), "': response (left side of ~) of 'formula' must not be specified."))
+        if(call$formula[[1]] != "~") stop(paste0("In '", deparse1(term), "': ~ missing in 'formula'."))
+        if(length(call$formula) != 2) stop(paste0("In '", deparse1(term), "': response (left side of ~) of 'formula' must not be specified."))
+        check_for_embeddings(call$formula[[2]])
       }
       args <- names(formals(dnn))
       allowed_args <- c("formula", "data", "hidden", "activation", "bias", "dropout", "X")
       for(arg in setdiff(args, allowed_args)) {
-        if(!is.null(call[[arg]])) warning(paste0("In '", deparse(term), "': Specifying '", arg, "' here has no effect. When using dnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
+        if(!is.null(call[[arg]])) warning(paste0("In '", deparse1(term), "': Specifying '", arg, "' here has no effect. When using dnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
       }
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      if(!is.null(call$Y)) stop(paste0("In '", deparse(term), "': 'Y' must not be specified."))
-      if(is.null(call$X)) stop(paste0("In '", deparse(term), "': 'X' must be specified."))
-      if(is.null(call$architecture)) stop(paste0("In '", deparse(term), "': 'architecture' must be specified."))
+      if(!is.null(call$Y)) stop(paste0("In '", deparse1(term), "': 'Y' must not be specified."))
+      if(is.null(call$X)) stop(paste0("In '", deparse1(term), "': 'X' must be specified."))
+      if(is.null(call$architecture)) stop(paste0("In '", deparse1(term), "': 'architecture' must be specified."))
       args <- names(formals(cnn))
       allowed_args <- c("X", "architecture")
       for(arg in setdiff(args, allowed_args)) {
-        if(!is.null(call[[arg]])) warning(paste0("In '", deparse(term), "': Specifying '", arg, "' here has no effect. When using cnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
+        if(!is.null(call[[arg]])) warning(paste0("In '", deparse1(term), "': Specifying '", arg, "' here has no effect. When using cnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
       }
     } else {
-      stop(paste0("Symbol not supported: ", term[[1]]))
+      stop(paste0("In '", deparse1(formula), "': Symbol not supported: ", term[[1]]))
     }
   }
 
-  if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse(formula), "': ~ missing."))
-  if(length(formula) == 2) stop(paste0("Incorrect formula '", deparse(formula), "': response (left side of ~) missing."))
+  if(formula[[1]] != "~") stop(paste0("Incorrect formula '", deparse1(formula), "': ~ missing."))
+  if(length(formula) == 2) stop(paste0("Incorrect formula '", deparse1(formula), "': response (left side of ~) missing."))
   inner(formula[[3]])
+}
+
+check_for_embeddings <- function(term) {
+  if(length(term) > 1) {
+    if(term[[1]] == "+") {
+      check_for_embeddings(term[[2]])
+      check_for_embeddings(term[[3]])
+    } else if(term[[1]] == "e") {
+      stop(paste0("'", deparse1(term), "': Embeddings not implemented in mmn() yet."))
+    }
+  }
 }
 
 
