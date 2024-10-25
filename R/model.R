@@ -251,7 +251,7 @@ build_mmn <- function(model_properties) {
 
   fusion_input <- 0
   for(i in 1:length(subModules)) {
-    temp <- torch::torch_rand(c(1, model_properties$subModules[[i]]$input))
+    temp <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
     fusion_input <- fusion_input + dim(subModules[[i]](temp))[2]
   }
 
