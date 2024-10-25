@@ -390,7 +390,7 @@ dnn <- function(formula = NULL,
     out$training_properties <- training_properties
     out$device = device_old
     out$responses = responses
-    out$burnin = burnin
+    out$burnin = burnin #Add to training_properties
 
     ### training loop ###
     out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
