@@ -31,17 +31,17 @@ mmn(
 )
 }
 \arguments{
-\item{formula}{A formula object specifying the model structure. See examples for more information}
+\item{formula}{A formula object specifying the model structure. See examples for more information.}
 
 \item{dataList}{A list containing the data for training the model. The list should contain all variables used in the formula.}
 
-\item{fusion_hidden}{A numeric vector specifying the number of units in each hidden layer of the fusion network.}
+\item{fusion_hidden}{A numeric vector specifying the number of units (nodes) in each hidden layer of the fusion network. The length of this vector determines the number of hidden layers created, with each element specifying the number of units in the corresponding layer.}
 
-\item{fusion_activation}{A character vector specifying the activation function for each hidden layer of the fusion network. Available options are: "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid".}
+\item{fusion_activation}{A character vector specifying the activation function(s) applied after each hidden layer in the fusion network. If a single character string is provided, the same activation function will be applied to all hidden layers. Alternatively, a character vector of the same length as \code{fusion_hidden} can be provided to apply different activation functions to each layer. Available options include: \code{"relu"}, \code{"leaky_relu"}, \code{"tanh"}, \code{"elu"}, \code{"rrelu"}, \code{"prelu"}, \code{"softplus"}, \code{"celu"}, \code{"selu"}, \code{"gelu"}, \code{"relu6"}, \code{"sigmoid"}, \code{"softsign"}, \code{"hardtanh"}, \code{"tanhshrink"}, \code{"softshrink"}, \code{"hardshrink"}, \code{"log_sigmoid"}.}
 
-\item{fusion_bias}{A logical value or vector (length(fusion_hidden) + 1) indicating whether to include bias terms in the layers of the fusion network.}
+\item{fusion_bias}{A logical value or a vector indicating whether to include bias terms in each layer of the fusion network. If a single logical value is provided, it will apply to all layers. To specify bias inclusion for each layer individually, provide a logical vector of length \code{length(fusion_hidden) + 1}, where each element corresponds to a hidden layer, and the final element controls whether a bias term is added to the output layer.}
 
-\item{fusion_dropout}{The dropout rate for the fusion network, a numeric value or vector (length(fusion_hidden)) between 0 and 1.}
+\item{fusion_dropout}{The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.}
 
 \item{loss}{The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 
