@@ -290,7 +290,7 @@ visualize.training <- function(losses,epoch, main, new = FALSE, baseline = NULL)
 #' The baseline loss is the most important reference. If the model was not able to achieve a better (lower) loss than the baseline (which is the loss for a intercept only model), the model probably did not converge. Possible reasons include an improper learning rate, too few epochs, or too much regularization. See the `?dnn` help or the `vignette("B-Training_neural_networks")`.
 #'
 #'
-#' @param object a model created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @param object a model created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}
 #' @return a 'plotly' figure
 #' @example /inst/examples/analyze_training-example.R
 #' @export
@@ -304,10 +304,10 @@ analyze_training<- function(object){
     )
   }
 
-  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn"))) stop("Function requires an object of class citodnn, citodnnBootstrap or citocnn")
+  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn", "citommn"))) stop("Function requires an object of class citodnn, citodnnBootstrap, citocnn or citommn")
 
 
-  if(inherits(object, c("citodnn", "citocnn"))) {
+  if(inherits(object, c("citodnn", "citocnn", "citommn"))) {
     fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                            width = 900)
 
@@ -331,7 +331,9 @@ analyze_training<- function(object){
                                              y1 = object$base_loss,
                                              line = list(color = "#00c49aAA")
     ))
-    title <- ifelse(inherits(object, "citocnn"), 'CNN Training', 'DNN Training')
+    if(inherits(object, "citodnn")) title <- 'DNN Training'
+    else if(inherits(object, "citocnn")) title <- 'CNN Training'
+    else if(inherits(object, "citommn")) title <- 'MMN Training'
     fig<- plotly::layout(fig,
                          title=title,
                          xaxis = list(zeroline = FALSE),
