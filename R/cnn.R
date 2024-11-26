@@ -522,7 +522,7 @@ create_architecture <- function(...,
   default_padding <- fill_defaults(default_padding, list(conv = 0, maxPool = 0, avgPool = 0))
   default_dilation <- fill_defaults(default_dilation, list(conv = 1, maxPool = 1))
   default_bias <- fill_defaults(default_bias, list(conv = TRUE, linear = TRUE))
-  default_activation <- fill_defaults(default_activation, list(conv = "relu", linear = "relu"))
+  default_activation <- fill_defaults(default_activation, list(conv = "selu", linear = "selu"))
   default_normalization <- fill_defaults(default_normalization, list(conv = FALSE, linear = FALSE))
   default_dropout <- fill_defaults(default_dropout, list(conv = 0.0, linear = 0.0))
 
