@@ -44,7 +44,9 @@ build_dnn = function(model_properties) {
       } else {
         layers[[counter]] = torch::nn_linear(hidden[i-1], out_features = hidden[i], bias = bias[i])
       }
-      counter = counter+1
+      counter = counter + 1
+      #layers[[counter]] = torch::nn_batch_norm1d(num_features = hidden[[i]])
+      #counter = counter + 1
       layers[[counter]]<- get_activation_layer(activation[i])
 
       counter = counter+1
