@@ -47,7 +47,7 @@
 mmn <- function(formula,
                 dataList = NULL,
                 fusion_hidden = c(50L, 50L),
-                fusion_activation = "selu",
+                fusion_activation = "relu",
                 fusion_bias = TRUE,
                 fusion_dropout = 0.0,
                 loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
@@ -264,7 +264,6 @@ predict.citommn <- function(object,
   })
   if(any(sapply(newdata, is.character))) from_folder = TRUE
 
-  ### No dataloader?!
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE, from_folder=from_folder)))
 
   pred <- NULL
@@ -273,6 +272,8 @@ predict.citommn <- function(object,
     if(is.null(pred)) pred <- torch::as_array(link(object$net(b))$to(device="cpu"))
     else pred <- rbind(pred, torch::as_array(link(object$net(b))$to(device="cpu")))
   })
+
+  if(!is.null(sample_names)) rownames(pred) <- sample_names
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls

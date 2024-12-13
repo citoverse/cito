@@ -13,7 +13,7 @@ create_architecture(
   default_padding = list(conv = 0, maxPool = 0, avgPool = 0),
   default_dilation = list(conv = 1, maxPool = 1),
   default_bias = list(conv = TRUE, linear = TRUE),
-  default_activation = list(conv = "selu", linear = "selu"),
+  default_activation = list(conv = "relu", linear = "relu"),
   default_normalization = list(conv = FALSE, linear = FALSE),
   default_dropout = list(conv = 0, linear = 0)
 )

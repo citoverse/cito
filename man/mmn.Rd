@@ -8,7 +8,7 @@ mmn(
   formula,
   dataList = NULL,
   fusion_hidden = c(50L, 50L),
-  fusion_activation = "selu",
+  fusion_activation = "relu",
   fusion_bias = TRUE,
   fusion_dropout = 0,
   loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
