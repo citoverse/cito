@@ -264,6 +264,7 @@ predict.citommn <- function(object,
   })
   if(any(sapply(newdata, is.character))) from_folder = TRUE
 
+
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE, from_folder=from_folder)))
 
   pred <- NULL

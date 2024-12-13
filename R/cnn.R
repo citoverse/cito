@@ -379,7 +379,7 @@ predict.citocnn <- function(object,
     message("Be aware of potential dimension mismatches. Dimensions cannot be checked because the data folder was used during training.")
     newdata = torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
-    sample_names <- dimnames(newdata)[1]
+    sample_names <- dimnames(newdata)[[1]]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
