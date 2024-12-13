@@ -2,30 +2,38 @@
 % Please edit documentation in R/mmn.R
 \name{predict.citommn}
 \alias{predict.citommn}
-\title{Predict from a fitted mmn model}
+\title{Predict with a fitted MMN model}
 \usage{
 \method{predict}{citommn}(
   object,
   newdata = NULL,
   type = c("link", "response", "class"),
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
+  batchsize = NULL,
   ...
 )
 }
 \arguments{
 \item{object}{a model created by \code{\link{mmn}}}
 
-\item{newdata}{new data for predictions}
+\item{newdata}{A list containing the new data for which predictions are to be made. The dimensions of the elements in \code{newdata} should match those of the training data, except for the respective first dimensions which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.}
 
-\item{type}{which value should be calculated, either raw response, output of link function or predicted class (in case of classification)}
+\item{type}{A character string specifying the type of prediction to be made. Options are:
+\itemize{
+\item \code{"link"}: Scale of the linear predictor.
+\item \code{"response"}: Scale of the response.
+\item \code{"class"}: The predicted class labels (for classification tasks).
+}}
 
-\item{device}{device on which network should be trained on.}
+\item{device}{Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.}
 
-\item{...}{additional arguments}
+\item{batchsize}{An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.}
+
+\item{...}{Additional arguments (currently not used).}
 }
 \value{
-prediction matrix
+A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 }
 \description{
-Predict from a fitted mmn model
+This function generates predictions from a Multi-Modal Neural Network (MMN) model that was created using the \code{\link{mmn}} function.
 }
