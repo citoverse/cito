@@ -248,7 +248,7 @@ predict.citommn <- function(object,
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
 
-  sample_names <- dimnames(newdata[[1]])[1]
+  sample_names <- dimnames(newdata[[1]])[[1]]
   newdata <- lapply(newdata, torch::torch_tensor, dtype=torch::torch_float32())
 
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE)))
