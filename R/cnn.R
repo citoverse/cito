@@ -342,7 +342,9 @@ predict.citocnn <- function(object,
 
   if(is.null(newdata)){
     newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
+    sample_names <- dimnames(object$data$X)[1]
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
+    sample_names <- dimnames(newdata)[1]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
@@ -356,7 +358,7 @@ predict.citocnn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
   })
 
-  if(!is.null(dimnames(newdata))) rownames(pred) <- dimnames(newdata)[[1]]
+  if(!is.null(sample_names)) rownames(pred) <- sample_names
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls
@@ -465,7 +467,7 @@ create_architecture <- function(...,
                                 default_padding = list(conv = 0, maxPool = 0, avgPool = 0),
                                 default_dilation = list(conv = 1, maxPool = 1),
                                 default_bias = list(conv = TRUE, linear = TRUE),
-                                default_activation = list(conv = "selu", linear = "selu"),
+                                default_activation = list(conv = "relu", linear = "relu"),
                                 default_normalization = list(conv = FALSE, linear = FALSE),
                                 default_dropout = list(conv = 0.0, linear = 0.0)) {
 
@@ -487,7 +489,7 @@ create_architecture <- function(...,
   default_padding <- fill_defaults(default_padding, list(conv = 0, maxPool = 0, avgPool = 0))
   default_dilation <- fill_defaults(default_dilation, list(conv = 1, maxPool = 1))
   default_bias <- fill_defaults(default_bias, list(conv = TRUE, linear = TRUE))
-  default_activation <- fill_defaults(default_activation, list(conv = "selu", linear = "selu"))
+  default_activation <- fill_defaults(default_activation, list(conv = "relu", linear = "relu"))
   default_normalization <- fill_defaults(default_normalization, list(conv = FALSE, linear = FALSE))
   default_dropout <- fill_defaults(default_dropout, list(conv = 0.0, linear = 0.0))
 
@@ -695,11 +697,14 @@ maxPool <- function(kernel_size = NULL,
 #' @param name (character) The name of the pretrained model. Available options include: "alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2".
 #' @param pretrained (boolean) If \code{TRUE}, the model uses its pretrained weights. If \code{FALSE}, random weights are initialized.
 #' @param freeze (boolean) If \code{TRUE}, the weights of the pretrained model (except the "classifier" part at the end) are not updated during training. This setting only applies if \code{pretrained = TRUE}.
+#' @param rgb (boolean) If \code{FALSE}, the pretrained weights of the first convolutional layer are averaged across the channel dimension. This is useful if your data has 3 channels but isn't an RGB image. This setting only applies if \code{pretrained = TRUE}.
 #'
 #' @details
 #' This function creates a \code{transfer} layer object, which represents a pretrained model of the \code{torchvision} package with the linear "classifier" part removed. This allows the pretrained features of the model to be utilized while enabling customization of the classifier. When using this function with \code{\link{create_architecture}}, only linear layers can be added after the \code{transfer} layer. These linear layers define the "classifier" part of the network. If no linear layers are provided following the \code{transfer} layer, the default classifier will consist of a single output layer.
 #'
 #' Additionally, the \code{pretrained} argument specifies whether to use the pretrained weights or initialize the model with random weights. If \code{freeze} is set to \code{TRUE}, only the weights of the final linear layers (the "classifier") are updated during training, while the rest of the pretrained model remains unchanged. Note that \code{freeze} has no effect unless \code{pretrained} is set to \code{TRUE}.
+#'
+#' If your data has three channels but is not an RGB image set \code{rgb} to \code{FALSE} to average the pretrained weights of the first convolutional layer, so that each channel is treated equally. This is also done if your data has more or less channels than 3.
 #'
 #' @return An S3 object of class \code{"transfer" "citolayer"}, representing a pretrained model of the \code{torchvision} package in the CNN architecture.
 #'
@@ -710,7 +715,8 @@ maxPool <- function(kernel_size = NULL,
 #' @export
 transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"),
                      pretrained = TRUE,
-                     freeze = TRUE) {
+                     freeze = TRUE,
+                     rgb = TRUE) {
 
   if(identical(name, c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"))) {
     name <- "alexnet"
@@ -720,7 +726,8 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 
   layer <- list(name = name,
                 pretrained = pretrained,
-                freeze = pretrained & freeze)
+                freeze = pretrained & freeze,
+                rgb = rgb)
   class(layer) <- c("transfer", "citolayer")
   return(layer)
 }
@@ -749,7 +756,7 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
     for(layer in x) {
       if(inherits(layer, "transfer")) {
-        if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+        if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       }
       input_shape <- print(layer, input_shape)
     }
@@ -896,7 +903,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
   for(layer in x) {
     if(inherits(layer, "transfer")) {
-      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+      if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       tmp <- paste0("Transfer network: ", layer[["name"]], " (pretrained weights: ", layer[["pretrained"]])
       if(layer[["pretrained"]]) {
         tmp <- paste0(tmp, ", frozen weights: ", layer[["freeze"]], ")")
