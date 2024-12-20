@@ -1,21 +1,22 @@
-#' Continues training of a model generated with \code{\link{dnn}} or \code{\link{cnn}} for additional epochs.
+#' Continues training of a model generated with \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}} for additional epochs.
 #'
 #' @description
 #' If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
 #'
 #'
-#' @param model a model created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @param model a model created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}
 #' @param ... class-specific arguments
 #' @param epochs additional epochs the training should continue for
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X array. If not provided X from original training will be used
 #' @param Y vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used
+#' @param dataList A list containing the data for training the model. The list should contain all variables used in the formula. If not provided dataList from original training will be used
 #' @param device can be used to overwrite device used in previous training
 #' @param verbose print training and validation loss of epochs
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
 #' @param parallel train bootstrapped model in parallel
 #' @param init_optimizer re-initialize optimizer or not
-#' @return a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @return a model of class citodnn, citodnnBootstrap, citocnn or citommn created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}
 #'
 #' @example /inst/examples/continue_training-example.R
 #'
@@ -201,6 +202,65 @@ continue_training.citocnn <- function(model,
   return(model)
 }
 
+#' @rdname continue_training
+#' @export
+continue_training.citommn <- function(model,
+                                      epochs = 32,
+                                      dataList=NULL,
+                                      device= NULL,
+                                      verbose = TRUE,
+                                      changed_params=NULL,
+                                      init_optimizer=TRUE,
+                                      ...){
+
+  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
+
+
+  if(is.null(device)) device <- model$device
+  device <- check_device(device)
+
+  model<- check_model(model)
+
+
+  ### set training environment ###
+  if(!is.null(changed_params)){
+    for (i in 1:length(changed_params)){
+      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
+      eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+    }
+  }
+
+  ### set dataloader  ###
+  if(is.null(dataList)) dataList <- model$data$dataList
+
+  X <- format_input_data(model$call$formula[[3]], dataList)
+  X <- lapply(X, torch::torch_tensor, dtype=torch::torch_float32())
+
+  Y <- eval(model$call$formula[[2]], envir = dataList)
+
+  targets <- format_targets(Y, model$loss, model$data$ylvls)
+  Y <- targets$Y
+  y_dim <- targets$y_dim
+  ylvls <- targets$ylvls
+
+  ### dataloader  ###
+  if(model$training_properties$validation != 0) {
+    n_samples <- dim(Y)[1]
+    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+    train <- c(1:n_samples)[-valid]
+    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)))
+    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)))
+  } else {
+    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)))
+    valid_dl <- NULL
+  }
+
+
+  model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
+
+  return(model)
+}
 
 
 

@@ -12,7 +12,7 @@
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
 #' @param validation Proportion of the data to be used for validation. Default is 0.0.
 #' @param batchsize Batch size for training. Default is 32.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
@@ -138,7 +138,7 @@ cnn <- function(X,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
-                burnin = 30,
+                burnin = Inf,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = NULL,
@@ -283,7 +283,7 @@ cnn <- function(X,
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   out$device <- device_old
-  out$burnin = burnin
+  out$burnin <- burnin #Add to training_properties
 
 
 
@@ -306,7 +306,7 @@ cnn <- function(X,
 #'   \item \code{"response"}: Scale of the response.
 #'   \item \code{"class"}: The predicted class labels (for classification tasks).
 #' }
-#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".
+#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.
 #' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
@@ -317,7 +317,8 @@ predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = NULL,
-                            batchsize = NULL, ...) {
+                            batchsize = NULL,
+                            ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
@@ -331,7 +332,6 @@ predict.citocnn <- function(object,
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-
   if(type %in% c("response","class")) {
     link <- object$loss$invlink
   }else{
@@ -342,7 +342,9 @@ predict.citocnn <- function(object,
 
   if(is.null(newdata)){
     newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
+    sample_names <- dimnames(object$data$X)[[1]]
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
+    sample_names <- dimnames(newdata)[[1]]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
@@ -356,7 +358,7 @@ predict.citocnn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
   })
 
-  if(!is.null(dimnames(newdata))) rownames(pred) <- dimnames(newdata)[[1]]
+  if(!is.null(sample_names)) rownames(pred) <- sample_names
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls
@@ -444,7 +446,7 @@ coef.citocnn <- function(object,...){
 #' @param default_padding (integer or tuple) Default zero-padding added to both sides of the input. Can be a single integer or a tuple if padding differs across dimensions. Default is \code{list(conv = 0, maxPool = 0, avgPool = 0)}.
 #' @param default_dilation (integer or tuple) Default dilation of kernels in convolutional and max pooling layers. Can be a single integer or a tuple if dilation differs across dimensions. Default is \code{list(conv = 1, maxPool = 1)}.
 #' @param default_bias (boolean) Default value indicating if a learnable bias should be added to neurons of linear layers and kernels of convolutional layers. Default is \code{list(conv = TRUE, linear = TRUE)}.
-#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "relu", linear = "relu")}.
+#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "selu", linear = "selu")}.
 #' @param default_normalization (boolean) Default value indicating if batch normalization should be applied after linear and convolutional layers. Default is \code{list(conv = FALSE, linear = FALSE)}.
 #' @param default_dropout (numeric) Default dropout rate for linear and convolutional layers. Set to 0 for no dropout. Default is \code{list(conv = 0.0, linear = 0.0)}.
 #'
@@ -695,11 +697,14 @@ maxPool <- function(kernel_size = NULL,
 #' @param name (character) The name of the pretrained model. Available options include: "alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2".
 #' @param pretrained (boolean) If \code{TRUE}, the model uses its pretrained weights. If \code{FALSE}, random weights are initialized.
 #' @param freeze (boolean) If \code{TRUE}, the weights of the pretrained model (except the "classifier" part at the end) are not updated during training. This setting only applies if \code{pretrained = TRUE}.
+#' @param rgb (boolean) If \code{FALSE}, the pretrained weights of the first convolutional layer are averaged across the channel dimension. This is useful if your data has 3 channels but isn't an RGB image. This setting only applies if \code{pretrained = TRUE}.
 #'
 #' @details
 #' This function creates a \code{transfer} layer object, which represents a pretrained model of the \code{torchvision} package with the linear "classifier" part removed. This allows the pretrained features of the model to be utilized while enabling customization of the classifier. When using this function with \code{\link{create_architecture}}, only linear layers can be added after the \code{transfer} layer. These linear layers define the "classifier" part of the network. If no linear layers are provided following the \code{transfer} layer, the default classifier will consist of a single output layer.
 #'
 #' Additionally, the \code{pretrained} argument specifies whether to use the pretrained weights or initialize the model with random weights. If \code{freeze} is set to \code{TRUE}, only the weights of the final linear layers (the "classifier") are updated during training, while the rest of the pretrained model remains unchanged. Note that \code{freeze} has no effect unless \code{pretrained} is set to \code{TRUE}.
+#'
+#' If your data has three channels but is not an RGB image set \code{rgb} to \code{FALSE} to average the pretrained weights of the first convolutional layer, so that each channel is treated equally. This is also done if your data has more or less channels than 3.
 #'
 #' @return An S3 object of class \code{"transfer" "citolayer"}, representing a pretrained model of the \code{torchvision} package in the CNN architecture.
 #'
@@ -710,7 +715,8 @@ maxPool <- function(kernel_size = NULL,
 #' @export
 transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"),
                      pretrained = TRUE,
-                     freeze = TRUE) {
+                     freeze = TRUE,
+                     rgb = TRUE) {
 
   if(identical(name, c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"))) {
     name <- "alexnet"
@@ -720,7 +726,8 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 
   layer <- list(name = name,
                 pretrained = pretrained,
-                freeze = pretrained & freeze)
+                freeze = pretrained & freeze,
+                rgb = rgb)
   class(layer) <- c("transfer", "citolayer")
   return(layer)
 }
@@ -749,7 +756,7 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
     for(layer in x) {
       if(inherits(layer, "transfer")) {
-        if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+        if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       }
       input_shape <- print(layer, input_shape)
     }
@@ -896,7 +903,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
   for(layer in x) {
     if(inherits(layer, "transfer")) {
-      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+      if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       tmp <- paste0("Transfer network: ", layer[["name"]], " (pretrained weights: ", layer[["pretrained"]])
       if(layer[["pretrained"]]) {
         tmp <- paste0(tmp, ", frozen weights: ", layer[["freeze"]], ")")
