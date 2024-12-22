@@ -154,11 +154,11 @@ testthat::test_that("CNN accuracy", {
   shapes <- cito:::simulate_shapes(n, 50)
   test <- sample.int(n, 0.1*n)
   train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", device=device, validation=0.1, epochs=200, plot=FALSE, verbose=FALSE)
+  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="softmax", device=device, validation=0.1, epochs=400, early_stopping = 20, lambda = 0.001, plot=FALSE, verbose=FALSE)
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)
-  testthat::expect_gt(accuracy, 0.80)
+  testthat::expect_gt(accuracy, 0.95)
 })
 
 

@@ -16,7 +16,7 @@ cnn(
   lambda = 0,
   validation = 0,
   batchsize = 32L,
-  burnin = 30,
+  burnin = Inf,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = NULL,
@@ -48,7 +48,7 @@ cnn(
 
 \item{batchsize}{Batch size for training. Default is 32.}
 
-\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.}
+\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.}
 
 \item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
 

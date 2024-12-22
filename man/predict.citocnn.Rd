@@ -25,7 +25,7 @@
 \item \code{"class"}: The predicted class labels (for classification tasks).
 }}
 
-\item{device}{Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".}
+\item{device}{Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.}
 
 \item{batchsize}{An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.}
 
