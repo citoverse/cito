@@ -10,6 +10,7 @@ ALE(
   model,
   variable = NULL,
   data = NULL,
+  type = "response",
   K = 10,
   ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
@@ -21,6 +22,7 @@ ALE(
   model,
   variable = NULL,
   data = NULL,
+  type = "response",
   K = 10,
   ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
@@ -32,6 +34,7 @@ ALE(
   model,
   variable = NULL,
   data = NULL,
+  type = "response",
   K = 10,
   ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
@@ -45,6 +48,8 @@ ALE(
 \item{variable}{variable as string for which the PDP should be done}
 
 \item{data}{data on which ALE is performed on, if NULL training data will be used.}
+
+\item{type}{ALE on which scale response or link, default is response}
 
 \item{K}{number of neighborhoods original feature space gets divided into}
 

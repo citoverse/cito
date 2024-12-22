@@ -130,14 +130,18 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
       }
     }
     if(is.numeric(parallel)) {
-      backend = parabar::start_backend(parallel)
-      nodes = parabar::evaluate(backend, paste(Sys.info()[['nodename']], Sys.getpid(), sep='-'))
-      parabar::export(backend, ls(environment()), environment())
+      #backend = parabar::start_backend(parallel)
+      #nodes = parabar::evaluate(backend, paste(Sys.info()[['nodename']], Sys.getpid(), sep='-'))
+      #parabar::export(backend, ls(environment()), environment())
+      backend = parallel::makeCluster(parallel)
+      nodes = parallel::clusterEvalQ(backend, {paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')})
+      parallel::clusterExport(backend, ls(environment()), envir = environment())
     }
     # start parallel block
-    parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2), clear=FALSE)
+    # parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2), clear=FALSE)
 
-    tune_df <- parabar::par_lapply(backend, 1:steps, function(i) {
+    #tune_df <- parabar::par_lapply(backend, 1:steps, function(i) {
+    tune_df = parallel::parLapply(backend, 1:steps, function(i) {
 
       requireNamespace("tibble")
       loss_obj <- get_loss(loss, device = device, X= X, Y = Y)
@@ -191,7 +195,8 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
       }
       return(tune_df[i,])
     })
-    parabar::stop_backend(backend)
+    #parabar::stop_backend(backend)
+    parallel::stopCluster(backend)
     tune_df = do.call(rbind, tune_df)
   }
 

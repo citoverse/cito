@@ -366,6 +366,7 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
 #' @param model a model created by \code{\link{dnn}}
 #' @param variable variable as string for which the PDP should be done
 #' @param data data on which ALE is performed on, if NULL training data will be used.
+#' @param type ALE on which scale response or link, default is response
 #' @param K number of neighborhoods original feature space gets divided into
 #' @param ALE_type method on how the feature space is divided into neighborhoods.
 #' @param plot plot ALE or not
@@ -399,6 +400,7 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
 ALE <- function(model,
                 variable = NULL,
                 data = NULL,
+                type = "response",
                 K = 10,
                 ALE_type = c("equidistant", "quantile"),
                 plot=TRUE,
@@ -409,6 +411,7 @@ ALE <- function(model,
 ALE.citodnn <- function(model,
                         variable = NULL,
                         data = NULL,
+                        type = "response",
                         K = 10,
                         ALE_type = c("equidistant", "quantile"),
                         plot=TRUE,
@@ -440,7 +443,7 @@ ALE.citodnn <- function(model,
     variable = variable[!is_categorical]
   }
   p_ret <- sapply (variable,function(v){
-    results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, ...)
+    results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, type = type, ...)
 
     results[sapply(results, is.null)] = NULL
 
@@ -480,6 +483,7 @@ ALE.citodnn <- function(model,
 ALE.citodnnBootstrap <- function(model,
                                  variable = NULL,
                                  data = NULL,
+                                 type = "response",
                                  K = 10,
                                  ALE_type = c("equidistant", "quantile"),
                                  plot=TRUE,
@@ -519,7 +523,7 @@ ALE.citodnnBootstrap <- function(model,
         variable = variable[!is_categorical]
       }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, ALE_type = ALE_type, data = data, K = K, verbose = FALSE, ...)
+        results = getALE(model = model_indv, v = v, ALE_type = ALE_type,type = type, data = data, K = K, verbose = FALSE, ...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -598,7 +602,7 @@ ALE.citodnnBootstrap <- function(model,
 
 
 
-getALE = function(model, ALE_type, data, K, v, verbose = TRUE, ...) {
+getALE = function(model, ALE_type, data, K, v, verbose = TRUE, type = "response", ...) {
   return(
     lapply(1:model$model_properties$output, function(n_output) {
       if ( ALE_type == "equidistant"){
@@ -615,9 +619,9 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, ...) {
               if(length(region_indizes)>0){
                 perm_data <- data[region_indizes,]
                 perm_data[,v] <- borders[i-1]
-                lower_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
+                lower_preds <- stats::predict(model, perm_data, type = type,...)[,n_output,drop=FALSE]
                 perm_data[,v] <- borders[i]
-                upper_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
+                upper_preds <- stats::predict(model, perm_data, type = type,...)[,n_output,drop=FALSE]
                 return(mean(upper_preds - lower_preds))
               }else{
                 return(NA)
@@ -645,9 +649,9 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, ...) {
           y = unlist(lapply(seq_len(length(groups)), function(i){
             perm_data <- data[groups[[i]],]
             perm_data[,v] <- quants[i]
-            lower_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
+            lower_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
             perm_data[,v] <- quants[i+1]
-            upper_preds <- stats::predict(model, perm_data, ...)[,n_output,drop=FALSE]
+            upper_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
             return(mean(upper_preds - lower_preds))
           })))
 
