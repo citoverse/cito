@@ -668,13 +668,19 @@ get_X_Y = function(formula, X, Y, data) {
     out = list(X = X, Y = Y, formula = formula, data = data, Z = NULL, Z_terms = NULL)
   } else {
     terms = sapply(Specials$terms, as.character)
+
+    Zlvls =
+      sapply(terms, function(i) {
+        if(!is.factor(data[,i])) stop("Embeddings must be passed as factor/categorical feature.")
+        return(nlevels(data[,i]))
+      })
     Z =
       lapply(terms, function(i) {
         return(as.integer(data[,i]))
       })
     Z = do.call(cbind, Z)
     colnames(Z) = terms
-    out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args)
+    out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args, Zlvls = Zlvls)
   }
   out$old_formula = old_formula
   return(out)
