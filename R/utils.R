@@ -30,7 +30,7 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
     ##### TODO move Y preparation to loss objects!!!!
 
-  } else if(!is.function(loss_obj$call) && any(loss_obj$call == "softmax")) {
+  } else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("softmax", "cross-entropy"))) {
     if (is.character(Y)) {
       if (is.null(ylvls)) {
         Y <- factor(Y[,1])
@@ -45,10 +45,7 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
     y_dim <- length(unique(Y))
     prop <- as.vector(table(Y)/sum(table(Y)))
     Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
-    if(any(loss_obj$call == "softmax") ) Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
-    else Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
-
-
+    Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
   }  else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("multinomial", "clogit" ))) {
 
     if(ncol(Y) > 1.5) {
