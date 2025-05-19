@@ -242,6 +242,7 @@ dnn <- function(formula = NULL,
   Z_formula = tmp_data$Z_terms
   data = tmp_data$data
 
+
   if(!is.null(Z)) {
 
     Z_args = list()
@@ -250,7 +251,7 @@ dnn <- function(formula = NULL,
     }
 
     embeddings = list(inputs = ncol(Z),
-                      dims = apply(Z, 2, function(z) length(levels(as.factor(z)))), # input embeddings
+                      dims = tmp_data$Zlvls, # input embeddings
                       args = Z_args )
   } else {
     embeddings = NULL
@@ -777,7 +778,10 @@ predict.citodnn <- function(object, newdata = NULL,
     else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls)[,-1,drop=FALSE])
 
     if(!is.null(object$model_properties$embeddings)) {
-      tmp = do.call(cbind, lapply(object$Z_formula, function(term) newdata[, term]))
+      tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
+        if(!is.factor(newdata[[term]])) stop(paste0(term, " must be factor."))
+        newdata[[term]] |> as.integer()
+      }) )
       Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
     }
   }
