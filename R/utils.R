@@ -30,7 +30,7 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
 
     ##### TODO move Y preparation to loss objects!!!!
 
-  } else if(!is.function(loss_obj$call) && any(loss_obj$call == "softmax")) {
+  } else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("softmax", "cross-entropy"))) {
     if (is.character(Y)) {
       if (is.null(ylvls)) {
         Y <- factor(Y[,1])
