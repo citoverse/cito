@@ -390,7 +390,7 @@ dnn <- function(formula = NULL,
     out$training_properties <- training_properties
     out$device = device_old
     out$responses = responses
-    out$burnin = burnin
+    out$burnin = burnin #Add to training_properties
 
     ### training loop ###
     out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
@@ -767,11 +767,13 @@ predict.citodnn <- function(object, newdata = NULL,
   object$net$to(device = device)
 
   if(is.null(newdata)){
+    sample_names <- rownames(object$data$X)
     X = torch::torch_tensor(object$data$X)
     if(!is.null(object$model_properties$embeddings)) {
       Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long())
     }
   } else {
+    sample_names <- rownames(newdata)
     if(is.data.frame(newdata)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE])
     else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls)[,-1,drop=FALSE])
 
@@ -801,7 +803,7 @@ predict.citodnn <- function(object, newdata = NULL,
     }
   })
 
-  rownames(pred) <- rownames(X)
+  if(!is.null(sample_names)) rownames(pred) <- sample_names
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls

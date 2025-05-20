@@ -117,9 +117,13 @@ build_cnn <- function(model_properties) {
   transfer <- FALSE
   for(layer in architecture) {
     if(inherits(layer, "transfer")) {
-      if(!(input_dim == 2 && input_shape[1] == 3)) stop("The pretrained models only work on RGB images: [n, 3, x, y]")
+      if(input_dim != 2) stop("The pretrained models only work for 2D convolutions.")
 
-      transfer_model <- get_pretrained_model(layer$name, layer$pretrained)
+      if(input_shape[1] != 3) layer$rgb <- FALSE
+
+      transfer_model <- get_pretrained_model(layer$name, layer$pretrained, layer$rgb)
+
+      if(!layer$rgb) replace_first_conv_layer(transfer_model, input_shape[1])
 
       if(layer$freeze) transfer_model <- freeze_weights(transfer_model)
 
@@ -251,7 +255,7 @@ build_mmn <- function(model_properties) {
 
   fusion_input <- 0
   for(i in 1:length(subModules)) {
-    temp <- torch::torch_rand(c(1, model_properties$subModules[[i]]$input))
+    temp <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
     fusion_input <- fusion_input + dim(subModules[[i]](temp))[2]
   }
 
