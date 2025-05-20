@@ -38,14 +38,22 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
       } else {
         Y <- factor(Y[,1], levels = ylvls)
       }
+      prop <- as.vector(table(Y)/sum(table(Y)))
+      y_dim <- length(ylvls)
       Y <- as.matrix(as.integer(Y), ncol=1L)
+      if(length(ylvls) != length(unique(Y))) {
+        warning("There exist labels without any corresponding samples. Make sure this is intended:\n
+                1) dnn, cnn: The provided factor containing the labels has levels with zero occurences. For each level a node in the output layer will be created.\n
+                2) continue_training: The new data provided has labels with zero corresponding samples.")
+      }
     } else {
       Y <- as.matrix(as.integer(Y[,1]), ncol=1L)
+      y_dim <- length(unique(Y))
+      prop <- as.vector(table(Y)/sum(table(Y)))
     }
-    y_dim <- length(unique(Y))
-    prop <- as.vector(table(Y)/sum(table(Y)))
     Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
     Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
+
   }  else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("multinomial", "clogit" ))) {
 
     if(ncol(Y) > 1.5) {
@@ -398,13 +406,13 @@ get_transfer_output_shape <- function(name) {
 # Load the pretrained models.
 # In inception_v3 the auxiliary part is omitted since we don't use it and the input transformation is moved to the forward function (if pretrained=TRUE)
 # In mobilenet_v2 the global average pool is moved from the forward function to a module, so the last 2 modules of all models are avgpool and classifier, respectively.
-get_pretrained_model <- function(transfer, pretrained) {
+get_pretrained_model <- function(transfer, pretrained, rgb) {
   if(transfer == "inception_v3") {
     inception_v3 <- torchvision::model_inception_v3(pretrained = pretrained)
 
 
     forward <- deparse(inception_v3$.forward)[1:2]
-    if(pretrained) {
+    if(pretrained & rgb) {
       forward <- c(forward, deparse(inception_v3$.transform_input)[c(4:9)], "        x <- torch::torch_cat(list(x_ch0, x_ch1, x_ch2), 2)")
     }
 
@@ -443,6 +451,46 @@ get_pretrained_model <- function(transfer, pretrained) {
     eval(parse(text = paste0("torch_model <- torchvision::model_", transfer, "(pretrained = pretrained)")))
   }
   return(torch_model)
+}
+
+replace_first_conv_layer <- function(torch_model, in_channels) {
+  tmp <- "torch_model"
+  while(TRUE) {
+    eval(parse(text = paste0("children <- names(", tmp, "$children)")))
+    if(is.null(children)) stop("Could not find first convolutional layer of pretrained model. Pls report this to the developers of 'cito'.")
+    tmp <- paste0(tmp, "$'", children[1], "'")
+    module <- eval(parse(text = tmp))
+    if(inherits(module, "nn_conv2d")) {
+      out_channels <- module$out_channels
+      kernel_size <- module$kernel_size
+      stride <- module$stride
+      padding <- module$padding
+      dilation <- module$dilation
+      bias <- ifelse(is.null(module$bias), FALSE, TRUE)
+      groups <- module$groups
+      padding_mode = module$padding_mode
+
+      new_layer <- torch::nn_conv2d(in_channels = in_channels,
+                                    out_channels = out_channels,
+                                    kernel_size = kernel_size,
+                                    stride = stride,
+                                    padding = padding,
+                                    dilation = dilation,
+                                    groups = groups,
+                                    bias = bias,
+                                    padding_mode = padding_mode)
+
+      # Initialize bias
+      if(bias) new_layer$bias$set_data(module$bias)
+      # Initialize weights
+      avg_weights <- torch::torch_mean(module$weight, dim = 2L, keepdim = TRUE)
+      new_layer$weight$set_data(avg_weights$'repeat'(c(1,in_channels,1,1)))
+
+      eval(parse(text = paste0(tmp, "<- new_layer")))
+
+      break
+    }
+  }
 }
 
 replace_classifier <- function(transfer_model, cito_model) {
