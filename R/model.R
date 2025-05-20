@@ -99,7 +99,20 @@ build_dnn = function(model_properties) {
     }
 
   } else {
-    net = do.call(torch::nn_sequential, layers)
+    create_dnn <- torch::nn_module(
+      initialize = function() {
+        for(i in 1:length(layers)) {
+          self[[paste0("l_",i)]] = layers[[i]]
+        }
+      },
+      forward = function(x) {
+        for(i in 1:length(layers)) {
+          x = self[[paste0("l_",i)]](x)
+        }
+        return(x)
+      }
+    )
+    net <- create_dnn()
   }
   return(net)
 }
@@ -226,7 +239,20 @@ build_cnn <- function(model_properties) {
 
   if(!is.null(output_shape)) net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
 
-  net <- do.call(torch::nn_sequential, net_layers)
+  create_cnn <- torch::nn_module(
+    initialize = function() {
+      for(i in 1:length(layers)) {
+        self[[paste0("l_",i)]] = layers[[i]]
+      }
+    },
+    forward = function(x) {
+      for(i in 1:length(layers)) {
+        x = self[[paste0("l_",i)]](x)
+      }
+      return(x)
+    }
+  )
+  net <- create_cnn()
 
   if(transfer) {
     net <- replace_classifier(transfer_model, net)
