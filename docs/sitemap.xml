@@ -1,165 +1,58 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>/404.html</loc>
-  </url>
-  <url>
-    <loc>/LICENSE.html</loc>
-  </url>
-  <url>
-    <loc>/articles/A-Introduction_to_cito.html</loc>
-  </url>
-  <url>
-    <loc>/articles/B-Training_neural_networks.html</loc>
-  </url>
-  <url>
-    <loc>/articles/C-Example_Species_distribution_modeling.html</loc>
-  </url>
-  <url>
-    <loc>/articles/D-Advanced_custom_loss_functions.html</loc>
-  </url>
-  <url>
-    <loc>/articles/index.html</loc>
-  </url>
-  <url>
-    <loc>/authors.html</loc>
-  </url>
-  <url>
-    <loc>/index.html</loc>
-  </url>
-  <url>
-    <loc>/news/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/ALE.html</loc>
-  </url>
-  <url>
-    <loc>/reference/PDP.html</loc>
-  </url>
-  <url>
-    <loc>/reference/analyze_training.html</loc>
-  </url>
-  <url>
-    <loc>/reference/avgPool.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cito.html</loc>
-  </url>
-  <url>
-    <loc>/reference/cnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/coef.citocnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/coef.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/conditionalEffects.html</loc>
-  </url>
-  <url>
-    <loc>/reference/config_lr_scheduler.html</loc>
-  </url>
-  <url>
-    <loc>/reference/config_optimizer.html</loc>
-  </url>
-  <url>
-    <loc>/reference/config_tuning.html</loc>
-  </url>
-  <url>
-    <loc>/reference/continue_training.html</loc>
-  </url>
-  <url>
-    <loc>/reference/conv.html</loc>
-  </url>
-  <url>
-    <loc>/reference/create_architecture.html</loc>
-  </url>
-  <url>
-    <loc>/reference/dnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/e.html</loc>
-  </url>
-  <url>
-    <loc>/reference/findReTrmClasses.html</loc>
-  </url>
-  <url>
-    <loc>/reference/index.html</loc>
-  </url>
-  <url>
-    <loc>/reference/linear.html</loc>
-  </url>
-  <url>
-    <loc>/reference/maxPool.html</loc>
-  </url>
-  <url>
-    <loc>/reference/plot.citoarchitecture.html</loc>
-  </url>
-  <url>
-    <loc>/reference/plot.citocnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/plot.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/plot.citodnnBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/predict.citocnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/predict.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/predict.citodnnBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.citoarchitecture.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.citocnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.citodnnBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.conditionalEffects.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.conditionalEffectsBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.summary.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/print.summary.citodnnBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/residuals.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/simulate_shapes.html</loc>
-  </url>
-  <url>
-    <loc>/reference/sumTerms.html</loc>
-  </url>
-  <url>
-    <loc>/reference/summary.citocnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/summary.citodnn.html</loc>
-  </url>
-  <url>
-    <loc>/reference/summary.citodnnBootstrap.html</loc>
-  </url>
-  <url>
-    <loc>/reference/transfer.html</loc>
-  </url>
-  <url>
-    <loc>/reference/tune.html</loc>
-  </url>
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/E-CNN_and_MMN.html</loc></url>
+<url><loc>/LICENSE.html</loc></url>
+<url><loc>/articles/A-Introduction_to_cito.html</loc></url>
+<url><loc>/articles/B-Training_neural_networks.html</loc></url>
+<url><loc>/articles/C-Example_Species_distribution_modeling.html</loc></url>
+<url><loc>/articles/D-Advanced_custom_loss_functions.html</loc></url>
+<url><loc>/articles/E-CNN_and_MMN.html</loc></url>
+<url><loc>/articles/index.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/ALE.html</loc></url>
+<url><loc>/reference/PDP.html</loc></url>
+<url><loc>/reference/analyze_training.html</loc></url>
+<url><loc>/reference/avgPool.html</loc></url>
+<url><loc>/reference/cito.html</loc></url>
+<url><loc>/reference/cnn.html</loc></url>
+<url><loc>/reference/coef.citocnn.html</loc></url>
+<url><loc>/reference/coef.citodnn.html</loc></url>
+<url><loc>/reference/conditionalEffects.html</loc></url>
+<url><loc>/reference/config_lr_scheduler.html</loc></url>
+<url><loc>/reference/config_optimizer.html</loc></url>
+<url><loc>/reference/config_tuning.html</loc></url>
+<url><loc>/reference/continue_training.html</loc></url>
+<url><loc>/reference/conv.html</loc></url>
+<url><loc>/reference/create_architecture.html</loc></url>
+<url><loc>/reference/dnn.html</loc></url>
+<url><loc>/reference/e.html</loc></url>
+<url><loc>/reference/findReTrmClasses.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/linear.html</loc></url>
+<url><loc>/reference/maxPool.html</loc></url>
+<url><loc>/reference/mmn.html</loc></url>
+<url><loc>/reference/multinomial_log_prob.html</loc></url>
+<url><loc>/reference/plot.citoarchitecture.html</loc></url>
+<url><loc>/reference/plot.citocnn.html</loc></url>
+<url><loc>/reference/plot.citodnn.html</loc></url>
+<url><loc>/reference/predict.citocnn.html</loc></url>
+<url><loc>/reference/predict.citodnn.html</loc></url>
+<url><loc>/reference/predict.citommn.html</loc></url>
+<url><loc>/reference/print.citoarchitecture.html</loc></url>
+<url><loc>/reference/print.citocnn.html</loc></url>
+<url><loc>/reference/print.citodnn.html</loc></url>
+<url><loc>/reference/print.citommn.html</loc></url>
+<url><loc>/reference/print.conditionalEffects.html</loc></url>
+<url><loc>/reference/print.summary.citodnn.html</loc></url>
+<url><loc>/reference/residuals.citodnn.html</loc></url>
+<url><loc>/reference/simulate_shapes.html</loc></url>
+<url><loc>/reference/sumTerms.html</loc></url>
+<url><loc>/reference/summary.citocnn.html</loc></url>
+<url><loc>/reference/summary.citodnn.html</loc></url>
+<url><loc>/reference/summary.citommn.html</loc></url>
+<url><loc>/reference/transfer.html</loc></url>
+<url><loc>/reference/tune.html</loc></url>
 </urlset>
+

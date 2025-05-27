@@ -30,5 +30,9 @@ knitr::knit("D-Advanced_custom_loss_functions.Rmd.orig",
             output = "D-Advanced_custom_loss_functions.Rmd"
 )
 
+knitr::knit("E-CNN_and_MMN.Rmd.orig",
+            output = "E-CNN_and_MMN.Rmd"
+)
+
 
 pkgdown::build_site()

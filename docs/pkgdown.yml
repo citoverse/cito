@@ -1,10 +1,10 @@
-pandoc: 3.1.1
-pkgdown: 2.0.7
+pandoc: '3.2'
+pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   A-Introduction_to_cito: A-Introduction_to_cito.html
   B-Training_neural_networks: B-Training_neural_networks.html
   C-Example_Species_distribution_modeling: C-Example_Species_distribution_modeling.html
   D-Advanced_custom_loss_functions: D-Advanced_custom_loss_functions.html
-last_built: 2024-03-16T13:31Z
-
+  E-CNN_and_MMN: E-CNN_and_MMN.html
+last_built: 2025-05-27T13:36Z

@@ -132,7 +132,7 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
 get_optimizer <- function(optimizer, lr, parameters){
 
   if(!inherits(optimizer, "cito_optim")){
-    optimizer <- match.arg(tolower(optimizer), choices =  c("sgd", "adam","adadelta", "adagrad", "rmsprop", "rprop"))
+    optimizer <- match.arg(tolower(optimizer), choices =  c("sgd", "adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"))
 
     optim <- switch(optimizer,
                     "adam"= torch::optim_adam(params= parameters, lr=lr),
@@ -141,6 +141,7 @@ get_optimizer <- function(optimizer, lr, parameters){
                     "rmsprop"  = torch::optim_rmsprop(params= parameters, lr=lr),
                     "rprop" = torch::optim_rprop(params= parameters, lr=lr),
                     "sgd" = torch::optim_sgd(params= parameters, lr=lr),
+                    'ignite_adam' = torch::optim_ignite_adam(params = parameters, lr = lr),
                     stop(paste0("optimizer = ",optimizer," is not supported, choose between adam, adadelta, adagrad, rmsprop, rprop or sgd")))
 
   }else{

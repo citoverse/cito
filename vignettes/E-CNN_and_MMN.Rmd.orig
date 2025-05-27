@@ -1,0 +1,331 @@
+---
+title: "Convultions neural networks and Multi modal neural networks"
+author: "Maximilian Pichler"
+date: "`r Sys.Date()`"
+abstract: "This vignette demonstrates the use of CITO for complex data (CNN) and a mixture of complex and tabular data (MMN). CNN can be used for various tasks, such as image classification ('Is this image a dog or a cat?') and ecological tasks, such as multi-deep species distribution models (deepSDM), where the input could be an environmental time series or remote sensing data and the goal is to predict species occurrences. MMN extends CNN by combining complex data, such as satellite images, and tabular data, such as environmental or spatial information. Furthermore, MMN can combine complex data of different dimensions and scales (e.g. LiDAR 3D inputs and coloured 2D optical satellite images). This vignette explains how to prepare the data and suggests an example project structure."
+output:
+ rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 4
+    html_document:
+      toc: true
+      theme: cerulean
+vignette: >
+  %\VignetteIndexEntry{Convultions neural networks and Multi modal neural networks}
+  %\VignetteEncoding{UTF-8}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  #dpi=32,
+  #out.width="400px",
+  fig.cap = "",
+  fig.align="center",
+  fig.path = 'E/E-'
+)
+options("progress_enabled" = FALSE)
+
+```
+
+## Data Preparation of complex data
+
+In Cito, the workflow for preparing complex data for Convolutional Neural Networks (CNNs) and Multimodal Neural Networks (MMNs) is the same. The only difference is that MMNs can process multiple data types simultaneously (see the 'MMN' section below).
+
+Before we dive into the details, let's clarify how we represent different types of complex data in R using multidimensional arrays:
+
+- Black/white image: $[height, width]$ with height/width being the number of pixels
+- Colored images: $[3, height, width]$ 3 channels for the three colors
+- LiDAR point clouds: $[x, y, z]$
+- Environmental time series (can be also represented by an "image"): $[\text{time_steps}, \text{n_covariates}]$
+
+Note: Cito currently supports up to three-dimensional inputs (excluding the sample dimension). Four-dimensional arrays, such as temporal RGB sequences $[3, height, width, time_steps]$, are not yet supported. Please contact us if you need support for 4D inputs.
+
+### The format of the inputs we expect in cito
+
+The `cnn()` and `mmn()` functions both expect their X argument to be a single array, with the first dimension indexing samples. The subsequent dimensions then correspond to the data structure of each sample. Specifically:
+
+- Grayscale images: $[\text{n_samples}, height, width]$
+- RGB images: $[\text{n_samples}, 3, height, width]$
+- LiDAR point clouds: $[\text{n_samples}, x, y, z]$
+- Time series data: $[\text{n_samples}, time_steps, n_covariates]$
+
+It is crucial that the order of samples in X matches the order of observations in your response (target) vector (or matrix for multiple response) y.
+
+Ultimately, the only requirement for cito is that it has these multidimensional arrays as inputs. Please note that there are several ways in which we can build them; the following workflow is just one example.
+
+
+### 1. Preparing your data on disk
+Although images can be saved in different formats, we recommend using formats for which an R function or R package is available to allow you to load the images into R.
+
+Grayscale and RGB images should be saved as `.png` or `.jpeg`. Time series data can technically be interpreted as grayscale images and should therefore also be saved as `.png` or `.jpeg`.
+
+However, LiDAR point clouds and/or other remote sensing data have more 'channels' (ofc, they do not have channels at all) than grayscale or RGB images and cannot therefore be saved as `.png` or `.jpeg`. Classical formats for saving such data are `.tiff` (GeoTiff) and `.nc` (netCDF).
+
+We recommend saving each image individually to your hard drive and using a naming strategy that allows the observation ID to be inferred from the image name. Here is an example:
+
+```
+project/
+├── data/
+│   ├── RGBimages/
+│   │   ├── 001-img.jpeg
+│   │   ├── 002-img.jpeg
+│   │   ├── 003-img.jpeg
+│   │   ├── 004-img.jpeg
+│   │   └── ...
+│   ├── LiDAR/
+│   │   ├── 001-LiDAR.tiff
+│   │   ├── 002-LiDAR.tiff
+│   │   ├── 003-LiDAR.tiff
+│   │   ├── 004-LiDAR.tiff
+│   │   └── ...
+│   └── Response/
+│       └── Y.csv
+└── code/
+    ├── 01-CNN.R
+    └── 02-MMN.R
+```
+
+
+### 2. Load images into R
+
+Before we can run/train cito, we must load the images into R, transform them into arrays, and concatenate the individual images of one input type into one array.
+
+- Reading `.jpeg` files: This can be done either using the `imager` package via `as.array(imager::load.image("path-to-img.jpeg")))` or using the `torchvision` package (dependency of cito) via `torchvision::base_loader("path-to-img.jpeg")`
+- Reading `.png` files: This can be done using the `torchvision` package (dependency of cito) via `torchvision::base_loader("path-to-img.jpeg")`
+- Reading `.tiff` files:  `tiff::readTIFF("path-to-img.tiff")`
+- Reading `.tiff` (GeoTIFF) files: `as.array(raster::brick("path-to-img.tiff"))`
+- Reading `.nc` (netCDF) files: `ncdf4::ncvar_get(ncdf4::nc_open("path-to-img.nc"))`
+
+Loop to read images into R:
+
+First data type:
+```{r,eval=FALSE}
+RGBimages_files = list.files(path = "RGBimages/", full.names = TRUE)
+RGBimages = vector("list", length(RGBimages_files))
+
+for(i in 1:length(RGBimages_files)) {
+  RGBimages[[i]] = torchvision::base_loader(RGBimages_files[i])
+}
+
+```
+
+Second data type:
+```{r,eval=FALSE}
+LiDAR_files = list.files(path = "LiDAR/", full.names = TRUE)
+LiDAR = vector("list", length(RGBimages_files))
+
+for(i in 1:length(LiDAR_files)) {
+  LiDAR[[i]] = torchvision::base_loader(LiDAR_files[i])
+}
+
+```
+
+Change list of arrays into one array:
+```{r,eval=FALSE}
+RGBimages = abind::abind(RGBimages, along = -1)
+LiDAR = abind::abind(LiDAR, along = -1)
+```
+
+### 3. Normalize and check channel dimension
+Deep Neural Networks converge better when the inputs are normalized/standardized, for complex data, we can divide them by their max value to bring the values into the range of $[0, 1]$
+
+```{r,eval=FALSE}
+RGBimages = RGBimages/max(RGBimages)
+LiDAR = LiDAR/max(LiDAR)
+```
+
+Also, cito expects the channel dimension for RGB images to be in the second dimension. For LiDAR, the question is which dimension should be treated as the channel dimension. The channel dimension is treated slightly differently in CNN, so I would propose setting the z dimension as the channel dimension. However, when we read images into R, the channel dimension is usually the last dimension. In Cito, though, it must be the second dimension. (Reminder: our dimensions for RGB are currently: $[n, height, width, 3]$)
+
+```{r,eval=FALSE}
+RGBimages = aperm(RGBimages, c(1, 4, 2, 3)) # change order of dimensions
+LiDAR = aperm(LiDAR, c(1, 4, 2, 3))  # change order of dimensions
+```
+
+
+### 4. Prepare tabular data (response and other tabular data such as altitude and spatial coordinates)
+Read tabular data into R using the `read.csv` function. Predictors (e.g. spatial coordinates, altitude and climatic variables such as bioclim variables) should be standardised using the `scale` function.
+
+**Note:** there should be no missing values in the data! If you have 1,000 images and 1,000 response values with NAs, Cito/R will drop the NA observations in the response, meaning the number of observations will no longer match up. Of course, there should also be no NAs in the images!
+
+**Note:** The order of the tabular data (responses and predictors) should match the order of the images.
+
+
+## Convolutional neural networks
+
+We can setup the architecture of the CNN by using the `create_architecture` function. CNN usually consist of several convolutional layers, each layer followed by a pooling layer, and finally fully connected layers:
+
+```{r, eval=FALSE}
+architecture <- create_architecture(conv(5), # convolutional layer with 5 kernels
+                                    maxPool(),  # max pooling layer to reduce the dimension of the feature maps
+                                    conv(5), # convolutional layer with 5 kernels
+                                    maxPool(), # max pooling layer to reduce the dimension of the feature maps
+                                    linear(10)) # fully connected layer
+```
+
+The idea is that the convolutional layers learn to extract structures from the images such as shapes and edges. These structures are then presented to the fully connected layer that is then doing the actual classification or regression.
+
+Finding a good architecture can require a lot of experience and knowledge of CNNs. As an alternative, we recommend using transfer learning, which is also state of the art. Rather than training our own convolutional layers, we use a pre-trained CNN (usually trained on a large dataset with hundreds or thousands of response categories) and only train the final fully connected layer. It has been found that the convolutional layers often learn the same things, so there is no need to retrain them each time. This saves a lot of computational runtime, but more importantly, we don't need as much training data because we only have to train a small part of our model:
+
+```{r, eval=FALSE}
+architecture <- create_architecture(transfer("resnet18"), # use pretrained resnet18 architecture
+                                    linear(100)) # our fully connnected layer
+
+```
+
+Also, with that, we don't have to think about our own architecture!
+
+Finally we can fit our model:
+```{r, eval=FALSE}
+model <- cnn(X = LiDAR, Y, architecture, loss = "binomial",
+              epochs = 10, validation = 0.1, lr = 0.05, device=device)
+
+```
+
+Note:
+
+1. The format of Y depends on the loss and your task.
+2. Be aware of convergence issues; the loss should be higher than the baseline loss.
+3. Use the validation split to monitor overfitting; training can be cancelled automatically based on the validation loss using early stopping.
+
+All of these points are described in the [Introduction to cito vignette](https://cran.r-project.org/web/packages/cito/vignettes/A-Introduction_to_cito.html) and apply to the `dnn()` and `cnn()` functions.
+
+When the model is trained, we can make predictions via the `predict` method:
+
+```{r, eval=FALSE}
+pred = predict(model, LiDAR) # by default predictions will be on the scale of the link (so no probabilities)
+pred_proba = predict(model, LiDAR, type = "response") # change type to get probabilities
+```
+
+Model can be visualized via `plot(model)`
+
+
+## Multi-modal neural networks
+Multi-modal neural networks (MMNs) are useful when:
+
+- There are different input data types, e.g. when combining LiDAR and optical satellite images (RGB images), or when combining LiDAR with tabular data (e.g. bioclimatic variables).
+- You want to combine different resolutions of the same input data type
+- Or both of the above
+
+Each complex input data must be passed within its own multidimensional array and its own architecture:
+
+```{r, eval=FALSE}
+architecture_LiDAR <- create_architecture(transfer("resnet18"))
+architecture_RGBimages <- create_architecture(transfer("resnet18"))
+
+model =
+  mmn(df$Y ~
+      cnn(X = LiDAR, architecture = architecture_LiDAR) +
+      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      dnn(~Temp+Precip, data = df),
+      loss = 'binomial',
+      optimizer = "adam")
+
+```
+
+**Important:** Tabular data must be within one data.frame, so here, the response variable `Y` is in the same data.frame as `Temp` and `Precip`!
+
+For multiple responses:
+
+```{r, eval=FALSE}
+model =
+  mmn(cbind(df$Y1, df$Y2, df$Y3) ~
+      cnn(X = LiDAR, architecture = architecture_LiDAR) +
+      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      dnn(~Temp+Precip, data = df),
+      loss = 'binomial',
+      optimizer = "adam")
+```
+
+Newdata must be passed as list to the predict function. The datasets must have the same order as the model components in the mmn:
+
+```{r,eval=FALSE}
+predict(model, newdata = list(LiDAR, RGBimages, df), type = "response")
+```
+
+
+Multiple different responses with different losses:
+
+```{r,eval=FALSE}
+
+custom_joint_loss = function(pred, true) {
+
+  # first loss, e.g. binomial -> negative loglikelihood
+  loss1 = -torch::distr_bernoulli(logits = torch_sigmoid(pred[,1]))$log_prob(true[,1])$mean()
+
+  # second loss, e.g. mse
+  loss2 = torch::nnf_mse_loss(pred[,2], true[,2])
+
+  # third loss, e.g. poisson
+  loss3 = -torch::distr_poisson(pred[,3]$exp())$log_prob(true[,3])$mean()
+
+  # return joint loss
+  return(loss1 + loss2 + loss3)
+}
+
+model =
+  mmn(cbind(df$Y1, df$Y2, df$Y3) ~
+      cnn(X = LiDAR, architecture = architecture_LiDAR) +
+      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      dnn(~Temp+Precip, data = df),
+      loss = custom_joint_loss,
+      epochs = 5L,
+      optimizer = "adam")
+```
+
+As cito now lacks the inverse link functions, we have to apply them to the predictions ourselves:
+
+```{r}
+pred = predict(model, newdata = list(LiDAR, RGBimages, df))
+pred[,1] = plogis(pred[,1])
+pred[,3] = exp(pred[,3])
+```
+
+Note:
+
+1. The format of Y depends on the loss and your task.
+2. Be aware of convergence issues; the loss should be higher than the baseline loss.
+3. Use the validation split to monitor overfitting; training can be cancelled automatically based on the validation loss using early stopping.
+
+All of these points are described in the [Introduction to cito vignette](https://cran.r-project.org/web/packages/cito/vignettes/A-Introduction_to_cito.html) and apply to the `dnn()` and `cnn()` functions.
+
+
+## Computational Considerations and Constraints
+
+When working with convolutional neural networks (CNNs) and multimodal networks (MMNs), two critical computational factors are memory (RAM) and GPU availability.
+
+### 1. GPU Requirements
+
+CNNs benefit significantly from GPU acceleration:
+
+- **Speed**: Training on a GPU is orders of magnitude faster than on a CPU.
+- **Memory**: Due to the intensive tensor operations, we recommend a GPU with at least **12 GB** of VRAM to handle typical batch sizes (e.g., `batch_size = 20`).
+
+### 2. System Memory (RAM)
+
+Currently, all images must be loaded into a single R session:
+
+- This approach limits the number of observations by your available system RAM.
+- We are implementing data loaders to stream only mini-batches into memory.
+
+#### Example Calculation (500 observations)
+
+| Data Type                       | Dimensions             | Memory Usage           |
+|---------------------------------|------------------------|------------------------|
+| LiDAR volume                    | (500, 500, 500, 500)   | ~500 GB                |
+| Optical satellite images        | (500, 3, 500, 500)     | ~3 GB                  |
+| Tabular data                    | Negligible             | < 1 GB (ignored)       |
+| Model parameters (~2.24 M)      | —                      | < 0.1 GB (negligible)  |
+| **Total**                       |                        | **~503 GB**            |
+
+To run this dataset in a single R session you would need **~550 GB** of system RAM. By contrast, GPU memory is less constraining because only one batch is loaded at a time on the GPU. For `batch_size = 20`, a 12–14 GB GPU should suffice.
+
+---
+
+**Summary**: The primary bottleneck is system RAM on the CPU, not VRAM on the GPU. To scale further, consider on-the-fly data loaders or distributed training strategies to reduce memory footprint.
+
+
