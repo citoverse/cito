@@ -490,11 +490,8 @@ memory.</li>
 GB</strong> of system RAM. By contrast, GPU memory is less constraining
 because only one batch is loaded at a time on the GPU. For
 <code>batch_size = 20</code>, a 12–14 GB GPU should suffice.</p>
-<hr>
 <p><strong>Summary</strong>: The primary bottleneck is system RAM on the
-CPU, not VRAM on the GPU. To scale further, consider on-the-fly data
-loaders or distributed training strategies to reduce memory
-footprint.</p>
+CPU, not VRAM on the GPU.</p>
 </div>
 </div>
 </div>

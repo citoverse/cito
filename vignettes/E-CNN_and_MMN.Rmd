@@ -326,8 +326,7 @@ Currently, all images must be loaded into a single R session:
 
 To run this dataset in a single R session you would need **~550 GB** of system RAM. By contrast, GPU memory is less constraining because only one batch is loaded at a time on the GPU. For `batch_size = 20`, a 12–14 GB GPU should suffice.
 
----
 
-**Summary**: The primary bottleneck is system RAM on the CPU, not VRAM on the GPU. To scale further, consider on-the-fly data loaders or distributed training strategies to reduce memory footprint.
+**Summary**: The primary bottleneck is system RAM on the CPU, not VRAM on the GPU.
 
 
