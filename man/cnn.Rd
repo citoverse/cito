@@ -28,7 +28,7 @@ cnn(
 )
 }
 \arguments{
-\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions.}
+\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.}
 
 \item{Y}{The target data. It can be a factor, numeric vector, or a numeric or logical matrix.}
 

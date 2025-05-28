@@ -85,15 +85,51 @@ format_targets <- function(Y, loss_obj, ylvls=NULL) {
 }
 
 
-get_data_loader = function(..., batch_size=25L, shuffle=TRUE) {
+get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALSE) {
 
-  ds <- torch::tensor_dataset(...)
+  if(from_folder) ds = dataset_folder(...)
+  else ds <- torch::tensor_dataset(...)
 
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
 
   return(dl)
 }
 
+dataset_folder = torch::dataset(
+  initialize = function(...) {
+    self$inputs = list(...)
+  },
+  .getbatch = function(index) {
+
+    batch = lapply(self$inputs, function(x) {
+      if(inherits(x, "torch_tensor")) {
+        return(x[index])
+      } else {
+        if(any(grepl(".png", x)) | any(grepl(".jpeg", x))) {
+          X = lapply(x[index], function(p) torch::torch_tensor(torchvision::base_loader(p), torch::torch_float32() )$unsqueeze(1L) )
+        }
+        if(any(grepl(".tiff", x))) {
+          X = lapply(x[index], function(p) torch::torch_tensor( tiff::readTIFF(x), torch::torch_float32() )$unsqueeze(1L) )
+        }
+        X = torch::torch_cat(X, dim = 1L)/255.
+        X = X$permute(c(1, 4, 2, 3))
+        return(X)
+      }
+    })
+    return(batch)
+  },
+  .length = function() {
+    # this class is only used when there is at least one folder/paths...search for it an use it to infer the length
+    for(x in self$inputs) {
+      if(any(is.character(x))) return(length(x))
+    }
+  }
+)
+
+# ds = do.call(dataset_folder, list(list.files(path = "test_folder/", full.names = T), torch_rand(1000), torch_rand(1000, 20, 10)))
+# DL = torch::dataloader(ds, batch_size = 20, shuffle = TRUE)
+# k = coro::collect(DL, 1)
+# k
 
 #' Multinomial log likelihood
 #'

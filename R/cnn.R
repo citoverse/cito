@@ -2,7 +2,7 @@
 #'
 #' This function trains a Convolutional Neural Network (CNN) on the provided input data `X` and the target data `Y` using the specified architecture, loss function, and optimizer.
 #'
-#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions.
+#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
 #' @param loss The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
@@ -149,7 +149,7 @@ cnn <- function(X,
                 verbose = TRUE) {
 
   #Data
-  checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5))
+  checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5), checkmate::check_character(X))
   checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
                     checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"),
                     checkmate::checkNull(Y))
@@ -174,7 +174,14 @@ cnn <- function(X,
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
 
-    input_shape <- dim(X)[-1]
+    # TODO: X handling at the beginning, Y at the end (MAX)
+    if(is.character(X)) {
+      X = list.files(X, full.names = TRUE)
+      ds = get_data_loader(X, batch_size = 1L, shuffle = FALSE, from_folder = TRUE)
+      input_shape = dim(ds$dataset$.getbatch(1)[[1]])[-1]
+    } else {
+      input_shape <- dim(X)[-1]
+    }
 
     architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
@@ -205,7 +212,7 @@ cnn <- function(X,
   device_old <- device
   device <- check_device(device)
 
-  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
+  loss_obj <- get_loss(loss, device = device, X = X, Y = Y) # why do we need X in get_loss??
   if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
   if(!is.null(custom_parameters)){
     if(!inherits(custom_parameters,"list")){
@@ -216,7 +223,7 @@ cnn <- function(X,
     }
   }
 
-  old_X <- X
+  old_X <- X # save folder and not paths!
   old_Y <- Y
   targets <- format_targets(Y, loss_obj)
   Y <- targets$Y
@@ -224,25 +231,40 @@ cnn <- function(X,
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
 
-  X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+  from_folder = FALSE
+
+  if(is.character(X)) {
+    X = list.files(X, full.names = TRUE)
+    from_folder = TRUE
+  } else {
+    X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+  }
 
   loss.fkt <- loss_obj$loss
   if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
   base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y$to(device = device))$mean()$cpu())
 
   if(validation != 0) {
-    n_samples <- dim(X)[1]
+    if(is.character(X)) n_samples <- length(X)
+    else n_samples <- dim(X)[1]
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle)
+
+    if(from_folder) {
+      # X will be the list of img files!
+      train_dl <- get_data_loader(X[train], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+      valid_dl <- get_data_loader(X[valid], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+    } else {
+      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+    }
   } else {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle)
+    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
     valid_dl <- NULL
   }
 
-  input_shape <- dim(X)[-1]
-
+  # TODO infer form the train_dl!
+  input_shape <- dim(train_dl$dataset$.getbatch(1)[[1]])[-1] #dim(X)[-1]
   architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
 
@@ -319,7 +341,7 @@ predict.citocnn <- function(object,
                             device = NULL,
                             batchsize = NULL, ...) {
 
-  checkmate::assert(checkmate::checkNull(newdata),
+  checkmate::assert(checkmate::checkNull(newdata),checkmate::checkCharacter(newdata),
                     checkmate::checkArray(newdata, min.d = 3, max.d = 5))
 
   object <- check_model(object)
@@ -340,15 +362,28 @@ predict.citocnn <- function(object,
 
   object$net$to(device = device)
 
+  from_folder = FALSE
+
+
   if(is.null(newdata)){
-    newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
+    if(is.character(object$data$X)) {
+      newdata = list.files(object$data$X, full.names = TRUE)
+      from_folder = TRUE
+    } else {
+      newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
+    }
+  } else if(is.character(newdata)) {
+    newdata = list.files(newdata, full.names = TRUE)
+    from_folder = TRUE
+  } else if(is.array(newdata) & is.character(object$data$X)) {
+    message("Be aware of potential dimension mismatches. Dimensions cannot be checked because the data folder was used during training.")
+    newdata = torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
-
-  dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE)
+  dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE, from_folder = from_folder)
 
   pred <- NULL
   coro::loop(for(b in dl) {

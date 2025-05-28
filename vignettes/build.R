@@ -34,5 +34,6 @@ knitr::knit("E-CNN_and_MMN.Rmd.orig",
             output = "E-CNN_and_MMN.Rmd"
 )
 
+setwd("../")
 
 pkgdown::build_site()

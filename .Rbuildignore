@@ -15,3 +15,4 @@
 ^pkgdown$
 ^_rest$
 tests/testthat/Rplots.pdf
+^test_folder$

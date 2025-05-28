@@ -16,7 +16,7 @@ dnn(
   validation = 0,
   lambda = 0,
   alpha = 0.5,
-  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
   batchsize = NULL,
   burnin = Inf,

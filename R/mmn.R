@@ -103,8 +103,16 @@ mmn <- function(formula,
   if(length(formula) == 2) stop("Incorrect formula '", deparse(formula), "': response (left side of ~) missing")
 
   Y <- eval(formula[[2]], envir = dataList)
+
+  from_folder = FALSE
+
   X <- format_input_data(formula[[3]], dataList)
-  X <- lapply(X, torch::torch_tensor, dtype=torch::torch_float32())
+  X <- lapply(X, function(x) {
+    if(is.character(x)) x = list.files(x, full.names = TRUE)
+    else x = torch::torch_tensor(x, dtype=torch::torch_float32() )
+    return(x)
+    })
+  if(any(sapply(X, is.character))) from_folder = TRUE
 
   targets <- format_targets(Y, loss_obj)
   Y_torch <- targets$Y
@@ -120,10 +128,10 @@ mmn <- function(formula,
     n_samples <- dim(Y_torch)[1]
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle)))
-    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle)))
+    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
+    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
   } else {
-    train_dl <- do.call(get_data_loader, append(X, list(Y_torch, batch_size = batchsize, shuffle = shuffle)))
+    train_dl <- do.call(get_data_loader, append(X, list(Y_torch, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
     valid_dl <- NULL
   }
 
@@ -178,18 +186,31 @@ mmn <- function(formula,
   return(out)
 }
 
-#' Predict from a fitted mmn model
+#' Predict with a fitted MMN model
+#'
+#' This function generates predictions from a Multi-Modal Neural Network (MMN) model that was created using the \code{\link{mmn}} function.
 #'
 #' @param object a model created by \code{\link{mmn}}
-#' @param newdata new data for predictions
-#' @param type which value should be calculated, either raw response, output of link function or predicted class (in case of classification)
-#' @param device device on which network should be trained on.
-#' @param ... additional arguments
-#' @return prediction matrix
+#' @param newdata A list containing the new data for which predictions are to be made. The dimensions of the elements in \code{newdata} should match those of the training data, except for the respective first dimensions which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.
+#' @param type A character string specifying the type of prediction to be made. Options are:
+#' \itemize{
+#'   \item \code{"link"}: Scale of the linear predictor.
+#'   \item \code{"response"}: Scale of the response.
+#'   \item \code{"class"}: The predicted class labels (for classification tasks).
+#' }
+#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.
+#' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
+#' @param ... Additional arguments (currently not used).
+#' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 #'
+#' @example /inst/examples/predict.citommn-example.R
 #' @export
-predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "class"), device = c("cpu","cuda", "mps"), ...) {
-
+predict.citommn <- function(object,
+                            newdata = NULL,
+                            type=c("link", "response", "class"),
+                            device = NULL,
+                            batchsize = NULL,
+                            ...) {
   checkmate::assert(checkmate::checkNull(newdata),
                     checkmate::checkList(newdata))
 
@@ -197,15 +218,16 @@ predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "
 
   type <- match.arg(type)
 
-  device <- match.arg(device)
+  if(is.null(device)) device <- object$device
+  device <- check_device(device)
 
-  if(type %in% c("link", "class")) {
+  if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
+
+  if(type %in% c("response", "class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
   }
-
-  device <- check_device(device)
 
   object$net$to(device = device)
 
@@ -216,10 +238,23 @@ predict.citommn <- function(object, newdata = NULL, type=c("link", "response", "
   } else {
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
+  from_folder = FALSE
+  newdata <- lapply(newdata, function(x) {
+    if(is.character(x)) x = list.files(x, full.names = TRUE)
+    else x = torch::torch_tensor(x, dtype=torch::torch_float32() )
+    return(x)
+  })
+  if(any(sapply(newdata, is.character))) from_folder = TRUE
 
-  newdata <- lapply(newdata, torch::torch_tensor, dtype=torch::torch_float32())
+  ### No dataloader?!
+  dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE, from_folder=from_folder)))
 
-  pred <- torch::as_array(link(object$net(newdata))$to(device="cpu"))
+  pred <- NULL
+  coro::loop(for(b in dl) {
+    b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
+    if(is.null(pred)) pred <- torch::as_array(link(object$net(b))$to(device="cpu"))
+    else pred <- rbind(pred, torch::as_array(link(object$net(b))$to(device="cpu")))
+  })
 
   if(!is.null(object$data$ylvls)) {
     colnames(pred) <- object$data$ylvls
@@ -303,7 +338,6 @@ format_input_data <- function(formula, dataList) {
 }
 
 get_model_properties <- function(formula, dataList) {
-
   inner <- function(term, model_properties) {
     if(term[[1]] == "+") {
       model_properties <- inner(term[[2]], model_properties)

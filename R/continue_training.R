@@ -155,10 +155,15 @@ continue_training.citocnn <- function(model,
   device <- check_device(device)
 
   if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL")
-  if(!is.null(X) && !all(dim(X)[-1] == dim(model$data$X)[-1])) stop(paste0("Wrong dimensions of X [",paste0(dim(X), collapse = ","),"]. Correct dimensions: [N,",paste0(dim(model$data$X)[-1]), "]"))
+  if(!is.character(X) | !is.character(model$data$X)) {
+    if(!is.null(X) && !all(dim(X)[-1] == dim(model$data$X)[-1])) stop(paste0("Wrong dimensions of X [",paste0(dim(X), collapse = ","),"]. Correct dimensions: [N,",paste0(dim(model$data$X)[-1]), "]"))
+    }
   if(!is.null(Y) && is.matrix(Y) && ncol(Y) != ncol(model$data$Y)) stop(paste0("Wrong dimensions of Y [",paste0(dim(Y), collapse = ","),"]. Correct dimensions: [N,",ncol(model$data$Y), "]"))
   if(!is.null(Y) && is.matrix(Y) && nrow(Y) != dim(X)[1]) stop(paste0("nrow(Y)=", nrow(Y), " has to be equal to dim(X)[1]=", dim(X)[1]))
-  if(!is.null(Y) && !is.matrix(Y) && length(Y) != dim(X)[1]) stop(paste0("length(Y)=", length(Y), " has to be equal to dim(X)[1]=", dim(X)[1]))
+
+  if(!is.character(X)) {
+    if(!is.null(Y) && !is.matrix(Y) && length(Y) != dim(X)[1]) stop(paste0("length(Y)=", length(Y), " has to be equal to dim(X)[1]=", dim(X)[1]))
+  }
 
   model<- check_model(model)
 
@@ -172,6 +177,9 @@ continue_training.citocnn <- function(model,
   }
 
   ### set dataloader  ###
+
+  from_folder = FALSE
+
   if(is.null(X)) X <- model$data$X
   if(is.null(Y)) Y <- model$data$Y
 
@@ -180,20 +188,43 @@ continue_training.citocnn <- function(model,
   y_dim <- targets$y_dim
   ylvls <- targets$ylvls
 
-  X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+  if(is.character(X)) {
+    X <- list.files(X, full.names = TRUE)
+    from_folder = TRUE
+  } else {
+    X <- torch::torch_tensor(X, dtype = torch::torch_float32())
+  }
 
 
   ### dataloader  ###
-  if(model$training_properties$validation != 0) {
-    n_samples <- dim(X)[1]
-    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
-    train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+
+  if(from_folder) {
+
+    if(model$training_properties$validation != 0) {
+      n_samples <- length(X)
+      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+      train <- c(1:n_samples)[-valid]
+      train_dl <- get_data_loader(X[train], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
+      valid_dl <- get_data_loader(X[valid], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
+    } else {
+      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
+      valid_dl <- NULL
+    }
+
   } else {
-    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    valid_dl <- NULL
+
+    if(model$training_properties$validation != 0) {
+      n_samples <- dim(X)[1]
+      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+      train <- c(1:n_samples)[-valid]
+      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    } else {
+      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- NULL
+    }
   }
+
 
 
   model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose, plot_new = TRUE, init_optimizer = init_optimizer)
