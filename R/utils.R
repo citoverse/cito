@@ -136,7 +136,7 @@ multinomial_log_prob = function(probs, value) {
 #
 # }
 
-get_loss_new <- function(loss, Y, device) {
+get_loss_new <- function(loss, Y) {
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)
   if(!inherits(loss, "family") & is.character(loss)) {
@@ -147,118 +147,9 @@ get_loss_new <- function(loss, Y, device) {
                    loss)
   }
 
-  if(loss=="cross-entropy") {
-    loss_cross_entropy <- torch::nn_module(
-      classname = "cross-entropy loss",
-      initialize = function(Y) {
-        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
-                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
-
-        if(is.factor(Y)) {
-          if(length(levels(Y)) != length(unique(Y))) warning("The provided factor containing the labels has levels with zero occurences. Make sure this is intended, as for each level a node in the output layer will be created.")
-        } else {
-          Y <- factor(Y)
-        }
-
-        self$responses <- levels(Y)
-        self$y_dim <- length(levels(Y))
-
-        # prop <- as.vector(table(Y)/sum(table(Y)))
-        # Y_base <- torch::torch_tensor(matrix(prop, nrow = length(Y), ncol = length(levels(Y)), byrow = TRUE), dtype = torch::torch_float32())
-        # Y_torch <- torch::torch_tensor(as.matrix(as.integer(Y), ncol=1L), dtype = torch::torch_long())
-        # self$baseloss <- self$forward(Y_base, Y_torch)
-      },
-      forward = function(pred, true) {
-        torch::nnf_cross_entropy(input = pred, target = true$squeeze(dim = 2), reduction = "none")
-      },
-      link = function(x) {log(x) + log(ncol(x))},
-      invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
-      format_Y = function(Y) {
-        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
-                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
-        Y <- factor(Y, self$responses)
-        if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
-                          If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
-        return(torch::torch_tensor(as.matrix(as.integer(Y), ncol=1L), dtype = torch::torch_long()))
-      }
-    )
-  } else if(loss=="mse") {
-    loss_mse <- torch::nn_module(
-      classname = "mean squared error loss",
-      initialize = function(Y) {
-        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
-                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
-
-        if(is.vector(Y)) {
-          self$y_dim <- 1
-          self$responses <- NULL
-        } else {
-          self$y_dim <- ncol(Y)
-          self$responses <- colnames(Y)
-        }
-      },
-      forward = function(pred, true) {
-        torch::nnf_mse_loss(input = pred, target = true, reduction = "none")
-      },
-      link = function(x) {x},
-      invlink = function(x) {x},
-      format_Y = function(Y) {
-        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
-                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
-
-        Y <- as.matrix(Y)
-        if(self$y_dim != ncol(Y)) {
-          if (self$y_dim == 1) stop("Wrong dimension of provided target data. Model expects target data to be provided as a numerical vector or numerical matrix/data.frame with 1 column.")
-          else stop(paste0("Wrong dimension of provided target data. Model expects target data to be provided as a numerical matrix/data.frame with ",self$y_dim," columns."))
-        }
-
-        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
-      }
-    )
-  } else if(loss=="mae") {
-    loss_mse <- torch::nn_module(
-      classname = "mean absolute error loss",
-      initialize = function(Y) {
-        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
-                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
-
-        if(is.vector(Y)) {
-          self$y_dim <- 1
-          self$responses <- NULL
-        } else {
-          self$y_dim <- ncol(Y)
-          self$responses <- colnames(Y)
-        }
-      },
-      forward = function(pred, true) {
-        torch::nnf_l1_loss(input = pred, target = true, reduction = "none")
-      },
-      link = function(x) {x},
-      invlink = function(x) {x},
-      format_Y = function(Y) {
-        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
-                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
-
-        Y <- as.matrix(Y)
-        if(self$y_dim != ncol(Y)) {
-          if (self$y_dim == 1) stop("Wrong dimension of provided target data. Model expects target data to be provided as a numerical vector or numerical matrix/data.frame with 1 column.")
-          else stop(paste0("Wrong dimension of provided target data. Model expects target data to be provided as a numerical matrix/data.frame with ",self$y_dim," columns."))
-        }
-
-        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
-      }
-    )
-  } else if(inherits(loss, "family")) {
+  if(inherits(loss, "family")) {
     if(loss$family == "gaussian") {
-      loss_gaussian <- torch::nn_module(
+      create_loss <- torch::nn_module(
         classname = "gaussian loss",
         initialize = function(Y) {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
@@ -281,7 +172,7 @@ get_loss_new <- function(loss, Y, device) {
 
         },
         forward = function(pred, true) {
-          torch::distr_normal(self$invlink(pred), torch::torch_clamp(self$parameter, 0.0001, 20))$log_prob(true)$negative()
+          return(torch::distr_normal(self$invlink(pred), torch::torch_clamp(self$parameter, 0.0001, 20))$log_prob(true)$negative())
         },
         format_Y = function(Y) {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
@@ -298,7 +189,7 @@ get_loss_new <- function(loss, Y, device) {
         }
       )
     } else if(loss$family == "poisson") {
-      loss_poisson <- torch::nn_module(
+      create_loss <- torch::nn_module(
         classname = "poisson loss",
         initialize = function(Y) {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
@@ -318,12 +209,12 @@ get_loss_new <- function(loss, Y, device) {
             self$invlink = function(x) {x}
           } else {
             if(loss$link != "log") warning(paste0("Link '", loss$link, "' is not implemented for poisson loss, yet. Using 'log' link instead."))
-            self$link <- function(x) log(x)
-            self$invlink <- function(x) torch::torch_exp(x)
+            self$link = function(x) {log(x)}
+            self$invlink = function(x) {torch::torch_exp(x)}
           }
         },
         forward = function(pred, true) {
-          torch::distr_poisson(self$invlink(pred))$log_prob(true)$negative()
+          return(torch::distr_poisson(self$invlink(pred))$log_prob(true)$negative())
         },
         format_Y = function(Y) {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
@@ -340,7 +231,7 @@ get_loss_new <- function(loss, Y, device) {
         }
       )
     } else if(loss$family == "binomial") {
-      loss_binomial <- torch::nn_module(
+      create_loss <- torch::nn_module(
         classname = "binomial loss",
         initialize = function(Y) {
           checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
@@ -363,15 +254,16 @@ get_loss_new <- function(loss, Y, device) {
           }
 
           self$y_dim = 1
-          self$responses = NULL
+          if(is.null(self$control_level)) self$responses <- "p(success)"
+          else self$responses <- paste0("p(NOT ", self$control_level, ")")
 
           if(loss$link == "probit")  {
-            self$link <- function(x) stats::binomial("probit")$linkfun(as.matrix(x))
-            self$invlink <- function(x) torch::torch_sigmoid(x*1.7012)
+            self$link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())}
+            self$invlink = function(x) {torch::torch_sigmoid(x*1.7012)}
           } else {
             if(loss$link != "logit") warning(paste0("Link '", loss$link, "' is not implemented for binomial loss, yet. Using 'logit' link instead."))
-            self$link <- function(x) stats::binomial("logit")$linkfun(as.matrix(x))
-            self$invlink <- function(x) torch::torch_sigmoid(x)
+            self$link = function(x) {torch::torch_tensor(stats::binomial("logit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())}
+            self$invlink = function(x) {torch::torch_sigmoid(x)}
           }
         },
         forward = function(pred, true) {
@@ -381,7 +273,7 @@ get_loss_new <- function(loss, Y, device) {
           p = self$invlink(pred)
 
           nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(s + 1) + torch::torch_lgamma(f + 1) - s * torch::torch_log(p) - f * torch::torch_log(1 - p)
-          nll = nll/n # normalize
+          # nll = nll/n # normalize
           return(nll)
         },
         format_Y = function(Y) {
@@ -404,10 +296,345 @@ get_loss_new <- function(loss, Y, device) {
     } else {
       stop(paste0("Family '", loss$family,"' not supported."))
     }
-  } else if (loss == "multinomial") {
+  } else if(loss=="cross-entropy") {
+    create_loss <- torch::nn_module(
+      classname = "cross-entropy loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
 
+        if(is.factor(Y)) {
+          if(length(levels(Y)) != length(unique(Y))) warning("The provided factor containing the labels has levels with zero occurences. Make sure this is intended, as for each level a node in the output layer will be created.")
+        } else {
+          Y <- factor(Y)
+        }
+
+        self$responses <- levels(Y)
+        self$y_dim <- length(levels(Y))
+
+        # prop <- as.vector(table(Y)/sum(table(Y)))
+        # Y_base <- torch::torch_tensor(matrix(prop, nrow = length(Y), ncol = length(levels(Y)), byrow = TRUE), dtype = torch::torch_float32())
+        # Y_torch <- torch::torch_tensor(as.matrix(as.integer(Y), ncol=1L), dtype = torch::torch_long())
+        # self$baseloss <- self$forward(Y_base, Y_torch)
+      },
+      forward = function(pred, true) {
+        return(torch::nnf_cross_entropy(input = pred, target = true, reduction = "none"))
+      },
+      link = function(x) {log(x) + log(ncol(x))},
+      invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
+        Y <- factor(Y, self$responses)
+        if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
+                          If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
+        return(torch::torch_tensor(as.integer(Y), dtype = torch::torch_long()))
+      }
+    )
+  } else if(loss=="mse") {
+    create_loss <- torch::nn_module(
+      classname = "mean squared error loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        if(is.vector(Y)) {
+          self$y_dim <- 1
+          self$responses <- NULL
+        } else {
+          self$y_dim <- ncol(Y)
+          self$responses <- colnames(Y)
+        }
+      },
+      forward = function(pred, true) {
+        return(torch::nnf_mse_loss(input = pred, target = true, reduction = "none"))
+      },
+      link = function(x) {x},
+      invlink = function(x) {x},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        Y <- as.matrix(Y)
+        if(self$y_dim != ncol(Y)) {
+          if (self$y_dim == 1) stop("Wrong dimension of provided target data. Model expects target data to be provided as a numerical vector or numerical matrix/data.frame with 1 column.")
+          else stop(paste0("Wrong dimension of provided target data. Model expects target data to be provided as a numerical matrix/data.frame with ",self$y_dim," columns."))
+        }
+
+        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+      }
+    )
+  } else if(loss=="mae") {
+    create_loss <- torch::nn_module(
+      classname = "mean absolute error loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        if(is.vector(Y)) {
+          self$y_dim <- 1
+          self$responses <- NULL
+        } else {
+          self$y_dim <- ncol(Y)
+          self$responses <- colnames(Y)
+        }
+      },
+      forward = function(pred, true) {
+        return(torch::nnf_l1_loss(input = pred, target = true, reduction = "none"))
+      },
+      link = function(x) {x},
+      invlink = function(x) {x},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        Y <- as.matrix(Y)
+        if(self$y_dim != ncol(Y)) {
+          if (self$y_dim == 1) stop("Wrong dimension of provided target data. Model expects target data to be provided as a numerical vector or numerical matrix/data.frame with 1 column.")
+          else stop(paste0("Wrong dimension of provided target data. Model expects target data to be provided as a numerical matrix/data.frame with ",self$y_dim," columns."))
+        }
+
+        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+      }
+    )
+  } else if(loss == "multinomial") {
+    create_loss <- torch::nn_module(
+      classname = "multinomial loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        if(is.factor(Y)) {
+          self$responses <- levels(Y)
+        } else if(is.vector(Y)) {
+          self$responses <- levels(factor(Y))
+        } else if(is.matrix(Y)) {
+          if(is.character(Y)) self$responses <- levels(factor(Y))
+          else self$responses <- colnames(Y)
+        } else if(is.data.frame(Y)) {
+          if(is.character(Y[,1])) self$responses <- levels(factor(Y[,1]))
+          else self$responses <- colnames(Y)
+        }
+
+        if(is.null(self$responses)) self$y_dim <- ncol(Y)
+        else self$y_dim <- length(responses)
+      },
+      forward = function(pred, true) {
+        n = torch::torch_sum(true, 2)
+        p = torch::nnf_softmax(pred, dim = 2)
+        log_p = torch::torch_log(p)
+        log_p[true == 0 & log_p == -Inf] = 0
+
+        nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(true + 1)$sum(2) - (log_p * true)$sum(2)
+        #nll = nll/n # normalize
+        return(nll)
+      },
+      link = function(x) {log(x) + log(ncol(x))},
+      invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
+          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          if(!all(Y %in% self$responses)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
+                                                If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
+          Y <- factor(Y, levels = self$responses)
+          return(torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32()))
+
+        } else {
+          if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
+            return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
+          } else{
+            if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+            return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+          }
+        }
+      }
+    )
+  } else if(loss == "mvp") {
+    create_loss <- torch::nn_module(
+      classname = "multivariate probit loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+
+        self$y_dim <- ncol(Y)
+        self$responses <- colnames(Y)
+
+        df = floor(ncol(Y)/2)
+        self$parameter <- torch::nn_parameter(torch::torch_tensor(matrix(stats::runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE))
+      },
+      forward = function(pred, true) {
+        noise = torch::torch_randn(list(100L, nrow(pred), ncol(self$parameter)), device = self$parameter$device)
+        E = torch::torch_sigmoid((torch::torch_einsum("ijk, lk -> ijl", list(noise, self$parameter))+pred)*1.7012)*0.999999+0.0000005
+        logprob = log(E)*true + log(1.0-E)*(1.0-true)
+        logprob = logprob$sum(3)
+        maxlogprob = torch::torch_amax(logprob, dim = 1)
+        Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
+        return((-log(Eprob) - maxlogprob)$mean())
+      },
+      link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
+      invlink = function(x) {torch::torch_sigmoid(x*1.7012)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+        if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
+          return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
+        } else{
+          if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+        }
+      }
+    )
+  } else if (loss == "clogit") {
+    create_loss <- torch::nn_module(
+      classname = "conditional binomial loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        if(is.factor(Y)) {
+          self$responses <- levels(Y)
+        } else if(is.vector(Y)) {
+          self$responses <- levels(factor(Y))
+        } else if(is.matrix(Y)) {
+          if(is.character(Y)) self$responses <- levels(factor(Y))
+          else {
+            if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+            self$responses <- colnames(Y)
+          }
+        } else if(is.data.frame(Y)) {
+          if(is.character(Y[,1])) self$responses <- levels(factor(Y[,1]))
+          else {
+            if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+            self$responses <- colnames(Y)
+          }
+        }
+
+        if(is.null(self$responses)) self$y_dim <- ncol(Y)
+        else self$y_dim <- length(responses)
+      },
+      forward = function(pred, true) {
+        return(torch::distr_bernoulli(probs = torch::nnf_softmax(pred, dim = 2))$log_prob(true)$negative())
+      },
+      link <- function(x) {log(x) + log(ncol(x))},
+      invlink <- function(x) {torch::nnf_softmax(x, dim = 2)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
+          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          if(!all(Y %in% self$responses)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
+                                                If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
+          Y <- factor(Y, levels = self$responses)
+          return(torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32()))
+        } else {
+          if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+          if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
+            return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
+          } else{
+            if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+            return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+          }
+        }
+      }
+    )
+  } else if(loss == "nbinom") {
+    create_loss <- torch::nn_module(
+      classname = "negative binomial loss",
+      initialize = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        if(is.vector(Y)) {
+          self$y_dim <- 1
+          self$responses <- NULL
+          self$parameter = torch::nn_parameter(torch::torch_tensor(0.5, requires_grad=TRUE))
+        } else {
+          self$y_dim <- ncol(Y)
+          self$responses <- colnames(Y)
+          self$parameter = torch::nn_parameter(torch::torch_tensor(rep(0.5, ncol(Y)), requires_grad=TRUE))
+        }
+      },
+      forward = function(pred, true) {
+        eps = 0.0001
+        pred = torch::torch_exp(pred)
+        theta_tmp = 1.0/(torch::nnf_softplus(self$parameter)+eps)
+        probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred), 0.0+eps, 1.0-eps)
+        total_count = theta_tmp
+        value = true
+        logits = torch::torch_log(probs) - torch::torch_log1p(-probs)
+        log_unnormalized_prob <- total_count * torch::torch_log(torch::torch_sigmoid(-logits)) + value * torch::torch_log(torch::torch_sigmoid(logits))
+        log_normalization <- -torch::torch_lgamma(total_count + value) + torch::torch_lgamma(1 + value) + torch::torch_lgamma(total_count)
+        log_normalization <- torch::torch_where(total_count + value == 0, torch::torch_tensor(0, dtype = log_normalization$dtype, device = self$parameter$device), log_normalization)
+        return(-(log_unnormalized_prob - log_normalization))
+      },
+      link = function(x) {log(x)},
+      invlink = function(x) {torch::torch_exp(x)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
+                          checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
+
+        Y <- as.matrix(Y)
+        if(self$y_dim != ncol(Y)) {
+          if (self$y_dim == 1) stop("Wrong dimension of provided target data. Model expects target data to be provided as a numerical vector or numerical matrix/data.frame with 1 column.")
+          else stop(paste0("Wrong dimension of provided target data. Model expects target data to be provided as a numerical matrix/data.frame with ",self$y_dim," columns."))
+        }
+
+        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+      },
+      simulate = function(pred) { #Not used atm
+        theta_tmp = as.numeric((1.0/(torch::nnf_softplus(self$parameter)+0.0001))$cpu)
+        probs = 1.0 - theta_tmp/(theta_tmp + pred)
+        total_count = theta_tmp
+
+        if(is.matrix(pred)) {
+          sim = sapply(1:ncol(pred), function(i) {
+            logits = log(probs[,i]) - log1p(-probs[,i])
+            stats::rpois(length(logits), exp(-logits))
+            return( stats::rpois(length(logits), stats::rgamma(length(logits),total_count[i], exp(- logits ))) )
+          })
+        } else {
+          logits = log(probs) - log1p(-probs)
+          stats::rpois(length(pred), exp(-logits))
+          sim = stats::rpois(length(pred), stats::rgamma(length(pred),total_count, exp(- logits )))
+        }
+        return(sim)
+      }
+    )
   }
 
+  return(create_loss(Y))
 }
 
 
@@ -537,7 +764,7 @@ get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
         pred = torch::torch_exp(pred)
         if(pred$device$type != out$parameter$device$type) pred = pred$to(device = out$parameter$device)
         theta_tmp = 1.0/(torch::nnf_softplus(out$parameter)+eps)
-        probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred)+eps, 0.0, 1.0-eps)
+        probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred), 0.0+eps, 1.0-eps)
         total_count = theta_tmp
         value = true
         logits = torch::torch_log(probs) - torch::torch_log1p(-probs)
