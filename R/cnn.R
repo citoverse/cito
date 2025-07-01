@@ -5,7 +5,7 @@
 #' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
-#' @param loss The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
@@ -131,7 +131,7 @@
 cnn <- function(X,
                 Y = NULL,
                 architecture,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
+                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
                 optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
                 alpha = 0.5,
