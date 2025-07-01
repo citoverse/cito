@@ -632,6 +632,24 @@ get_loss_new <- function(loss, Y) {
         return(sim)
       }
     )
+  } else if(is.function(loss)) {
+    create_loss <- torch::nn_module(
+      classname = "custom loss",
+      initialize = function(Y) {
+        if(length(names(formals(loss))) != 2) stop("custom loss function has to take exactly two arguments: \"pred\" and \"true\"")
+        if((names(formals(loss))[1] != "pred") | (names(formals(loss))[2] != "true")) stop("\"pred\" has to be the first argument of the custom loss function, and \"true\" the second.")
+
+        Y <- as.matrix(Y)
+        self$y_dim = ncol(Y)
+        self$responses = colnames(Y)
+      },
+      forward = loss,
+      link = function(x) {x},
+      invlink = function(x) {x},
+      format_Y = function(Y) {
+        return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
+      }
+    )
   }
 
   return(create_loss(Y))
