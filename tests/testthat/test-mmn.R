@@ -47,60 +47,17 @@ test_loss <- function(loss, Y) {
 }
 
 
-
-
-testthat::test_that("MMN softmax", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)))
-
-  test_loss("softmax", Y)
-})
-
-testthat::test_that("MMN poisson", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  Y <- list(rpois(100, 10),
-            matrix(rpois(100, 10), nrow=100, ncol=1),
-            matrix(rpois(300, 10), nrow=100, ncol=3))
-  test_loss("poisson", Y)
-})
-
-testthat::test_that("MMN nbinom", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  Y <- list(rpois(100, 10),
-            matrix(rpois(100, 10), nrow=100, ncol=1),
-            matrix(rpois(300, 10), nrow=100, ncol=3))
-  test_loss("nbinom", Y)
-})
-
-testthat::test_that("MMN binomial", {
+testthat::test_that("MMN cross-entropy", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()
 
   Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)),
-            matrix(sample(c(0,1), 300, replace=TRUE), nrow=100, ncol=3),
-            matrix(sample(c(FALSE,TRUE), 300, replace=TRUE), nrow=100, ncol=3))
-  test_loss("binomial", Y)
-})
+            sample(c("a","b","c"), 100, replace=TRUE),
+            matrix(sample(c("a","b","c"), 100, replace=TRUE), nrow=100, ncol=1),
+            data.frame(sample(c("a","b","c"), 100, replace=TRUE)))
 
-testthat::test_that("MMN multinomial", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)),
-            #matrix(rpois(100,10),100,1),
-            matrix(rpois(300,10),100,3))
-  test_loss("multinomial", Y)
+  test_loss("cross-entropy", Y)
 })
 
 testthat::test_that("MMN mse/mae/gaussian", {
@@ -110,8 +67,95 @@ testthat::test_that("MMN mse/mae/gaussian", {
 
   Y <- list(runif(100),
             matrix(runif(100), nrow=100, ncol=1),
-            matrix(runif(300), nrow=100, ncol=3))
+            matrix(runif(300), nrow=100, ncol=3),
+            data.frame(runif(100)),
+            data.frame(runif(100), runif(100), runif(100)))
+
   test_loss("mse", Y)
   test_loss("mae", Y)
   test_loss("gaussian", Y)
+})
+
+testthat::test_that("MMN poisson", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(rpois(100, 10),
+            matrix(rpois(100, 10), nrow=100, ncol=1),
+            matrix(rpois(300, 10), nrow=100, ncol=3),
+            data.frame(rpois(100, 10)),
+            data.frame(rpois(100, 10), rpois(100, 20), rpois(100, 30)))
+
+  test_loss("poisson", Y)
+})
+
+testthat::test_that("MMN nbinom", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(rnbinom(100, size=0.5, mu=10),
+            matrix(rnbinom(100, size=0.5, mu=10), nrow=100, ncol=1),
+            matrix(rnbinom(300, size=0.5, mu=10), nrow=100, ncol=3),
+            data.frame(rnbinom(300, size=0.5, mu=10)),
+            data.frame(rnbinom(300, size=0.5, mu=10), rnbinom(300, size=0.5, mu=20), rnbinom(300, size=0.5, mu=30)))
+
+  test_loss("nbinom", Y)
+})
+
+testthat::test_that("MMN binomial", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(factor(sample(c("a","b"), 100, replace=TRUE)),
+            sample(c("a","b"), 100, replace=TRUE),
+            matrix(sample(c("a","b"), 100, replace=TRUE), nrow=100, ncol=1),
+            data.frame(sample(c("a","b"), 100, replace=TRUE)),
+            matrix(sample(0:10, 200, replace = TRUE), nrow=100, ncol=2),
+            data.frame(sample(0:10, 100, replace = TRUE), sample(0:10, 100, replace = TRUE)))
+
+  test_loss("binomial", Y)
+})
+
+testthat::test_that("MMN multinomial", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)),
+            sample(c("a","b","c"), 100, replace=TRUE),
+            matrix(sample(c("a","b","c"), 100, replace=TRUE), nrow=100, ncol=1),
+            data.frame(sample(c("a","b","c"), 100, replace=TRUE)),
+            matrix(sample(0:10, 300, replace = TRUE), nrow=100, ncol=3),
+            data.frame(sample(0:10, 100, replace = TRUE), sample(0:10, 100, replace = TRUE), sample(0:10, 100, replace = TRUE)))
+
+  test_loss("multinomial", Y)
+})
+
+testthat::test_that("MMN mvp", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(matrix(sample(c(0,1), 300, replace = TRUE), nrow=100, ncol=3),
+            data.frame(sample(c(0,1), 100, replace = TRUE), sample(c(0,1), 100, replace = TRUE), sample(c(0,1), 100, replace = TRUE)))
+
+  test_loss("mvp", Y)
+})
+
+testthat::test_that("MMN clogit", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(factor(sample(c("a","b","c"), 100, replace=TRUE)),
+            sample(c("a","b","c"), 100, replace=TRUE),
+            matrix(sample(c("a","b","c"), 100, replace=TRUE), nrow=100, ncol=1),
+            data.frame(sample(c("a","b","c"), 100, replace=TRUE)),
+            matrix(sample(c(0,1), 300, replace = TRUE), nrow=100, ncol=3),
+            data.frame(sample(c(0,1), 100, replace = TRUE), sample(c(0,1), 100, replace = TRUE), sample(c(0,1), 100, replace = TRUE)))
+
+  test_loss("clogit", Y)
 })
