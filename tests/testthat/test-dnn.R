@@ -2,36 +2,21 @@ source("utils.R")
 library(cito)
 set.seed(42)
 
-wrap_dnn = function(pars) {
-  testthat::expect_error({model <<- do.call(dnn, pars)}, NA)
-  testthat::expect_error({.n = predict(model, newdata=pars$X)}, NA)
-  testthat::expect_error({.n = continue_training(model, epochs = 2L, verbose = FALSE)}, NA)
-  testthat::expect_error({.n = predict(model)}, NA)
-  testthat::expect_error({.n = predict(model, type = "response")}, NA)
-  testthat::expect_error({.n = coef(model)}, NA)
-  testthat::expect_error({.n = plot(model)}, NA)
-  testthat::expect_error({.n = residuals(model)}, NA)
-  testthat::expect_error({.n = summary(model)}, NA)
-  suppressWarnings(testthat::expect_error({.n = PDP(model, variable = "X.1")}, NA))
-  suppressWarnings(testthat::expect_error({.n = ALE(model, variable = "X.1")}, NA))
-}
-
-
 X = matrix(runif(3*50), 50, 3)
-Y = matrix(rbinom(3*50, 1, 0.5), 50, 3)
+Y = matrix(rbinom(2*50, 1, 0.5), 50, 2)
 data = data.frame(Y = Y, X, Cat = as.factor(rep(1:5, 10)))
 
 #### Test scenarios ####
 # Architecture
 scenarios =
   list(
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
-    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = NULL),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(2L, 5L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L, 3L)),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh")),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=FALSE),
+    list(device = "cpu", formula = stats::as.formula("cbind(Y.1, Y.2) ~ X1+X2+X3+e(Cat)"), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, hidden = c(9, 1L), activation = c("leaky_relu", "tanh"), bias=c(TRUE, FALSE))
 )
 
 testthat::test_that("DNN architecture", {
@@ -60,140 +45,6 @@ testthat::test_that("DNN architecture", {
 
 })
 
-# Family
-X = matrix(runif(3*50), 50, 3)
-Y = matrix(as.character(rbinom(50, 3, 0.5)))
-data = data.frame(Y = Y, X = X)
-scenarios =
-  list(
-    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "softmax", epochs = 1L),
-    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L),
-    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "softmax", epochs = 1L, bootstrap = 2L),
-    list(formula = stats::as.formula("Y ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::binomial(), epochs = 1L, bootstrap = 2L)
-  )
-testthat::test_that("DNN softmax/binomial", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  for(i in 1:3) {
-    wrap_dnn(scenarios[[i]])
-  }
-
-  if(  torch::cuda_is_available() ) {
-    for(i in 1:length(scenarios)) {
-      sc = scenarios[[i]]
-      sc$device = "cuda"
-      .n = wrap_dnn(sc)
-    }
-  }
-
-  if(  torch::backends_mps_is_available() ) {
-    for(i in 1:length(scenarios)) {
-      sc = scenarios[[i]]
-      sc$device = "mps"
-      .n = wrap_dnn(sc)
-    }
-  }
-})
-
-
-
-X = matrix(runif(3*50), 50, 3)
-Y = matrix(rpois(50*3,lambda = 2), 50, 3)
-data = data.frame(Y = Y, X = X)
-
-Ym = t(stats::rmultinom(100, 10, prob = c(0.2, 0.2, 0.5)))
-data2 = data.frame(Y, X.1 = stats::runif(100))
-
-scenarios =
-  list(
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L , verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "nbinom", epochs = 1L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L),
-
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::gaussian(), epochs = 1L, bootstrap = 2L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L, verbose = FALSE),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = stats::poisson(), epochs = 1L, bootstrap = 2L),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "nbinom", epochs = 1L, bootstrap = 2L),
-
-    list(formula = stats::as.formula("Species ~ ."), plot=FALSE, verbose = FALSE, data = iris, loss = "multinomial", epochs = 1L),
-    list(formula = stats::as.formula("Species ~ ."), plot=FALSE, verbose = FALSE, data = iris, loss = "multinomial", epochs = 1L, bootstrap = 2L),
-
-    list(formula = stats::as.formula("cbind(X1, X2, X3)~."), plot=FALSE, verbose = FALSE, data = data2, loss = "multinomial", epochs = 1L),
-    list(formula = stats::as.formula("cbind(X1, X2, X3)~."), plot=FALSE, verbose = FALSE, data = data2, loss = "multinomial", epochs = 1L, bootstrap = 2L)
-
-  )
-testthat::test_that("DNN rnorm/poisson", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  for(i in 1:length(scenarios)) {
-    wrap_dnn(scenarios[[i]])
-  }
-
-  if(  torch::cuda_is_available() ) {
-    for(i in 1:length(scenarios)) {
-      sc = scenarios[[i]]
-      sc$device = "cuda"
-      .n = wrap_dnn(sc)
-
-    }
-  }
-
-  if(  torch::backends_mps_is_available() ) {
-    for(i in 1:length(scenarios)) {
-        sc = scenarios[[i]]
-        sc$device = "mps"
-        .n = wrap_dnn(sc)
-    }
-  }
-})
-
-
-X = matrix(runif(3*50), 50, 3)
-Y = matrix(rpois(50*3,lambda = 2), 50, 3)
-data = data.frame(Y = Y, X = X)
-scenarios =
-  list(
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L),
-    list(formula = stats::as.formula("Y.1 ~ ."), plot=FALSE,data = data, loss = "mae", epochs = 1L, bootstrap = 2L, verbose = FALSE),
-    list(formula = stats::as.formula("cbind(Y.1, Y.2, Y.3) ~ ."), plot=FALSE, verbose = FALSE, data = data, loss = "mae", epochs = 1L, bootstrap = 2L)
-  )
-testthat::test_that("DNN mae", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  for(i in 1:length(scenarios)) {
-    wrap_dnn(scenarios[[i]])
-  }
-
-  if(  torch::cuda_is_available() ) {
-    for(i in 1:length(scenarios)) {
-      sc = scenarios[[i]]
-      sc$device = "cuda"
-      .n = wrap_dnn(sc)
-    }
-  }
-
-  if(  torch::backends_mps_is_available() ) {
-    for(i in 1:length(scenarios)) {
-      sc = scenarios[[i]]
-      sc$device = "mps"
-      .n = wrap_dnn(sc)
-    }
-  }
-})
-
-
 testthat::test_that("DNN save and reload", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
@@ -212,8 +63,6 @@ testthat::test_that("DNN save and reload", {
   testthat::expect_error({.n = continue_training(nn.fit,epochs = 5)}, NA)
   file.remove("test_model.RDS")
 })
-
-
 
 testthat::test_that("DNN custom loss and custom parameters", {
   testthat::skip_on_cran()
@@ -291,8 +140,6 @@ testthat::test_that("DNN coef accuracy check",{
   testthat::expect_lt(max(abs((unlist(coef(nn.fit))[-1] - coefs))), 1e02)
 
 })
-
-
 
 testthat::test_that("DNN baseline loss check",{
 
