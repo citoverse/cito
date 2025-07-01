@@ -440,8 +440,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y)) {
           self$responses <- levels(Y)
@@ -475,8 +475,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
           if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
@@ -499,8 +499,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
     create_loss <- torch::nn_module(
       classname = "multivariate probit loss",
       initialize = function() {
-        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
         if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
 
         self$y_dim <- ncol(Y)
@@ -521,8 +521,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
       link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
       invlink = function(x) {torch::torch_sigmoid(x*1.7012)},
       format_Y = function(Y) {
-        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
         if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
         if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
           return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
@@ -540,8 +540,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y)) {
           self$responses <- levels(Y)
@@ -574,8 +574,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
           if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
