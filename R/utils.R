@@ -659,6 +659,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
         return(sim)
       }
     )
+  } else {
+    stop("Loss not implemented.")
   }
 
   return(create_loss())
