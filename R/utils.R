@@ -172,7 +172,7 @@ multinomial_log_prob = function(probs, value) {
 #
 # }
 
-get_loss_new <- function(loss, Y) {
+get_loss_new <- function(loss, Y, custom_parameters) {
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)
   if(!inherits(loss, "family") & is.character(loss)) {
@@ -183,11 +183,38 @@ get_loss_new <- function(loss, Y) {
                    loss)
   }
 
-  if(inherits(loss, "family")) {
+  if(is.function(loss)) {
+    create_loss <- torch::nn_module(
+      classname = "custom loss",
+      initialize = function() {
+        if(is.null(formals(loss)$pred) | is.null(formals(loss)$true)) stop("The custom loss function has to take two arguments: \"pred\" and \"true\"")
+
+        Y <- as.matrix(Y)
+        self$y_dim = ncol(Y)
+        self$responses = colnames(Y)
+
+        self$loss.fkt = loss
+
+        if(!is.null(custom_parameters)) {
+          for (name in names(custom_parameters)) {
+            self[[name]] <- torch::nn_parameter(torch::torch_tensor(custom_parameters[[name]], dtype = torch::torch_float32(), requires_grad = TRUE))
+          }
+        }
+
+        list2env(self$parameters, envir = environment(fun=self$loss.fkt))
+      },
+      forward = function(pred, true) {return(self$loss.fkt(pred=pred, true=true))},
+      link = function(x) {x},
+      invlink = function(x) {x},
+      format_Y = function(Y) {
+        return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
+      }
+    )
+  } else if(inherits(loss, "family")) {
     if(loss$family == "gaussian") {
       create_loss <- torch::nn_module(
         classname = "gaussian loss",
-        initialize = function(Y) {
+        initialize = function() {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
                             checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
                             checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
@@ -227,7 +254,7 @@ get_loss_new <- function(loss, Y) {
     } else if(loss$family == "poisson") {
       create_loss <- torch::nn_module(
         classname = "poisson loss",
-        initialize = function(Y) {
+        initialize = function() {
           checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
                             checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
                             checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
@@ -269,7 +296,7 @@ get_loss_new <- function(loss, Y) {
     } else if(loss$family == "binomial") {
       create_loss <- torch::nn_module(
         classname = "binomial loss",
-        initialize = function(Y) {
+        initialize = function() {
           checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
                             checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                             checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
@@ -335,7 +362,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss=="cross-entropy") {
     create_loss <- torch::nn_module(
       classname = "cross-entropy loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
@@ -374,7 +401,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss=="mse") {
     create_loss <- torch::nn_module(
       classname = "mean squared error loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
                           checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
@@ -409,7 +436,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss=="mae") {
     create_loss <- torch::nn_module(
       classname = "mean absolute error loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
                           checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
@@ -444,7 +471,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss == "multinomial") {
     create_loss <- torch::nn_module(
       classname = "multinomial loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
@@ -507,7 +534,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss == "mvp") {
     create_loss <- torch::nn_module(
       classname = "multivariate probit loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
         if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
@@ -544,7 +571,7 @@ get_loss_new <- function(loss, Y) {
   } else if (loss == "clogit") {
     create_loss <- torch::nn_module(
       classname = "conditional binomial loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
@@ -606,7 +633,7 @@ get_loss_new <- function(loss, Y) {
   } else if(loss == "nbinom") {
     create_loss <- torch::nn_module(
       classname = "negative binomial loss",
-      initialize = function(Y) {
+      initialize = function() {
         checkmate::assert(checkmate::checkNumeric(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "numeric", any.missing = F, all.missing = F),
                           checkmate::checkDataFrame(Y, types = "numeric", any.missing = F, all.missing = F))
@@ -668,27 +695,9 @@ get_loss_new <- function(loss, Y) {
         return(sim)
       }
     )
-  } else if(is.function(loss)) {
-    create_loss <- torch::nn_module(
-      classname = "custom loss",
-      initialize = function(Y) {
-        if(length(names(formals(loss))) != 2) stop("custom loss function has to take exactly two arguments: \"pred\" and \"true\"")
-        if((names(formals(loss))[1] != "pred") | (names(formals(loss))[2] != "true")) stop("\"pred\" has to be the first argument of the custom loss function, and \"true\" the second.")
-
-        Y <- as.matrix(Y)
-        self$y_dim = ncol(Y)
-        self$responses = colnames(Y)
-      },
-      forward = loss,
-      link = function(x) {x},
-      invlink = function(x) {x},
-      format_Y = function(Y) {
-        return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
-      }
-    )
   }
 
-  return(create_loss(Y))
+  return(create_loss())
 }
 
 
@@ -1232,7 +1241,6 @@ get_X_Y = function(formula, X, Y, data) {
       data <- cbind(data.frame(Y), data.frame(X))
     } else {
       formula <- stats::formula("~ .")
-      old_formula = formula
       data <- data.frame(X)
     }
     formula <- formula(stats::terms.formula(formula, data = data))
