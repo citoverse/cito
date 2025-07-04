@@ -114,6 +114,7 @@ mmn <- function(formula,
   from_folder = FALSE
 
   X <- format_input_data(formula[[3]], dataList)
+
   X <- lapply(X, function(x) {
     if(is.character(x)) x = list.files(x, full.names = TRUE)
     else x = torch::torch_tensor(x, dtype=torch::torch_float32())
@@ -318,30 +319,19 @@ format_input_data <- function(formula, dataList) {
     } else if(term[[1]] == "dnn") {
       call <- match.call(dnn, term)
 
-      if(!is.null(call$X)) {
-        tmp <- stats::model.matrix(stats::formula("~ ."), data = data.frame(eval(call$X, envir = dataList)))
-        X <- tmp[, -1, drop=FALSE]
-        attr(X, "assign") <- attr(tmp, "assign")[-1]
+      if(!is.null(call$X)) X <- eval(call$X, envir = dataList)
+      else X <- NULL
+      if(!is.null(call$formula)) formula <- stats::formula(call$formula)
+      else formula <- NULL
+      if(!is.null(call$data)) data <- data.frame(eval(call$data, envir = dataList))
+      else data <- NULL
 
-      } else if(!is.null(call$formula)) {
-        if(!is.null(call$data)) {
-          data <- data.frame(eval(call$data, envir = dataList))
-          formula <- stats::formula(stats::terms(stats::formula(call$formula), data = data))
-          formula <- stats::update.formula(formula, ~ . + 1)
-          tmp <- stats::model.matrix(formula, data = data)
-          X <- tmp[, -1, drop=FALSE]
-          attr(X, "assign") <- attr(tmp, "assign")[-1]
-        } else {
-          formula <- stats::update.formula(stats::formula(call$formula), ~ . + 1)
-          tmp <- stats::model.matrix(formula, data = dataList)
-          X <- tmp[, -1, drop=FALSE]
-          attr(X, "assign") <- attr(tmp, "assign")[-1]
-        }
-      }
-      input_data <- append(input_data, list(X))
+      temp <- get_X_Y(formula, X, NULL, data)
+      input_data <- append(input_data, list(torch::torch_tensor(temp$X, dtype = torch::torch_float32())))
+      if (!is.null(temp$Z)) input_data <- append(input_data, list(torch::torch_tensor(temp$Z, dtype = torch::torch_long())))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      input_data <- append(input_data, list(eval(call$X, envir = dataList)))
+      input_data <- append(input_data, list(torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32())))
     }
     return(input_data)
   }

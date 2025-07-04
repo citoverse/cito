@@ -61,6 +61,7 @@ build_dnn = function(model_properties) {
   self = NULL
   if(!is.null(embeddings)) {
     net_embed <- torch::nn_module(
+      classname = "DNN",
       initialize = function() {
         for(i in 1:length(embeddings$dims)) {
           self[[paste0("e_", i)]] = torch::nn_embedding(embeddings$dims[i], embeddings$args[[i]]$dim  )
@@ -68,7 +69,7 @@ build_dnn = function(model_properties) {
         for(i in 1:length(layers)) {
           self[[paste0("l_",i)]] = layers[[i]]
         }
-
+        self$has_embeddings = TRUE
       },
       forward = function(input_hidden, input_embeddings) {
         n_em = length(embeddings$dims)
@@ -100,10 +101,12 @@ build_dnn = function(model_properties) {
 
   } else {
     create_dnn <- torch::nn_module(
+      classname = "DNN",
       initialize = function() {
         for(i in 1:length(layers)) {
           self[[paste0("l_",i)]] = layers[[i]]
         }
+        self$has_embeddings = FALSE
       },
       forward = function(x) {
         for(i in 1:length(layers)) {
@@ -240,6 +243,7 @@ build_cnn <- function(model_properties) {
   if(!is.null(output_shape)) net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
 
   create_cnn <- torch::nn_module(
+    classname = "CNN",
     initialize = function() {
       for(i in 1:length(layers)) {
         self[[paste0("l_",i)]] = layers[[i]]
@@ -264,16 +268,24 @@ build_cnn <- function(model_properties) {
 build_mmn <- function(model_properties) {
   self = NULL
   create_mmn <- torch::nn_module(
+    classname = "MMN",
     initialize = function(subModules, fusion) {
       self$subModules <- torch::nn_module_list(subModules)
       self$fusion <- fusion
     },
     forward = function(input) {
-      for(i in 1:length(self$subModules)) {
-        input[[i]] <- self$subModules[[i]](input[[i]])
+      i <- 1
+      fusion_input <- list()
+      for(subModule in self$subModules) {
+        if(inherits(subModule, "DNN") && subModule$has_embeddings) {
+          fusion_input <- append(fusion_input, list(subModule(input[[i]], input[[i+1]])))
+          i <- i + 2
+        } else {
+          fusion_input <- append(fusion_input, list(subModule(input[[i]])))
+          i <- i + 1
+        }
       }
-      input <- self$fusion(torch::torch_cat(input[1:length(self$subModules)], dim = 2L))
-      input
+      return(self$fusion(torch::torch_cat(fusion_input, dim = 2L)))
     }
   )
 
@@ -281,8 +293,17 @@ build_mmn <- function(model_properties) {
 
   fusion_input <- 0
   for(i in 1:length(subModules)) {
-    temp <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
-    fusion_input <- fusion_input + dim(subModules[[i]](temp))[2]
+    if(inherits(subModules[[i]], "DNN") && subModules[[i]]$has_embeddings) {
+      tempX <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
+      tempZ <- lapply(model_properties$subModules[[i]]$embeddings$dims, function(x) {
+        return(torch::torch_randint(1,x+1,c(2,1)))
+      })
+      tempZ <- torch::torch_cat(tempZ,2)
+      fusion_input <- fusion_input + dim(subModules[[i]](tempX, tempZ))[2]
+    } else {
+      temp <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
+      fusion_input <- fusion_input + dim(subModules[[i]](temp))[2]
+    }
   }
 
   model_properties$fusion$input <- fusion_input

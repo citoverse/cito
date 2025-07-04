@@ -1190,7 +1190,7 @@ check_device = function(device) {
     if (torch::cuda_is_available()) {
       device <- torch::torch_device("cuda")}
     else{
-      warning("No Cuda device detected, device is set to cpu")
+      warning("No cuda device detected, device is set to cpu")
       device <- torch::torch_device("cpu")
     }
 
@@ -1202,7 +1202,7 @@ check_device = function(device) {
       device <- torch::torch_device("cpu")
     }
   } else {
-    if(device != "cpu") warning(paste0("device ",device," not know, device is set to cpu"))
+    if(device != "cpu") warning(paste0("device ",device," not known, device is set to cpu"))
     device <- torch::torch_device("cpu")
   }
   return(device)
