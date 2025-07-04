@@ -205,8 +205,11 @@ predict.citommn <- function(object,
 
   type <- match.arg(type)
 
-  if(is.null(device)) device <- object$device
+  if(is.null(device)) device <- object$training_properties$device
   device <- check_device(device)
+
+  object$net$to(device = device)
+  object$loss$to(device = device)
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
@@ -216,17 +219,12 @@ predict.citommn <- function(object,
     link = function(a) a
   }
 
-  object$net$to(device = device)
-
   if(is.null(newdata)){
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList)
   } else {
     #TODO check whether elements in newdata have the same dimensions as they had in object$data$dataList
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
-
-  sample_names <- dimnames(newdata[[1]])[[1]]
-  newdata <- lapply(newdata, torch::torch_tensor, dtype=torch::torch_float32())
 
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE)))
 
@@ -237,11 +235,9 @@ predict.citommn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b))$to(device="cpu")))
   })
 
-  if(!is.null(sample_names)) rownames(pred) <- sample_names
-
-  if(!is.null(object$data$ylvls)) {
-    colnames(pred) <- object$data$ylvls
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  if(!is.null(object$loss$responses)) {
+    colnames(pred) <- object$loss$responses
+    if(type == "class") pred <- factor(apply(pred,1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)
@@ -359,7 +355,6 @@ check_mmn_formula <- function(formula) {
       if(!is.null(call$formula)) {
         if(call$formula[[1]] != "~") stop(paste0("In '", deparse1(term), "': ~ missing in 'formula'."))
         if(length(call$formula) != 2) stop(paste0("In '", deparse1(term), "': response (left side of ~) of 'formula' must not be specified."))
-        check_for_embeddings(call$formula[[2]])
       }
       args <- names(formals(dnn))
       allowed_args <- c("formula", "data", "hidden", "activation", "bias", "dropout", "X")
@@ -385,16 +380,4 @@ check_mmn_formula <- function(formula) {
   if(length(formula) == 2) stop(paste0("Incorrect formula '", deparse1(formula), "': response (left side of ~) missing."))
   inner(formula[[3]])
 }
-
-check_for_embeddings <- function(term) {
-  if(length(term) > 1) {
-    if(term[[1]] == "+") {
-      check_for_embeddings(term[[2]])
-      check_for_embeddings(term[[3]])
-    } else if(term[[1]] == "e") {
-      stop(paste0("'", deparse1(term), "': Embeddings not implemented in mmn() yet."))
-    }
-  }
-}
-
 
