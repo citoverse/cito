@@ -6,18 +6,18 @@
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
+#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
 #' @param validation Proportion of the data to be used for validation. Default is 0.0.
 #' @param batchsize Batch size for training. Default is 32.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
-#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
-#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
-#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
+#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
 #' @param plot Whether to plot the training progress. Default is TRUE.
 #' @param verbose Whether to print detailed training progress. Default is TRUE.
@@ -42,7 +42,6 @@
 #' | :--- | :--- | :--- |
 #' | mse | mean squared error |Regression, predicting continuous values|
 #' | mae | mean absolute error | Regression, predicting continuous values |
-#' | softmax | categorical cross entropy |Multi-class, species classification|
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification|
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
@@ -132,44 +131,38 @@ cnn <- function(X,
                 Y = NULL,
                 architecture,
                 loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
+                custom_parameters = NULL,
                 optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
+                lr_scheduler = NULL,
                 alpha = 0.5,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
-                burnin = Inf,
                 shuffle = TRUE,
                 epochs = 100,
-                early_stopping = NULL,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
+                early_stopping = Inf,
+                burnin = Inf,
                 device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE) {
 
-  #Data
-  checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5), checkmate::check_character(X))
-  checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
-                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"),
-                    checkmate::checkNull(Y))
-
   if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
 
-  #Training
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(lambda, "R1[0,)")
-  checkmate::qassert(alpha, "R1[0,1]")
-  checkmate::qassert(validation, "R1[0,1)")
+  checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X))
+  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(lr, "N1(0,)")
+  checkmate::qassert(alpha, "N1[0,1]")
+  checkmate::qassert(lambda, "N1[0,)")
+  checkmate::qassert(validation, "N1[0,1)")
   checkmate::qassert(batchsize, "X1[1,)")
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(epochs, "X1[0,)")
-  checkmate::qassert(early_stopping, c("0","X1[1,)"))
-  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(early_stopping, "N1[1,]")
+  checkmate::qassert(burnin, "N1[1,]")
+  checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
-  checkmate::qassert(device, "S+[3,)")
-
 
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
@@ -193,43 +186,30 @@ cnn <- function(X,
 
   device <- match.arg(device)
 
-  if(!is.function(loss) & !inherits(loss,"family")) {
-    loss <- match.arg(loss)
-
-    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
-      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
-
-  if(inherits(loss,"family")) {
-    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
-      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
+  # if(!is.function(loss) & !inherits(loss,"family")) {
+  #   loss <- match.arg(loss)
+  #
+  #   if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+  #     message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
+  #
+  # if(inherits(loss,"family")) {
+  #   if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+  #     message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
 
   device_old <- device
   device <- check_device(device)
 
-  loss_obj <- get_loss(loss, device = device, X = X, Y = Y) # why do we need X in get_loss??
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
-      warning("custom_parameters has to be list")
-    } else {
-      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
-    }
-  }
+  if(is.character(loss)) loss <- match.arg(loss)
+  loss_obj <- get_loss_new(loss, Y, custom_parameters)
 
-  old_X <- X # save folder and not paths!
-  old_Y <- Y
-  targets <- format_targets(Y, loss_obj)
-  Y <- targets$Y
-  Y_base <- targets$Y_base
-  y_dim <- targets$y_dim
-  ylvls <- targets$ylvls
+  X_old <- X
+  Y_old <- Y
 
   from_folder = FALSE
 
@@ -240,13 +220,10 @@ cnn <- function(X,
     X <- torch::torch_tensor(X, dtype = torch::torch_float32())
   }
 
-  loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y$to(device = device))$mean()$cpu())
+  Y <- loss_obj$format_Y(Y)
 
   if(validation != 0) {
-    if(is.character(X)) n_samples <- length(X)
-    else n_samples <- dim(X)[1]
+    n_samples <- dim(Y)[1]
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
 
@@ -267,51 +244,44 @@ cnn <- function(X,
   input_shape <- dim(train_dl$dataset$.getbatch(1)[[1]])[-1] #dim(X)[-1]
   architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-
-
   model_properties <- list(input = input_shape,
-                           output = y_dim,
+                           output = loss_obj$y_dim,
                            architecture = architecture)
   class(model_properties) <- "citocnn_properties"
 
   net <- build_cnn(model_properties)
 
-
-  training_properties <- list(lr = lr,
+  training_properties <- list(optimizer = optimizer,
+                              lr = lr,
                               lr_scheduler = lr_scheduler,
-                              optimizer = optimizer,
-                              epochs = epochs,
-                              early_stopping = early_stopping,
-                              plot = plot,
-                              validation = validation,
-                              lambda = lambda,
                               alpha = alpha,
+                              lambda = lambda,
+                              validation = validation,
                               batchsize = batchsize,
-                              shuffle = shuffle)
+                              shuffle = shuffle,
+                              epochs = epochs, #redundant?
+                              early_stopping = early_stopping,
+                              burnin = burnin,
+                              device = device_old,
+                              plot = plot,
+                              verbose = verbose)
 
   out <- list()
   class(out) <- "citocnn"
   out$net <- net
   out$call <- match.call()
   out$loss <- loss_obj
-  out$data <- list(X = old_X, Y = old_Y)
-  if(!is.null(ylvls)) out$data$ylvls <- ylvls
+  out$data <- list(X = X_old, Y = Y_old)
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
-  out$base_loss <- base_loss
+  out$model_properties <- model_properties
+  out$training_properties <- training_properties
+  # below unneccessary?
   out$weights <- list()
   out$buffers <- list()
   out$use_model_epoch <- 2
   out$loaded_model_epoch <- torch::torch_tensor(0)
-  out$model_properties <- model_properties
-  out$training_properties <- training_properties
-  out$device <- device_old
-  out$burnin <- burnin #Add to training_properties
 
-
-
-  ### training loop ###
-  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
+  out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
 
   return(out)
 }

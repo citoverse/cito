@@ -9,18 +9,18 @@
 #' @param fusion_bias A logical value or a vector indicating whether to include bias terms in each layer of the fusion network. If a single logical value is provided, it will apply to all layers. To specify bias inclusion for each layer individually, provide a logical vector of length \code{length(fusion_hidden) + 1}, where each element corresponds to a hidden layer, and the final element controls whether a bias term is added to the output layer.
 #' @param fusion_dropout The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
+#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
 #' @param validation Proportion of the data to be used for validation. Default is 0.0.
 #' @param batchsize Batch size for training. Default is 32.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
-#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
-#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
-#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
+#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
 #' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
 #' @param plot Whether to plot the training progress. Default is TRUE.
 #' @param verbose Whether to print detailed training progress. Default is TRUE.
@@ -51,110 +51,92 @@ mmn <- function(formula,
                 fusion_bias = TRUE,
                 fusion_dropout = 0.0,
                 loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
+                custom_parameters = NULL,
                 optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
                 lr = 0.01,
+                lr_scheduler = NULL,
                 alpha = 0.5,
                 lambda = 0.0,
                 validation = 0.0,
                 batchsize = 32L,
-                burnin = Inf,
                 shuffle = TRUE,
                 epochs = 100,
-                early_stopping = NULL,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
+                early_stopping = Inf,
+                burnin = Inf,
                 device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE) {
 
-  #Data
   checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
-
-  #Training
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(lambda, "R1[0,)")
-  checkmate::qassert(alpha, "R1[0,1]")
-  checkmate::qassert(validation, "R1[0,1)")
+  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(lr, "N1(0,)")
+  checkmate::qassert(alpha, "N1[0,1]")
+  checkmate::qassert(lambda, "N1[0,)")
+  checkmate::qassert(validation, "N1[0,1)")
   checkmate::qassert(batchsize, "X1[1,)")
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(epochs, "X1[0,)")
-  checkmate::qassert(early_stopping, c("0","X1[1,)"))
-  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(early_stopping, "N1[1,]")
+  checkmate::qassert(burnin, "N1[1,]")
+  checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
-  checkmate::qassert(device, "S+[3,)")
 
   device <- match.arg(device)
 
-  if(!is.function(loss) & !inherits(loss,"family")) {
-    loss <- match.arg(loss)
-
-    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
-      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
-
-  if(inherits(loss,"family")) {
-    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
-      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
+  # if(!is.function(loss) & !inherits(loss,"family")) {
+  #   loss <- match.arg(loss)
+  #
+  #   if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+  #     message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
+  #
+  # if(inherits(loss,"family")) {
+  #   if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+  #     message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
 
   device_old <- device
   device <- check_device(device)
-
-  loss_obj <- get_loss(loss, device = device)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
-      warning("custom_parameters has to be list")
-    } else {
-      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
-    }
-  }
 
   formula <- stats::terms(formula)
   check_mmn_formula(formula)
 
   Y <- eval(formula[[2]], envir = dataList)
 
+  if(is.character(loss)) loss <- match.arg(loss)
+  loss_obj <- get_loss_new(loss, Y, custom_parameters)
+
   from_folder = FALSE
 
   X <- format_input_data(formula[[3]], dataList)
   X <- lapply(X, function(x) {
     if(is.character(x)) x = list.files(x, full.names = TRUE)
-    else x = torch::torch_tensor(x, dtype=torch::torch_float32() )
+    else x = torch::torch_tensor(x, dtype=torch::torch_float32())
     return(x)
     })
   if(any(sapply(X, is.character))) from_folder = TRUE
 
-  targets <- format_targets(Y, loss_obj)
-  Y_torch <- targets$Y
-  Y_base <- targets$Y_base
-  y_dim <- targets$y_dim
-  ylvls <- targets$ylvls
-
-  loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu())
+  Y <- loss_obj$format_Y(Y)
 
   if(validation != 0) {
-    n_samples <- dim(Y_torch)[1]
+    n_samples <- dim(Y)[1]
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
-    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y_torch), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
+    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
+    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
   } else {
-    train_dl <- do.call(get_data_loader, append(X, list(Y_torch, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
+    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
     valid_dl <- NULL
   }
 
   model_properties <- list()
   model_properties$subModules <- get_model_properties(formula[[3]], dataList)
-  model_properties$fusion <- list(output = y_dim,
+  model_properties$fusion <- list(output = loss_obj$y_dim,
                                   hidden = fusion_hidden,
                                   activation = fusion_activation,
                                   bias = fusion_bias,
@@ -163,18 +145,20 @@ mmn <- function(formula,
 
   net <- build_mmn(model_properties)
 
-  training_properties <- list(lr = lr,
+  training_properties <- list(optimizer = optimizer,
+                              lr = lr,
                               lr_scheduler = lr_scheduler,
-                              optimizer = optimizer,
-                              epochs = epochs,
-                              early_stopping = early_stopping,
-                              plot = plot,
-                              validation = validation,
-                              lambda = lambda,
                               alpha = alpha,
+                              lambda = lambda,
+                              validation = validation,
                               batchsize = batchsize,
-                              shuffle = shuffle)
-
+                              shuffle = shuffle,
+                              epochs = epochs, #redundant?
+                              early_stopping = early_stopping,
+                              burnin = burnin,
+                              device = device_old,
+                              plot = plot,
+                              verbose = verbose)
 
   out <- list()
   class(out) <- "citommn"
@@ -183,21 +167,14 @@ mmn <- function(formula,
   out$call$formula <- formula #necessary?
   out$loss <- loss_obj
   out$data <- list(dataList=dataList)
-  if(!is.null(ylvls)) out$data$ylvls <- ylvls
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
-  out$base_loss <- base_loss
+  out$model_properties <- model_properties
+  out$training_properties <- training_properties
   out$weights <- list()
   out$buffers <- list()
   out$use_model_epoch <- 2
   out$loaded_model_epoch <- torch::torch_tensor(0)
-  out$model_properties <- model_properties
-  out$training_properties <- training_properties
-  out$device <- device_old
-  out$burnin <- burnin #Add to training_properties
 
-
-
-  ### training loop ###
   out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
 
   return(out)
