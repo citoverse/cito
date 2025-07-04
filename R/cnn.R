@@ -312,15 +312,18 @@ predict.citocnn <- function(object,
                             batchsize = NULL,
                             ...) {
 
-  checkmate::assert(checkmate::checkNull(newdata),checkmate::checkCharacter(newdata),
-                    checkmate::checkArray(newdata, min.d = 3, max.d = 5))
+  checkmate::assert(checkmate::checkNull(newdata), checkmate::checkCharacter(newdata),
+                    checkmate::checkArray(newdata, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE))
 
   object <- check_model(object)
 
   type <- match.arg(type)
 
-  if(is.null(device)) device <- object$device
+  if(is.null(device)) device <- object$training_properties$device
   device <- check_device(device)
+
+  object$net$to(device = device)
+  object$loss$to(device = device)
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
@@ -330,10 +333,7 @@ predict.citocnn <- function(object,
     link = function(a) a
   }
 
-  object$net$to(device = device)
-
   from_folder = FALSE
-
 
   if(is.null(newdata)){
     if(is.character(object$data$X)) {
@@ -364,9 +364,9 @@ predict.citocnn <- function(object,
 
   if(!is.null(sample_names)) rownames(pred) <- sample_names
 
-  if(!is.null(object$data$ylvls)) {
-    colnames(pred) <- object$data$ylvls
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  if(!is.null(object$loss$responses)) {
+    colnames(pred) <- object$loss$responses
+    if(type == "class") pred <- factor(apply(pred,1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)
