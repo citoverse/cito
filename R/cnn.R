@@ -2,7 +2,7 @@
 #'
 #' This function trains a Convolutional Neural Network (CNN) on the provided input data `X` and the target data `Y` using the specified architecture, loss function, and optimizer.
 #'
-#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.
+#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
@@ -226,15 +226,8 @@ cnn <- function(X,
     n_samples <- dim(Y)[1]
     valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     train <- c(1:n_samples)[-valid]
-
-    if(from_folder) {
-      # X will be the list of img files!
-      train_dl <- get_data_loader(X[train], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-      valid_dl <- get_data_loader(X[valid], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-    } else {
-      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-    }
+    train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+    valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
   } else {
     train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
     valid_dl <- NULL
@@ -291,7 +284,7 @@ cnn <- function(X,
 #' This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 #'
 #' @param object a model created by \code{\link{cnn}}.
-#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.
+#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. If \code{NULL}, the function uses the data the model was trained on.
 #' @param type A character string specifying the type of prediction to be made. Options are:
 #' \itemize{
 #'   \item \code{"link"}: Scale of the linear predictor.
@@ -327,7 +320,7 @@ predict.citocnn <- function(object,
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-  if(type %in% c("response","class")) {
+  if(type %in% c("response", "class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
@@ -345,15 +338,13 @@ predict.citocnn <- function(object,
   } else if(is.character(newdata)) {
     newdata = list.files(newdata, full.names = TRUE)
     from_folder = TRUE
-  } else if(is.array(newdata) & is.character(object$data$X)) {
-    message("Be aware of potential dimension mismatches. Dimensions cannot be checked because the data folder was used during training.")
-    newdata = torch::torch_tensor(newdata, dtype = torch::torch_float32())
-  } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
+  } else if(all(dim(newdata)[-1] == object$model_properties$input)) {
     sample_names <- dimnames(newdata)[[1]]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
+
   dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE, from_folder = from_folder)
 
   pred <- NULL
@@ -366,7 +357,7 @@ predict.citocnn <- function(object,
 
   if(!is.null(object$loss$responses)) {
     colnames(pred) <- object$loss$responses
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)

@@ -114,10 +114,10 @@ dataset_folder = torch::dataset(
         return(x[index])
       } else {
         if(any(grepl(".png", x)) | any(grepl(".jpeg", x))) {
-          X = lapply(x[index], function(p) torch::torch_tensor(torchvision::base_loader(p), torch::torch_float32() )$unsqueeze(1L) )
+          X = lapply(x[index], function(p) torch::torch_tensor(torchvision::base_loader(p), torch::torch_float32())$unsqueeze(1L))
         }
         if(any(grepl(".tiff", x))) {
-          X = lapply(x[index], function(p) torch::torch_tensor( tiff::readTIFF(x), torch::torch_float32() )$unsqueeze(1L) )
+          X = lapply(x[index], function(p) torch::torch_tensor(tiff::readTIFF(x), torch::torch_float32())$unsqueeze(1L))
         }
         X = torch::torch_cat(X, dim = 1L)/255.
         X = X$permute(c(1, 4, 2, 3))

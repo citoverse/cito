@@ -11,20 +11,20 @@ mmn(
   fusion_activation = "relu",
   fusion_bias = TRUE,
   fusion_dropout = 0,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp", "nbinom", "multinomial", "clogit"),
+  loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
+    "nbinom", "multinomial", "clogit"),
+  custom_parameters = NULL,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
   lr = 0.01,
+  lr_scheduler = NULL,
   alpha = 0.5,
   lambda = 0,
   validation = 0,
   batchsize = 32L,
-  burnin = Inf,
   shuffle = TRUE,
   epochs = 100,
-  early_stopping = NULL,
-  lr_scheduler = NULL,
-  custom_parameters = NULL,
+  early_stopping = Inf,
+  burnin = Inf,
   device = c("cpu", "cuda", "mps"),
   plot = TRUE,
   verbose = TRUE
@@ -43,11 +43,15 @@ mmn(
 
 \item{fusion_dropout}{The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.}
 
-\item{loss}{The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
+\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
+
+\item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
 
 \item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
 
 \item{lr}{Learning rate for the optimizer. Default is 0.01.}
+
+\item{lr_scheduler}{Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.}
 
 \item{alpha}{Alpha value for L1/L2 regularization. Default is 0.5.}
 
@@ -57,17 +61,13 @@ mmn(
 
 \item{batchsize}{Batch size for training. Default is 32.}
 
-\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.}
-
 \item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
 
 \item{epochs}{Number of epochs to train the model. Default is 100.}
 
-\item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is NULL.}
+\item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is Inf.}
 
-\item{lr_scheduler}{Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.}
-
-\item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
+\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.}
 
 \item{device}{Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 

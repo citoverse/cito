@@ -111,16 +111,15 @@ mmn <- function(formula,
   if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss_new(loss, Y, custom_parameters)
 
-  from_folder = FALSE
-
   X <- format_input_data(formula[[3]], dataList)
+
+  from_folder = FALSE
+  if(any(sapply(X, is.character))) from_folder = TRUE
 
   X <- lapply(X, function(x) {
     if(is.character(x)) x = list.files(x, full.names = TRUE)
-    else x = torch::torch_tensor(x, dtype=torch::torch_float32())
     return(x)
     })
-  if(any(sapply(X, is.character))) from_folder = TRUE
 
   Y <- loss_obj$format_Y(Y)
 
@@ -171,6 +170,7 @@ mmn <- function(formula,
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
+  # below unneccessary?
   out$weights <- list()
   out$buffers <- list()
   out$use_model_epoch <- 2
@@ -235,13 +235,14 @@ predict.citommn <- function(object,
     #TODO check whether elements in newdata have the same dimensions as they had in object$data$dataList
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
   }
+
   from_folder = FALSE
+  if(any(sapply(newdata, is.character))) from_folder = TRUE
+
   newdata <- lapply(newdata, function(x) {
     if(is.character(x)) x = list.files(x, full.names = TRUE)
-    else x = torch::torch_tensor(x, dtype=torch::torch_float32() )
     return(x)
   })
-  if(any(sapply(newdata, is.character))) from_folder = TRUE
 
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE, from_folder=from_folder)))
 
@@ -254,7 +255,7 @@ predict.citommn <- function(object,
 
   if(!is.null(object$loss$responses)) {
     colnames(pred) <- object$loss$responses
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)
@@ -316,20 +317,26 @@ format_input_data <- function(formula, dataList) {
       input_data <- inner(term[[3]], input_data)
     } else if(term[[1]] == "dnn") {
       call <- match.call(dnn, term)
-
-      if(!is.null(call$X)) X <- eval(call$X, envir = dataList)
-      else X <- NULL
-      if(!is.null(call$formula)) formula <- stats::formula(call$formula)
-      else formula <- NULL
-      if(!is.null(call$data)) data <- data.frame(eval(call$data, envir = dataList))
-      else data <- NULL
-
+      X <- NULL
+      formula <- NULL
+      data <- NULL
+      if(!is.null(call$X)) {
+        if(!as.character(local(call$X)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$X)), "' in names of dataList."))
+        X <- eval(call$X, envir = dataList)
+      } else if(!is.null(call$formula)) {
+        formula <- stats::formula(call$formula)
+        if(is.null(call$data)) stop(paste0("In '", deparse1(term), "': When using 'formula', 'data' has to be specified."))
+        if(!as.character(local(call$data)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$data)), "' in names of dataList."))
+        data <- data.frame(eval(call$data, envir = dataList))
+      }
       temp <- get_X_Y(formula, X, NULL, data)
       input_data <- append(input_data, list(torch::torch_tensor(temp$X, dtype = torch::torch_float32())))
       if (!is.null(temp$Z)) input_data <- append(input_data, list(torch::torch_tensor(temp$Z, dtype = torch::torch_long())))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      input_data <- append(input_data, list(torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32())))
+      if(!as.character(local(call$X)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$X)), "' in names of dataList."))
+      if(is.character(eval(call$X, envir = dataList))) input_data <- append(input_data, list(eval(call$X, envir = dataList)))
+      else input_data <- append(input_data, list(torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32())))
     }
     return(input_data)
   }
