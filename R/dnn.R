@@ -376,7 +376,7 @@ dnn <- function(formula = NULL,
     out$use_model_epoch <- 2
     out$loaded_model_epoch <- torch::torch_tensor(0)
 
-    out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
+    out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
   } else {
     out <- list()
