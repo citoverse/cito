@@ -16,7 +16,7 @@
 \arguments{
 \item{object}{a model created by \code{\link{cnn}}.}
 
-\item{newdata}{A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.}
+\item{newdata}{A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. If \code{NULL}, the function uses the data the model was trained on.}
 
 \item{type}{A character string specifying the type of prediction to be made. Options are:
 \itemize{

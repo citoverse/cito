@@ -15,9 +15,10 @@ continue_training(model, ...)
   epochs = 32,
   data = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   init_optimizer = TRUE,
+  X = NULL,
+  Y = NULL,
   ...
 )
 
@@ -26,10 +27,11 @@ continue_training(model, ...)
   epochs = 32,
   data = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   parallel = FALSE,
   init_optimizer = TRUE,
+  X = NULL,
+  Y = NULL,
   ...
 )
 
@@ -39,7 +41,6 @@ continue_training(model, ...)
   X = NULL,
   Y = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   init_optimizer = TRUE,
   ...
@@ -50,7 +51,6 @@ continue_training(model, ...)
   epochs = 32,
   dataList = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   init_optimizer = TRUE,
   ...
@@ -67,17 +67,15 @@ continue_training(model, ...)
 
 \item{device}{can be used to overwrite device used in previous training}
 
-\item{verbose}{print training and validation loss of epochs}
-
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
 
 \item{init_optimizer}{re-initialize optimizer or not}
 
+\item{X}{Predictor data. If not provided X from original training will be used}
+
+\item{Y}{Target data. If not provided Y from original training will be used}
+
 \item{parallel}{train bootstrapped model in parallel}
-
-\item{X}{array. If not provided X from original training will be used}
-
-\item{Y}{vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used}
 
 \item{dataList}{A list containing the data for training the model. The list should contain all variables used in the formula. If not provided dataList from original training will be used}
 }

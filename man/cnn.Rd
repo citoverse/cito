@@ -17,18 +17,19 @@ cnn(
   alpha = 0.5,
   lambda = 0,
   validation = 0,
-  batchsize = 32L,
+  batchsize = NULL,
   shuffle = TRUE,
   epochs = 100,
   early_stopping = Inf,
   burnin = Inf,
+  baseloss = NULL,
   device = c("cpu", "cuda", "mps"),
   plot = TRUE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.}
+\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.}
 
 \item{Y}{The target data. It can be a factor, numeric vector, or a numeric or logical matrix.}
 
@@ -50,7 +51,7 @@ cnn(
 
 \item{validation}{Proportion of the data to be used for validation. Default is 0.0.}
 
-\item{batchsize}{Batch size for training. Default is 32.}
+\item{batchsize}{Batch size for training. If NULL, batchsize is 10\% of the training data. Default is NULL.}
 
 \item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
 
@@ -58,7 +59,9 @@ cnn(
 
 \item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is Inf.}
 
-\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.}
+\item{burnin}{Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.}
+
+\item{baseloss}{Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.}
 
 \item{device}{Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 

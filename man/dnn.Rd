@@ -13,24 +13,24 @@ dnn(
   dropout = 0,
   loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
     "nbinom", "multinomial", "clogit"),
-  validation = 0,
-  lambda = 0,
-  alpha = 0.5,
+  custom_parameters = NULL,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
+  lr_scheduler = NULL,
+  alpha = 0.5,
+  lambda = 0,
+  validation = 0,
   batchsize = NULL,
-  burnin = Inf,
-  baseloss = NULL,
   shuffle = TRUE,
   epochs = 100,
-  bootstrap = NULL,
-  bootstrap_parallel = FALSE,
+  early_stopping = Inf,
+  burnin = Inf,
+  baseloss = NULL,
+  device = c("cpu", "cuda", "mps"),
   plot = TRUE,
   verbose = TRUE,
-  lr_scheduler = NULL,
-  custom_parameters = NULL,
-  device = c("cpu", "cuda", "mps"),
-  early_stopping = FALSE,
+  bootstrap = NULL,
+  bootstrap_parallel = FALSE,
   tuning = config_tuning(),
   hooks = NULL,
   X = NULL,
@@ -52,41 +52,41 @@ dnn(
 
 \item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
 
-\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
-
-\item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
-
-\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
+\item{custom_parameters}{List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.}
 
 \item{optimizer}{which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}}
 
 \item{lr}{learning rate given to optimizer}
 
+\item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
+
+\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
+
+\item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
+
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
+
 \item{batchsize}{number of samples that are used to calculate one learning rate step, default is 10\% of the training data}
-
-\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
-
-\item{baseloss}{baseloss, if null baseloss corresponds to intercept only models}
 
 \item{shuffle}{if TRUE, data in each batch gets reshuffled every epoch}
 
 \item{epochs}{epochs the training goes on for}
 
-\item{bootstrap}{bootstrap neural network or not, numeric corresponds to number of bootstrap samples}
+\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
 
-\item{bootstrap_parallel}{parallelize (CPU) bootstrapping}
+\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+
+\item{baseloss}{baseloss, if null baseloss corresponds to intercept only models}
+
+\item{device}{device on which network should be trained on. mps correspond to M1/M2 GPU devices.}
 
 \item{plot}{plot training loss}
 
 \item{verbose}{print training and validation loss of epochs}
 
-\item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
+\item{bootstrap}{bootstrap neural network or not, numeric corresponds to number of bootstrap samples}
 
-\item{custom_parameters}{List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.}
-
-\item{device}{device on which network should be trained on. mps correspond to M1/M2 GPU devices.}
-
-\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+\item{bootstrap_parallel}{parallelize (CPU) bootstrapping}
 
 \item{tuning}{tuning options created with \code{\link{config_tuning}}}
 
@@ -120,7 +120,6 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    Name \tab Explanation \tab Example / Task \cr
    mse \tab mean squared error \tab Regression, predicting continuous values \cr
    mae \tab mean absolute error \tab Regression, predicting continuous values \cr
-   softmax \tab categorical cross entropy \tab Multi-class, species classification \cr
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
