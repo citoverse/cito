@@ -183,6 +183,11 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                    loss)
   }
 
+  if(is.character(loss) && loss == "softmax") {
+    warning("loss = 'softmax' is deprecated and will be removed in a future version of 'cito'. Please use loss = 'cross-entropy' instead.")
+    loss <- "cross-entropy"
+  }
+
   if(is.function(loss)) {
     create_loss <- torch::nn_module(
       classname = "custom loss",
