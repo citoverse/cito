@@ -20,7 +20,8 @@
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is Inf.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
+#' @param baseloss Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.
 #' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
 #' @param plot Whether to plot the training progress. Default is TRUE.
 #' @param verbose Whether to print detailed training progress. Default is TRUE.
@@ -63,6 +64,7 @@ mmn <- function(formula,
                 epochs = 100,
                 early_stopping = Inf,
                 burnin = Inf,
+                baseloss = NULL,
                 device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE) {
@@ -78,6 +80,7 @@ mmn <- function(formula,
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(early_stopping, "N1[1,]")
   checkmate::qassert(burnin, "N1[1,]")
+  checkmate::qassert(baseloss, c("0", "N1"))
   checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
@@ -110,6 +113,7 @@ mmn <- function(formula,
 
   if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss_new(loss, Y, custom_parameters)
+  if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 
   X <- format_input_data(formula[[3]], dataList)
 
@@ -156,6 +160,7 @@ mmn <- function(formula,
                               epochs = epochs, #redundant?
                               early_stopping = early_stopping,
                               burnin = burnin,
+                              baseloss = baseloss,
                               device = device_old,
                               plot = plot,
                               verbose = verbose)
