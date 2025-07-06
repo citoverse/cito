@@ -1,4 +1,4 @@
-train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE, init_optimizer=TRUE){
+train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_new = FALSE, init_optimizer=TRUE){
   model$net$to(device = device)
   model$loss$to(device = device)
   model$net$train(TRUE)
@@ -83,7 +83,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     })
 
     if(is.na(loss$item())) {
-      if(verbose) cat("Loss is NA. Bad training, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
+      if(model$training_properties$verbose) cat("Loss is NA. Bad training, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
       model$successfull = 0
       break
     }
@@ -92,7 +92,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
     if(epoch >= model$training_properties$burnin) {
       if(model$losses$train_l[epoch] > model$training_properties$base_loss) {
-        if(verbose) cat("Cancel training because loss is still above baseline, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
+        if(model$training_properties$verbose) cat("Cancel training because loss is still above baseline, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
         model$successfull = 0
         break
       }
@@ -162,10 +162,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     }
 
     if(model$training_properties$validation != 0 & !is.null(valid_dl)){
-      if(verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+      if(model$training_properties$verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                               epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
     }else{
-      if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
+      if (model$training_properties$verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
 
     ### create plot ###

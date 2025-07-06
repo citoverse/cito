@@ -170,7 +170,7 @@ mmn <- function(formula,
   class(out) <- "citommn"
   out$net <- net
   out$call <- match.call()
-  out$call$formula <- formula #necessary?
+  out$call$formula <- formula
   out$loss <- loss_obj
   out$data <- list(dataList=dataList)
   if(validation != 0) out$data <- append(out$data, list(validation = valid))
