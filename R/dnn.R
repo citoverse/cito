@@ -7,27 +7,26 @@
 #' @param hidden hidden units in layers, length of hidden corresponds to number of layers
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
-#'
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
 #' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
-#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
-#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
-#' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
+#' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
 #' @param lr learning rate given to optimizer
+#' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
+#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
+#' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
+#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
 #' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
-#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
-#' @param baseloss baseloss, if null baseloss corresponds to intercept only models
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
-#' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
-#' @param bootstrap_parallel parallelize (CPU) bootstrapping
-#' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
+#' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
+#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
+#' @param baseloss baseloss, if null baseloss corresponds to intercept only models
+#' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param plot plot training loss
 #' @param verbose print training and validation loss of epochs
-#' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
-#' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
-#' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
+#' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
+#' @param bootstrap_parallel parallelize (CPU) bootstrapping
 #' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
@@ -46,7 +45,6 @@
 #' | :--- | :--- | :--- |
 #' | mse | mean squared error |Regression, predicting continuous values|
 #' | mae | mean absolute error | Regression, predicting continuous values |
-#' | softmax | categorical cross entropy |Multi-class, species classification|
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification|
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
@@ -173,33 +171,28 @@ dnn <- function(formula = NULL,
                 bias = TRUE,
                 dropout = 0.0,
                 loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
-                validation = 0,
-                lambda = 0.0,
-                alpha = 0.5,
+                custom_parameters = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,
+                lr_scheduler = NULL,
+                alpha = 0.5,
+                lambda = 0.0,
+                validation = 0,
                 batchsize = NULL,
-                burnin = Inf,
-                baseloss = NULL,
                 shuffle = TRUE,
                 epochs = 100,
-                bootstrap = NULL,
-                bootstrap_parallel = FALSE,
+                early_stopping = Inf,
+                burnin = Inf,
+                baseloss = NULL,
+                device = c("cpu","cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
-                device = c("cpu","cuda", "mps"),
-                early_stopping = FALSE,
+                bootstrap = NULL,
+                bootstrap_parallel = FALSE,
                 tuning = config_tuning(),
                 hooks = NULL,
                 X = NULL,
                 Y = NULL) {
-
-
-  out <- list()
-
-  class(out) <- "citodnn"
 
   tuner = check_hyperparameters(hidden = hidden ,
                                 bias = bias,
@@ -211,37 +204,47 @@ dnn <- function(formula = NULL,
                                 epochs = epochs,
                                 lr = lr)
 
+  checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(validation, "N1[0,1)")
+  checkmate::qassert(shuffle, "B1")
+  checkmate::qassert(early_stopping, "N1[1,]")
+  checkmate::qassert(burnin, "N1[1,]")
+  checkmate::qassert(baseloss, c("0", "N1"))
+  checkmate::qassert(device, "S+[3,)")
+  checkmate::qassert(plot, "B1")
+  checkmate::qassert(verbose, "B1")
+
 
   device <- match.arg(device)
 
-  if(!is.function(loss) & !inherits(loss,"family")){
-    loss <- match.arg(loss)
+  # if(!is.function(loss) & !inherits(loss,"family")){
+  #   loss <- match.arg(loss)
+  #
+  #   if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+  #     message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
+  #
+  # if(inherits(loss,"family")) {
+  #   if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+  #     message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
 
-    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
-      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
+  device_old <- device
+  device <- check_device(device)
 
-  if(inherits(loss,"family")) {
-    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
-      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
 
-  device_old = device
-  device = check_device(device)
   tmp_data = get_X_Y(formula, X, Y, data)
   old_formula = tmp_data$old_formula
-  out$old_formula = old_formula
   X = tmp_data$X
   Y = tmp_data$Y
   Z = tmp_data$Z
   formula = tmp_data$formula
   Z_formula = tmp_data$Z_terms
   data = tmp_data$data
-
 
   if(!is.null(Z)) {
 
@@ -257,10 +260,9 @@ dnn <- function(formula = NULL,
     embeddings = NULL
   }
 
-  if(is.null(batchsize)) batchsize = round(0.1*nrow(X))
-
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
+    if(any(inherits(hidden, "tune"), inherits(activation, "tune"), inherits(bias, "tune"), inherits(dropout, "tune"))) stop("Tuning of hyperparameters is not supported within mmn().")
     model_properties <- list(input = ncol(X),
                              hidden = hidden,
                              activation = activation,
@@ -271,40 +273,24 @@ dnn <- function(formula = NULL,
     return(model_properties)
   }
 
-  loss_obj <- get_loss(loss, device = device, X = X, Y = Y)
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
-      warning("custom_parameters has to be list")
-    }else{
-      custom_parameters<- lapply(custom_parameters,function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
-    }
-  }
-
-  loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
+  if(is.character(loss)) loss <- match.arg(loss)
+  loss_obj <- get_loss_new(loss, Y, custom_parameters)
 
   response_column <- NULL
-  if(inherits(loss_obj$call, "character") && loss_obj$call == "softmax") response_column = as.character(LHSForm(formula)) #Gibt die RHS aus, falls keine LHS vorhanden. Relevant?
-
-  targets <- format_targets(Y, loss_obj)
-  Y_torch <- targets$Y
-  Y_transformed = as.matrix(Y_torch)
-  Y_base <- targets$Y_base
-  y_dim <- targets$y_dim
-  ylvls <- targets$ylvls
-  responses <- targets$responses
+  if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out
 
   X_torch <- torch::torch_tensor(X)
+  Y_torch <- loss_obj$format_Y(Y)
   if(!is.null(embeddings)) {
     Z_torch = torch::torch_tensor(Z, dtype = torch::torch_long())
   } else {
     Z_torch = NULL
   }
 
-  ### Hyperparameter tuning ###
+  if(is.null(batchsize)) batchsize = round(0.1*dim(Y_torch)[1])
 
+  ### Hyperparameter tuning ###
+  #TODO: Adjust for new loss objects
   if(length(tuner) != 0 ) {
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
@@ -316,12 +302,10 @@ dnn <- function(formula = NULL,
 
   if(is.null(bootstrap) || !bootstrap) {
 
-    if(is.null(baseloss)) {
-      baseloss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y_torch$to(device = device))$mean()$cpu() )
-    }
-    ### dataloader  ###
+    if(is.null(baseloss)) baseloss <- loss_obj$baseloss
+
     if(validation != 0) {
-      n_samples <- nrow(X)
+      n_samples <- dim(Y_torch)[1]
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
       if(is.null(Z_torch)) {
@@ -341,7 +325,7 @@ dnn <- function(formula = NULL,
     }
 
     model_properties <- list(input = ncol(X),
-                             output = y_dim,
+                             output = loss_obj$y_dim,
                              hidden = hidden,
                              activation = activation,
                              bias = bias,
@@ -351,50 +335,48 @@ dnn <- function(formula = NULL,
 
     net <- build_dnn(model_properties)
 
-    training_properties <- list(lr = lr,
-                               lr_scheduler = lr_scheduler,
-                               optimizer = optimizer,
-                               epochs = epochs,
-                               early_stopping = early_stopping,
-                               plot = plot,
-                               validation = validation,
-                               lambda = lambda,
-                               alpha = alpha,
-                               batchsize = batchsize,
-                               shuffle = shuffle,
-                               formula = formula,
-                               embeddings = embeddings,
-                               hooks = hooks)
+    training_properties <- list(optimizer = optimizer,
+                                lr = lr,
+                                lr_scheduler = lr_scheduler,
+                                alpha = alpha,
+                                lambda = lambda,
+                                validation = validation,
+                                batchsize = batchsize,
+                                shuffle = shuffle,
+                                epochs = epochs, #redundant?
+                                early_stopping = early_stopping,
+                                burnin = burnin,
+                                baseloss = baseloss,
+                                device = device_old,
+                                plot = plot,
+                                verbose = verbose,
+                                formula = formula, #redundant: in out$call
+                                embeddings = embeddings, #redundant: in model_properties
+                                hooks = hooks) #unnecessary: does nothing?
+
     out <- list()
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
-    out$call$formula <- stats::terms.formula(formula, data=data)
-    out$Z_formula = Z_formula
-    out$old_formula = old_formula
+    out$call$formula <- stats::terms.formula(formula, data=data) #suggestion: put formula and Z_formula back together to get nice looking formula of what the network actually does (e.g. for print.citodnn)
+    out$Z_formula = Z_formula #redundant: inferable from old_formula
+    out$old_formula = old_formula #redundant: see above
     out$loss <- loss_obj
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
+    out$response_column <- response_column #redundant: inferable from old_formula
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #redundant to save X, Y and Z?
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
-    out$base_loss = baseloss
-    if(!is.null(ylvls))  {
-      out$data$ylvls <- ylvls
-      out$data$xlvls <- out$data$xlvls[-which(names(out$data$xlvls) %in% as.character(formula[[2]]))]
-    }
+    out$data$xlvls <- out$data$xlvls[!names(out$data$xlvls) %in% as.character(formula[[2]])]
     if(validation != 0) out$data <- append(out$data, list(validation = valid))
+    out$model_properties <- model_properties
+    out$training_properties <- training_properties
+    # below unneccessary?
     out$weights <- list()
     out$use_model_epoch <- 2
     out$loaded_model_epoch <- torch::torch_tensor(0)
-    out$model_properties <- model_properties
-    out$training_properties <- training_properties
-    out$device = device_old
-    out$responses = responses
-    out$burnin = burnin #Add to training_properties
 
-    ### training loop ###
-    out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
+    out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
 
   } else {
     out <- list()
@@ -406,15 +388,22 @@ dnn <- function(formula = NULL,
 
       for(b in 1:bootstrap) {
         indices <- sample(nrow(data),replace = TRUE)
+        #Alternative that doesn't require future editing when new arguments are added to dnn() (e.g. burnin, baseloss are missing)
+        #call <- match.call()
+        #call$data <- data[indices,]
+        #call$plot <- FALSE
+        #call$verbose <- FALSE
+        #call$bootstrap <- NULL
+        #m = eval(call)
         m = do.call(dnn, args = list(
           formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
-          bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
-          optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
+          bias = bias, validation = validation, lambda = lambda, alpha = alpha, lr = lr, dropout = dropout, hooks = hooks,
+          optimizer = optimizer, batchsize = batchsize, shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
         pb$tick()
         models[[b]] = m
       }
@@ -443,7 +432,7 @@ dnn <- function(formula = NULL,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z)
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
         m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)
@@ -451,12 +440,12 @@ dnn <- function(formula = NULL,
     }
 
     out$models <- models
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z)
+    #out$call for print.citodnnBootstrap ?
+    out$old_formula = old_formula #old_formula into out$call ?
+    out$loss = loss_obj
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #X, Y, Z redundant
     out$device = device_old
-    out$responses = responses
-    out$loss = loss_obj$call
-    out$response_column = response_column
-    out$old_formula = old_formula
+    out$response_column = response_column #redundant: inferable from old_formula
 
     out$successfull = any(!sapply(models, function(m) m$successfull) == 0)
 
@@ -483,6 +472,7 @@ print.citodnn <- function(x,...){
 #' @rdname print.citodnn
 #' @export
 print.citodnnBootstrap <- function(x,...){
+  #print call?
   x$models <- lapply(x$models, check_model)
   print(x$models[[1]]$net)
   return(invisible(x))
@@ -499,7 +489,7 @@ print.citodnnBootstrap <- function(x,...){
 residuals.citodnn <- function(object,...){
   object <- check_model(object)
   out <- data.frame(
-    true = object$data$Y,
+    true = object$data$Y, #If Y is removed to reduce redundancy, infer Y here from data
     pred = stats::predict(object, object$data$data)
   )
   return(out)
@@ -537,7 +527,7 @@ summary.citodnn <- function(object, n_permute = NULL, device = NULL, type = "res
   object <- check_model(object)
   out <- list()
   class(out) <- "summary.citodnn"
-  if(is.null(device)) device = object$device
+  if(is.null(device)) device = object$training_properties$device
   out$importance <- get_importance(object, n_permute, device)
   for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
   out$conditionalEffects = conditionalEffects(object, device = device, type = type)
@@ -603,8 +593,8 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ad
         as.vector(as.matrix(stats::pnorm(abs(imps/imps_se), lower.tail = FALSE)*2))
       )
       colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
-      resp = object$responses[i-1]
-      if(inherits(object$loss, "character")) { if(object$loss == "softmax") resp = object$response_column }
+      resp = object$loss$responses[i-1]
+      if(inherits(loss_obj, "cross-entropy loss")) resp = object$response_column
       rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
       if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
       res_imps[[i-1]] = coefmat
@@ -631,7 +621,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ad
       as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$responses[i])
+    rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
     if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
     res_ACE[[i]] = coefmat
   }
@@ -654,7 +644,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ad
       as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
     )
     colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$responses[i])
+    rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
     if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
     res_ASCE[[i]] = coefmat
   }
@@ -735,36 +725,36 @@ coef.citodnnBootstrap <- function(object, ...) {
 #'
 #' @example /inst/examples/predict.citodnn-example.R
 #' @export
-predict.citodnn <- function(object, newdata = NULL,
+predict.citodnn <- function(object,
+                            newdata = NULL,
                             type=c("link", "response", "class"),
-                            device = c("cpu","cuda", "mps"),
+                            device = NULL,
                             batchsize = NULL, ...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
                      checkmate::checkDataFrame(newdata),
                      checkmate::checkScalarNA(newdata))
+
   object <- check_model(object)
 
   type <- match.arg(type)
 
-  device <- match.arg(device)
+  if(is.null(device)) device <- object$training_properties$device
+  device <- check_device(device)
 
-  if(type %in% c("response","class")) {
+  object$net$to(device = device)
+  object$loss$to(device = device)
+
+  if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
+
+  if(type %in% c("response", "class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
   }
 
-  if(is.null(batchsize)) {
-    batchsize = object$training_properties$batchsize
-  }
-
-  device <- check_device(device)
-
   Z = NULL
-
-  object$net$to(device = device)
 
   if(is.null(newdata)){
     sample_names <- rownames(object$data$X)
@@ -780,6 +770,7 @@ predict.citodnn <- function(object, newdata = NULL,
     if(!is.null(object$model_properties$embeddings)) {
       tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
         if(!is.factor(newdata[[term]])) stop(paste0(term, " must be factor."))
+        #TODO: check if newdata[[term]] has the same factor levels as object$data[[term]]
         newdata[[term]] |> as.integer()
       }) )
       Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
@@ -805,9 +796,9 @@ predict.citodnn <- function(object, newdata = NULL,
 
   if(!is.null(sample_names)) rownames(pred) <- sample_names
 
-  if(!is.null(object$data$ylvls)) {
-    colnames(pred) <- object$data$ylvls
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  if(!is.null(object$loss$responses)) {
+    colnames(pred) <- object$loss$responses
+    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)
@@ -821,7 +812,7 @@ predict.citodnn <- function(object, newdata = NULL,
 predict.citodnnBootstrap <- function(object,
                                      newdata = NULL,
                                      type=c("link", "response", "class"),
-                                     device = c("cpu","cuda", "mps"),
+                                     device = NULL,
                                      batchsize = NULL,
                                      reduce = c("mean", "median", "none"),...) {
 
@@ -829,8 +820,6 @@ predict.citodnnBootstrap <- function(object,
                      checkmate::checkMatrix(newdata),
                      checkmate::checkDataFrame(newdata),
                      checkmate::checkScalarNA(newdata))
-
-  if(is.null(newdata)) newdata = object$data$X
 
   predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device, batchsize = batchsize))
   predictions = abind::abind(predictions, along = 0L)
@@ -858,7 +847,7 @@ predict.citodnnBootstrap <- function(object,
 #' @export
 plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
 
-  if(!is.null(x$data$Z)) {
+  if(x$net$has_embeddings) {
     cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")
     return(invisible(NULL))
   }
