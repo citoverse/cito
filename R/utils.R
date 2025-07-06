@@ -1233,8 +1233,6 @@ cast_to_r_keep_dim = function(x) {
 
 get_X_Y = function(formula, X, Y, data) {
 
-  if(!is.null(formula)) old_formula = formula
-
   if(!is.null(X)) {
     if(!is.null(Y)) {
       if(!is.matrix(Y)) Y <- data.frame(Y)
