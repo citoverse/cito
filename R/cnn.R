@@ -13,7 +13,7 @@
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
 #' @param validation Proportion of the data to be used for validation. Default is 0.0.
-#' @param batchsize Batch size for training. Default is 32.
+#' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
@@ -139,7 +139,7 @@ cnn <- function(X,
                 alpha = 0.5,
                 lambda = 0.0,
                 validation = 0.0,
-                batchsize = 32L,
+                batchsize = NULL,
                 shuffle = TRUE,
                 epochs = 100,
                 early_stopping = Inf,
@@ -157,7 +157,7 @@ cnn <- function(X,
   checkmate::qassert(alpha, "N1[0,1]")
   checkmate::qassert(lambda, "N1[0,)")
   checkmate::qassert(validation, "N1[0,1)")
-  checkmate::qassert(batchsize, "X1[1,)")
+  checkmate::qassert(batchsize, c("0", "X1[1,)"))
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(early_stopping, "N1[1,]")
@@ -225,6 +225,7 @@ cnn <- function(X,
   }
 
   Y <- loss_obj$format_Y(Y)
+  if(is.null(batchsize)) batchsize = round(0.1*dim(Y)[1])
 
   if(validation != 0) {
     n_samples <- dim(Y)[1]
