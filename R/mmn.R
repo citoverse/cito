@@ -261,6 +261,8 @@ predict.citommn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b))$to(device="cpu")))
   })
 
+  #TODO: find a way to get sample_names as in predict.citodnn and predict.citocnn
+
   if(!is.null(object$loss$responses)) {
     colnames(pred) <- object$loss$responses
     if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)

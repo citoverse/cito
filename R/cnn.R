@@ -333,12 +333,15 @@ predict.citocnn <- function(object,
   }
 
   from_folder = FALSE
+  sample_names = NULL
 
+  #TODO: get sample_names from files in folder
   if(is.null(newdata)){
     if(is.character(object$data$X)) {
       newdata = list.files(object$data$X, full.names = TRUE)
       from_folder = TRUE
     } else {
+      sample_names <- dimnames(object$data$X)[[1]]
       newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
     }
   } else if(is.character(newdata)) {
