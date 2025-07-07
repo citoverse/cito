@@ -374,6 +374,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
 
         if(is.factor(Y)) {
           if(length(levels(Y)) != length(unique(Y))) warning("The provided factor containing the labels has levels with zero occurences. Make sure this is intended, as for each level a node in the output layer will be created.")
+        } else if(is.data.frame(Y)) {
+          Y <- factor(Y[,1])
         } else {
           Y <- factor(Y)
         }
@@ -396,7 +398,10 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
-        Y <- factor(Y, self$responses)
+
+        if(is.data.frame(Y)) Y <- factor(Y[,1], self$responses)
+        else Y <- factor(Y, self$responses)
+
         if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
                           If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
         return(torch::torch_tensor(as.integer(Y), dtype = torch::torch_long()))
