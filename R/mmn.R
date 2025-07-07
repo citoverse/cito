@@ -114,7 +114,7 @@ mmn <- function(formula,
   Y <- eval(formula[[2]], envir = dataList)
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss_new(loss, Y, custom_parameters)
+  loss_obj <- get_loss(loss, Y, custom_parameters)
   if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 
   X <- format_input_data(formula[[3]], dataList)

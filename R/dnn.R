@@ -274,7 +274,7 @@ dnn <- function(formula = NULL,
   }
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss_new(loss, Y, custom_parameters)
+  loss_obj <- get_loss(loss, Y, custom_parameters)
 
   response_column <- NULL
   if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out

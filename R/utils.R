@@ -1,98 +1,3 @@
-format_targets <- function(Y, loss_obj, ylvls=NULL) {
-
-  if(is.vector(Y)) y_dim = 1
-  else y_dim = ncol(Y)
-
-  if(is.null(ylvls) && is.factor(Y)) ylvls <- levels(Y)
-  if(!inherits(Y, "matrix")) Y = as.matrix(Y)
-  responses <- colnames(Y)
-
-  if(inherits(loss_obj$call, "family") && loss_obj$call$family == "binomial") {
-    if(all(Y %in% c(0,1))) {
-      Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
-
-    } else if(is.character(Y)) {
-      if (is.null(ylvls)) {
-        Y <- factor(Y[,1])
-        ylvls <- levels(Y)
-      } else {
-        Y <- factor(Y[,1], levels = ylvls)
-      }
-      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
-
-    } else {
-      Y <- as.integer(Y[,1])
-      Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
-    }
-    y_dim <- ncol(Y)
-    Y_base <- torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
-
-
-    ##### TODO move Y preparation to loss objects!!!!
-
-  } else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("softmax", "cross-entropy"))) {
-    if (is.character(Y)) {
-      if (is.null(ylvls)) {
-        Y <- factor(Y[,1])
-        ylvls <- levels(Y)
-      } else {
-        Y <- factor(Y[,1], levels = ylvls)
-      }
-      prop <- as.vector(table(Y)/sum(table(Y)))
-      y_dim <- length(ylvls)
-      Y <- as.matrix(as.integer(Y), ncol=1L)
-      if(length(ylvls) != length(unique(Y))) {
-        warning("There exist labels without any corresponding samples. Make sure this is intended:\n
-                1) dnn, cnn: The provided factor containing the labels has levels with zero occurences. For each level a node in the output layer will be created.\n
-                2) continue_training: The new data provided has labels with zero corresponding samples.")
-      }
-    } else {
-      Y <- as.matrix(as.integer(Y[,1]), ncol=1L)
-      y_dim <- length(unique(Y))
-      prop <- as.vector(table(Y)/sum(table(Y)))
-    }
-    Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
-    Y <- torch::torch_tensor(Y, dtype = torch::torch_long())
-
-  }  else if(!is.function(loss_obj$call) && any(loss_obj$call %in% c("multinomial", "clogit" ))) {
-
-    if(ncol(Y) > 1.5) {
-      Y_base = torch::torch_tensor(matrix(colMeans(Y), nrow = nrow(Y), ncol = ncol(Y), byrow = TRUE), dtype = torch::torch_float32())
-      Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
-    } else {
-
-      if(is.character(Y)) {
-        if (is.null(ylvls)) {
-          Y <- factor(Y[,1])
-          ylvls <- levels(Y)
-        } else {
-          Y <- factor(Y[,1], levels = ylvls)
-        }
-        Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
-
-      } else {
-        Y <- as.integer(Y[,1])
-        Y <- torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32())
-      }
-      y_dim <- ncol(Y)
-      YY = apply(as.matrix(Y), 1, which.max)
-
-      prop <- as.vector(table(YY)/sum(table(YY)))
-      Y_base <- torch::torch_tensor( matrix(prop, nrow = nrow(Y), ncol = length(prop), byrow = TRUE), dtype = torch::torch_float32() )
-    }
-
-  } else {
-    y_dim <- ncol(Y)
-    Y <- torch::torch_tensor(Y, dtype = torch::torch_float32())
-    Y_base = torch::torch_tensor(matrix(apply(as.matrix(Y), 2, mean), nrow(Y), ncol(Y), byrow = TRUE))
-  }
-
-  if(!is.null(ylvls)) responses <- ylvls
-
-  return(list(Y=Y, Y_base=Y_base, y_dim=y_dim, ylvls=ylvls, responses=responses))
-}
-
-
 get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALSE) {
 
   if(from_folder) ds = dataset_folder(...)
@@ -134,45 +39,7 @@ dataset_folder = torch::dataset(
   }
 )
 
-# ds = do.call(dataset_folder, list(list.files(path = "test_folder/", full.names = T), torch_rand(1000), torch_rand(1000, 20, 10)))
-# DL = torch::dataloader(ds, batch_size = 20, shuffle = TRUE)
-# k = coro::collect(DL, 1)
-# k
-
-#' Multinomial log likelihood
-#'
-#' @param probs probabilities
-#' @param value observed values
-#'
-#' Multinomial log likelihood
-#'
-#' @export
-multinomial_log_prob = function(probs, value) {
-  logits = probs$log()
-  log_factorial_n = torch::torch_lgamma(value$sum(-1) + 1)
-  log_factorial_xs = torch::torch_lgamma(value + 1)$sum(-1)
-  logits[(value == 0) & (logits == -Inf)] = 0
-  log_powers = (logits * value)$sum(-1)
-  return(log_factorial_n - log_factorial_xs + log_powers)
-}
-
-# binomial_log_prob = function(probs, value, total_count) {
-#   log_factorial_n = torch_lgamma(total_count + 1)
-#   log_factorial_k = torch_lgamma(value + 1)
-#   log_factorial_nmk = torch_lgamma(total_count - value + 1)
-#
-#   normalize_term = (
-#     self.total_count * _clamp_by_zero(self.logits)
-#     + self.total_count * torch.log1p(torch.exp(-torch.abs(self.logits)))
-#     - log_factorial_n
-#   )
-#   return (
-#     value * self.logits - log_factorial_k - log_factorial_nmk - normalize_term
-#   )
-#
-# }
-
-get_loss_new <- function(loss, Y, custom_parameters) {
+get_loss <- function(loss, Y, custom_parameters) {
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)
   if(is.character(loss) && loss == "softmax") {
@@ -723,166 +590,6 @@ get_loss_new <- function(loss, Y, custom_parameters) {
   return(create_loss())
 }
 
-
-get_loss <- function(loss, device = "cpu", X = NULL, Y = NULL) {
-
-  out <- list()
-  out$parameter <- NULL
-
-  if(is.character(loss)) loss <- tolower(loss)
-  if(!inherits(loss, "family")& is.character(loss)) {
-    loss <- switch(loss,
-                   "gaussian" = stats::gaussian(),
-                   "binomial" = stats::binomial(),
-                   "poisson" = stats::poisson(),
-                   loss)
-  }
-
-  if(inherits(loss, "family")){
-    if(loss$family == "gaussian") {
-      out$parameter <- torch::torch_tensor(1.0, requires_grad = TRUE, device = device)
-      out$parameter_r = as.numeric(out$parameter$cpu())
-      out$invlink <- function(a) a
-      out$link <- function(a) a
-      out$loss <- function(pred, true) {
-        return(torch::distr_normal(pred, torch::torch_clamp(out$parameter, 0.0001, 20))$log_prob(true)$negative())
-      }
-    } else if(loss$family == "binomial") {
-      if(loss$link == "logit") {
-        out$invlink <- function(a) torch::torch_sigmoid(a)
-        out$link <- function(a) stats::binomial("logit")$linkfun(as.matrix(a))
-      } else if(loss$link == "probit")  {
-        out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
-        out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a))
-      } else {
-        out$invlink <- function(a) a
-        out$link <- function(a) a
-      }
-      out$loss <- function(pred, true) {
-        return(torch::distr_bernoulli(probs = out$invlink(pred))$log_prob(true)$negative())
-      }
-    } else if(loss$family == "poisson") {
-      if(loss$link == "log") {
-        out$invlink <- function(a) torch::torch_exp(a)
-        out$link <- function(a) log(a)
-      } else {
-        out$invlink <- function(a) a
-        out$link <- function(a) a
-      }
-      out$loss <- function(pred, true) {
-        return(torch::distr_poisson( out$invlink(pred) )$log_prob(true)$negative())
-      }
-    } else { stop("family not supported")}
-  } else  if (is.function(loss)){
-    if(is.null(formals(loss)$pred) | is.null(formals(loss)$true)){
-      stop("loss function has to take two arguments, \"pred\" and \"true\"")
-    }
-    out$loss <- loss
-    out$invlink <- function(a) a
-    out$link <- function(a) a
-  } else {
-    if(loss == "mae"){
-      out$invlink <- function(a) a
-      out$link <- function(a) a
-      out$loss <- function(pred, true) return(torch::nnf_l1_loss(input = pred, target = true))
-    }else if(loss == "mse"){
-      out$invlink <- function(a) a
-      out$link <- function(a) a
-      out$loss <- function(pred,true) return(torch::nnf_mse_loss(input= pred, target = true))
-    }else if(loss == "softmax" | loss == "cross-entropy") {
-      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
-      out$link <- function(a) log(a) + log(ncol(a))
-      out$loss <- function(pred, true) {
-        return(torch::nnf_cross_entropy(pred, true$squeeze(dim = 2), reduction = "none"))
-      }
-    } else if(loss == "mvp") {
-
-      if(!exists("Y")) Y = matrix(1., 1,1)
-
-      df = floor(ncol(Y)/2)
-      out$parameter <- torch::torch_tensor(matrix(stats::runif(ncol(Y)*df, -0.001, 0.001), ncol(Y), df), requires_grad = TRUE, device = device)
-      out$invlink <- function(a) torch::torch_sigmoid(a*1.7012)
-      out$link <- function(a) stats::binomial("probit")$linkfun(as.matrix(a$cpu()))
-      out$loss <- function(pred, true) {
-        sigma = out$parameter
-        Ys = true
-        df = ncol(sigma)
-        noise = torch::torch_randn(list(100L, nrow(pred), df), device = device)
-        E = torch::torch_sigmoid((torch::torch_einsum("ijk, lk -> ijl", list(noise, sigma))+pred)*1.702)*0.999999+0.0000005
-        logprob = -(log(E)*Ys + log(1.0-E)*(1.0-Ys))
-        logprob = - logprob$sum(3)
-        maxlogprob = torch::torch_amax(logprob, dim = 1)
-        Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
-        return((-log(Eprob) - maxlogprob)$mean())
-      }
-    } else if(loss == "nbinom") {
-
-      if(is.matrix(Y)) out$parameter = torch::torch_tensor(rep(0.5, ncol(Y)), requires_grad=TRUE, device = device)
-      else out$parameter = torch::torch_tensor(0.5, requires_grad=TRUE, device = device)
-      out$parameter_r = as.numeric(out$parameter$cpu())
-      out$invlink <- function(a) torch::torch_exp(a)
-      out$link <- function(a) log(as.matrix(a$cpu()))
-      out$parameter_link = function() {
-        out$parameter = re_init(out$parameter, out$parameter_r)
-        as.numeric((1.0/(torch::nnf_softplus(out$parameter)+0.0001))$cpu())
-      }
-      out$simulate = function(pred) {
-        theta_tmp = out$parameter_link()
-        probs = 1.0 - theta_tmp/(theta_tmp + pred)
-        total_count = theta_tmp
-
-        if(is.matrix(pred)) {
-          sim = sapply(1:ncol(pred), function(i) {
-            logits = log(probs[,i]) - log1p(-probs[,i])
-            stats::rpois(length(logits), exp(-logits))
-            return( stats::rpois(length(logits), stats::rgamma(length(logits),total_count[i], exp(- logits ))) )
-          })
-        } else {
-          logits = log(probs) - log1p(-probs)
-          stats::rpois(length(pred), exp(-logits))
-          sim = stats::rpois(length(pred), stats::rgamma(length(pred),total_count, exp(- logits )))
-        }
-        return(sim)
-      }
-
-      out$loss = function(pred, true) {
-        eps = 0.0001
-        pred = torch::torch_exp(pred)
-        if(pred$device$type != out$parameter$device$type) pred = pred$to(device = out$parameter$device)
-        theta_tmp = 1.0/(torch::nnf_softplus(out$parameter)+eps)
-        probs = torch::torch_clamp(1.0 - theta_tmp/(theta_tmp+pred), 0.0+eps, 1.0-eps)
-        total_count = theta_tmp
-        value = true
-        logits = torch::torch_log(probs) - torch::torch_log1p(-probs)
-        log_unnormalized_prob <- total_count * torch::torch_log(torch::torch_sigmoid(-logits)) + value * torch::torch_log(torch::torch_sigmoid(logits))
-        log_normalization <- -torch::torch_lgamma(total_count + value) + torch::torch_lgamma(1 + value) + torch::torch_lgamma(total_count)
-        log_normalization <- torch::torch_where(total_count + value == 0, torch::torch_tensor(0, dtype = log_normalization$dtype, device = out$parameter$device), log_normalization)
-        return( - (log_unnormalized_prob - log_normalization))
-      }
-
-    } else if(loss == "multinomial") {
-      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
-      out$link <- function(a) log(a) + log(ncol(a))
-      out$loss <- function(pred, true) {
-        return(multinomial_log_prob(torch::nnf_softmax(pred, dim = 2), true)$negative())
-      }
-    } else if(loss == "clogit") {
-      out$invlink <- function(a) torch::nnf_softmax(a, dim = 2)
-      out$link <- function(a) log(a) + log(ncol(a))
-      out$loss <- function(pred, true) {
-        # return(binomial_log_prob(torch::nnf_softmax(pred, dim = 2), true))
-        return(torch::distr_bernoulli(probs = torch::nnf_softmax(pred, dim = 2))$log_prob(true)$negative())
-      }
-    }else{
-      cat( "unidentified loss \n")
-    }
-
-  }
-  out$call <- loss
-
-  return(out)
-}
-
 get_activation_layer <- function(activation) {
   return(switch(tolower(activation),
                 "relu" = torch::nn_relu(),
@@ -936,7 +643,6 @@ get_output_shape <- function(input_shape, n_kernels, kernel_size, stride, paddin
   }
   return(input_shape)
 }
-
 
 adjust_architecture <- function(architecture, input_dim) {
 
@@ -1104,9 +810,7 @@ freeze_weights <- function(transfer_model) {
   return(transfer_model)
 }
 
-
-
-
+#Is this still used?
 re_init = function(param, param_r) {
   pointer_check <- tryCatch(torch::as_array(param), error = function(e) e)
 
@@ -1115,7 +819,6 @@ re_init = function(param, param_r) {
   }
   return(param)
 }
-
 
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
@@ -1126,9 +829,7 @@ check_model <- function(object) {
   if(inherits(pointer_check,"error")){
     object$net <- build_model(object)
     object$loaded_model_epoch <- torch::torch_tensor(0)
-    object$loss<- get_loss(object$loss$call)
   }
-
 
   if(as.numeric(object$loaded_model_epoch)!= object$use_model_epoch){
 
@@ -1168,8 +869,6 @@ check_model <- function(object) {
 
     object$loaded_model_epoch$set_data(object$use_model_epoch)
   }
-
-  if(!is.null(object$parameter)) object$loss$parameter <- lapply(object$parameter, torch::torch_tensor)
 
   object$net$eval()
 
@@ -1229,7 +928,6 @@ check_device = function(device) {
   return(device)
 }
 
-
 # taken and adopted from lme4:::RHSForm
 LHSForm = function (form, as.form = FALSE)
 {
@@ -1239,13 +937,11 @@ LHSForm = function (form, as.form = FALSE)
   else rhsf
 }
 
-
 cast_to_r_keep_dim = function(x) {
   d = dim(x)
   if(length(d) == 1) return(as.numeric(x$cpu()))
   else return(as.matrix(x$cpu()))
 }
-
 
 get_X_Y = function(formula, X, Y, data) {
 
@@ -1313,5 +1009,3 @@ get_X_Y = function(formula, X, Y, data) {
   out$old_formula = old_formula
   return(out)
 }
-
-
