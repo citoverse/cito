@@ -276,12 +276,12 @@ build_mmn <- function(model_properties) {
     forward = function(input) {
       i <- 1
       fusion_input <- list()
-      for(subModule in self$subModules) {
-        if(inherits(subModule, "DNN") && subModule$has_embeddings) {
-          fusion_input <- append(fusion_input, list(subModule(input[[i]], input[[i+1]])))
+      for(j in 1:length(self$subModules)) {
+        if(inherits(self$subModules[[j]], "DNN") && self$subModules[[j]]$has_embeddings) {
+          fusion_input <- append(fusion_input, list(self$subModules[[j]](input[[i]], input[[i+1]])))
           i <- i + 2
         } else {
-          fusion_input <- append(fusion_input, list(subModule(input[[i]])))
+          fusion_input <- append(fusion_input, list(self$subModules[[j]](input[[i]])))
           i <- i + 1
         }
       }
@@ -296,7 +296,7 @@ build_mmn <- function(model_properties) {
     if(inherits(subModules[[i]], "DNN") && subModules[[i]]$has_embeddings) {
       tempX <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
       tempZ <- lapply(model_properties$subModules[[i]]$embeddings$dims, function(x) {
-        return(torch::torch_randint(1,x+1,c(2,1)))
+        return(torch::torch_randint(1,x+1,c(2,1), dtype = torch::torch_long()))
       })
       tempZ <- torch::torch_cat(tempZ,2)
       fusion_input <- fusion_input + dim(subModules[[i]](tempX, tempZ))[2]
