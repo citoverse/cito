@@ -42,7 +42,7 @@ testthat::test_that("test cross-entropy", {
   test_loss("cross-entropy", Y)
 })
 
-testthat::test_that("test mse/mae/gaussian", {
+testthat::test_that("test mse", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()
@@ -54,7 +54,33 @@ testthat::test_that("test mse/mae/gaussian", {
             data.frame(Y.1=runif(100), Y.2=runif(100), Y.3=runif(100)))
 
   test_loss("mse", Y)
+})
+
+testthat::test_that("test mae", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(runif(100),
+            matrix(runif(100), nrow=100, ncol=1),
+            matrix(runif(300), nrow=100, ncol=3, dimnames = list(NULL, c("Y.1","Y.2","Y.3"))),
+            data.frame(Y=runif(100)),
+            data.frame(Y.1=runif(100), Y.2=runif(100), Y.3=runif(100)))
+
   test_loss("mae", Y)
+})
+
+testthat::test_that("test gaussian", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(runif(100),
+            matrix(runif(100), nrow=100, ncol=1),
+            matrix(runif(300), nrow=100, ncol=3, dimnames = list(NULL, c("Y.1","Y.2","Y.3"))),
+            data.frame(Y=runif(100)),
+            data.frame(Y.1=runif(100), Y.2=runif(100), Y.3=runif(100)))
+
   test_loss("gaussian", Y)
 })
 
@@ -72,20 +98,6 @@ testthat::test_that("test poisson", {
   test_loss("poisson", Y)
 })
 
-testthat::test_that("test nbinom", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  Y <- list(rnbinom(100, size=0.5, mu=10),
-            matrix(rnbinom(100, size=0.5, mu=10), nrow=100, ncol=1),
-            matrix(rnbinom(300, size=0.5, mu=10), nrow=100, ncol=3, dimnames = list(NULL, c("Y.1","Y.2","Y.3"))),
-            data.frame(Y=rnbinom(100, size=0.5, mu=10)),
-            data.frame(Y.1=rnbinom(100, size=0.5, mu=10), Y.2=rnbinom(100, size=0.5, mu=20), Y.3=rnbinom(100, size=0.5, mu=30)))
-
-  test_loss("nbinom", Y)
-})
-
 testthat::test_that("test binomial", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
@@ -99,6 +111,20 @@ testthat::test_that("test binomial", {
             data.frame(Y.1=sample(0:10, 100, replace = TRUE), Y.2=sample(0:10, 100, replace = TRUE)))
 
   test_loss("binomial", Y)
+})
+
+testthat::test_that("test nbinom", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(rnbinom(100, size=0.5, mu=10),
+            matrix(rnbinom(100, size=0.5, mu=10), nrow=100, ncol=1),
+            matrix(rnbinom(300, size=0.5, mu=10), nrow=100, ncol=3, dimnames = list(NULL, c("Y.1","Y.2","Y.3"))),
+            data.frame(Y=rnbinom(100, size=0.5, mu=10)),
+            data.frame(Y.1=rnbinom(100, size=0.5, mu=10), Y.2=rnbinom(100, size=0.5, mu=20), Y.3=rnbinom(100, size=0.5, mu=30)))
+
+  test_loss("nbinom", Y)
 })
 
 testthat::test_that("test multinomial", {
