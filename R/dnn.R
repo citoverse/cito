@@ -403,7 +403,7 @@ dnn <- function(formula = NULL,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
+        m$data$original = list(data = data, X = X, Y = as.matrix(Y_torch), Z = Z) #X, Y, Z redundant
         pb$tick()
         models[[b]] = m
       }
@@ -432,7 +432,7 @@ dnn <- function(formula = NULL,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
+        m$data$original = list(data = data, X = X, Y = as.matrix(Y_torch), Z = Z) #X, Y, Z redundant
         m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)
@@ -529,7 +529,7 @@ summary.citodnn <- function(object, n_permute = NULL, device = NULL, type = "res
   class(out) <- "summary.citodnn"
   if(is.null(device)) device = object$training_properties$device
   out$importance <- get_importance(object, n_permute, device)
-  for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
+  if(!is.null(out$importance)) for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
   out$conditionalEffects = conditionalEffects(object, device = device, type = type)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
   if(!is.matrix(out$ACE )) out$ACE= matrix(out$ACE , ncol = 1L)
@@ -594,7 +594,7 @@ summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, ad
       )
       colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
       resp = object$loss$responses[i-1]
-      if(inherits(loss_obj, "cross-entropy loss")) resp = object$response_column
+      if(inherits(object$loss, "cross-entropy loss")) resp = object$response_column
       rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
       if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
       res_imps[[i-1]] = coefmat
