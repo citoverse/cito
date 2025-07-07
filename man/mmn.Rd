@@ -12,9 +12,9 @@ mmn(
   fusion_bias = TRUE,
   fusion_dropout = 0,
   loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
-    "nbinom", "multinomial", "clogit"),
+    "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
-  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
   lr_scheduler = NULL,
   alpha = 0.5,
@@ -48,7 +48,7 @@ mmn(
 
 \item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
 
-\item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
+\item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
 
 \item{lr}{Learning rate for the optimizer. Default is 0.01.}
 

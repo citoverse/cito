@@ -10,7 +10,7 @@
 #' @param fusion_dropout The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
-#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
+#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
 #' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
@@ -51,9 +51,9 @@ mmn <- function(formula,
                 fusion_activation = "relu",
                 fusion_bias = TRUE,
                 fusion_dropout = 0.0,
-                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
+                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
-                optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+                optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,
                 lr_scheduler = NULL,
                 alpha = 0.5,
@@ -111,6 +111,7 @@ mmn <- function(formula,
 
   Y <- eval(formula[[2]], envir = dataList)
 
+  if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss_new(loss, Y, custom_parameters)
   if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 

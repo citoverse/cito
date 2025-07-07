@@ -12,7 +12,7 @@ dnn(
   bias = TRUE,
   dropout = 0,
   loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
-    "nbinom", "multinomial", "clogit"),
+    "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,

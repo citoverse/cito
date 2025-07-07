@@ -179,7 +179,6 @@ get_loss_new <- function(loss, Y, custom_parameters) {
     warning("loss = 'softmax' is deprecated and will be removed in a future version of 'cito'. Please use loss = 'cross-entropy' instead.")
     loss <- "cross-entropy"
   }
-  if(is.character(loss)) loss <- match.arg(loss)
   if(!inherits(loss, "family") & is.character(loss)) {
     loss <- switch(loss,
                    "gaussian" = stats::gaussian(),

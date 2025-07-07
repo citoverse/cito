@@ -7,7 +7,7 @@
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
-#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
+#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
 #' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
@@ -131,9 +131,9 @@
 cnn <- function(X,
                 Y = NULL,
                 architecture,
-                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
+                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
-                optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+                optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,
                 lr_scheduler = NULL,
                 alpha = 0.5,
@@ -208,6 +208,7 @@ cnn <- function(X,
   device_old <- device
   device <- check_device(device)
 
+  if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss_new(loss, Y, custom_parameters)
   if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 

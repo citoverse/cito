@@ -245,12 +245,12 @@ build_cnn <- function(model_properties) {
   create_cnn <- torch::nn_module(
     classname = "CNN",
     initialize = function() {
-      for(i in 1:length(layers)) {
-        self[[paste0("l_",i)]] = layers[[i]]
+      for(i in 1:length(net_layers)) {
+        self[[paste0("l_",i)]] = net_layers[[i]]
       }
     },
     forward = function(x) {
-      for(i in 1:length(layers)) {
+      for(i in 1:length(net_layers)) {
         x = self[[paste0("l_",i)]](x)
       }
       return(x)
