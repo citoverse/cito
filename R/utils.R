@@ -548,7 +548,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
       initialize = function() {
         checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
-        if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+        Y <- as.matrix(Y)
+        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integerish matrix/data.frame containing only zeroes and ones.")
 
         self$y_dim <- ncol(Y)
         self$responses <- colnames(Y)
@@ -570,11 +571,12 @@ get_loss_new <- function(loss, Y, custom_parameters) {
       format_Y = function(Y) {
         checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
-        if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+        Y <- as.matrix(Y)
+        if(!all(Y %in% c(0,1))) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
         if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
           return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
         } else{
-          if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
           return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
         }
       }
