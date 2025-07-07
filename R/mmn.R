@@ -109,7 +109,8 @@ mmn <- function(formula,
   formula <- stats::terms(formula)
   check_mmn_formula(formula)
 
-  if(!as.character(local(formula[[2]])) %in% names(dataList)) stop(paste0("In '", deparse1(formula), "': Couldn't find '", as.character(local(formula[[2]])), "' in names of dataList."))
+  if(!inherits(formula[[2]], "name")) stop(paste0("In '", deparse1(formula), "': Left side of ~ (target data) has to be assigned to a name that exists in dataList. E.g., mmn(some_name ~ dnn(...) + cnn(...), dataList=list(some_name=your_data, ...), ...)"))
+  if(!as.character(formula[[2]]) %in% names(dataList)) stop(paste0("In '", deparse1(formula), "': Couldn't find '", as.character(formula[[2]]), "' in names of dataList."))
   Y <- eval(formula[[2]], envir = dataList)
 
   if(is.character(loss)) loss <- match.arg(loss)
@@ -328,12 +329,14 @@ format_input_data <- function(formula, dataList) {
       formula <- NULL
       data <- NULL
       if(!is.null(call$X)) {
-        if(!as.character(local(call$X)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$X)), "' in names of dataList."))
+        if(!inherits(call$X, "name")) stop(paste0("In '", deparse1(term), "': X has to be assigned to a name that exists in dataList. E.g., mmn(Y ~ dnn(X=some_name, ...) + cnn(...), dataList=list(Y=Y, some_name=your_data, ...), ...)"))
+        if(!as.character(call$X) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$X), "' in names of dataList."))
         X <- eval(call$X, envir = dataList)
       } else if(!is.null(call$formula)) {
         formula <- stats::formula(call$formula)
         if(is.null(call$data)) stop(paste0("In '", deparse1(term), "': When using 'formula', 'data' has to be specified."))
-        if(!as.character(local(call$data)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$data)), "' in names of dataList."))
+        if(!inherits(call$data, "name")) stop(paste0("In '", deparse1(term), "': data has to be assigned to a name that exists in dataList. E.g., mmn(Y ~ dnn(~ A + e(B), data = some_name, ...) + cnn(...), dataList=list(Y=Y, some_name=your_data, ...), ...)"))
+        if(!as.character(call$data) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$data), "' in names of dataList."))
         data <- data.frame(eval(call$data, envir = dataList))
       }
       temp <- get_X_Y(formula, X, NULL, data)
@@ -341,7 +344,8 @@ format_input_data <- function(formula, dataList) {
       if (!is.null(temp$Z)) input_data <- append(input_data, list(torch::torch_tensor(temp$Z, dtype = torch::torch_long())))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      if(!as.character(local(call$X)) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(local(call$X)), "' in names of dataList."))
+      if(!inherits(call$X, "name")) stop(paste0("In '", deparse1(term), "': X has to be assigned to a name that exists in dataList. E.g., mmn(Y ~ cnn(X=some_name, ...) + dnn(...), dataList=list(Y=Y, some_name=your_data, ...), ...)"))
+      if(!as.character(call$X) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$X), "' in names of dataList."))
       if(is.character(eval(call$X, envir = dataList))) input_data <- append(input_data, list(eval(call$X, envir = dataList)))
       else input_data <- append(input_data, list(torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32())))
     }
