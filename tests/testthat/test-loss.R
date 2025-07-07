@@ -7,7 +7,7 @@ X_dnn <- matrix(runif(300), 100, 3)
 
 architecture <- create_architecture(conv(), maxPool(), conv(), avgPool(), linear())
 
-testloss <- function(loss, Y) {
+test_loss <- function(loss, Y) {
   inner <- function(device) {
     for (y in Y) {
       if(ncol(as.matrix(y)) == 1) {
@@ -80,8 +80,8 @@ testthat::test_that("test nbinom", {
   Y <- list(rnbinom(100, size=0.5, mu=10),
             matrix(rnbinom(100, size=0.5, mu=10), nrow=100, ncol=1),
             matrix(rnbinom(300, size=0.5, mu=10), nrow=100, ncol=3),
-            data.frame(rnbinom(300, size=0.5, mu=10)),
-            data.frame(rnbinom(300, size=0.5, mu=10), rnbinom(300, size=0.5, mu=20), rnbinom(300, size=0.5, mu=30)))
+            data.frame(rnbinom(100, size=0.5, mu=10)),
+            data.frame(rnbinom(100, size=0.5, mu=10), rnbinom(100, size=0.5, mu=20), rnbinom(100, size=0.5, mu=30)))
 
   test_loss("nbinom", Y)
 })
