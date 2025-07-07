@@ -335,8 +335,8 @@ get_loss_new <- function(loss, Y, custom_parameters) {
         },
         forward = function(pred, true) {
           n = torch::torch_sum(true, 2)
-          s = true[, 1]$squeeze(dim=2)
-          f = true[, 2]$squeeze(dim=2)
+          s = true[, 1]
+          f = true[, 2]
           p = self$invlink(pred)
 
           nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(s + 1) + torch::torch_lgamma(f + 1) - s * torch::torch_log(p) - f * torch::torch_log(1 - p)
@@ -351,10 +351,10 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                             checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, ncols = 2),
                             checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, ncols = 2))
 
-          if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
+          if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
             if(is.null(self$control_level)) stop("Model expects target data to be provided as integerish matrix/data.frame with 2 columns (first column: #successes, second column: #failures).")
             Y <- as.integer(Y != self$control_level)
-            Y <- cbind(Y,Y-1)
+            Y <- cbind(Y,1-Y)
           }
 
           return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
