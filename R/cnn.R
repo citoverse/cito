@@ -208,7 +208,6 @@ cnn <- function(X,
   device_old <- device
   device <- check_device(device)
 
-  if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss_new(loss, Y, custom_parameters)
   if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 

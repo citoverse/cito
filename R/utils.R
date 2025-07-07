@@ -175,17 +175,17 @@ multinomial_log_prob = function(probs, value) {
 get_loss_new <- function(loss, Y, custom_parameters) {
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)
+  if(is.character(loss) && loss == "softmax") {
+    warning("loss = 'softmax' is deprecated and will be removed in a future version of 'cito'. Please use loss = 'cross-entropy' instead.")
+    loss <- "cross-entropy"
+  }
+  if(is.character(loss)) loss <- match.arg(loss)
   if(!inherits(loss, "family") & is.character(loss)) {
     loss <- switch(loss,
                    "gaussian" = stats::gaussian(),
                    "binomial" = stats::binomial(),
                    "poisson" = stats::poisson(),
                    loss)
-  }
-
-  if(is.character(loss) && loss == "softmax") {
-    warning("loss = 'softmax' is deprecated and will be removed in a future version of 'cito'. Please use loss = 'cross-entropy' instead.")
-    loss <- "cross-entropy"
   }
 
   if(is.function(loss)) {
