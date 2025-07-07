@@ -489,6 +489,7 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y)) {
+          if(length(levels(Y)) != length(unique(Y))) warning("The provided factor containing the labels has levels with zero occurences. Make sure this is intended, as for each level a node in the output layer will be created.")
           self$responses <- levels(Y)
         } else if(is.vector(Y)) {
           self$responses <- levels(factor(Y))
@@ -501,7 +502,7 @@ get_loss_new <- function(loss, Y, custom_parameters) {
         }
 
         if(is.null(self$responses)) self$y_dim <- ncol(Y)
-        else self$y_dim <- length(responses)
+        else self$y_dim <- length(self$responses)
       },
       forward = function(pred, true) {
         n = torch::torch_sum(true, 2)
@@ -523,19 +524,20 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
-        if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
+        if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
           if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
-          if(!all(Y %in% self$responses)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
-                                                If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
-          Y <- factor(Y, levels = self$responses)
-          return(torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32()))
+          if(is.data.frame(Y)) Y <- factor(Y[,1], levels = self$responses)
+          else Y <- factor(Y, levels = self$responses)
+          if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
+                          If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
 
+          return(torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32()))
         } else {
           if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
-            return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
+            return(torch::torch_tensor(as.matrix(Y[, self$responses]), dtype = torch::torch_float32()))
           } else{
             if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
-            return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+            return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
           }
         }
       }
