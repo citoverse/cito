@@ -581,7 +581,7 @@ get_loss_new <- function(loss, Y, custom_parameters) {
         }
       }
     )
-  } else if (loss == "clogit") {
+  } else if(loss == "clogit") {
     create_loss <- torch::nn_module(
       classname = "conditional binomial loss",
       initialize = function() {
@@ -599,25 +599,25 @@ get_loss_new <- function(loss, Y, custom_parameters) {
         } else if(is.matrix(Y)) {
           if(is.character(Y)) self$responses <- levels(factor(Y))
           else {
-            if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+            if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame containing only zeroes and ones.")
             self$responses <- colnames(Y)
           }
         } else if(is.data.frame(Y)) {
           if(is.character(Y[,1])) self$responses <- levels(factor(Y[,1]))
           else {
-            if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+            if(!all(as.matrix(Y) %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame containing only zeroes and ones.")
             self$responses <- colnames(Y)
           }
         }
 
         if(is.null(self$responses)) self$y_dim <- ncol(Y)
-        else self$y_dim <- length(responses)
+        else self$y_dim <- length(self$responses)
       },
       forward = function(pred, true) {
         return(torch::distr_bernoulli(probs = torch::nnf_softmax(pred, dim = 2))$log_prob(true)$negative())
       },
-      link <- function(x) {log(x) + log(ncol(x))},
-      invlink <- function(x) {torch::nnf_softmax(x, dim = 2)},
+      link = function(x) {log(x) + log(ncol(x))},
+      invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
       format_Y = function(Y) {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
@@ -626,18 +626,26 @@ get_loss_new <- function(loss, Y, custom_parameters) {
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
                           checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
 
-        if(is.factor(Y) || is.vector(y) || ncol(Y)==1) {
-          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
-          if(!all(Y %in% self$responses)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
+        if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
+          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+          if(is.data.frame(Y)) Y <- factor(Y[,1], levels = self$responses)
+          else Y <- factor(Y, levels = self$responses)
+          if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
                                                 If this was intended, make sure to provide the target data for the initial training as factor that includes all required class labels as level, even those with zero occurences in the initial data.")
-          Y <- factor(Y, levels = self$responses)
           return(torch::torch_tensor(torch::nnf_one_hot(torch::torch_tensor(Y, dtype = torch::torch_long())), dtype = torch::torch_float32()))
         } else {
-          if(!all(Y %in% c(0,1))) stop("The matrix/data.frame must only contain zeroes and ones.")
+          Y <- as.matrix(Y)
+          if(!all(Y %in% c(0,1))) {
+            if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+            else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+          }
           if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
             return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
-          } else{
-            if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          } else {
+            if(self$y_dim != ncol(Y)) {
+              if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+              else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+            }
             return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
           }
         }
