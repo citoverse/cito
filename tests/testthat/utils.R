@@ -6,7 +6,7 @@ skip_if_no_torch = function() {
 wrap_dnn = function(pars) {
   testthat::expect_error({model = do.call(dnn, pars)}, NA)
   testthat::expect_error({.n = predict(model, newdata=pars$data)}, NA)
-  testthat::expect_error({.n = continue_training(model, epochs = 1L, verbose = FALSE)}, NA)
+  testthat::expect_error({.n = continue_training(model, epochs = 1L)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
   testthat::expect_error({.n = predict(model, type = "response")}, NA)
   testthat::expect_error({.n = coef(model)}, NA)
@@ -20,7 +20,7 @@ wrap_dnn = function(pars) {
 wrap_cnn = function(pars) {
   testthat::expect_error({model = do.call(cnn, pars)}, NA)
   testthat::expect_error({.n = predict(model, newdata=pars$X)}, NA)
-  testthat::expect_error({.n = continue_training(model, epochs = 1L, verbose = FALSE)}, NA)
+  testthat::expect_error({.n = continue_training(model, epochs = 1L)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
   testthat::expect_error({.n = predict(model, type = "response")}, NA)
   testthat::expect_error({.n = coef(model)}, NA)
@@ -31,8 +31,8 @@ wrap_cnn = function(pars) {
 
 wrap_mmn = function(pars) {
   testthat::expect_error({model = do.call(mmn, pars)}, NA)
-  testthat::expect_error({.n = predict(model, newdata=pard$dataList)}, NA)
-  testthat::expect_error({.n = continue_training(model, epochs = 1L, verbose = FALSE)}, NA)
+  testthat::expect_error({.n = predict(model, newdata=pars$dataList)}, NA)
+  testthat::expect_error({.n = continue_training(model, epochs = 1L)}, NA)
   testthat::expect_error({.n = predict(model)}, NA)
   testthat::expect_error({.n = predict(model, type = "response")}, NA)
   testthat::expect_error({.n = coef(model)}, NA)
