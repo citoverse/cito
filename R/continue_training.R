@@ -246,6 +246,7 @@ continue_training.citommn <- function(model,
     new_validation_split = FALSE
   }
 
+  if(!as.character(local(model$call$formula[[2]])) %in% names(dataList)) stop(paste0("In '", deparse1(model$call$formula), "': Couldn't find '", as.character(local(model$call$formula[[2]])), "' in names of dataList."))
   Y <- eval(model$call$formula[[2]], envir = dataList)
 
   X <- format_input_data(model$call$formula[[3]], dataList)

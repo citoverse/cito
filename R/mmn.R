@@ -109,6 +109,7 @@ mmn <- function(formula,
   formula <- stats::terms(formula)
   check_mmn_formula(formula)
 
+  if(!as.character(local(formula[[2]])) %in% names(dataList)) stop(paste0("In '", deparse1(formula), "': Couldn't find '", as.character(local(formula[[2]])), "' in names of dataList."))
   Y <- eval(formula[[2]], envir = dataList)
 
   if(is.character(loss)) loss <- match.arg(loss)
