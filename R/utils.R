@@ -172,8 +172,8 @@ get_loss <- function(loss, Y, custom_parameters) {
                             checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                             checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                            checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, ncols = 2),
-                            checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, ncols = 2))
+                            checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, ncols = 2),
+                            checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, ncols = 2))
 
           if(is.factor(Y)) {
             self$control_level <- levels(Y)[1]
@@ -215,11 +215,11 @@ get_loss <- function(loss, Y, custom_parameters) {
                             checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                             checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                            checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, ncols = 2),
-                            checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, ncols = 2))
+                            checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, ncols = 2),
+                            checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, ncols = 2))
 
           if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
-            if(is.null(self$control_level)) stop("Model expects target data to be provided as integerish matrix/data.frame with 2 columns (first column: #successes, second column: #failures).")
+            if(is.null(self$control_level)) stop("Model expects target data to be provided as integer matrix/data.frame with 2 columns (first column: #successes, second column: #failures).")
             Y <- as.integer(Y != self$control_level)
             Y <- cbind(Y,1-Y)
           }
@@ -278,12 +278,12 @@ get_loss <- function(loss, Y, custom_parameters) {
     create_loss <- torch::nn_module(
       classname = "bernoulli loss",
       initialize = function() {
-        checkmate::assert(checkmate::checkIntegerish(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        checkmate::assert(checkmate::checkInteger(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F))
 
         Y <- as.matrix(Y)
-        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integerish vector/matrix/data.frame containing only zeroes and ones.")
+        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integer vector/matrix/data.frame containing only zeroes and ones.")
         self$y_dim <- ncol(Y)
         self$responses <- colnames(Y)
       },
@@ -293,14 +293,14 @@ get_loss <- function(loss, Y, custom_parameters) {
       link = function(x) {torch::torch_tensor(stats::binomial("logit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
       invlink = function(x) {torch::torch_sigmoid(x)},
       format_Y = function(Y) {
-        checkmate::assert(checkmate::checkIntegerish(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+        checkmate::assert(checkmate::checkInteger(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F))
 
         Y <- as.matrix(Y)
         if((ncol(Y) != self$y_dim) || (!all(Y %in% c(0,1)))) {
-          if(self$y_dim == 1) stop("Model expects target data to be provided as integerish vector or matrix/data.frame with 1 column, containing only zeroes and ones.")
-          else stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+          if(self$y_dim == 1) stop("Model expects target data to be provided as integer vector or matrix/data.frame with 1 column, containing only zeroes and ones.")
+          else stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
         }
 
         return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
@@ -384,8 +384,8 @@ get_loss <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y)) {
           if(length(levels(Y)) != length(unique(Y))) warning("The provided factor containing the labels has levels with zero occurences. Make sure this is intended, as for each level a node in the output layer will be created.")
@@ -420,11 +420,11 @@ get_loss <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
-          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns."))
           if(is.data.frame(Y)) Y <- factor(Y[,1], levels = self$responses)
           else Y <- factor(Y, levels = self$responses)
           if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
@@ -435,7 +435,7 @@ get_loss <- function(loss, Y, custom_parameters) {
           if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
             return(torch::torch_tensor(as.matrix(Y[, self$responses]), dtype = torch::torch_float32()))
           } else{
-            if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns."))
+            if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns."))
             return(torch::torch_tensor(as.matrix(Y), dtype = torch::torch_float32()))
           }
         }
@@ -445,10 +445,10 @@ get_loss <- function(loss, Y, custom_parameters) {
     create_loss <- torch::nn_module(
       classname = "multivariate probit loss",
       initialize = function() {
-        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
         Y <- as.matrix(Y)
-        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integerish matrix/data.frame containing only zeroes and ones.")
+        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integer matrix/data.frame containing only zeroes and ones.")
 
         self$y_dim <- ncol(Y)
         self$responses <- colnames(Y)
@@ -468,14 +468,14 @@ get_loss <- function(loss, Y, custom_parameters) {
       link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
       invlink = function(x) {torch::torch_sigmoid(x*1.7012)},
       format_Y = function(Y) {
-        checkmate::assert(checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+        checkmate::assert(checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
         Y <- as.matrix(Y)
-        if(!all(Y %in% c(0,1))) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+        if(!all(Y %in% c(0,1))) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
         if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
           return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
         } else{
-          if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+          if(self$y_dim != ncol(Y)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
           return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
         }
       }
@@ -488,8 +488,8 @@ get_loss <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y)) {
           self$responses <- levels(Y)
@@ -498,13 +498,13 @@ get_loss <- function(loss, Y, custom_parameters) {
         } else if(is.matrix(Y)) {
           if(is.character(Y)) self$responses <- levels(factor(Y))
           else {
-            if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame containing only zeroes and ones.")
+            if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integer matrix/data.frame containing only zeroes and ones.")
             self$responses <- colnames(Y)
           }
         } else if(is.data.frame(Y)) {
           if(is.character(Y[,1])) self$responses <- levels(factor(Y[,1]))
           else {
-            if(!all(as.matrix(Y) %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame containing only zeroes and ones.")
+            if(!all(as.matrix(Y) %in% c(0,1))) stop("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integer matrix/data.frame containing only zeroes and ones.")
             self$responses <- colnames(Y)
           }
         }
@@ -522,11 +522,11 @@ get_loss <- function(loss, Y, custom_parameters) {
                           checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
-                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
-                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F, min.cols = 2))
+                          checkmate::checkMatrix(Y, mode = "integer", any.missing = F, all.missing = F, min.cols = 2),
+                          checkmate::checkDataFrame(Y, types = "integer", any.missing = F, all.missing = F, min.cols = 2))
 
         if(is.factor(Y) || is.vector(Y) || ncol(Y)==1) {
-          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+          if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
           if(is.data.frame(Y)) Y <- factor(Y[,1], levels = self$responses)
           else Y <- factor(Y, levels = self$responses)
           if(anyNA(Y)) stop("Unknown class labels. This probably means that new provided target data (e.g. for continued training) includes class labels that did not exist in the data used for the initial training.\n
@@ -535,15 +535,15 @@ get_loss <- function(loss, Y, custom_parameters) {
         } else {
           Y <- as.matrix(Y)
           if(!all(Y %in% c(0,1))) {
-            if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
-            else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+            if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+            else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
           }
           if(!is.null(self$responses) && all(self$responses %in% colnames(Y))) {
             return(torch::torch_tensor(Y[, self$responses], dtype = torch::torch_float32()))
           } else {
             if(self$y_dim != ncol(Y)) {
-              if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
-              else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+              if(is.null(self$responses)) stop(paste0("Model expects target data to be provided as integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+              else stop(paste0("Model expects target data to be provided as factor, character vector, character matrix/data.frame with 1 column or integer matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
             }
             return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
           }
