@@ -309,11 +309,11 @@ dnn <- function(formula = NULL,
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       train <- c(1:n_samples)[-valid]
       if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+        train_dl <- get_data_loader(X_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid, drop=F], Y_torch[valid, drop=F], batch_size = batchsize, shuffle = shuffle)
       } else {
-        train_dl <- get_data_loader(X_torch[train,], Z_torch[train,], Y_torch[train,], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid,], Z_torch[valid,], Y_torch[valid,], batch_size = batchsize, shuffle = shuffle)
+        train_dl <- get_data_loader(X_torch[train, drop=F], Z_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
+        valid_dl <- get_data_loader(X_torch[valid, drop=F], Z_torch[valid, drop=F], Y_torch[valid, drop=F], batch_size = batchsize, shuffle = shuffle)
       }
     } else {
       if(is.null(Z_torch)) {
