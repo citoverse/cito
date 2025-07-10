@@ -70,6 +70,20 @@ testthat::test_that("test mae", {
   test_loss("mae", Y)
 })
 
+testthat::test_that("test bernoulli", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  Y <- list(sample(c(0,1), 100, replace = TRUE),
+            matrix(sample(c(0,1), 100, replace = TRUE), nrow=100, ncol=1),
+            matrix(sample(c(0,1), 300, replace = TRUE), nrow=100, ncol=3, dimnames = list(NULL, c("Y.1","Y.2","Y.3"))),
+            data.frame(Y=sample(c(0,1), 100, replace = TRUE)),
+            data.frame(Y.1=sample(c(0,1), 100, replace = TRUE), Y.2=sample(c(0,1), 100, replace = TRUE), Y.3=sample(c(0,1), 100, replace = TRUE)))
+
+  test_loss("bernoulli", Y)
+})
+
 testthat::test_that("test gaussian", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
