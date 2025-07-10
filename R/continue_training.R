@@ -74,11 +74,11 @@ continue_training.citodnn <- function(model,
     else valid <- model$data$validation
     train <- c(1:n_samples)[-valid]
     if(is.null(Z)) {
-      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     } else {
-      train_dl <- get_data_loader(X[train,], Z[train,], Y[train,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid,], Z[valid,], Y[valid,], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      train_dl <- get_data_loader(X[train, drop=F], Z[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+      valid_dl <- get_data_loader(X[valid, drop=F], Z[valid, drop=F], Y[valid, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
 
   } else {
