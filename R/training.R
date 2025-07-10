@@ -125,7 +125,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
 
     }
 
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)) {
+    if(!is.null(valid_dl)) {
       model$net$train(FALSE)
       model$loss$train(FALSE)
 
@@ -151,7 +151,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     ### learning rate scheduler ###
     if(!is.null(scheduler)){
       if(model$training_properties$lr_scheduler$lr_scheduler == "reduce_on_plateau"){
-        if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(!is.null(valid_dl)){
           scheduler$step(model$losses$valid_l[epoch])
         }else{
           scheduler$step(model$losses$train_l[epoch])
@@ -161,7 +161,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       }
     }
 
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+    if(!is.null(valid_dl)){
       if(model$training_properties$verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                               epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
     }else{
@@ -178,7 +178,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     plot_new <- FALSE
 
     # Save best weights
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)) {
+    if(!is.null(valid_dl)) {
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
         model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
@@ -314,7 +314,7 @@ analyze_training<- function(object){
     fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss",
                             line = list(color = "#5B84B1FF"),
                             marker =list(color = "#5B84B1FF"), name = "Training loss" )
-    if(object$training_properties$validation>0)  {
+    if(length(object$training_properties$validation) > 1 || object$training_properties$validation>0)  {
       fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss",
                               line = list(color = "#FC766AFF"),
                               marker =list(color = "#FC766AFF"), name = "Validation loss")

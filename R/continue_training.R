@@ -68,10 +68,26 @@ continue_training.citodnn <- function(model,
   Y <- model$loss$format_Y(Y)
   if(!is.null(Z)) Z = torch::torch_tensor(Z, dtype=torch::torch_long())
 
-  if(model$training_properties$validation != 0) {
+  if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
+    if(is.null(Z)) {
+      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    } else {
+      train_dl <- get_data_loader(X, Z, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
+    }
+    valid_dl <- NULL
+  } else {
     n_samples <- dim(Y)[1]
-    if(new_validation_split | is.null(model$data$validation)) sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
-    else valid <- model$data$validation
+    if(new_validation_split | is.null(model$data$validation)) {
+      if(length(model$training_properties$validation)>1) {
+        if(!"validation" %in% names(changed_params)) warning("You provided new training data, but did not provide new validation indices. The validation indices of the initial training will be used.")
+        if(any(model$training_properties$validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+        valid  <- model$training_properties$validation
+      } else {
+        valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+      }
+    } else {
+      valid <- model$data$validation
+    }
     train <- c(1:n_samples)[-valid]
     if(is.null(Z)) {
       train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
@@ -80,14 +96,6 @@ continue_training.citodnn <- function(model,
       train_dl <- get_data_loader(X[train, drop=F], Z[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
       valid_dl <- get_data_loader(X[valid, drop=F], Z[valid, drop=F], Y[valid, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
     }
-
-  } else {
-    if(is.null(Z)) {
-      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    } else {
-      train_dl <- get_data_loader(X, Z, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    }
-    valid_dl <- NULL
   }
 
 
@@ -195,16 +203,25 @@ continue_training.citocnn <- function(model,
     if(dim(Y)[1] != dim(X)[1]) stop(paste0("Y (", dim(Y)[1], ") has to have an equal number of samples as X (", dim(X)[1], ")."))
   }
 
-  if(model$training_properties$validation != 0) {
+  if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
+    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
+    valid_dl <- NULL
+  } else {
     n_samples <- dim(Y)[1]
-    if(new_validation_split | is.null(model$data$validation)) sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
-    else valid <- model$data$validation
+    if(new_validation_split | is.null(model$data$validation)) {
+      if(length(model$training_properties$validation)>1) {
+        if(!"validation" %in% names(changed_params)) warning("You provided new training data, but did not provide new validation indices. The validation indices of the initial training will be used.")
+        if(any(model$training_properties$validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+        valid  <- model$training_properties$validation
+      } else {
+        valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+      }
+    } else {
+      valid <- model$data$validation
+    }
     train <- c(1:n_samples)[-valid]
     train_dl <- get_data_loader(X[train, drop=FALSE], Y[train, drop=FALSE], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
     valid_dl <- get_data_loader(X[valid, drop=FALSE], Y[valid, drop=FALSE], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
-  } else {
-    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
-    valid_dl <- NULL
   }
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
@@ -262,16 +279,25 @@ continue_training.citommn <- function(model,
   Y <- model$loss$format_Y(Y)
 
   ### dataloader  ###
-  if(model$training_properties$validation != 0) {
+  if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
+    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
+    valid_dl <- NULL
+  } else {
     n_samples <- dim(Y)[1]
-    if(new_validation_split | is.null(model$data$validation)) sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
-    else valid <- model$data$validation
+    if(new_validation_split | is.null(model$data$validation)) {
+      if(length(model$training_properties$validation)>1) {
+        if(!"validation" %in% names(changed_params)) warning("You provided new training data, but did not provide new validation indices. The validation indices of the initial training will be used.")
+        if(any(model$training_properties$validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+        valid  <- model$training_properties$validation
+      } else {
+        valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(model$training_properties$validation*n_samples)))
+      }
+    } else {
+      valid <- model$data$validation
+    }
     train <- c(1:n_samples)[-valid]
     train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
     valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
-  } else {
-    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
-    valid_dl <- NULL
   }
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)

@@ -49,7 +49,7 @@ cnn(
 
 \item{lambda}{Lambda value for L1/L2 regularization. Default is 0.0.}
 
-\item{validation}{Proportion of the data to be used for validation. Default is 0.0.}
+\item{validation}{Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.}
 
 \item{batchsize}{Batch size for training. If NULL, batchsize is 10\% of the training data. Default is NULL.}
 

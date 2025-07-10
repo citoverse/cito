@@ -15,7 +15,7 @@
 #' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
-#' @param validation Proportion of the data to be used for validation. Default is 0.0.
+#' @param validation Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param epochs Number of epochs to train the model. Default is 100.
@@ -74,7 +74,7 @@ mmn <- function(formula,
   checkmate::qassert(lr, "N1(0,)")
   checkmate::qassert(alpha, "N1[0,1]")
   checkmate::qassert(lambda, "N1[0,)")
-  checkmate::qassert(validation, "N1[0,1)")
+  checkmate::qassert(validation, c("N1[0,1)","X>1[1,)"))
   checkmate::qassert(batchsize, c("0", "X1[1,)"))
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(epochs, "X1[0,)")
@@ -130,15 +130,20 @@ mmn <- function(formula,
   Y <- loss_obj$format_Y(Y)
   if(is.null(batchsize)) batchsize = round(0.1*dim(Y)[1])
 
-  if(validation != 0) {
+  if(length(validation) == 1 && validation == 0) {
+    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
+    valid_dl <- NULL
+  } else {
     n_samples <- dim(Y)[1]
-    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    if(length(validation) > 1) {
+      if(any(validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+      valid <- validation
+    } else {
+      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    }
     train <- c(1:n_samples)[-valid]
     train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
     valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
-  } else {
-    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
-    valid_dl <- NULL
   }
 
   model_properties <- list()
@@ -175,7 +180,7 @@ mmn <- function(formula,
   out$call$formula <- formula
   out$loss <- loss_obj
   out$data <- list(dataList=dataList)
-  if(validation != 0) out$data <- append(out$data, list(validation = valid))
+  if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
   # below unneccessary?

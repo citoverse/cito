@@ -15,7 +15,7 @@
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
 #' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
-#' @param validation percentage of data set that should be taken as validation set (chosen randomly)
+#' @param validation percentage of data set that should be taken as validation set (chosen randomly). Alternatively, a vector containing the indices of the validation samples can be provided.
 #' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
@@ -205,7 +205,7 @@ dnn <- function(formula = NULL,
                                 lr = lr)
 
   checkmate::qassert(custom_parameters, c("0", "L+"))
-  checkmate::qassert(validation, "N1[0,1)")
+  checkmate::qassert(validation, c("N1[0,1)","X>1[1,)"))
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(early_stopping, "N1[1,]")
   checkmate::qassert(burnin, "N1[1,]")
@@ -304,9 +304,21 @@ dnn <- function(formula = NULL,
 
     if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 
-    if(validation != 0) {
+    if(length(validation) == 1 && validation == 0) {
+      if(is.null(Z_torch)) {
+        train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
+      } else {
+        train_dl <- get_data_loader(X_torch, Z_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
+      }
+      valid_dl <- NULL
+    } else {
       n_samples <- dim(Y_torch)[1]
-      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+      if(length(validation) > 1) {
+        if(any(validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+        valid <- validation
+      } else {
+        valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+      }
       train <- c(1:n_samples)[-valid]
       if(is.null(Z_torch)) {
         train_dl <- get_data_loader(X_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
@@ -315,13 +327,6 @@ dnn <- function(formula = NULL,
         train_dl <- get_data_loader(X_torch[train, drop=F], Z_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
         valid_dl <- get_data_loader(X_torch[valid, drop=F], Z_torch[valid, drop=F], Y_torch[valid, drop=F], batch_size = batchsize, shuffle = shuffle)
       }
-    } else {
-      if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
-      } else {
-        train_dl <- get_data_loader(X_torch, Z_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
-      }
-      valid_dl <- NULL
     }
 
     model_properties <- list(input = ncol(X),
@@ -368,7 +373,7 @@ dnn <- function(formula = NULL,
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
     out$data$xlvls <- out$data$xlvls[!names(out$data$xlvls) %in% as.character(formula[[2]])]
-    if(validation != 0) out$data <- append(out$data, list(validation = valid))
+    if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
     out$model_properties <- model_properties
     out$training_properties <- training_properties
     # below unneccessary?

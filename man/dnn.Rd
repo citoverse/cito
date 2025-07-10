@@ -64,7 +64,7 @@ dnn(
 
 \item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
 
-\item{validation}{percentage of data set that should be taken as validation set (chosen randomly)}
+\item{validation}{percentage of data set that should be taken as validation set (chosen randomly). Alternatively, a vector containing the indices of the validation samples can be provided.}
 
 \item{batchsize}{number of samples that are used to calculate one learning rate step, default is 10\% of the training data}
 
