@@ -8,7 +8,7 @@
 #' @param fusion_activation A character vector specifying the activation function(s) applied after each hidden layer in the fusion network. If a single character string is provided, the same activation function will be applied to all hidden layers. Alternatively, a character vector of the same length as \code{fusion_hidden} can be provided to apply different activation functions to each layer. Available options include: \code{"relu"}, \code{"leaky_relu"}, \code{"tanh"}, \code{"elu"}, \code{"rrelu"}, \code{"prelu"}, \code{"softplus"}, \code{"celu"}, \code{"selu"}, \code{"gelu"}, \code{"relu6"}, \code{"sigmoid"}, \code{"softsign"}, \code{"hardtanh"}, \code{"tanhshrink"}, \code{"softshrink"}, \code{"hardshrink"}, \code{"log_sigmoid"}.
 #' @param fusion_bias A logical value or a vector indicating whether to include bias terms in each layer of the fusion network. If a single logical value is provided, it will apply to all layers. To specify bias inclusion for each layer individually, provide a logical vector of length \code{length(fusion_hidden) + 1}, where each element corresponds to a hidden layer, and the final element controls whether a bias term is added to the output layer.
 #' @param fusion_dropout The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.
-#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
@@ -51,7 +51,7 @@ mmn <- function(formula,
                 fusion_activation = "relu",
                 fusion_bias = TRUE,
                 fusion_dropout = 0.0,
-                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
+                loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,

@@ -11,8 +11,8 @@ mmn(
   fusion_activation = "relu",
   fusion_bias = TRUE,
   fusion_dropout = 0,
-  loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
-    "nbinom", "multinomial", "clogit", "softmax"),
+  loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson",
+    "mvp", "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
@@ -44,7 +44,7 @@ mmn(
 
 \item{fusion_dropout}{The dropout rate(s) to apply to each hidden layer in the fusion network. This can be a single numeric value (between 0 and 1) to apply the same dropout rate to all hidden layers, or a numeric vector of length \code{length(fusion_hidden)} to set different dropout rates for each layer individually. The dropout rate is not applied to the output layer.}
 
-\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
+\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 
 \item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
 

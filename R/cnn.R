@@ -5,7 +5,7 @@
 #' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
-#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
@@ -131,7 +131,7 @@
 cnn <- function(X,
                 Y = NULL,
                 architecture,
-                loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
+                loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,

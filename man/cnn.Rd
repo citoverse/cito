@@ -8,8 +8,8 @@ cnn(
   X,
   Y = NULL,
   architecture,
-  loss = c("mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "mvp",
-    "nbinom", "multinomial", "clogit", "softmax"),
+  loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson",
+    "mvp", "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
   optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
@@ -35,7 +35,7 @@ cnn(
 
 \item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.}
 
-\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
+\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 
 \item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
 

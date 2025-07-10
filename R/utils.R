@@ -274,6 +274,38 @@ get_loss <- function(loss, Y, custom_parameters) {
         return(torch::torch_tensor(as.integer(Y), dtype = torch::torch_long()))
       }
     )
+  } else if(loss=="bernoulli") {
+    create_loss <- torch::nn_module(
+      classname = "bernoulli loss",
+      initialize = function() {
+        checkmate::assert(checkmate::checkIntegerish(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        Y <- as.matrix(Y)
+        if(!all(Y %in% c(0,1))) stop("Model expects target data to be provided as integerish vector/matrix/data.frame containing only zeroes and ones.")
+        self$y_dim <- ncol(Y)
+        self$responses <- colnames(Y)
+      },
+      forward = function(pred, true) {
+        return(torch::distr_bernoulli(probs = torch::torch_sigmoid(pred))$log_prob(true)$negative())
+      },
+      link = function(x) {torch::torch_tensor(stats::binomial("logit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
+      invlink = function(x) {torch::torch_sigmoid(x)},
+      format_Y = function(Y) {
+        checkmate::assert(checkmate::checkIntegerish(Y, any.missing = F, all.missing = F, lower = 0, upper = 1),
+                          checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F),
+                          checkmate::checkDataFrame(Y, types = "integerish", any.missing = F, all.missing = F))
+
+        Y <- as.matrix(Y)
+        if((ncol(Y) != self$y_dim) || (!all(Y %in% c(0,1)))) {
+          if(self$y_dim == 1) stop("Model expects target data to be provided as integerish vector or matrix/data.frame with 1 column, containing only zeroes and ones.")
+          else stop(paste0("Model expects target data to be provided as integerish matrix/data.frame with ", self$y_dim, " columns containing only zeroes and ones."))
+        }
+
+        return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
+      }
+    )
   } else if(loss=="mse") {
     create_loss <- torch::nn_module(
       classname = "mean squared error loss",
