@@ -28,26 +28,24 @@ continue_training <- function(model, ...){UseMethod("continue_training")}
 #' @export
 continue_training.citodnn <- function(model,
                               epochs = 32,
-                              data=NULL,
-                              device= NULL,
-                              changed_params=NULL,
-                              init_optimizer=TRUE,
+                              data = NULL,
+                              device = NULL,
+                              changed_params = NULL,
+                              init_optimizer = TRUE,
                               X = NULL,
                               Y = NULL,
-                              ...){
+                              ...) {
 
   if(is.null(device)) device = model$training_properties$device
 
   device <- check_device(device)
 
-  model<- check_model(model)
+  model$use_model_epoch <- "last"
+  model <- check_model(model)
 
-
-  ### set training environment ###
-  if(!is.null(changed_params)){
-    for (i in 1:length(changed_params)){
-      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
-      eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+  if(!is.null(changed_params)) {
+    for(name in names(changed_params)) {
+      model$training_properties[[name]] <- changed_params[[name]]
     }
   }
 
@@ -98,10 +96,9 @@ continue_training.citodnn <- function(model,
     }
   }
 
-
   model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
 
-    return(model)
+  return(model)
 }
 
 
@@ -109,14 +106,14 @@ continue_training.citodnn <- function(model,
 #' @export
 continue_training.citodnnBootstrap <- function(model,
                                       epochs = 32,
-                                      data=NULL,
-                                      device= NULL,
-                                      changed_params=NULL,
+                                      data = NULL,
+                                      device = NULL,
+                                      changed_params = NULL,
                                       parallel = FALSE,
                                       init_optimizer = TRUE,
                                       X = NULL,
                                       Y = NULL,
-                                      ...){
+                                      ...) {
 
   if(parallel == FALSE) {
     pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
@@ -151,31 +148,27 @@ continue_training.citodnnBootstrap <- function(model,
 #' @export
 continue_training.citocnn <- function(model,
                                       epochs = 32,
-                                      X=NULL,
-                                      Y=NULL,
-                                      device= NULL,
-                                      changed_params=NULL,
-                                      init_optimizer=TRUE,
-                                      ...){
+                                      X = NULL,
+                                      Y = NULL,
+                                      device = NULL,
+                                      changed_params = NULL,
+                                      init_optimizer = TRUE,
+                                      ...) {
 
   checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X), checkmate::checkNull(X))
-  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::qassert(epochs, "X1[1,)")
 
   if(is.null(device)) device <- model$training_properties$device
   device <- check_device(device)
 
-  model<- check_model(model)
+  model$use_model_epoch <- "last"
+  model <- check_model(model)
 
-  ### set training environment ###
-  if(!is.null(changed_params)){
-    for (i in 1:length(changed_params)){
-      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
-      eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+  if(!is.null(changed_params)) {
+    for(name in names(changed_params)) {
+      model$training_properties[[name]] <- changed_params[[name]]
     }
   }
-
-
-
 
   if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL.")
 
@@ -233,27 +226,25 @@ continue_training.citocnn <- function(model,
 #' @export
 continue_training.citommn <- function(model,
                                       epochs = 32,
-                                      dataList=NULL,
-                                      device= NULL,
-                                      changed_params=NULL,
-                                      init_optimizer=TRUE,
-                                      ...){
+                                      dataList = NULL,
+                                      device = NULL,
+                                      changed_params = NULL,
+                                      init_optimizer = TRUE,
+                                      ...) {
 
   checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
-  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::qassert(epochs, "X1[1,)")
 
 
   if(is.null(device)) device <- model$training_properties$device
   device <- check_device(device)
 
-  model<- check_model(model)
+  model$use_model_epoch <- "last"
+  model <- check_model(model)
 
-
-  ### set training environment ###
-  if(!is.null(changed_params)){
-    for (i in 1:length(changed_params)){
-      if(is.character(unlist(changed_params[i]))) parantheses<- "\"" else parantheses<- ""
-      eval(parse(text=paste0("model$training_properties$",names(changed_params)[i], " <- ", parantheses,changed_params[i],parantheses)))
+  if(!is.null(changed_params)) {
+    for(name in names(changed_params)) {
+      model$training_properties[[name]] <- changed_params[[name]]
     }
   }
 
@@ -278,7 +269,6 @@ continue_training.citommn <- function(model,
 
   Y <- model$loss$format_Y(Y)
 
-  ### dataloader  ###
   if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
     train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
     valid_dl <- NULL

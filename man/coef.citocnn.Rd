@@ -12,10 +12,11 @@
 \item{...}{Additional arguments (currently not used).}
 }
 \value{
-A list with two components:
+A list with up to three components:
 \itemize{
-\item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
-\item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+\item \code{net_parameters}: A list of the model's weights and biases for the currently used model epoch.
+\item \code{net_buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+\item \code{loss_parameters}: A list of the loss function's parameters for the currently used model epoch.
 }
 }
 \description{

@@ -183,11 +183,6 @@ mmn <- function(formula,
   if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
-  # below unneccessary?
-  out$weights <- list()
-  out$buffers <- list()
-  out$use_model_epoch <- 2
-  out$loaded_model_epoch <- torch::torch_tensor(0)
 
   out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
@@ -312,16 +307,19 @@ summary.citommn <- function(object, ...){
 #' @param ... Additional arguments (currently not used).
 #' @return A list with two components:
 #' \itemize{
-#'   \item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
-#'   \item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#'   \item \code{net_parameters}: A list of the model's weights and biases for the currently used model epoch.
+#'   \item \code{net_buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#'   \item \code{loss_parameters}: A list of the loss function's parameters for the currently used model epoch.
 #' }
 #' @example /inst/examples/coef.citommn-example.R
 #' @export
 coef.citommn <- function(object,...){
-  coefs <- list()
-  coefs$parameters <- object$weights[object$use_model_epoch]
-  coefs$buffers <- object$buffers[object$use_model_epoch]
-  return(coefs)
+  object <- check_model(object)
+  out <- list()
+  out$net_parameters <- lapply(object$net$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$net$buffers)) out$net_buffers <- lapply(object$net$buffers, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  return(out)
 }
 
 format_input_data <- function(formula, dataList) {

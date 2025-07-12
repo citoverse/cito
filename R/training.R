@@ -64,7 +64,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       }
 
       #TODO: Rework regularization of embedding layers. This code atm regularizes embedding layers twice for DNNs.
-      #      In MMNs embeddings layers are regularized only once but with the wrong allpha and lambda values
+      #      In MMNs embeddings layers are regularized only once but with the wrong alpha and lambda values
       if(!is.null(model$model_properties$embeddings)) {
         for(i in 1:length(model$model_properties$embeddings$dims)) {
           if(model$model_properties$embeddings$args[[i]]$lambda > 0) {
@@ -181,16 +181,23 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     if(!is.null(valid_dl)) {
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
-        model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
-        # Save parameters of loss function as well
+        model$net$to(device = "cpu")
+        model$loss$to(device = "cpu")
+        model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+        model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
+        model$net$to(device = device)
+        model$loss$to(device = device)
         counter = 0
       }
     } else {
       if(model$losses$train_l[epoch] < best_train_loss) {
         best_train_loss = model$losses$train_l[epoch]
-        model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+        model$net$to(device = "cpu")
+        model$loss$to(device = "cpu")
+        model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+        model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
+        model$net$to(device = device)
+        model$loss$to(device = device)
         counter = 0
       }
     }
@@ -207,15 +214,13 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
   model$net$to(device = "cpu")
   model$loss$to(device = "cpu")
 
+  model$last_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+  model$last_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
 
-  model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-  model$buffers[[2]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
-  # Save parameters of loss function as well
+  model$optimizer = optimizer #TODO: Save Optimizer and LR_scheduler
 
-  model$use_model_epoch <- 2
-  model$loaded_model_epoch$set_data(2)
-
-  model$optimizer = optimizer
+  model$use_model_epoch <- "last"
+  model$loaded_model_epoch <- "last"
 
   model$net$eval()
   model$loss$eval()

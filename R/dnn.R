@@ -355,9 +355,9 @@ dnn <- function(formula = NULL,
                                 device = device_old,
                                 plot = plot,
                                 verbose = verbose,
-                                formula = formula, #redundant: in out$call
-                                embeddings = embeddings, #redundant: in model_properties
-                                hooks = hooks) #unnecessary: does nothing?
+                                formula = formula, #redundant: in out$call, also all variables in training_properties should be changeable in continue_training
+                                embeddings = embeddings, #redundant: in model_properties, also all variables in training_properties should be changeable in continue_training
+                                hooks = hooks)
 
     out <- list()
     class(out) <- "citodnn"
@@ -376,10 +376,6 @@ dnn <- function(formula = NULL,
     if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
     out$model_properties <- model_properties
     out$training_properties <- training_properties
-    # below unneccessary?
-    out$weights <- list()
-    out$use_model_epoch <- 2
-    out$loaded_model_epoch <- torch::torch_tensor(0)
 
     out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
@@ -702,12 +698,16 @@ print.summary.citodnnBootstrap <- function(x, ... ){
 #'
 #' @param object a model created by \code{\link{dnn}}
 #' @param ... nothing implemented yet
-#' @return list of weights of neural network
+#' @return list of parameters of neural network and loss
 #'
 #' @example /inst/examples/coef.citodnn-example.R
 #' @export
-coef.citodnn <- function(object,...){
-  return(object$weights[object$use_model_epoch])
+coef.citodnn <- function(object, ...) {
+  object <- check_model(object)
+  out <- list()
+  out$net_parameters <- lapply(object$net$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  return(out)
 }
 
 #' @rdname coef.citodnn

@@ -25,7 +25,7 @@ dataset_folder = torch::dataset(
           X = lapply(x[index], function(p) torch::torch_tensor(tiff::readTIFF(x), torch::torch_float32())$unsqueeze(1L))
         }
         X = torch::torch_cat(X, dim = 1L)/255.
-        X = X$permute(c(1, 4, 2, 3))
+        X = X$permute(c(1, 4, 2, 3)) #TODO: Make function usable for 1D and 3D convolutions as well
         return(X)
       }
     })
@@ -885,52 +885,29 @@ check_model <- function(object) {
 
   if(!inherits(object, c("citodnn", "citocnn", "citommn"))) stop("model not of class citodnn, citocnn or citommn")
 
-  pointer_check <- tryCatch(torch::as_array(object$net$parameters[[1]]), error = function(e) e)
-  if(inherits(pointer_check,"error")){
-    object$net <- build_model(object)
-    object$loaded_model_epoch <- torch::torch_tensor(0)
+  pointer_check_net <- tryCatch(object$net$state_dict(), error = function(e) e)
+  pointer_check_loss <- tryCatch(object$loss$state_dict(), error = function(e) e)
+  if(inherits(pointer_check_net, "error") || inherits(pointer_check_loss, "error")) {
+    object$loaded_model_epoch <- "none"
   }
 
-  if(as.numeric(object$loaded_model_epoch)!= object$use_model_epoch){
+  if(object$loaded_model_epoch != object$use_model_epoch) {
 
-    set_data <- function(params_buffers_names, mode) {
-      module_name <- sapply(params_buffers_names, function(x) {
-        period_indices <- which(strsplit(x,"")[[1]]==".")
-        last_period_index <- period_indices[length(period_indices)]
-        substr(x,1,last_period_index-1)
-      })
-
-      module_type <- sapply(params_buffers_names, function(x) {
-        period_indices <- which(strsplit(x,"")[[1]]==".")
-        last_period_index <- period_indices[length(period_indices)]
-        substring(x,last_period_index+1)
-      })
-
-      if(mode == 1) {
-        text1 <- "parameters"
-        text2 <- "weights"
-      } else {
-        text1 <- "buffers"
-        text2 <- "buffers"
-      }
-
-      for ( i in names(object$net$modules)){
-        if(i %in% module_name){
-          k<- which(i == module_name)
-          sapply(k, function(x) eval(parse(text=paste0("object$net$modules$`",i,"`$",text1,"$",module_type[k],"$set_data(object$",text2,"[[object$use_model_epoch]]$`",params_buffers_names[k],"`)"))))
-        }
-      }
+    if(object$use_model_epoch == "best") {
+      object$net$load_state_dict(torch::torch_load(object$best_epoch_net_state_dict))
+      object$loss$load_state_dict(torch::torch_load(object$best_epoch_loss_state_dict))
+    } else if(object$use_model_epoch == "last") {
+      object$net$load_state_dict(torch::torch_load(object$last_epoch_net_state_dict))
+      object$loss$load_state_dict(torch::torch_load(object$last_epoch_loss_state_dict))
+    } else {
+      stop("'object$use_model_epoch' must be either 'best' or 'last'.")
     }
 
-    module_params <- names(object$weights[[object$use_model_epoch]])
-    if(!is.null(module_params)) set_data(module_params, mode = 1)
-    module_buffers <- names(object$buffers[[object$use_model_epoch]])
-    if(!is.null(module_buffers)) set_data(module_buffers, mode = 2)
-
-    object$loaded_model_epoch$set_data(object$use_model_epoch)
+    object$loaded_model_epoch <- object$use_model_epoch
   }
 
   object$net$eval()
+  object$loss$eval()
 
   return(object)
 }
