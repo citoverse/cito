@@ -72,18 +72,19 @@ cnn(
 \value{
 An S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 The list consists of the following attributes:
-\item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
+\item{net}{An object of class "nn_module". Originates from the torch package and represents the core object of this workflow.}
 \item{call}{The original function call.}
-\item{loss}{A list which contains relevant information for the target variable and the used loss function.}
-\item{data}{Contains the data used for the training of the model.}
-\item{base_loss}{The loss of the intercept-only model.}
-\item{weights}{List of parameters (weights and biases) of the models from the best and the last training epoch.}
-\item{buffers}{List of buffers (e.g. running mean and variance of batch normalization layers) of the models from the best and the last training epoch.}
-\item{use_model_epoch}{Integer, defines whether the model from the best (= 1) or the last (= 2) training epoch should be used for prediction.}
-\item{loaded_model_epoch}{Integer, shows whether the parameters and buffers of the model from the best (= 1) or the last (= 2) training epoch are currently loaded in \code{net}.}
+\item{loss}{An object of class "nn_module". Contains all relevant information for the loss function, e.g. parameters and a function (format_Y) that transforms target data.}
+\item{data}{A list. Contains the data used for the training of the model.}
 \item{model_properties}{A list of properties, that define the architecture of the model.}
-\item{training_properties}{A list of all the training parameters used the last time the model was trained.}
+\item{training_properties}{A list of all training hyperparameters used the last time the model was trained.}
 \item{losses}{A data.frame containing training and validation losses of each epoch.}
+\item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
+\item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+\item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
+\item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 }
 \description{
 This function trains a Convolutional Neural Network (CNN) on the provided input data \code{X} and the target data \code{Y} using the specified architecture, loss function, and optimizer.

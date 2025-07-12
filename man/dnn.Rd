@@ -95,18 +95,21 @@ dnn(
 \item{Y}{Response vector, factor, matrix or data.frame, alternative data interface}
 }
 \value{
-an S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
+An S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 The list consists of the following attributes:
-\item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
-\item{call}{The original function call}
-\item{loss}{A list which contains relevant information for the target variable and the used loss function}
-\item{data}{Contains data used for training the model}
-\item{weights}{List of weights for each training epoch}
-\item{use_model_epoch}{Integer, which defines which model from which training epoch should be used for prediction. 1 = best model, 2 = last model}
-\item{loaded_model_epoch}{Integer, shows which model from which epoch is loaded currently into model$net.}
-\item{model_properties}{A list of properties of the neural network, contains number of input nodes, number of output nodes, size of hidden layers, activation functions, whether bias is included and if dropout layers are included.}
-\item{training_properties}{A list of all training parameters that were used the last time the model was trained. It consists of learning rate, information about an learning rate scheduler, information about the optimizer, number of epochs, whether early stopping was used, if plot was active, lambda and alpha for L1/L2 regularization, batchsize, shuffle, was the data set split into validation and training, which formula was used for training and at which epoch did the training stop.}
-\item{losses}{A data.frame containing training and validation losses of each epoch}
+\item{net}{An object of class "nn_module". Originates from the torch package and represents the core object of this workflow.}
+\item{call}{The original function call.}
+\item{loss}{An object of class "nn_module". Contains all relevant information for the loss function, e.g. parameters and a function (format_Y) that transforms target data.}
+\item{data}{A list. Contains the data used for the training of the model.}
+\item{model_properties}{A list of properties, that define the architecture of the model.}
+\item{training_properties}{A list of all training hyperparameters used the last time the model was trained.}
+\item{losses}{A data.frame containing training and validation losses of each epoch.}
+\item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
+\item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+\item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
+\item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 }
 \description{
 fits a custom deep neural network using the Multilayer Perceptron architecture. \code{dnn()} supports the formula syntax and allows to customize the neural network to a maximal degree.
