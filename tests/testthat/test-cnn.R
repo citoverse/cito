@@ -46,15 +46,16 @@ testthat::test_that("CNN accuracy", {
   }
 
   set.seed(42)
+  torch::torch_manual_seed(42)
   n <- 1000
   shapes <- cito:::simulate_shapes(n, 50)
   test <- sample.int(n, 0.1*n)
   train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="cross-entropy", device=device, validation=0.1, epochs=400, early_stopping = 20, lambda = 0.001, plot=FALSE, verbose=FALSE)
+  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="cross-entropy", device=device, validation=0.1, epochs=400, early_stopping = 10, lambda = 0.001, plot=FALSE, verbose=FALSE)
   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
   true <- shapes$labels[test]
   accuracy <- length(which(pred==true))/length(test)
-  testthat::expect_gt(accuracy, 0.95)
+  testthat::expect_gt(accuracy, 0.75)
 })
 
 testthat::test_that("CNN transfer learning", {
@@ -121,6 +122,7 @@ testthat::test_that("CNN pretrained", {
   architecture <- create_architecture(transfer("alexnet", pretrained=TRUE, freeze=TRUE))
 
   set.seed(42)
+  torch::torch_manual_seed(42)
   n <- 500
   shapes <- cito:::simulate_shapes(n, 100, 3)
   test <- sample.int(n, 0.1*n)

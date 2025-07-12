@@ -183,7 +183,7 @@ get_loss <- function(loss, Y, custom_parameters) {
         classname = "binomial loss",
         initialize = function() {
           checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                            checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                            checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                             checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, ncols = 2),
@@ -231,7 +231,7 @@ get_loss <- function(loss, Y, custom_parameters) {
         },
         format_Y = function(Y) {
           checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                            checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                            checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                             checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                             checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, ncols = 2),
@@ -254,7 +254,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       classname = "cross-entropy loss",
       initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
 
@@ -280,7 +280,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
       format_Y = function(Y) {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1))
 
@@ -400,7 +400,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       classname = "multinomial loss",
       initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
@@ -440,7 +440,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
       format_Y = function(Y) {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
@@ -511,7 +511,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       classname = "conditional binomial loss",
       initialize = function() {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),
@@ -549,7 +549,7 @@ get_loss <- function(loss, Y, custom_parameters) {
       invlink = function(x) {torch::nnf_softmax(x, dim = 2)},
       format_Y = function(Y) {
         checkmate::assert(checkmate::checkCharacter(Y, any.missing = F, all.missing = F),
-                          checkmate::checkFactor(Y, any.missing = F, all.missing = F, empty.levels.ok = F),
+                          checkmate::checkFactor(Y, any.missing = F, all.missing = F),
                           checkmate::checkMatrix(Y, mode = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkDataFrame(Y, types = "character", any.missing = F, all.missing = F, ncols = 1),
                           checkmate::checkMatrix(Y, mode = "integerish", any.missing = F, all.missing = F, min.cols = 2),

@@ -69,57 +69,50 @@ testthat::test_that("DNN custom loss and custom parameters", {
   testthat::skip_on_ci()
   skip_if_no_torch()
 
-custom_loss = function(pred, true) {
-  logLik = torch::distr_normal(pred,
-                               scale = torch::nnf_relu(scale)+
-                                 0.001)$log_prob(true)
-  return(-logLik$mean())
-}
+  custom_loss = function(pred, true) {
+    logLik = torch::distr_normal(pred, scale = torch::nnf_relu(scale)+0.001)$log_prob(true)
+    return(-logLik$mean())
+  }
 
-testthat::expect_error({
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
+  testthat::expect_error({
+    testthat::skip_on_cran()
+    testthat::skip_on_ci()
+    skip_if_no_torch()
 
-  nn.fit<- dnn(Sepal.Length~.,
+    nn.fit<- dnn(Sepal.Length~.,
+                 data = datasets::iris,
+                 loss = custom_loss,
+                 epochs = 2L,
+                 verbose = FALSE,
+                 plot = FALSE,
+                 custom_parameters = list(scale = 1.0))
+    }, NA)
+
+  create_cov = function(LU, Diag) {
+    return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
+  }
+
+  custom_loss_MVN = function(true, pred) {
+    Sigma = create_cov(SigmaPar, SigmaDiag)
+    logLik = torch::distr_multivariate_normal(pred,covariance_matrix = Sigma)$log_prob(true)
+    return(-logLik$mean())
+  }
+
+  testthat::expect_error({
+    testthat::skip_on_cran()
+    testthat::skip_on_ci()
+    skip_if_no_torch()
+
+  nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
                data = datasets::iris,
-               loss = custom_loss,
-               epochs = 2L,
+               lr = 0.01,
+               epochs = 200L,
+               loss = custom_loss_MVN,
                verbose = FALSE,
                plot = FALSE,
-               custom_parameters = list(scale = 1.0)
-  )
+               custom_parameters = list(SigmaDiag =  rep(0., 3),
+                                        SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2)))
   }, NA)
-
-create_cov = function(LU, Diag) {
-  return(torch::torch_matmul(LU, LU$t()) + torch::torch_diag(Diag$exp()+0.01))
-}
-
-custom_loss_MVN = function(true, pred) {
-  Sigma = create_cov(SigmaPar, SigmaDiag)
-  logLik = torch::distr_multivariate_normal(pred,
-                                            covariance_matrix = Sigma)$
-    log_prob(true)
-  return(-logLik$mean())
-}
-
-testthat::expect_error({
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
-             data = datasets::iris,
-             lr = 0.01,
-             epochs = 200L,
-             loss = custom_loss_MVN,
-             verbose = FALSE,
-             plot = FALSE,
-             custom_parameters =
-               list(SigmaDiag =  rep(0., 3),
-                    SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
-)
-}, NA)
 
 })
 
@@ -149,27 +142,27 @@ testthat::test_that("DNN baseline loss check",{
 
   Y = rbinom(50, 1, 0.5)
   X = rnorm(50)
-  m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "binomial", epochs = 2L, verbose = FALSE, plot = FALSE)
-  testthat::expect_equal( !!m$base_loss, !!(-sum(dbinom(Y, 1, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
+  m = dnn(Y~., data = data.frame(Y = factor(Y), X = X), loss = "binomial", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal( !!m$training_properties$baseloss, !!(-sum(dbinom(Y, 1, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
 
   Y = rpois(50, 5)
   X = rnorm(50)
   m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "poisson", epochs = 2L, verbose = FALSE, plot = FALSE)
-  testthat::expect_equal( !!m$base_loss, !!(-sum(dpois(Y, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
+  testthat::expect_equal( !!m$training_properties$baseloss, !!(-sum(dpois(Y, (mean(Y)), log = TRUE)/50)), tolerance = 0.01)
 
   Y = rnorm(50, 5)
   X = rnorm(50)
   m = dnn(Y~., data = data.frame(Y = Y, X = X), loss = "mse", epochs = 2L, verbose = FALSE, plot = FALSE)
-  testthat::expect_equal( !!m$base_loss, !!mean((Y - mean(Y))**2 ), tolerance = 0.01)
+  testthat::expect_equal( !!m$training_properties$baseloss, !!mean((Y - mean(Y))**2 ), tolerance = 0.01)
 
   Y = rbinom(50, 2, 0.5)
   X = rnorm(50)
   m = dnn(Y~., data = data.frame(Y = as.factor(Y+1), X = X), loss = "cross-entropy", epochs = 2L, verbose = FALSE, plot = FALSE)
   pred = log(matrix(table(as.factor(Y+1))/sum(table(as.factor(Y+1))), 50, 3, byrow = TRUE)) + log(3)
   loss = as.numeric(torch::nnf_cross_entropy(pred, torch::torch_tensor(Y+1, dtype = torch::torch_long())))
-  testthat::expect_equal( !!m$base_loss, !!loss , tolerance = 0.01)
+  testthat::expect_equal( !!m$training_properties$baseloss, !!loss , tolerance = 0.01)
 
-  })
+})
 
 
 testthat::test_that("DNN hyperparameter tuning",{
