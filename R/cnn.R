@@ -1031,3 +1031,53 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
     ytop <- ytop-height
   }
 }
+
+augment_flip <- function(x) {
+  for(i in 3:x$dim()) {
+    if(runif(1)>0.5) x <- x$flip(i)
+  }
+  return(x)
+}
+
+augment_rotate90 <- function(x) {
+  if(x$ndim == 3) {
+    stop("1D data: Rotations not possible.")
+  } else if (x$ndim == 4) {
+    if(dim(x)[3] != dim(x)[4]) stop("2D data: X and Y dimension must be equal for rotations.")
+    return(x$rot90(sample(0:3,1), c(3,4)))
+  } else if (x$ndim == 5) {
+    planes <- list(c(3,4), c(3,5), c(4,5))
+    equal_dims <- sapply(planes, function(y) dim(x)[y[1]]==dim(x)[y[2]])
+    if(!any(equal_dims)) {
+      stop("3D data: At least 2 dimensions of X, Y and Z must be equal for rotations.")
+    } else if(all(equal_dims)) {
+      orientation <- list(function(y) y,
+                          function(y) y$rot90(1, c(3,5)),
+                          function(y) y$rot90(2, c(3,5)),
+                          function(y) y$rot90(3, c(3,5)),
+                          function(y) y$rot90(1, c(4,5)),
+                          function(y) y$rot90(3, c(4,5)))
+      x <- orientation[[sample(1:6,1)]](x)
+      return(x$rot90(sample(0:3,1), c(3,4)))
+    } else {
+      return(x$rot90(sample(0:3,1), planes[[which(equal_dims)]]))
+    }
+  }
+}
+
+augment_noise <- function(x, std = 0.01) {
+  return(x + torch_randn_like(x) * std)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

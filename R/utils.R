@@ -1,6 +1,6 @@
-get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALSE) {
+get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALSE, data_augmentation = NULL) {
 
-  if(from_folder) ds = dataset_folder(...)
+  if(from_folder | !is.null(data_augmentation)) ds = cito_dataset(..., data_augmentation = data_augmentation)
   else ds <- torch::tensor_dataset(...)
 
   dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
@@ -8,36 +8,67 @@ get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALS
   return(dl)
 }
 
-dataset_folder = torch::dataset(
-  initialize = function(...) {
+cito_dataset = torch::dataset(
+  initialize = function(..., data_augmentation) {
     self$inputs = list(...)
+    self$data_augmentation = data_augmentation
   },
   .getbatch = function(index) {
 
     batch = lapply(self$inputs, function(x) {
       if(inherits(x, "torch_tensor")) {
-        return(x[index])
+        return(x[index, drop=FALSE])
       } else {
-        if(any(grepl(".png", x)) | any(grepl(".jpeg", x))) {
-          X = lapply(x[index], function(p) torch::torch_tensor(torchvision::base_loader(p), torch::torch_float32())$unsqueeze(1L))
-        }
-        if(any(grepl(".tiff", x))) {
-          X = lapply(x[index], function(p) torch::torch_tensor(tiff::readTIFF(x), torch::torch_float32())$unsqueeze(1L))
-        }
-        X = torch::torch_cat(X, dim = 1L)/255.
-        X = X$permute(c(1, 4, 2, 3)) #TODO: Make function usable for 1D and 3D convolutions as well
-        return(X)
+        X <- lapply(x[index], function(path) {
+          if(grepl(".png", path) | grepl(".jpeg", path)) return(self$load_image(path))
+          else if(grepl(".tiff", path)) return(self$load_tiff(path))
+          else stop(paste0("File format not supported: ", path))
+        })
+        return(torch::torch_stack(X))
       }
     })
+
+    if(!is.null(self$data_augmentation)) {
+      batch <- torch_cat(lapply(1:dim(batch)[1], function(i) {
+        sample <- batch[i, drop=FALSE]
+        for(fn in data_augmentation) {
+          sample <- fn(sample)
+        }
+        return(sample)
+      }))
+    }
+
     return(batch)
   },
   .length = function() {
-    # this class is only used when there is at least one folder/paths...search for it an use it to infer the length
-    for(x in self$inputs) {
-      if(any(is.character(x))) return(length(x))
-    }
+    if(inherits(self$inputs[[1]], "torch_tensor")) return(dim(self$inputs[[1]])[1])
+    else return(length(self$inputs[[1]]))
+  },
+  load_image = function(path) {
+    img <- torch::torch_tensor(torchvision::base_loader(path), torch::torch_float32())
+    if(img$ndim == 2) img <- img$unsqueeze(3)
+    img <- img$permute(c(3, 1, 2))
+    img <- img/255
+    return(img)
+  },
+  load_tiff = function(path) {
+    img_list <- tiff::readTIFF(x, all = TRUE)
+    img_list <- lapply(img_list, function(img) {
+      img <- torch::torch_tensor(img, dtype = torch::torch_float32())
+      if(img$ndim == 2) img <- img$unsqueeze(3)
+      img <- img$permute(c(3, 1, 2))
+    })
+
+    if(length(img_list) == 1) img <- img_list[[1]]
+    else img <- torch::torch_stack(img_list, 4) #3D object
+
+    return(img)
   }
 )
+
+apply_augmentation <- function(x, data_augmentation) {
+
+}
 
 get_loss <- function(loss, Y, custom_parameters) {
   out <- list()
