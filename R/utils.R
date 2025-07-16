@@ -56,7 +56,7 @@ cito_dataset = torch::dataset(
     return(img)
   },
   load_tiff = function(path) {
-    img_list <- tiff::readTIFF(x, all = TRUE)
+    img_list <- tiff::readTIFF(path, all = TRUE)
     img_list <- lapply(img_list, function(img) {
       img <- torch::torch_tensor(img, dtype = torch::torch_float32())
       if(img$ndim == 2) img <- img$unsqueeze(3)
