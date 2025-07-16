@@ -15,6 +15,7 @@
 #' @param validation Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
+#' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
 #' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
@@ -143,6 +144,7 @@ cnn <- function(X,
                 validation = 0.0,
                 batchsize = NULL,
                 shuffle = TRUE,
+                data_augmentation = NULL,
                 epochs = 100,
                 early_stopping = Inf,
                 burnin = Inf,
@@ -161,6 +163,7 @@ cnn <- function(X,
   checkmate::qassert(validation, c("N1[0,1)","X>1[1,)"))
   checkmate::qassert(batchsize, c("0", "X1[1,)"))
   checkmate::qassert(shuffle, "B1")
+  checkmate::qassert(data_augmentation, c("0", "L+"))
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(early_stopping, "N1[1,]")
   checkmate::qassert(burnin, "N1[1,]")
@@ -229,8 +232,10 @@ cnn <- function(X,
   Y <- loss_obj$format_Y(Y)
   if(is.null(batchsize)) batchsize = round(0.1*dim(Y)[1])
 
+  if(!is.null(data_augmentation)) data_augmentation <- check_data_augmentation(data_augmentation)
+
   if(length(validation) == 1 && validation == 0) {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
     valid_dl <- NULL
   } else {
     n_samples <- dim(Y)[1]
@@ -241,7 +246,7 @@ cnn <- function(X,
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     }
     train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+    train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
     valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
   }
 
@@ -264,6 +269,7 @@ cnn <- function(X,
                               validation = validation,
                               batchsize = batchsize,
                               shuffle = shuffle,
+                              data_augmentation = data_augmentation,
                               epochs = epochs, #redundant?
                               early_stopping = early_stopping,
                               burnin = burnin,

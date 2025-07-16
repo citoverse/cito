@@ -32,6 +32,49 @@ testthat::test_that("CNN dimensions", {
   }
 })
 
+testthat::test_that("CNN data augmentation", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  if(torch::cuda_is_available()) {
+    device <- "cuda"
+  } else if(torch::backends_mps_is_available()) {
+    device <- "mps"
+  } else {
+    device <- "cpu"
+  }
+
+  set.seed(42)
+  array_dims <- list(c(100,1,10),
+                     c(100,1,10,10),
+                     c(100,1,10,10,10),
+                     c(100,3,10),
+                     c(100,3,10,10),
+                     c(100,3,10,10,10))
+  X <- lapply(array_dims, function(x) array(runif(prod(x)), dim = x))
+  Y <- factor(sample(c("a","b","c"), 100, replace=TRUE))
+
+  fn <- function(x) {return(x+1)}
+  data_augmentation <- list("flip", "noise", fn)
+
+  for (x in X) {
+    .n <- wrap_cnn(list(X=x, Y=Y, architecture=architecture, loss="cross-entropy", device=device, epochs=1, plot=FALSE, verbose=FALSE, data_augmentation=data_augmentation))
+  }
+
+  array_dims <- list(c(100,1,10,10),
+                     c(100,1,10,10,10),
+                     c(100,3,10,10),
+                     c(100,3,20,10,20))
+  X <- lapply(array_dims, function(x) array(runif(prod(x)), dim = x))
+  data_augmentation <- list("rotate90")
+  for (x in X) {
+    .n <- wrap_cnn(list(X=x, Y=Y, architecture=architecture, loss="cross-entropy", device=device, epochs=1, plot=FALSE, verbose=FALSE, data_augmentation=data_augmentation))
+  }
+
+})
+
+
 testthat::test_that("CNN accuracy", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()

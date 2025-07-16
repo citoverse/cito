@@ -22,6 +22,7 @@ mmn(
   validation = 0,
   batchsize = NULL,
   shuffle = TRUE,
+  data_augmentation = NULL,
   epochs = 100,
   early_stopping = Inf,
   burnin = Inf,
@@ -63,6 +64,8 @@ mmn(
 \item{batchsize}{Batch size for training. If NULL, batchsize is 10\% of the training data. Default is NULL.}
 
 \item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
+
+\item{data_augmentation}{A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.}
 
 \item{epochs}{Number of epochs to train the model. Default is 100.}
 

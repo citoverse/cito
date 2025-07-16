@@ -29,13 +29,17 @@ cito_dataset = torch::dataset(
     })
 
     if(!is.null(self$data_augmentation)) {
-      batch <- torch_cat(lapply(1:dim(batch)[1], function(i) {
-        sample <- batch[i, drop=FALSE]
-        for(fn in data_augmentation) {
-          sample <- fn(sample)
-        }
-        return(sample)
-      }))
+      batch <- lapply(batch, function(x) {
+        if(x$ndim < 3) return(x)
+        x <- torch_cat(lapply(1:(dim(x)[1]), function(i) {
+          sample <- x[i, drop=FALSE]
+          for(fn in self$data_augmentation) {
+            sample <- fn(sample)
+          }
+          return(sample)
+        }))
+        return(x)
+      })
     }
 
     return(batch)
@@ -66,8 +70,26 @@ cito_dataset = torch::dataset(
   }
 )
 
-apply_augmentation <- function(x, data_augmentation) {
-
+check_data_augmentation <- function(data_augmentation) {
+  for(i in 1:length(data_augmentation)) {
+    if(is.character(data_augmentation[[i]])) {
+      data_augmentation[[i]] <- switch(data_augmentation[[i]],
+                                       "rotate90" = augment_rotate90,
+                                       "flip" = augment_flip,
+                                       "noise" = augment_noise,
+                                       stop(paste0("Data augmentation function '", data_augmentation[[i]], "' not found.")))
+    } else if(is.function(data_augmentation[[i]])) {
+      args <- formals(data_augmentation[[i]])
+      if(length(args) == 0) stop("Data augmentation function must have at least one argument.")
+      has_default <- sapply(args, function(x) !is.symbol(x) || deparse(x) != "")
+      required_args <- which(!has_default)
+      if (length(required_args) > 1) stop("Data augmentation function must have at most one argument without a default.")
+      if (length(required_args) == 1 && required_args != 1) stop("The one argument without a default must be the first argument.")
+    } else {
+      stop("Elements of data_augmentation must be either a function or astring corresponding to one of cito's inbuilt data augmentation functions ('rotate90', 'flip' or 'noise').")
+    }
+  }
+  return(data_augmentation)
 }
 
 get_loss <- function(loss, Y, custom_parameters) {
