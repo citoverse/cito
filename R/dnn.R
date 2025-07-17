@@ -388,6 +388,8 @@ dnn <- function(formula = NULL,
     out <- list()
     class(out) <- "citodnnBootstrap"
 
+    Y_transformed <- as.matrix(Y_torch)
+
     if(bootstrap_parallel == FALSE) {
       pb = progress::progress_bar$new(total = bootstrap, format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models = list()
@@ -409,7 +411,7 @@ dnn <- function(formula = NULL,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = as.matrix(Y_torch), Z = Z) #X, Y, Z redundant
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
         pb$tick()
         models[[b]] = m
       }
@@ -438,7 +440,7 @@ dnn <- function(formula = NULL,
           bootstrap_parallel = FALSE
         ))
         m$data$indices = indices
-        m$data$original = list(data = data, X = X, Y = as.matrix(Y_torch), Z = Z) #X, Y, Z redundant
+        m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
         m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)

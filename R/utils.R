@@ -276,8 +276,7 @@ get_loss <- function(loss, Y, custom_parameters) {
           n = torch::torch_sum(true, 2)
           s = true[, 1]
           f = true[, 2]
-          p = self$invlink(pred)
-
+          p = self$invlink(pred$squeeze())
           nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(s + 1) + torch::torch_lgamma(f + 1) - s * torch::torch_log(p) - f * torch::torch_log(1 - p)
           # nll = nll/n # normalize
           return(nll)
