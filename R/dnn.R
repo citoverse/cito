@@ -526,19 +526,19 @@ residuals.citodnn <- function(object,...){
 #' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
-#' @param n_permute number of permutations performed. Default is \eqn{3 * \sqrt{n}}, where n euqals then number of samples in the training set
+#' @param n_permute number of permutations performed for the feature importance. Default is 10, where n euqals then number of samples in the training set.
 #' @param device for calculating variable importance and conditional effects
 #' @param adjust_se adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )
 #' @param type on what scale should the average conditional effects be calculated ("response" or "link")
-#' @param ... additional arguments
+#' @param ... additional arguments to
 #' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnn <- function(object, n_permute = NULL, device = NULL, type = "response", ...){
+summary.citodnn <- function(object, n_permute = 10L, device = NULL, type = "response", ...){
   object <- check_model(object)
   out <- list()
   class(out) <- "summary.citodnn"
   if(is.null(device)) device = object$device
-  out$importance <- get_importance(object, n_permute, device)
+  out$importance <- get_importance(object, n_permute, device, ...)
   for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
   out$conditionalEffects = conditionalEffects(object, device = device, type = type)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
@@ -578,7 +578,7 @@ print.summary.citodnn <- function(x, ... ){
 
 #' @rdname summary.citodnn
 #' @export
-summary.citodnnBootstrap <- function(object, n_permute = NULL, device = NULL, adjust_se = FALSE, type = "response", ...){
+summary.citodnnBootstrap <- function(object, n_permute = 10, device = NULL, adjust_se = FALSE, type = "response", ...){
   object$models <- lapply(object$models, check_model)
   out <- list()
   class(out) <- "summary.citodnnBootstrap"

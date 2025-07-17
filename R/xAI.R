@@ -672,7 +672,7 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, type = "response"
 
 
 
-get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", out_of_bag = FALSE){
+get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", out_of_bag = FALSE, ...){
 
   if(out_of_bag) {
     model$data$data = model$data$original$data[-model$data$indices,]
@@ -724,8 +724,8 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
     if(n_outputs > 1) true_tmp = true[,n_prediction,drop=FALSE]
     else true_tmp = true
 
-    if(!softmax) org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device)[,n_prediction,drop=FALSE]) ,true = true_tmp)$mean())
-    else org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device)) ,true = true_tmp)$mean())
+    if(!softmax) org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)[,n_prediction,drop=FALSE]) ,true = true_tmp)$mean())
+    else org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)) ,true = true_tmp)$mean())
 
     importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
                              importance = c(0))
@@ -741,8 +741,8 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
           perm_data <- model$data$data
           perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = FALSE),importance$variable[i]]
 
-          if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device)[,n_prediction,drop=FALSE])
-          else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device))
+          if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...)[,n_prediction,drop=FALSE])
+          else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...))
 
           new_err <- append(new_err, as.numeric(loss(pred = torch::torch_tensor(perm_preds),
                                                      true = true_tmp)$mean() ))
@@ -754,8 +754,8 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
           perm_data <- model$data$data[j,]
           for(k in seq_len(nrow(model$data$data))[-j]){
             perm_data[i] <- model$data$data[k,i]
-            if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device)[,n_prediction,drop=FALSE])
-            else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device))
+            if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...)[,n_prediction,drop=FALSE])
+            else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...))
             true <- append(true_tmp, model$data$Y[j])
           }
         }
