@@ -1,6 +1,8 @@
-train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose = TRUE, plot_new = FALSE, init_optimizer=TRUE){
+train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_new = FALSE, init_optimizer=TRUE){
   model$net$to(device = device)
-  model$net$train()
+  model$loss$to(device = device)
+  model$net$train(TRUE)
+  model$loss$train(TRUE)
   model$successfull = 1
 
   hooks = model$training_properties$hooks
@@ -9,7 +11,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
   ### Optimizer ###
   if(init_optimizer) {
     optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
-                               parameters = c(model$net$parameters, unlist(model$loss$parameter)),
+                               parameters = c(model$net$parameters, model$loss$parameters),
                                lr = model$training_properties$lr)
   } else {
     optimizer = model$optimizer # TODO check that optimizer exists
@@ -28,10 +30,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
                           data.frame(epoch=c((max(model$losses$epoch)+1):(max(model$losses$epoch)+epochs)),train_l=NA,valid_l= NA))
   }
 
-  loss.fkt <- model$loss$loss
-  if(!is.null(model$loss$parameter)) list2env(model$loss$parameter,envir = environment(fun= loss.fkt))
-
-  regularize <- !(model$training_properties$lambda==0)
+  regularize <- model$training_properties$lambda!=0
 
   best_train_loss = Inf
   best_val_loss = Inf
@@ -49,10 +48,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       if(inherits(model, "citommn")) {
         output <- model$net(b[-length(b)])
       } else {
-        if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]])
-        else output <- model$net(b[[1]], b[[2]])
+        if(inherits(model, "citodnn") && model$net$has_embeddings) output <- model$net(b[[1]], b[[2]])
+        else output <- model$net(b[[1]])
       }
-      loss <- loss.fkt(output, b[[length(b)]])$mean()
+      loss <- model$loss(output, b[[length(b)]])$mean()
 
       if(regularize){
         regularization_loss <- regularize_weights(parameters = model$net$parameters,
@@ -64,14 +63,15 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         total_loss = loss
       }
 
-      if(!is.null(model$training_properties$embeddings)) {
-        for(i in 1:length(model$training_properties$embeddings$dims)) {
-          if(model$training_properties$embeddings$args[[i]]$lambda > 0) {
+      #TODO: Rework regularization of embedding layers. This code atm regularizes embedding layers twice for DNNs.
+      #      In MMNs embeddings layers are regularized only once but with the wrong alpha and lambda values
+      if(!is.null(model$model_properties$embeddings)) {
+        for(i in 1:length(model$model_properties$embeddings$dims)) {
+          if(model$model_properties$embeddings$args[[i]]$lambda > 0) {
             total_loss = torch::torch_add(total_loss,  regularize_weights(model$net[[paste0("e_", i)]]$parameters,
-                                                                          lambda = model$training_properties$embeddings$args[[i]]$lambda,
-                                                                          alpha = model$training_properties$embeddings$args[[i]]$alpha))
+                                                                          lambda = model$model_properties$embeddings$args[[i]]$lambda,
+                                                                          alpha = model$model_properties$embeddings$args[[i]]$alpha))
           }
-
         }
       }
 
@@ -83,16 +83,16 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
     })
 
     if(is.na(loss$item())) {
-      if(verbose) cat("Loss is NA. Bad training, please hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
+      if(model$training_properties$verbose) cat("Loss is NA. Bad training, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
       model$successfull = 0
       break
     }
 
     model$losses$train_l[epoch] <- mean(train_l)
 
-    if(epoch >= model$burnin) {
-      if(model$losses$train_l[epoch] > model$base_loss) {
-        if(verbose) cat("Cancel training because loss is still above baseline, please hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
+    if(epoch >= model$training_properties$burnin) {
+      if(model$losses$train_l[epoch] > model$training_properties$base_loss) {
+        if(model$training_properties$verbose) cat("Cancel training because loss is still above baseline, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
         model$successfull = 0
         break
       }
@@ -125,8 +125,9 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
 
     }
 
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+    if(!is.null(valid_dl)) {
       model$net$train(FALSE)
+      model$loss$train(FALSE)
 
       valid_l <- c()
 
@@ -135,21 +136,22 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
         if(inherits(model, "citommn")) {
           output <- model$net(b[-length(b)])
         } else {
-          if(is.null(model$training_properties$embeddings)) output <- model$net(b[[1]])
-          else output <- model$net(b[[1]], b[[2]])
+          if(inherits(model, "citodnn") && model$net$has_embeddings) output <- model$net(b[[1]], b[[2]])
+          else output <- model$net(b[[1]])
         }
-        loss <- loss.fkt(output, b[[length(b)]])$mean()
+        loss <- model$loss(output, b[[length(b)]])$mean()
         valid_l <- c(valid_l, loss$item())
       })
       model$losses$valid_l[epoch] <- mean(valid_l)
 
       model$net$train(TRUE)
+      model$loss$train(TRUE)
     }
 
     ### learning rate scheduler ###
     if(!is.null(scheduler)){
       if(model$training_properties$lr_scheduler$lr_scheduler == "reduce_on_plateau"){
-        if(model$training_properties$validation != 0 & !is.null(valid_dl)){
+        if(!is.null(valid_dl)){
           scheduler$step(model$losses$valid_l[epoch])
         }else{
           scheduler$step(model$losses$train_l[epoch])
@@ -159,11 +161,11 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       }
     }
 
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)){
-      if(verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
+    if(!is.null(valid_dl)){
+      if(model$training_properties$verbose) cat(sprintf("Loss at epoch %d: training: %3.3f, validation: %3.3f, lr: %3.5f\n",
                               epoch, model$losses$train_l[epoch], model$losses$valid_l[epoch],optimizer$param_groups[[1]]$lr))
     }else{
-      if (verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
+      if (model$training_properties$verbose) cat(sprintf("Loss at epoch %d: %3f, lr: %3.5f\n", epoch, model$losses$train_l[epoch],optimizer$param_groups[[1]]$lr))
     }
 
     ### create plot ###
@@ -172,53 +174,56 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, verbose
       citocnn = "Training of CNN",
       citommn = "Training of MMN"
     )
-    if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$base_loss)
+    if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$training_properties$baseloss)
     plot_new <- FALSE
 
     # Save best weights
-    if(model$training_properties$validation != 0 & !is.null(valid_dl)) {
+    if(!is.null(valid_dl)) {
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
-        model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+        model$net$to(device = "cpu")
+        model$loss$to(device = "cpu")
+        model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+        model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
+        model$net$to(device = device)
+        model$loss$to(device = device)
         counter = 0
       }
     } else {
       if(model$losses$train_l[epoch] < best_train_loss) {
         best_train_loss = model$losses$train_l[epoch]
-        model$weights[[1]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-        model$buffers[[1]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+        model$net$to(device = "cpu")
+        model$loss$to(device = "cpu")
+        model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+        model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
+        model$net$to(device = device)
+        model$loss$to(device = device)
         counter = 0
       }
     }
 
     ### early stopping ###
-    if(is.numeric(model$training_properties$early_stopping)) {
-      if(counter >= model$training_properties$early_stopping) {
-        break
-      }
-      counter = counter + 1
+    if(counter >= model$training_properties$early_stopping) {
+      break
     }
+    counter = counter + 1
+
 
   }
 
   model$net$to(device = "cpu")
+  model$loss$to(device = "cpu")
 
-  model$weights[[2]] =  lapply(model$net$parameters,function(x) torch::as_array(x$to(device="cpu")))
-  model$buffers[[2]] =  lapply(model$net$buffers,function(x) torch::as_array(x$to(device="cpu")))
+  model$last_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
+  model$last_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
 
+  model$optimizer = optimizer #TODO: Save Optimizer and LR_scheduler
 
-  if(!is.null(model$loss$parameter)) model$parameter <- lapply(model$loss$parameter, cast_to_r_keep_dim)
-  model$use_model_epoch <- 2
-  model$loaded_model_epoch$set_data(2)
-
-  if(!is.null(model$loss$parameter)) {
-      model$loss$parameter_r = unlist(lapply(model$loss$parameter, function(p) as.numeric(p$cpu())))
-  }
-
-  model$optimizer = optimizer
+  model$use_model_epoch <- "last"
+  model$loaded_model_epoch <- "last"
 
   model$net$eval()
+  model$loss$eval()
 
   return(model)
 }
@@ -290,7 +295,7 @@ visualize.training <- function(losses,epoch, main, new = FALSE, baseline = NULL)
 #' The baseline loss is the most important reference. If the model was not able to achieve a better (lower) loss than the baseline (which is the loss for a intercept only model), the model probably did not converge. Possible reasons include an improper learning rate, too few epochs, or too much regularization. See the `?dnn` help or the `vignette("B-Training_neural_networks")`.
 #'
 #'
-#' @param object a model created by \code{\link{dnn}} or \code{\link{cnn}}
+#' @param object a model created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}
 #' @return a 'plotly' figure
 #' @example /inst/examples/analyze_training-example.R
 #' @export
@@ -304,17 +309,17 @@ analyze_training<- function(object){
     )
   }
 
-  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn"))) stop("Function requires an object of class citodnn, citodnnBootstrap or citocnn")
+  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn", "citommn"))) stop("Function requires an object of class citodnn, citodnnBootstrap, citocnn or citommn")
 
 
-  if(inherits(object, c("citodnn", "citocnn"))) {
+  if(inherits(object, c("citodnn", "citocnn", "citommn"))) {
     fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                            width = 900)
 
     fig<- plotly::add_trace(fig,x = ~epoch, y = ~train_l,text = "Training Loss",
                             line = list(color = "#5B84B1FF"),
                             marker =list(color = "#5B84B1FF"), name = "Training loss" )
-    if(object$call$validation>0 && !is.null(object$call$validation))  {
+    if(length(object$training_properties$validation) > 1 || object$training_properties$validation>0)  {
       fig<- plotly::add_trace(fig,x = ~epoch, y = ~valid_l, text ="Validation loss",
                               line = list(color = "#FC766AFF"),
                               marker =list(color = "#FC766AFF"), name = "Validation loss")
@@ -327,11 +332,13 @@ analyze_training<- function(object){
                                              showlegend = TRUE,
                                              name = "Baseline loss",
                                              xref = "paper",
-                                             y0 = object$base_loss,
-                                             y1 = object$base_loss,
+                                             y0 = object$training_properties$baseloss,
+                                             y1 = object$training_properties$baseloss,
                                              line = list(color = "#00c49aAA")
     ))
-    title <- ifelse(inherits(object, "citocnn"), 'CNN Training', 'DNN Training')
+    if(inherits(object, "citodnn")) title <- 'DNN Training'
+    else if(inherits(object, "citocnn")) title <- 'CNN Training'
+    else if(inherits(object, "citommn")) title <- 'MMN Training'
     fig<- plotly::layout(fig,
                          title=title,
                          xaxis = list(zeroline = FALSE),
@@ -345,7 +352,7 @@ analyze_training<- function(object){
   if(inherits(object, "citodnnBootstrap")) {
 
     train_l = sapply(object$models, function(i) i$losses$train_l)
-    base_loss = mean(sapply(object$models, function(i) i$base_loss))
+    base_loss = mean(sapply(object$models, function(i) i$training_properties$baseloss))
     fig <- plotly::plot_ly(type = 'scatter', mode = 'lines+markers',
                            width = 900)
 

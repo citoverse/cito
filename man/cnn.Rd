@@ -8,57 +8,63 @@ cnn(
   X,
   Y = NULL,
   architecture,
-  loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson",
-    "mvp", "nbinom", "multinomial", "clogit"),
-  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+  loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson",
+    "mvp", "nbinom", "multinomial", "clogit", "softmax"),
+  custom_parameters = NULL,
+  optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
   lr = 0.01,
+  lr_scheduler = NULL,
   alpha = 0.5,
   lambda = 0,
   validation = 0,
-  batchsize = 32L,
-  burnin = 30,
+  batchsize = NULL,
   shuffle = TRUE,
+  data_augmentation = NULL,
   epochs = 100,
-  early_stopping = NULL,
-  lr_scheduler = NULL,
-  custom_parameters = NULL,
+  early_stopping = Inf,
+  burnin = Inf,
+  baseloss = NULL,
   device = c("cpu", "cuda", "mps"),
   plot = TRUE,
   verbose = TRUE
 )
 }
 \arguments{
-\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.}
+\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.}
 
 \item{Y}{The target data. It can be a factor, numeric vector, or a numeric or logical matrix.}
 
 \item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.}
 
-\item{loss}{The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
+\item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 
-\item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
+\item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
+
+\item{optimizer}{The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".}
 
 \item{lr}{Learning rate for the optimizer. Default is 0.01.}
+
+\item{lr_scheduler}{Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.}
 
 \item{alpha}{Alpha value for L1/L2 regularization. Default is 0.5.}
 
 \item{lambda}{Lambda value for L1/L2 regularization. Default is 0.0.}
 
-\item{validation}{Proportion of the data to be used for validation. Default is 0.0.}
+\item{validation}{Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.}
 
-\item{batchsize}{Batch size for training. Default is 32.}
-
-\item{burnin}{Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.}
+\item{batchsize}{Batch size for training. If NULL, batchsize is 10\% of the training data. Default is NULL.}
 
 \item{shuffle}{Whether to shuffle the data before each epoch. Default is TRUE.}
 
+\item{data_augmentation}{A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.}
+
 \item{epochs}{Number of epochs to train the model. Default is 100.}
 
-\item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is NULL.}
+\item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is Inf.}
 
-\item{lr_scheduler}{Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.}
+\item{burnin}{Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.}
 
-\item{custom_parameters}{Parameters for the custom loss function. See the vignette for an example. Default is NULL.}
+\item{baseloss}{Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.}
 
 \item{device}{Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".}
 
@@ -69,18 +75,19 @@ cnn(
 \value{
 An S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 The list consists of the following attributes:
-\item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
+\item{net}{An object of class "nn_module". Originates from the torch package and represents the core object of this workflow.}
 \item{call}{The original function call.}
-\item{loss}{A list which contains relevant information for the target variable and the used loss function.}
-\item{data}{Contains the data used for the training of the model.}
-\item{base_loss}{The loss of the intercept-only model.}
-\item{weights}{List of parameters (weights and biases) of the models from the best and the last training epoch.}
-\item{buffers}{List of buffers (e.g. running mean and variance of batch normalization layers) of the models from the best and the last training epoch.}
-\item{use_model_epoch}{Integer, defines whether the model from the best (= 1) or the last (= 2) training epoch should be used for prediction.}
-\item{loaded_model_epoch}{Integer, shows whether the parameters and buffers of the model from the best (= 1) or the last (= 2) training epoch are currently loaded in \code{net}.}
+\item{loss}{An object of class "nn_module". Contains all relevant information for the loss function, e.g. parameters and a function (format_Y) that transforms target data.}
+\item{data}{A list. Contains the data used for the training of the model.}
 \item{model_properties}{A list of properties, that define the architecture of the model.}
-\item{training_properties}{A list of all the training parameters used the last time the model was trained.}
+\item{training_properties}{A list of all training hyperparameters used the last time the model was trained.}
 \item{losses}{A data.frame containing training and validation losses of each epoch.}
+\item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
+\item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
+\item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+\item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
+\item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 }
 \description{
 This function trains a Convolutional Neural Network (CNN) on the provided input data \code{X} and the target data \code{Y} using the specified architecture, loss function, and optimizer.
@@ -100,7 +107,6 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    Name \tab Explanation \tab Example / Task \cr
    mse \tab mean squared error \tab Regression, predicting continuous values \cr
    mae \tab mean absolute error \tab Regression, predicting continuous values \cr
-   softmax \tab categorical cross entropy \tab Multi-class, species classification \cr
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
    binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr

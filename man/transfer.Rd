@@ -10,7 +10,8 @@ transfer(
     "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn",
     "wide_resnet101_2", "wide_resnet50_2"),
   pretrained = TRUE,
-  freeze = TRUE
+  freeze = TRUE,
+  rgb = TRUE
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ transfer(
 \item{pretrained}{(boolean) If \code{TRUE}, the model uses its pretrained weights. If \code{FALSE}, random weights are initialized.}
 
 \item{freeze}{(boolean) If \code{TRUE}, the weights of the pretrained model (except the "classifier" part at the end) are not updated during training. This setting only applies if \code{pretrained = TRUE}.}
+
+\item{rgb}{(boolean) If \code{FALSE}, the pretrained weights of the first convolutional layer are averaged across the channel dimension. This is useful if your data has 3 channels but isn't an RGB image. This setting only applies if \code{pretrained = TRUE}.}
 }
 \value{
 An S3 object of class \code{"transfer" "citolayer"}, representing a pretrained model of the \code{torchvision} package in the CNN architecture.
@@ -30,6 +33,8 @@ This function creates a \code{transfer} layer object of class \code{citolayer} f
 This function creates a \code{transfer} layer object, which represents a pretrained model of the \code{torchvision} package with the linear "classifier" part removed. This allows the pretrained features of the model to be utilized while enabling customization of the classifier. When using this function with \code{\link{create_architecture}}, only linear layers can be added after the \code{transfer} layer. These linear layers define the "classifier" part of the network. If no linear layers are provided following the \code{transfer} layer, the default classifier will consist of a single output layer.
 
 Additionally, the \code{pretrained} argument specifies whether to use the pretrained weights or initialize the model with random weights. If \code{freeze} is set to \code{TRUE}, only the weights of the final linear layers (the "classifier") are updated during training, while the rest of the pretrained model remains unchanged. Note that \code{freeze} has no effect unless \code{pretrained} is set to \code{TRUE}.
+
+If your data has three channels but is not an RGB image set \code{rgb} to \code{FALSE} to average the pretrained weights of the first convolutional layer, so that each channel is treated equally. This is also done if your data has more or less channels than 3.
 }
 \examples{
 \donttest{

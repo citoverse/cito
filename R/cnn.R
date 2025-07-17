@@ -2,22 +2,24 @@
 #'
 #' This function trains a Convolutional Neural Network (CNN) on the provided input data `X` and the target data `Y` using the specified architecture, loss function, and optimizer.
 #'
-#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. The images will be normalized by dividing them by 255.0.
+#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.
 #' @param Y The target data. It can be a factor, numeric vector, or a numeric or logical matrix.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
-#' @param loss The loss function to be used. Options include "mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
-#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", and "rprop". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
+#' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
+#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
+#' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
 #' @param lr Learning rate for the optimizer. Default is 0.01.
+#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
 #' @param alpha Alpha value for L1/L2 regularization. Default is 0.5.
 #' @param lambda Lambda value for L1/L2 regularization. Default is 0.0.
-#' @param validation Proportion of the data to be used for validation. Default is 0.0.
-#' @param batchsize Batch size for training. Default is 32.
-#' @param burnin Number of epochs after which the training stops if the loss is still above the base loss. Default is 30.
+#' @param validation Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.
+#' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
+#' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
 #' @param epochs Number of epochs to train the model. Default is 100.
-#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is NULL.
-#' @param lr_scheduler Learning rate scheduler. See \code{\link{config_lr_scheduler}} for creating a learning rate scheduler. Default is NULL.
-#' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
+#' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
+#' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
+#' @param baseloss Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.
 #' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
 #' @param plot Whether to plot the training progress. Default is TRUE.
 #' @param verbose Whether to print detailed training progress. Default is TRUE.
@@ -42,7 +44,6 @@
 #' | :--- | :--- | :--- |
 #' | mse | mean squared error |Regression, predicting continuous values|
 #' | mae | mean absolute error | Regression, predicting continuous values |
-#' | softmax | categorical cross entropy |Multi-class, species classification|
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification|
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
 #' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
@@ -111,18 +112,20 @@
 #'
 #' @return An S3 object of class \code{"citocnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
-#' \item{net}{An object of class "nn_sequential" "nn_module", originates from the torch package and represents the core object of this workflow.}
+#' \item{net}{An object of class "nn_module". Originates from the torch package and represents the core object of this workflow.}
 #' \item{call}{The original function call.}
-#' \item{loss}{A list which contains relevant information for the target variable and the used loss function.}
-#' \item{data}{Contains the data used for the training of the model.}
-#' \item{base_loss}{The loss of the intercept-only model.}
-#' \item{weights}{List of parameters (weights and biases) of the models from the best and the last training epoch.}
-#' \item{buffers}{List of buffers (e.g. running mean and variance of batch normalization layers) of the models from the best and the last training epoch.}
-#' \item{use_model_epoch}{Integer, defines whether the model from the best (= 1) or the last (= 2) training epoch should be used for prediction.}
-#' \item{loaded_model_epoch}{Integer, shows whether the parameters and buffers of the model from the best (= 1) or the last (= 2) training epoch are currently loaded in \code{net}.}
+#' \item{loss}{An object of class "nn_module". Contains all relevant information for the loss function, e.g. parameters and a function (format_Y) that transforms target data.}
+#' \item{data}{A list. Contains the data used for the training of the model.}
 #' \item{model_properties}{A list of properties, that define the architecture of the model.}
-#' \item{training_properties}{A list of all the training parameters used the last time the model was trained.}
+#' \item{training_properties}{A list of all training hyperparameters used the last time the model was trained.}
 #' \item{losses}{A data.frame containing training and validation losses of each epoch.}
+#' \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
+#' \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
+#' \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
+#' \item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+#' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
+#' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
+
 #' @import checkmate
 #' @example /inst/examples/cnn-example.R
 #' @author Armin Schenk, Maximilian Pichler
@@ -131,45 +134,43 @@
 cnn <- function(X,
                 Y = NULL,
                 architecture,
-                loss = c("mse", "mae", "softmax", "cross-entropy", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit"),
-                optimizer = c("sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop"),
+                loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
+                custom_parameters = NULL,
+                optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
                 lr = 0.01,
+                lr_scheduler = NULL,
                 alpha = 0.5,
                 lambda = 0.0,
                 validation = 0.0,
-                batchsize = 32L,
-                burnin = 30,
+                batchsize = NULL,
                 shuffle = TRUE,
+                data_augmentation = NULL,
                 epochs = 100,
-                early_stopping = NULL,
-                lr_scheduler = NULL,
-                custom_parameters = NULL,
+                early_stopping = Inf,
+                burnin = Inf,
+                baseloss = NULL,
                 device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
                 verbose = TRUE) {
 
-  #Data
-  checkmate::assert(checkmate::checkArray(X, min.d = 3, max.d = 5), checkmate::check_character(X))
-  checkmate::assert(checkmate::checkFactor(Y), checkmate::checkNumeric(Y),
-                    checkmate::checkMatrix(Y, mode = "numeric"), checkmate::checkMatrix(Y, mode = "logical"),
-                    checkmate::checkNull(Y))
-
   if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
 
-  #Training
-  checkmate::qassert(lr, "R+[0,)")
-  checkmate::qassert(lambda, "R1[0,)")
-  checkmate::qassert(alpha, "R1[0,1]")
-  checkmate::qassert(validation, "R1[0,1)")
-  checkmate::qassert(batchsize, "X1[1,)")
-  checkmate::qassert(shuffle, "B1")
-  checkmate::qassert(epochs, "X1[0,)")
-  checkmate::qassert(early_stopping, c("0","X1[1,)"))
+  checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X))
   checkmate::qassert(custom_parameters, c("0", "L+"))
+  checkmate::qassert(lr, "N1(0,)")
+  checkmate::qassert(alpha, "N1[0,1]")
+  checkmate::qassert(lambda, "N1[0,)")
+  checkmate::qassert(validation, c("N1[0,1)","X>1[1,)"))
+  checkmate::qassert(batchsize, c("0", "X1[1,)"))
+  checkmate::qassert(shuffle, "B1")
+  checkmate::qassert(data_augmentation, c("0", "L+"))
+  checkmate::qassert(epochs, "X1[0,)")
+  checkmate::qassert(early_stopping, "N1[1,]")
+  checkmate::qassert(burnin, "N1[1,]")
+  checkmate::qassert(baseloss, c("0", "N1"))
+  checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
-  checkmate::qassert(device, "S+[3,)")
-
 
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
@@ -193,43 +194,31 @@ cnn <- function(X,
 
   device <- match.arg(device)
 
-  if(!is.function(loss) & !inherits(loss,"family")) {
-    loss <- match.arg(loss)
-
-    if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
-      message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
-
-  if(inherits(loss,"family")) {
-    if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
-      message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
-      device = "cpu"
-    }
-  }
+  # if(!is.function(loss) & !inherits(loss,"family")) {
+  #   loss <- match.arg(loss)
+  #
+  #   if((device == "mps") & (loss %in% c("poisson", "nbinom", "multinomial"))) {
+  #     message("`poisson`, `nbinom`, and `multinomial` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
+  #
+  # if(inherits(loss,"family")) {
+  #   if((device == "mps") & (loss$family %in% c("poisson", "nbinom"))) {
+  #     message("`poisson` or `nbinom` are not yet supported for `device=mps`, switching to `device=cpu`")
+  #     device = "cpu"
+  #   }
+  # }
 
   device_old <- device
   device <- check_device(device)
 
-  loss_obj <- get_loss(loss, device = device, X = X, Y = Y) # why do we need X in get_loss??
-  if(!is.null(loss_obj$parameter)) loss_obj$parameter <- list(parameter = loss_obj$parameter)
-  if(!is.null(custom_parameters)){
-    if(!inherits(custom_parameters,"list")){
-      warning("custom_parameters has to be list")
-    } else {
-      custom_parameters <- lapply(custom_parameters, function(x) torch::torch_tensor(x, requires_grad = TRUE, device = device))
-      loss_obj$parameter <- append(loss_obj$parameter, unlist(custom_parameters))
-    }
-  }
+  if(is.character(loss)) loss <- match.arg(loss)
+  loss_obj <- get_loss(loss, Y, custom_parameters)
+  if(is.null(baseloss)) baseloss <- loss_obj$baseloss
 
-  old_X <- X # save folder and not paths!
-  old_Y <- Y
-  targets <- format_targets(Y, loss_obj)
-  Y <- targets$Y
-  Y_base <- targets$Y_base
-  y_dim <- targets$y_dim
-  ylvls <- targets$ylvls
+  X_old <- X
+  Y_old <- Y
 
   from_folder = FALSE
 
@@ -240,78 +229,66 @@ cnn <- function(X,
     X <- torch::torch_tensor(X, dtype = torch::torch_float32())
   }
 
-  loss.fkt <- loss_obj$loss
-  if(!is.null(loss_obj$parameter)) list2env(loss_obj$parameter,envir = environment(fun= loss.fkt))
-  base_loss = as.numeric(loss.fkt(torch::torch_tensor(loss_obj$link(Y_base$cpu()), dtype = Y_base$dtype)$to(device = device), Y$to(device = device))$mean()$cpu())
+  Y <- loss_obj$format_Y(Y)
+  if(is.null(batchsize)) batchsize = round(0.1*dim(Y)[1])
 
-  if(validation != 0) {
-    if(is.character(X)) n_samples <- length(X)
-    else n_samples <- dim(X)[1]
-    valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
-    train <- c(1:n_samples)[-valid]
+  if(!is.null(data_augmentation)) data_augmentation <- check_data_augmentation(data_augmentation)
 
-    if(from_folder) {
-      # X will be the list of img files!
-      train_dl <- get_data_loader(X[train], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-      valid_dl <- get_data_loader(X[valid], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-    } else {
-      train_dl <- get_data_loader(X[train,], Y[train,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-      valid_dl <- get_data_loader(X[valid,], Y[valid,], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
-    }
-  } else {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
+  if(length(validation) == 1 && validation == 0) {
+    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
     valid_dl <- NULL
+  } else {
+    n_samples <- dim(Y)[1]
+    if(length(validation) > 1) {
+      if(any(validation>n_samples)) stop("Validation indices mustn't exceed the number of samples.")
+      valid <- validation
+    } else {
+      valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
+    }
+    train <- c(1:n_samples)[-valid]
+    train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
+    valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
   }
 
   # TODO infer form the train_dl!
   input_shape <- dim(train_dl$dataset$.getbatch(1)[[1]])[-1] #dim(X)[-1]
   architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
-
-
   model_properties <- list(input = input_shape,
-                           output = y_dim,
+                           output = loss_obj$y_dim,
                            architecture = architecture)
   class(model_properties) <- "citocnn_properties"
 
   net <- build_cnn(model_properties)
 
-
-  training_properties <- list(lr = lr,
+  training_properties <- list(optimizer = optimizer,
+                              lr = lr,
                               lr_scheduler = lr_scheduler,
-                              optimizer = optimizer,
-                              epochs = epochs,
-                              early_stopping = early_stopping,
-                              plot = plot,
-                              validation = validation,
-                              lambda = lambda,
                               alpha = alpha,
+                              lambda = lambda,
+                              validation = validation,
                               batchsize = batchsize,
-                              shuffle = shuffle)
+                              shuffle = shuffle,
+                              data_augmentation = data_augmentation,
+                              epochs = epochs, #redundant?
+                              early_stopping = early_stopping,
+                              burnin = burnin,
+                              baseloss = baseloss,
+                              device = device_old,
+                              plot = plot,
+                              verbose = verbose)
 
   out <- list()
   class(out) <- "citocnn"
   out$net <- net
   out$call <- match.call()
   out$loss <- loss_obj
-  out$data <- list(X = old_X, Y = old_Y)
-  if(!is.null(ylvls)) out$data$ylvls <- ylvls
-  if(validation != 0) out$data <- append(out$data, list(validation = valid))
-  out$base_loss <- base_loss
-  out$weights <- list()
-  out$buffers <- list()
-  out$use_model_epoch <- 2
-  out$loaded_model_epoch <- torch::torch_tensor(0)
+  out$data <- list(X = X_old, Y = Y_old)
+  if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
-  out$device <- device_old
-  out$burnin = burnin
 
-
-
-  ### training loop ###
-  out <- train_model(model = out,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, verbose = verbose)
-
+  out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
   return(out)
 }
@@ -321,14 +298,14 @@ cnn <- function(X,
 #' This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 #'
 #' @param object a model created by \code{\link{cnn}}.
-#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. If \code{NULL}, the function uses the data the model was trained on.
+#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. If \code{NULL}, the function uses the data the model was trained on.
 #' @param type A character string specifying the type of prediction to be made. Options are:
 #' \itemize{
 #'   \item \code{"link"}: Scale of the linear predictor.
 #'   \item \code{"response"}: Scale of the response.
 #'   \item \code{"class"}: The predicted class labels (for classification tasks).
 #' }
-#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". Default is "cpu".
+#' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.
 #' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
@@ -339,50 +316,52 @@ predict.citocnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = NULL,
-                            batchsize = NULL, ...) {
+                            batchsize = NULL,
+                            ...) {
 
-  checkmate::assert(checkmate::checkNull(newdata),checkmate::checkCharacter(newdata),
-                    checkmate::checkArray(newdata, min.d = 3, max.d = 5))
+  checkmate::assert(checkmate::checkNull(newdata), checkmate::checkCharacter(newdata),
+                    checkmate::checkArray(newdata, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE))
 
   object <- check_model(object)
 
   type <- match.arg(type)
 
-  if(is.null(device)) device <- object$device
+  if(is.null(device)) device <- object$training_properties$device
   device <- check_device(device)
+
+  object$net$to(device = device)
+  object$loss$to(device = device)
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-
-  if(type %in% c("response","class")) {
+  if(type %in% c("response", "class")) {
     link <- object$loss$invlink
   }else{
     link = function(a) a
   }
 
-  object$net$to(device = device)
-
   from_folder = FALSE
+  sample_names = NULL
 
-
+  #TODO: get sample_names from files in folder
   if(is.null(newdata)){
     if(is.character(object$data$X)) {
       newdata = list.files(object$data$X, full.names = TRUE)
       from_folder = TRUE
     } else {
+      sample_names <- dimnames(object$data$X)[[1]]
       newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
     }
   } else if(is.character(newdata)) {
     newdata = list.files(newdata, full.names = TRUE)
     from_folder = TRUE
-  } else if(is.array(newdata) & is.character(object$data$X)) {
-    message("Be aware of potential dimension mismatches. Dimensions cannot be checked because the data folder was used during training.")
-    newdata = torch::torch_tensor(newdata, dtype = torch::torch_float32())
-  } else if(all(dim(newdata)[-1] == dim(object$data$X)[-1])) {
+  } else if(all(dim(newdata)[-1] == object$model_properties$input)) {
+    sample_names <- dimnames(newdata)[[1]]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
+
   dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE, from_folder = from_folder)
 
   pred <- NULL
@@ -391,11 +370,11 @@ predict.citocnn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
   })
 
-  if(!is.null(dimnames(newdata))) rownames(pred) <- dimnames(newdata)[[1]]
+  if(!is.null(sample_names)) rownames(pred) <- sample_names
 
-  if(!is.null(object$data$ylvls)) {
-    colnames(pred) <- object$data$ylvls
-    if(type == "class") pred <- factor(apply(pred,1, function(x) object$data$ylvls[which.max(x)]), levels = object$data$ylvls)
+  if(!is.null(object$loss$responses)) {
+    colnames(pred) <- object$loss$responses
+    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
   }
 
   return(pred)
@@ -450,18 +429,21 @@ plot.citocnn <- function(x, ...){
 #'
 #' @param object A model created by \code{\link{cnn}}.
 #' @param ... Additional arguments (currently not used).
-#' @return A list with two components:
+#' @return A list with up to three components:
 #' \itemize{
-#'   \item \code{parameters}: A list of the model's weights and biases for the currently used model epoch.
-#'   \item \code{buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#'   \item \code{net_parameters}: A list of the model's weights and biases for the currently used model epoch.
+#'   \item \code{net_buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
+#'   \item \code{loss_parameters}: A list of the loss function's parameters for the currently used model epoch.
 #' }
 #' @example /inst/examples/coef.citocnn-example.R
 #' @export
-coef.citocnn <- function(object,...){
-  coefs <- list()
-  coefs$parameters <- object$weights[object$use_model_epoch]
-  coefs$buffers <- object$buffers[object$use_model_epoch]
-  return(coefs)
+coef.citocnn <- function(object, ...) {
+  object <- check_model(object)
+  out <- list()
+  out$net_parameters <- lapply(object$net$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$net$buffers)) out$net_buffers <- lapply(object$net$buffers, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  return(out)
 }
 
 
@@ -479,7 +461,7 @@ coef.citocnn <- function(object,...){
 #' @param default_padding (integer or tuple) Default zero-padding added to both sides of the input. Can be a single integer or a tuple if padding differs across dimensions. Default is \code{list(conv = 0, maxPool = 0, avgPool = 0)}.
 #' @param default_dilation (integer or tuple) Default dilation of kernels in convolutional and max pooling layers. Can be a single integer or a tuple if dilation differs across dimensions. Default is \code{list(conv = 1, maxPool = 1)}.
 #' @param default_bias (boolean) Default value indicating if a learnable bias should be added to neurons of linear layers and kernels of convolutional layers. Default is \code{list(conv = TRUE, linear = TRUE)}.
-#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "relu", linear = "relu")}.
+#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "selu", linear = "selu")}.
 #' @param default_normalization (boolean) Default value indicating if batch normalization should be applied after linear and convolutional layers. Default is \code{list(conv = FALSE, linear = FALSE)}.
 #' @param default_dropout (numeric) Default dropout rate for linear and convolutional layers. Set to 0 for no dropout. Default is \code{list(conv = 0.0, linear = 0.0)}.
 #'
@@ -730,11 +712,14 @@ maxPool <- function(kernel_size = NULL,
 #' @param name (character) The name of the pretrained model. Available options include: "alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2".
 #' @param pretrained (boolean) If \code{TRUE}, the model uses its pretrained weights. If \code{FALSE}, random weights are initialized.
 #' @param freeze (boolean) If \code{TRUE}, the weights of the pretrained model (except the "classifier" part at the end) are not updated during training. This setting only applies if \code{pretrained = TRUE}.
+#' @param rgb (boolean) If \code{FALSE}, the pretrained weights of the first convolutional layer are averaged across the channel dimension. This is useful if your data has 3 channels but isn't an RGB image. This setting only applies if \code{pretrained = TRUE}.
 #'
 #' @details
 #' This function creates a \code{transfer} layer object, which represents a pretrained model of the \code{torchvision} package with the linear "classifier" part removed. This allows the pretrained features of the model to be utilized while enabling customization of the classifier. When using this function with \code{\link{create_architecture}}, only linear layers can be added after the \code{transfer} layer. These linear layers define the "classifier" part of the network. If no linear layers are provided following the \code{transfer} layer, the default classifier will consist of a single output layer.
 #'
 #' Additionally, the \code{pretrained} argument specifies whether to use the pretrained weights or initialize the model with random weights. If \code{freeze} is set to \code{TRUE}, only the weights of the final linear layers (the "classifier") are updated during training, while the rest of the pretrained model remains unchanged. Note that \code{freeze} has no effect unless \code{pretrained} is set to \code{TRUE}.
+#'
+#' If your data has three channels but is not an RGB image set \code{rgb} to \code{FALSE} to average the pretrained weights of the first convolutional layer, so that each channel is treated equally. This is also done if your data has more or less channels than 3.
 #'
 #' @return An S3 object of class \code{"transfer" "citolayer"}, representing a pretrained model of the \code{torchvision} package in the CNN architecture.
 #'
@@ -745,7 +730,8 @@ maxPool <- function(kernel_size = NULL,
 #' @export
 transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"),
                      pretrained = TRUE,
-                     freeze = TRUE) {
+                     freeze = TRUE,
+                     rgb = TRUE) {
 
   if(identical(name, c("alexnet", "inception_v3", "mobilenet_v2", "resnet101", "resnet152", "resnet18", "resnet34", "resnet50", "resnext101_32x8d", "resnext50_32x4d", "vgg11", "vgg11_bn", "vgg13", "vgg13_bn", "vgg16", "vgg16_bn", "vgg19", "vgg19_bn", "wide_resnet101_2", "wide_resnet50_2"))) {
     name <- "alexnet"
@@ -755,7 +741,8 @@ transfer <- function(name = c("alexnet", "inception_v3", "mobilenet_v2", "resnet
 
   layer <- list(name = name,
                 pretrained = pretrained,
-                freeze = pretrained & freeze)
+                freeze = pretrained & freeze,
+                rgb = rgb)
   class(layer) <- c("transfer", "citolayer")
   return(layer)
 }
@@ -784,7 +771,7 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
     for(layer in x) {
       if(inherits(layer, "transfer")) {
-        if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+        if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       }
       input_shape <- print(layer, input_shape)
     }
@@ -931,7 +918,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
   for(layer in x) {
     if(inherits(layer, "transfer")) {
-      if(!(length(input_shape) == 3 && input_shape[1] == 3)) stop("The pretrained models only work on 2 dimensional data with 3 channels: [3, x, y]")
+      if(length(input_shape) != 3) stop("The pretrained models only work for 2D convolutions: [n_channels, x, y]")
       tmp <- paste0("Transfer network: ", layer[["name"]], " (pretrained weights: ", layer[["pretrained"]])
       if(layer[["pretrained"]]) {
         tmp <- paste0(tmp, ", frozen weights: ", layer[["freeze"]], ")")
@@ -1050,3 +1037,53 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
     ytop <- ytop-height
   }
 }
+
+augment_flip <- function(x) {
+  for(i in 3:x$dim()) {
+    if(runif(1)>0.5) x <- x$flip(i)
+  }
+  return(x)
+}
+
+augment_rotate90 <- function(x) {
+  if(x$ndim == 3) {
+    stop("1D data: Rotations not possible.")
+  } else if (x$ndim == 4) {
+    if(dim(x)[3] != dim(x)[4]) stop("2D data: X and Y dimension must be equal for rotations.")
+    return(x$rot90(sample(0:3,1), c(3,4)))
+  } else if (x$ndim == 5) {
+    planes <- list(c(3,4), c(3,5), c(4,5))
+    equal_dims <- sapply(planes, function(y) dim(x)[y[1]]==dim(x)[y[2]])
+    if(!any(equal_dims)) {
+      stop("3D data: At least 2 dimensions of X, Y and Z must be equal for rotations.")
+    } else if(all(equal_dims)) {
+      orientation <- list(function(y) y,
+                          function(y) y$rot90(1, c(3,5)),
+                          function(y) y$rot90(2, c(3,5)),
+                          function(y) y$rot90(3, c(3,5)),
+                          function(y) y$rot90(1, c(4,5)),
+                          function(y) y$rot90(3, c(4,5)))
+      x <- orientation[[sample(1:6,1)]](x)
+      return(x$rot90(sample(0:3,1), c(3,4)))
+    } else {
+      return(x$rot90(sample(0:3,1), planes[[which(equal_dims)]]))
+    }
+  }
+}
+
+augment_noise <- function(x, std = 0.01) {
+  return(x + torch_randn_like(x) * std)
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

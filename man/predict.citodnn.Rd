@@ -9,7 +9,7 @@
   object,
   newdata = NULL,
   type = c("link", "response", "class"),
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   batchsize = NULL,
   ...
 )
@@ -18,7 +18,7 @@
   object,
   newdata = NULL,
   type = c("link", "response", "class"),
-  device = c("cpu", "cuda", "mps"),
+  device = NULL,
   batchsize = NULL,
   reduce = c("mean", "median", "none"),
   ...
