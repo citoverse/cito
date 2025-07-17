@@ -41,7 +41,7 @@ k = 10 # cluster of groups with the same behavior
 dat = data.frame(f1 = runif(n),
                  f2 = runif(n),
                  f3 = runif(n),
-                 ind = rep(1:m, each = n/m),
+                 ind = factor(rep(1:m, each = n/m)),
                  cluster = rep(1:k, each = n/k),
                  response = NA)
 

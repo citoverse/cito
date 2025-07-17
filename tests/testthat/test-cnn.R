@@ -12,7 +12,7 @@ testthat::test_that("CNN dimensions", {
   if(torch::cuda_is_available()) {
     device <- "cuda"
   } else if(torch::backends_mps_is_available()) {
-    device <- "mps"
+    device <- "cpu"
   } else {
     device <- "cpu"
   }
@@ -40,7 +40,7 @@ testthat::test_that("CNN data augmentation", {
   if(torch::cuda_is_available()) {
     device <- "cuda"
   } else if(torch::backends_mps_is_available()) {
-    device <- "mps"
+    device <- "cpu"
   } else {
     device <- "cpu"
   }
@@ -83,7 +83,7 @@ testthat::test_that("CNN accuracy", {
   if(torch::cuda_is_available()) {
     device <- "cuda"
   } else if(torch::backends_mps_is_available()) {
-    device <- "mps"
+    device <- "cpu"
   } else {
     device <- "cpu"
   }
@@ -109,7 +109,7 @@ testthat::test_that("CNN transfer learning", {
   if(torch::cuda_is_available()) {
     device <- "cuda"
   } else if(torch::backends_mps_is_available()) {
-    device <- "mps"
+    device <- "cpu"
   } else {
     device <- "cpu"
   }
@@ -157,7 +157,7 @@ testthat::test_that("CNN pretrained", {
   if(torch::cuda_is_available()) {
     device <- "cuda"
   } else if(torch::backends_mps_is_available()) {
-    device <- "mps"
+    device <- "cpu"
   } else {
     device <- "cpu"
   }

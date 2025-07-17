@@ -55,7 +55,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
 
 
 #' @import tibble
-tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, formula, tuning, Y_torch, loss, device) {
+tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_torch, loss, device) {
 
   parallel = tuning$parallel
   NGPU = tuning$NGPU
@@ -107,8 +107,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           parameters$data = data[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
 
-          loss.fkt <- m$loss$loss
-          loss_obj = m$loss
+          loss.fkt <- m$loss
 
           if(return_models) tune_df$models[[i]] = list(m)
           #tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
@@ -118,7 +117,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
           } else {
             pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
             tune_df$test[i] = tune_df$test[i]+as.numeric(
-              loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
+              loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv]$to(device = device))$sum()$cpu())
           }
         }
       pb$tick(tokens = list(hp = format_hp, test_loss = round(tune_df$test[i], digits = 3)))
@@ -144,10 +143,9 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
     tune_df = parallel::parLapply(backend, 1:steps, function(i) {
 
       requireNamespace("tibble")
-      loss_obj <- get_loss(loss, device = device, X= X, Y = Y)
+      loss_obj <- get_loss(loss, Y, parameters$custom_parameters)
 
-      targets <- format_targets(Y, loss_obj)
-      Y_torch <- targets$Y
+      Y_torch <- loss_obj$format_Y(Y)
 
       if(NGPU > 1) {
         # who am I
@@ -178,8 +176,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
 
         m = do.call(dnn, parameters)
 
-        loss.fkt <- m$loss$loss
-        loss_obj = m$loss
+        loss.fkt <- m$loss
 
         if(return_models) tune_df$models[[i]] = list(m)
         tune_df$train[i] = tune_df$train[i]+ rev(m$losses$train_l[stats::complete.cases(m$losses$train_l)])[1]*nrow(m$data$X)
@@ -190,7 +187,7 @@ tuning_function = function(tuner, parameters, loss.fkt,loss_obj, X, Y,Z, data, f
         } else {
           pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
           tune_df$test[i] = tune_df$test[i]+as.numeric(
-            loss.fkt(torch::torch_tensor(loss_obj$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv,,drop=FALSE]$to(device = device))$sum()$cpu())
+            loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv]$to(device = device))$sum()$cpu())
         }
       }
       return(tune_df[i,])

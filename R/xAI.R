@@ -687,9 +687,9 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
 
   loss<- model$loss
 
-  if(!inherits(loss, c("cross-entropy loss", "mean squared error loss", "mean absolute error loss"))) {
-    return(NULL)
-  }
+  # if(!inherits(loss, c("cross-entropy loss", "mean squared error loss", "mean absolute error loss"))) {
+  #   return(NULL)
+  # }
 
   if(inherits(loss, "cross-entropy loss")) softmax = TRUE
 

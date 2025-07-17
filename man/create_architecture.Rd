@@ -82,13 +82,12 @@ print(architecture, c(3,128,128), 10)
 alexnet <- transfer("alexnet")
 
 # No other linear layers are used after the transfer layer:
-# The cnn() function will only replace the last linear layer of the architecture
-# to match the output dimensions of the data
+# The cnn() function will replace the linear classifier of the alexnet architecture with a single linear output layer
 architecture <- create_architecture(alexnet)
 print(architecture, c(3,128,128), 10)
 
 # Some linear layers are used after the transfer layer:
-# The cnn() function will replace the whole "classifier" part of the architecture
+# The cnn() function will replace the linear classifier of the alexnet architecture
 # with the specified linear layers + an output layer that matches the output dimensions
 architecture <- create_architecture(alexnet, linear(300), linear(100))
 print(architecture, c(3,128,128), 10)

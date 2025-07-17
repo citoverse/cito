@@ -110,7 +110,7 @@ nn.fit<- dnn(Sepal.Length~.,
              verbose = FALSE,
              custom_parameters = list(scale = 1.0)
 )
-nn.fit$parameter$scale
+nn.fit$parameters$scale
 
 ## Multivariate normal likelihood with parametrized covariance matrix
 ## Sigma = L*L^t + D
@@ -137,8 +137,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
                list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
-as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
-                     nn.fit$loss$parameter$SigmaDiag))
+as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
+                     nn.fit$loss$parameters$SigmaDiag))
 
 }
 }

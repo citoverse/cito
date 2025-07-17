@@ -298,8 +298,9 @@ dnn <- function(formula = NULL,
   if(length(tuner) != 0 ) {
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
+    parameters$custom_parameters = custom_parameters
     #parameters$hidden = hidden
-    model = tuning_function(tuner, parameters, loss.fkt,loss_obj, X, Y, Z, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
+    model = tuning_function(tuner, parameters, X, Y, Z, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
     return(model)
   }
 

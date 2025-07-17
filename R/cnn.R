@@ -1072,7 +1072,7 @@ augment_rotate90 <- function(x) {
 }
 
 augment_noise <- function(x, std = 0.01) {
-  return(x + torch_randn_like(x) * std)
+  return(x + torch::torch_randn_like(x) * std)
 }
 
 

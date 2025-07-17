@@ -31,7 +31,7 @@ cito_dataset = torch::dataset(
     if(!is.null(self$data_augmentation)) {
       batch <- lapply(batch, function(x) {
         if(x$ndim < 3) return(x)
-        x <- torch_cat(lapply(1:(dim(x)[1]), function(i) {
+        x <- torch::torch_cat(lapply(1:(dim(x)[1]), function(i) {
           sample <- x[i, drop=FALSE]
           for(fn in self$data_augmentation) {
             sample <- fn(sample)

@@ -48,7 +48,7 @@ library(cito)
 
 ## Build and train  Network
 ### softmax is used for multi-class responses (e.g., Species)
-nn.fit<- dnn(Species~., data = datasets::iris, loss = "softmax")
+nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 
 ## The training loss is below the baseline loss but at the end of the
 ## training the loss was still decreasing, so continue training for another 50
@@ -89,7 +89,7 @@ ALE(nn.fit, variable = "Petal.Length")
 ## Re-fit the neural network with bootstrapping
 nn.fit<- dnn(Species~.,
              data = datasets::iris,
-             loss = "softmax",
+             loss = "cross-entropy",
              epochs = 150L,
              verbose = FALSE,
              bootstrap = 20L)
@@ -127,7 +127,7 @@ print(hidden_values)
 nn.fit = dnn(Species~.,
              data = iris,
              epochs = 30L,
-             loss = "softmax",
+             loss = "cross-entropy",
              hidden = tune(values = hidden_values),
              lr = tune(0.00001, 0.1) # tune lr between range 0.00001 and 0.1
              )
@@ -152,7 +152,7 @@ nn.fit<- dnn(Sepal.Length~.,
              verbose = FALSE,
              custom_parameters = list(scale = 1.0)
 )
-nn.fit$parameter$scale
+nn.fit$parameters$scale
 
 ## Multivariate normal likelihood with parametrized covariance matrix
 ## Sigma = L*L^t + D
@@ -179,8 +179,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
                list(SigmaDiag =  rep(0, 3),
                     SigmaPar = matrix(rnorm(6, sd = 0.001), 3, 2))
 )
-as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
-                     nn.fit$loss$parameter$SigmaDiag))
+as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
+                     nn.fit$loss$parameters$SigmaDiag))
 
 }
 }
