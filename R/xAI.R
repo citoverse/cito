@@ -132,8 +132,8 @@ PDP.citodnn <- function(model,
     if(model$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$model_properties$output)))
     else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
   }
-  if(!is.null(model$data$ylvls)) {
-    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  if(!is.null(model$loss$responses)) {
+    names(p_ret) = paste0(model$loss$responses, "_",names(p_ret))
   }
   return(invisible(p_ret))
 }
@@ -261,8 +261,8 @@ PDP.citodnnBootstrap <- function(model,
     if(model$models[[1]]$model_properties$output >1) do.call(gridExtra::grid.arrange, c(p_ret, nrow = ceiling(length(p_ret)/model$models[[1]]$model_properties$output)))
     else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
   }
-  if(!is.null(model$data$ylvls)) {
-    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  if(!is.null(model$loss$responses)) {
+    names(p_ret) = paste0(model$loss$responses, "_",names(p_ret))
   }
   return(invisible(p_ret))
 
@@ -292,8 +292,8 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
         )
         df <- df[order(df$x),]
 
-        if(!is.null(model$data$ylvls)) {
-          label = paste0("PDP - ", model$data$ylvls[n_output])
+        if(!is.null(model$loss$responses)) {
+          label = paste0("PDP - ", model$loss$responses[n_output])
         } else {
           label = "PDP"
         }
@@ -340,8 +340,8 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
 
         if(ice) message("ice not available for categorical features")
 
-        if(!is.null(model$data$ylvls)) {
-          label = paste0("PDP - ", model$data$ylvls[n_output])
+        if(!is.null(model$loss$responses)) {
+          label = paste0("PDP - ", model$loss$responses[n_output])
         } else {
           label = "PDP"
         }
@@ -471,8 +471,8 @@ ALE.citodnn <- function(model,
     else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
   }
 
-  if(!is.null(model$data$ylvls)) {
-    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  if(!is.null(model$loss$responses)) {
+    names(p_ret) = paste0(model$loss$responses, "_",names(p_ret))
   }
   return(invisible(p_ret))
 }
@@ -594,8 +594,8 @@ ALE.citodnnBootstrap <- function(model,
     else do.call(gridExtra::grid.arrange, c(p_ret, ncol = length(p_ret)))
   }
 
-  if(!is.null(model$data$ylvls)) {
-    names(p_ret) = paste0(model$data$ylvls, "_",names(p_ret))
+  if(!is.null(model$loss$responses)) {
+    names(p_ret) = paste0(model$loss$responses, "_",names(p_ret))
   }
   return(invisible(p_ret))
 }
@@ -661,7 +661,7 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, type = "response"
       }
       df$y <- df$y - mean(df$y)
       #if(!is.null(model$data$ylvls)) {
-      label = paste0(v," \U2192 ", model$responses[n_output])
+      label = paste0(v," \U2192 ", model$loss$responses[n_output])
       # TODO model$data$responses[n_output]
       #} else {
       #  label = "ALE"
@@ -685,31 +685,20 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
   model<- check_model(model)
   softmax = FALSE
 
-  if(is.function(model$loss$call)) {
-    #warning("Importance is not supported for custom loss functions")
-    return(NULL)
-    }
+  loss<- model$loss
 
-  if(inherits(model$loss$call, "character")) {
-    if(!any(model$loss$call  == c("softmax","mse", "mae"))){ return(NULL)}
-    if(model$loss$call  == "softmax") {
-      softmax = TRUE
-    }
-  } else {
-    if(!any(model$loss$call$family == c("binomial")  )){ return(NULL)}
+  if(!inherits(loss, c("cross-entropy loss", "mean squared error loss", "mean absolute error loss"))) {
+    return(NULL)
   }
-  loss<- model$loss$loss
+
+  if(inherits(loss, "cross-entropy loss")) softmax = TRUE
+
+
 
   true = model$data$Y
 
-  if(inherits(model$loss$call, "character")) {
-    true = torch::torch_tensor(model$data$Y)
-  } else {
-    if(model$loss$call$family  == c("binomial") ){
-      mode(true) = "numeric"
-      true = torch::torch_tensor(true)
-    }
-  }
+  if(softmax) true = torch::torch_tensor(true, dtype = torch::torch_long())$squeeze(2)
+  else true = torch::torch_tensor(true, dtype = torch::torch_float32())
 
   n_outputs = model$model_properties$output
 

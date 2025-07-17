@@ -15,7 +15,7 @@
 \item{...}{nothing implemented yet}
 }
 \value{
-list of weights of neural network
+list of parameters of neural network and loss
 }
 \description{
 Returns list of parameters the neural network model currently has in use

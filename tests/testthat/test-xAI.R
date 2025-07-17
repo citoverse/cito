@@ -11,7 +11,7 @@ testthat::test_that("summary", {
   model = dnn(Sepal.Length~., data = datasets::iris, epoch = 2, verbose = FALSE)
   testthat::expect_error({summary(model)}, NA)
 
-  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "softmax", lr = 0.1, verbose = FALSE)
+  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "cross-entropy", lr = 0.1, verbose = FALSE)
   testthat::expect_error({summary(model)}, NA)
 
   model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE)
@@ -19,7 +19,7 @@ testthat::test_that("summary", {
 
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
-  iris2$Species = as.integer(iris2$Species) - 1
+  #iris2$Species = as.integer(iris2$Species) - 1
   model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE)
   testthat::expect_error({summary(model)}, NA)
 
@@ -46,7 +46,7 @@ testthat::test_that("PDP", {
   testthat::expect_error({.n = PDP(model, ice = 10)}, NA)
   testthat::expect_error({.n = PDP(model, variable = c("Sepal.Width",  "Petal.Length"), ice = 20)}, NA)
 
-  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "softmax", lr = 0.1, verbose = FALSE, plot = FALSE)
+  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "cross-entropy", lr = 0.1, verbose = FALSE, plot = FALSE)
   testthat::expect_error({.n = PDP(model)}, NA)
   testthat::expect_error({.n = PDP(model, variable = "Sepal.Width")}, NA)
   testthat::expect_error({.n = PDP(model, ice = TRUE)}, NA)
@@ -64,7 +64,7 @@ testthat::test_that("PDP", {
 
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
-  iris2$Species = as.integer(iris2$Species) - 1
+  #iris2$Species = as.integer(iris2$Species) - 1
   model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE, plot = FALSE)
   testthat::expect_error({.n = PDP(model)}, NA)
   testthat::expect_error({.n = PDP(model, variable = "Sepal.Width")}, NA)
@@ -94,7 +94,7 @@ testthat::test_that("ALE", {
   testthat::expect_error({.n = ALE(model, variable = c("Sepal.Width",  "Petal.Length"), K = 4)}, NA)
 
 
-  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "softmax", lr = 0.1, verbose = FALSE, plot = FALSE)
+  model = dnn(Species~., data = datasets::iris, epoch = 5, loss = "cross-entropy", lr = 0.1, verbose = FALSE, plot = FALSE)
   testthat::expect_error({.n = ALE(model)}, NA)
   testthat::expect_error({.n = ALE(model, variable = "Sepal.Width")}, NA)
   testthat::expect_error({.n = ALE(model, variable = c("Sepal.Width",  "Petal.Length"))}, NA)
@@ -109,7 +109,7 @@ testthat::test_that("ALE", {
 
   iris2 = iris
   iris2 = iris2[iris2$Species %in% c("setosa", "versicolor"),]
-  iris2$Species = as.integer(iris2$Species) - 1
+  #iris2$Species = as.integer(iris2$Species) - 1
   model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE, plot = FALSE)
   testthat::expect_error({.n = ALE(model)}, NA)
   testthat::expect_error({.n = ALE(model, variable = "Sepal.Width")}, NA)

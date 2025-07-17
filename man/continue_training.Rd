@@ -5,7 +5,8 @@
 \alias{continue_training.citodnn}
 \alias{continue_training.citodnnBootstrap}
 \alias{continue_training.citocnn}
-\title{Continues training of a model generated with \code{\link{dnn}} or \code{\link{cnn}} for additional epochs.}
+\alias{continue_training.citommn}
+\title{Continues training of a model generated with \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}} for additional epochs.}
 \usage{
 continue_training(model, ...)
 
@@ -14,9 +15,10 @@ continue_training(model, ...)
   epochs = 32,
   data = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   init_optimizer = TRUE,
+  X = NULL,
+  Y = NULL,
   ...
 )
 
@@ -25,10 +27,11 @@ continue_training(model, ...)
   epochs = 32,
   data = NULL,
   device = NULL,
-  verbose = TRUE,
   changed_params = NULL,
   parallel = FALSE,
   init_optimizer = TRUE,
+  X = NULL,
+  Y = NULL,
   ...
 )
 
@@ -38,14 +41,23 @@ continue_training(model, ...)
   X = NULL,
   Y = NULL,
   device = NULL,
-  verbose = TRUE,
+  changed_params = NULL,
+  init_optimizer = TRUE,
+  ...
+)
+
+\method{continue_training}{citommn}(
+  model,
+  epochs = 32,
+  dataList = NULL,
+  device = NULL,
   changed_params = NULL,
   init_optimizer = TRUE,
   ...
 )
 }
 \arguments{
-\item{model}{a model created by \code{\link{dnn}} or \code{\link{cnn}}}
+\item{model}{a model created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}}
 
 \item{...}{class-specific arguments}
 
@@ -55,20 +67,20 @@ continue_training(model, ...)
 
 \item{device}{can be used to overwrite device used in previous training}
 
-\item{verbose}{print training and validation loss of epochs}
-
 \item{changed_params}{list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed}
 
 \item{init_optimizer}{re-initialize optimizer or not}
 
+\item{X}{Predictor data. If not provided X from original training will be used}
+
+\item{Y}{Target data. If not provided Y from original training will be used}
+
 \item{parallel}{train bootstrapped model in parallel}
 
-\item{X}{array. If not provided X from original training will be used}
-
-\item{Y}{vector, factor, numerical matrix or logical matrix. If not provided Y from original training will be used}
+\item{dataList}{A list containing the data for training the model. The list should contain all variables used in the formula. If not provided dataList from original training will be used}
 }
 \value{
-a model of class citodnn, citodnnBootstrap or citocnn created by \code{\link{dnn}} or \code{\link{cnn}}
+a model of class citodnn, citodnnBootstrap, citocnn or citommn created by \code{\link{dnn}}, \code{\link{cnn}} or \code{\link{mmn}}
 }
 \description{
 If the training/validation loss is still decreasing at the end of the training, it is often a sign that the NN has not yet converged. You can use this function to continue training instead of re-training the entire model.
