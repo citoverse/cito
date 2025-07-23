@@ -33,6 +33,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #' @param cancel CV/tuning for specific hyperparameter set if model cannot reduce loss below baseline after burnin or returns NA loss
 #' @param bootstrap_final bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the [dnn()] function
 #' @param bootstrap_parallel should the bootstrapping be parallelized or not
+#' @param blocking blocking variable, must be a factor
 #' @param return_models return individual models
 #'
 #'
@@ -41,7 +42,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #'
 #'
 #' @export
-config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE, return_models=FALSE) {
+config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel = TRUE, bootstrap_final = NULL, bootstrap_parallel = FALSE,blocking = NULL, return_models=FALSE) {
   out = list()
   out$CV = CV
   out$steps = steps
@@ -50,6 +51,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
   out$bootstrap = bootstrap_final
   out$bootstrap_parallel = bootstrap_parallel
   out$return_models = return_models
+  out$blocking = blocking
   return(out)
 }
 
@@ -63,8 +65,19 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
 
   cat("Starting hyperparameter tuning...\n")
 
-  set = cut(sample.int(nrow(X)), breaks = tuning$CV, labels = FALSE)
-  test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
+  if(is.null(tuning$blocking)) {
+    set = sample.int(tuning$CV, size = nrow(X), replace = TRUE)
+    test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
+  } else {
+    if(tuning$CV > length(unique(tuning$blocking))) {
+      message("WARNING: CV > number of unique values in blocking factor...setting CV = number of levles")
+      tuning$CV = length(unique(tuning$blocking))
+    }
+    set = sample(matrix(1:tuning$CV, nrow = length(unique(tuning$blocking)))[,1])
+    #sample(tuning$CV, size = length(unique(tuning$blocking)), replace = TRUE)
+    set = set[as.integer((tuning$blocking))]
+    test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
+  }
 
   steps = tuning$steps
   tune_df = tibble::tibble(steps = 1:steps, test = 0, train = 0, models =  NA)
@@ -76,6 +89,8 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
       tune_df[[names(tuner)[i]]] = sapply(1:steps, function(j) tuner[[i]]$sample())
     }
   }
+
+
 
   parameters$formula = formula
   parameters$plot = FALSE
@@ -218,6 +233,9 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
   cat("Fitting final model...\n")
   m = do.call(dnn, parameters)
   m$tuning = tune_df
+  tuning$set = set
+  tuning$test_indices = test_indices
+  m$tuning_config = tuning
   return(m)
 
 }

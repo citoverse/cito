@@ -12,6 +12,7 @@ config_tuning(
   cancel = TRUE,
   bootstrap_final = NULL,
   bootstrap_parallel = FALSE,
+  blocking = NULL,
   return_models = FALSE
 )
 }
@@ -29,6 +30,8 @@ config_tuning(
 \item{bootstrap_final}{bootstrap final model, if all models should be boostrapped it must be set globally via the bootstrap argument in the \code{\link[=dnn]{dnn()}} function}
 
 \item{bootstrap_parallel}{should the bootstrapping be parallelized or not}
+
+\item{blocking}{blocking variable, must be a factor}
 
 \item{return_models}{return individual models}
 }
