@@ -129,7 +129,7 @@ get_loss <- function(loss, Y, custom_parameters) {
           }
         }
 
-        list2env(self$parameters, envir = environment(fun=self$loss.fkt))
+        if(!is.null(self$parameters)) list2env(self$parameters, envir = environment(fun=self$loss.fkt))
 
         Y_base <- torch::torch_tensor(matrix(colMeans(Y), nrow(Y), ncol(Y), byrow = TRUE), dtype = torch::torch_float32())
         self$baseloss <- as.numeric(self$forward(self$link(Y_base), self$format_Y(Y))$mean())

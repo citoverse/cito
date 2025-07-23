@@ -27,6 +27,7 @@
 #' @param verbose print training and validation loss of epochs
 #' @param bootstrap bootstrap neural network or not, numeric corresponds to number of bootstrap samples
 #' @param bootstrap_parallel parallelize (CPU) bootstrapping
+#' @param bootstrap_blocking_variable variable/vector that will be used for blocked bootstrapping (should be a factor)
 #' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
@@ -193,6 +194,7 @@ dnn <- function(formula = NULL,
                 verbose = TRUE,
                 bootstrap = NULL,
                 bootstrap_parallel = FALSE,
+                bootstrap_blocking_variable = NULL,
                 tuning = config_tuning(),
                 hooks = NULL,
                 X = NULL,
@@ -395,7 +397,15 @@ dnn <- function(formula = NULL,
       models = list()
 
       for(b in 1:bootstrap) {
-        indices <- sample(nrow(data),replace = TRUE)
+        if(is.null(bootstrap_blocking_variable) ) {
+          indices <- sample(nrow(data),replace = TRUE)
+        } else {
+          sample_lvls = sample(unique(bootstrap_blocking_variable),length(unique(bootstrap_blocking_variable)),replace = TRUE)
+          indices=
+            sapply(sample_lvls, function(lvl) {
+              return((1:nrow(data))[bootstrap_blocking_variable == lvl])
+          }) |> c()
+        }
         #Alternative that doesn't require future editing when new arguments are added to dnn() (e.g. burnin, baseloss are missing)
         #call <- match.call()
         #call$data <- data[indices,]
@@ -431,7 +441,15 @@ dnn <- function(formula = NULL,
       }
       parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
       models <- parabar::par_lapply(backend, 1:bootstrap, function(i) {
-        indices <- sample(nrow(data),replace = TRUE)
+        if(is.null(bootstrap_blocking_variable) ) {
+          indices <- sample(nrow(data),replace = TRUE)
+        } else {
+          sample_lvls = sample(unique(bootstrap_blocking_variable),length(unique(bootstrap_blocking_variable)),replace = TRUE)
+          indices=
+            sapply(sample_lvls, function(lvl) {
+              return((1:nrow(data))[bootstrap_blocking_variable == lvl])
+            }) |> c()
+        }
         m = do.call(dnn, args = list(
           formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,

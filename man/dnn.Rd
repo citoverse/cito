@@ -31,6 +31,7 @@ dnn(
   verbose = TRUE,
   bootstrap = NULL,
   bootstrap_parallel = FALSE,
+  bootstrap_blocking_variable = NULL,
   tuning = config_tuning(),
   hooks = NULL,
   X = NULL,
@@ -87,6 +88,8 @@ dnn(
 \item{bootstrap}{bootstrap neural network or not, numeric corresponds to number of bootstrap samples}
 
 \item{bootstrap_parallel}{parallelize (CPU) bootstrapping}
+
+\item{bootstrap_blocking_variable}{variable/vector that will be used for blocked bootstrapping (should be a factor)}
 
 \item{tuning}{tuning options created with \code{\link{config_tuning}}}
 
