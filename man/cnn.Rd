@@ -32,7 +32,7 @@ cnn(
 \arguments{
 \item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.}
 
-\item{Y}{The target data. It can be a factor, numeric vector, or a numeric or logical matrix.}
+\item{Y}{The target data. The allowed formats of the target data differ between loss functions. See \code{\link{dnn}} for more information.}
 
 \item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.}
 
@@ -92,6 +92,10 @@ The list consists of the following attributes:
 \description{
 This function trains a Convolutional Neural Network (CNN) on the provided input data \code{X} and the target data \code{Y} using the specified architecture, loss function, and optimizer.
 }
+\section{Details:}{
+Also check \code{\link{dnn}} for details to common arguments.
+}
+
 \section{Convolutional Neural Networks:}{
 Convolutional Neural Networks (CNNs) are a specialized type of neural network designed for processing structured data, such as images.
 The key components of a CNN are convolutional layers, pooling layers and fully-connected (linear) layers:
@@ -100,77 +104,34 @@ The key components of a CNN are convolutional layers, pooling layers and fully-c
 \item \strong{Pooling layers} reduce the size of the feature maps created by convolutional layers, while retaining important information. A common type is max pooling, which keeps the highest value in a region, simplifying the data while preserving essential features.
 \item \strong{Fully-connected (linear) layers} connect every neuron in one layer to every neuron in the next layer. These layers are found at the end of the network and are responsible for combining high-level features to make final predictions.
 }
+
+The architecture of the CNN that will be created and trained by this function is defined by an object of class 'citoarchitecture'. See \code{\link{create_architecture}} for detailed information on how to define and customize your CNN architecture.
 }
 
-\section{Loss functions / Likelihoods}{
-We support loss functions and likelihoods for different tasks:\tabular{lll}{
-   Name \tab Explanation \tab Example / Task \cr
-   mse \tab mean squared error \tab Regression, predicting continuous values \cr
-   mae \tab mean absolute error \tab Regression, predicting continuous values \cr
-   cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
-   gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
-   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
-   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
-   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
-   mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
-   multinomial \tab Multinomial likelihood \tab step selection in animal movement models \cr
-   clogit \tab conditional binomial \tab step selection in animal movement models \cr
-}
-}
-
-\section{Training and convergence of neural networks}{
-Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (amount of learnable parameters). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
-
-\figure{learningrates.jpg}{Learning rates}
-
-If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
-
-A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
-
-See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
-}
-
-\section{Finding the right architecture}{
-As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in \href{https://arxiv.org/abs/2306.10551}{Pichler & Hartig, 2023}, we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the \code{selu} activation function outperforms \code{relu} for small data sizes (<100 observations).
-
-We recommend starting with moderate sizes (like the defaults), and if the model doesn't generalize/converge, try larger networks along with a regularization that helps minimize the risk of overfitting (see \code{vignette("B-Training_neural_networks")} ).
-}
-
-\section{Overfitting}{
-Overfitting means that the model fits the training data well, but generalizes poorly to new observations. We can use the validation argument to detect overfitting. If the validation loss starts to increase again at a certain point, it often means that the models are starting to overfit your training data:
-
-\figure{overfitting.jpg}{Overfitting}
-
-\strong{Solutions}:
-
+\section{Data Augmentation}{
+Data augmentation is a technique used to improve the generalization of convolutional neural networks (CNNs) by increasing the diversity of the training data through random transformations. This function supports data augmentation through the \code{data_augmentation} argument, which accepts a list containing either user-defined functions or the names of cito's built-in data augmentation functions.
+Each user-defined function must take a \code{torch_tensor} as input and return a \code{torch_tensor} with the same shape. The input tensor must have 3 to 5 dimensions with the following structure:
 \itemize{
-\item Re-train with epochs = point where model started to overfit
-\item Early stopping, stop training when model starts to overfit, can be specified using the \verb{early_stopping=…} argument
-\item Use regularization (dropout or elastic-net, see next section)
+\item Dimension 1: singleton batch dimension (i.e., size 1),
+\item Dimension 2: channel dimension,
+\item Dimensions 3 to 5: spatial dimensions (e.g., X, Y, Z).
 }
+During training, the data loader re-loads each sample at every epoch, applying all provided augmentation functions sequentially each time the sample is accessed. This allows transformations to vary across epochs if the functions include randomness (e.g., randomly flipping a spatial axis) helping the model learn invariance to such changes.
+In addition to custom functions, the list can contain the names (as strings) of the following built-in augmentation methods:
+\itemize{
+\item \code{"rotate90"}:
+\itemize{
+\item For 2D convolutions: randomly applies one of the 4 possible 90° rotations. The X and Y dimensions have to be equal.
+\item For 3D convolutions:
+\itemize{
+\item If X, Y, and Z dimensions are equal: randomly applies one of the 24 possible 90° rotations.
+\item If only two spatial dimensions are equal: randomly applies one of the 4 possible 90° rotations in the plane of the two spatial dimensions.
 }
-
-\section{Regularization}{
-Elastic Net regularization combines the strengths of L1 (Lasso) and L2 (Ridge) regularization. It introduces a penalty term that encourages sparse weight values while maintaining overall weight shrinkage. By controlling the sparsity of the learned model, Elastic Net regularization helps avoid overfitting while allowing for meaningful feature selection. We advise using elastic net (e.g. lambda = 0.001 and alpha = 0.2).
-
-Dropout regularization helps prevent overfitting by randomly disabling a portion of neurons during training. This technique encourages the network to learn more robust and generalized representations, as it prevents individual neurons from relying too heavily on specific input patterns. Dropout has been widely adopted as a simple yet effective regularization method in deep learning.
-
-By utilizing these regularization methods in your neural network training with the cito package, you can improve generalization performance and enhance the network's ability to handle unseen data. These techniques act as valuable tools in mitigating overfitting and promoting more robust and reliable model performance.
+\item Not available for 1D convolutions.
 }
-
-\section{Custom Optimizer and Learning Rate Schedulers}{
-When training a network, you have the flexibility to customize the optimizer settings and learning rate scheduler to optimize the learning process. In the cito package, you can initialize these configurations using the \code{\link{config_lr_scheduler}} and \code{\link{config_optimizer}} functions.
-
-\code{\link{config_lr_scheduler}} allows you to define a specific learning rate scheduler that controls how the learning rate changes over time during training. This is beneficial in scenarios where you want to adaptively adjust the learning rate to improve convergence or avoid getting stuck in local optima.
-
-Similarly, the \code{\link{config_optimizer}} function enables you to specify the optimizer for your network. Different optimizers, such as stochastic gradient descent (SGD), Adam, or RMSprop, offer various strategies for updating the network's weights and biases during training. Choosing the right optimizer can significantly impact the training process and the final performance of your neural network.
+\item \code{"flip"}: Randomly flips each spatial dimension independently with 50\% probability.
+\item \code{"noise"}: Adds a small amount of normally distributed noise to the tensor.
 }
-
-\section{Training on graphic cards}{
-If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
-For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
-
-Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 }
 
 \examples{
@@ -226,5 +187,5 @@ plot(resnet)
 \code{\link{predict.citocnn}}, \code{\link{print.citocnn}}, \code{\link{plot.citocnn}}, \code{\link{summary.citocnn}}, \code{\link{coef.citocnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }
 \author{
-Armin Schenk, Maximilian Pichler
+Armin Schenk
 }
