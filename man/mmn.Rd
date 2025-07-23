@@ -101,6 +101,65 @@ The list consists of the following attributes:
 \description{
 This function trains a Multi-Modal Neural Network (MMN) which consists of a combination of DNNs and CNNs.
 }
+\section{Details:}{
+Also check \code{\link{dnn}} and \code{\link{cnn}} for details to common arguments.
+}
+
+\section{MMN architecture:}{
+\figure{MMN.png}{MMN architecture}
+
+The MMN combines multiple CNNs and DNNs. This allows the model to process data in different formats (e.g., DNN+CNN for tabular data and images, or CNN+CNN for images with different spatial resolutions).
+The architecture of the MMN is defined by the arguments \code{formula}, \code{fusion_hidden}, \code{fusion_activation}, \code{fusion_bias} and \code{fusion_dropout}:
+\itemize{
+\item \code{formula} specifies the architecture of the individual networks as well as their respective inputs, and the target data of the MMN (which specifies the shape of the output layer).
+\item \code{fusion_hidden}, \code{fusion_activation}, \code{fusion_bias} and \code{fusion_dropout} define the architecture of the DNN that fuses the outputs of the individual networks. See \code{\link{dnn}} for details.
+}
+
+\strong{\code{mmn(Y ~ dnn(X=tabular_data1) + dnn(~., data=tabular_data2) + cnn(X=image_data), dataList=mmn_data, ...)}}
+
+In this example, \strong{Y} (left side of ~) is the target data of the MMN. On the right side of ~ you can specify as many DNNs and CNNs as required.
+The specification works exactly as in \code{\link{dnn}} and \code{\link{cnn}} with the following restrictions:
+
+\itemize{
+\item Only specify arguments that relate to the architecture and input data of the network (bold arguments mandatory):
+\itemize{
+\item dnn(): \strong{formula}, \strong{data}, hidden, activation, bias, dropout, (\strong{X}, alternatively to formula and data)
+\item cnn(): \strong{X}, \strong{architecture}
+}
+\item Arguments relating to the training (e.g. loss, lr, epochs, ...) have to be passed to mmn() instead.
+\item The names of the data variables (in this example: Y, tabular_data1, tabular_data2, image_data) must be available in \code{dataList} (named list).
+}
+}
+
+\examples{
+\donttest{
+if(torch::torch_is_installed()){
+library(cito)
+
+# Example workflow in cito
+
+device <- ifelse(torch::cuda_is_available(), "cuda", "cpu")
+
+## Simulated data
+shapes <- cito:::simulate_shapes(n=320, size=50, channels=3)
+X_cnn <- shapes$data
+X_dnn <- matrix(runif(320*3),320,3)
+Y <- (as.integer(shapes$labels)-1)*2 + 0.5*X_dnn[,1] + 0.3*X_dnn[,2] - 0.8*X_dnn[,3]
+
+data <- list(Y=Y, X_cnn=X_cnn, X_dnn=X_dnn)
+
+## Architecture of the CNN
+architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
+
+## Build and train network
+mmn.fit <- mmn(Y ~ dnn(~., data=X_dnn, hidden = c(100,100,100), activation = "relu") + cnn(X=X_cnn, architecture = architecture),
+               dataList = data, loss = "mse", epochs = 50, validation = 0.1, lr = 0.05, device=device)
+
+## If the loss is still decreasing you can continue training for additional epochs:
+mmn.fit <- continue_training(mmn.fit, epochs = 50)
+}
+}
+}
 \seealso{
 \code{\link{predict.citommn}}, \code{\link{print.citommn}}, \code{\link{summary.citommn}}, \code{\link{coef.citommn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}
 }

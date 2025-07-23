@@ -42,7 +42,39 @@
 #' \item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
 #' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 #' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
-
+#'
+#' @details
+#'
+#' # Details:
+#'
+#' Also check \code{\link{dnn}} and \code{\link{cnn}} for details to common arguments.
+#'
+#' # MMN architecture:
+#'
+#' ![](MMN.png "MMN architecture")
+#'
+#' The MMN combines multiple CNNs and DNNs. This allows the model to process data in different formats (e.g., DNN+CNN for tabular data and images, or CNN+CNN for images with different spatial resolutions).
+#' The architecture of the MMN is defined by the arguments \code{formula}, \code{fusion_hidden}, \code{fusion_activation}, \code{fusion_bias} and \code{fusion_dropout}:
+#' \itemize{
+#'    \item \code{formula} specifies the architecture of the individual networks as well as their respective inputs, and the target data of the MMN (which specifies the shape of the output layer).
+#'    \item \code{fusion_hidden}, \code{fusion_activation}, \code{fusion_bias} and \code{fusion_dropout} define the architecture of the DNN that fuses the outputs of the individual networks. See \code{\link{dnn}} for details.
+#' }
+#'
+#' **`mmn(Y ~ dnn(X=tabular_data1) + dnn(~., data=tabular_data2) + cnn(X=image_data), dataList=mmn_data, ...)`**
+#'
+#' In this example, **Y** (left side of ~) is the target data of the MMN. On the right side of ~ you can specify as many DNNs and CNNs as required.
+#' The specification works exactly as in \code{\link{dnn}} and \code{\link{cnn}} with the following restrictions:
+#'
+#' \itemize{
+#'    \item Only specify arguments that relate to the architecture and input data of the network (bold arguments mandatory):
+#'        \itemize{
+#'            \item dnn(): **formula**, **data**, hidden, activation, bias, dropout, (**X**, alternatively to formula and data)
+#'            \item cnn(): **X**, **architecture**
+#'        }
+#'    \item Arguments relating to the training (e.g. loss, lr, epochs, ...) have to be passed to mmn() instead.
+#'    \item The names of the data variables (in this example: Y, tabular_data1, tabular_data2, image_data) must be available in \code{dataList} (named list).
+#' }
+#'
 #' @import checkmate
 #' @example /inst/examples/mmn-example.R
 #' @author Armin Schenk
@@ -214,7 +246,6 @@ mmn <- function(formula,
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 #'
-#' @example /inst/examples/predict.citommn-example.R
 #' @export
 predict.citommn <- function(object,
                             newdata = NULL,
@@ -286,7 +317,6 @@ predict.citommn <- function(object,
 #' @param x A model created by \code{\link{mmn}}.
 #' @param ... Additional arguments (currently not used).
 #' @return The original model object \code{x}, returned invisibly.
-#' @example /inst/examples/print.citommn-example.R
 #' @export
 print.citommn <- function(x, ...){
   x <- check_model(x)
@@ -319,7 +349,6 @@ summary.citommn <- function(object, ...){
 #'   \item \code{net_buffers}: A list of buffers (e.g., running statistics) for the currently used model epoch.
 #'   \item \code{loss_parameters}: A list of the loss function's parameters for the currently used model epoch.
 #' }
-#' @example /inst/examples/coef.citommn-example.R
 #' @export
 coef.citommn <- function(object,...){
   object <- check_model(object)
