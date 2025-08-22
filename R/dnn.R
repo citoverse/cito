@@ -32,11 +32,25 @@
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
+#' @section How neural networks work:
+#' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+#'
+#' Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+#'
+#' @section Training and convergence of neural networks:
+#'
+#' Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
+#'
+#' ![](learningrates.jpg "Learning rates")
+#'
+#' If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+#'
+#' A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
+#'
+#' See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
+#'
+#'
 #' @details
-#'
-#' # Activation functions
-#'
-#' Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
 #'
 #' # Loss functions / Likelihoods
 #'
@@ -55,23 +69,12 @@
 #' | multinomial | Multinomial likelihood | step selection in animal movement models |
 #' | clogit | conditional binomial | step selection in animal movement models |
 #'
-#' # Training and convergence of neural networks
-#'
-#' Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
-#'
-#' ![](learningrates.jpg "Learning rates")
-#'
-#' If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
-#'
-#' A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
-#'
-#' See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
-#'
 #' # Finding the right architecture
 #'
 #' As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in [Pichler & Hartig, 2023](https://arxiv.org/abs/2306.10551), we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the `selu` activation function outperforms `relu` for small data sizes (<100 observations).
 #'
 #' We recommend starting with moderate sizes (like the defaults), and if the model doesn't generalize/converge, try larger networks along with a regularization that helps minimize the risk of overfitting (see \code{vignette("B-Training_neural_networks")} ).
+#'
 #'
 #' # Overfitting
 #'
@@ -134,11 +137,10 @@
 #'
 #' For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
 #'
+#' # Activation functions
 #'
-#'# How neural networks work
-#' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+#' Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
 #'
-#' Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 #'
 #'
 #' # Training on graphic cards
@@ -280,7 +282,7 @@ dnn <- function(formula = NULL,
   }
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters)
+  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss)
 
   response_column <- NULL
   if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out
@@ -309,7 +311,7 @@ dnn <- function(formula = NULL,
 
   if(is.null(bootstrap) || !bootstrap) {
 
-    if(is.null(baseloss)) baseloss <- loss_obj$baseloss
+    baseloss <- loss_obj$baseloss
 
     if(length(validation) == 1 && validation == 0) {
       if(is.null(Z_torch)) {

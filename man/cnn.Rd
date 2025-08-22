@@ -134,6 +134,20 @@ In addition to custom functions, the list can contain the names (as strings) of 
 }
 }
 
+\section{Training and convergence of neural networks}{
+
+
+Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
+
+\figure{learningrates.jpg}{Learning rates}
+
+If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+
+A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
+
+See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
+}
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){

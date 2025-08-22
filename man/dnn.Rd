@@ -117,6 +117,27 @@ The list consists of the following attributes:
 \description{
 fits a custom deep neural network using the Multilayer Perceptron architecture. \code{dnn()} supports the formula syntax and allows to customize the neural network to a maximal degree.
 }
+\section{How neural networks work}{
+
+In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
+
+Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
+}
+
+\section{Training and convergence of neural networks}{
+
+
+Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
+
+\figure{learningrates.jpg}{Learning rates}
+
+If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
+
+A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
+
+See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
+}
+
 \section{Activation functions}{
 Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
 }
@@ -135,18 +156,6 @@ We support loss functions and likelihoods for different tasks:\tabular{lll}{
    multinomial \tab Multinomial likelihood \tab step selection in animal movement models \cr
    clogit \tab conditional binomial \tab step selection in animal movement models \cr
 }
-}
-
-\section{Training and convergence of neural networks}{
-Ensuring convergence can be tricky when training neural networks. Their training is sensitive to a combination of the learning rate (how much the weights are updated in each optimization step), the batch size (a random subset of the data is used in each optimization step), and the number of epochs (number of optimization steps). Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate:
-
-\figure{learningrates.jpg}{Learning rates}
-
-If the training loss of the model doesn't fall below the baseline loss, the learning rate is either too high or too low. If this happens, try higher and lower learning rates.
-
-A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
-
-See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
 }
 
 \section{Finding the right architecture}{
@@ -213,12 +222,6 @@ Note that hyperparameter tuning can be expensive. We have implemented an option 
 As this is an experimental feature, we welcome feature requests and bug reports on our github site.
 
 For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
-}
-
-\section{How neural networks work}{
-In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
-
-Therefore the value of each neuron can be calculated using: \eqn{ a (\sum_j{ w_j * a_j})}. Where \eqn{w_j} is the weight and \eqn{a_j} is the value from neuron j to the current one. a() is the activation function, e.g. \eqn{ relu(x) = max(0,x)}
 }
 
 \section{Training on graphic cards}{

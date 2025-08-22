@@ -40,9 +40,13 @@
 #' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 #' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 #'
+#'
+#' @inheritSection dnn Training and convergence of neural networks
+#'
 #' @details
 #'
 #' # Details:
+#'
 #'
 #' Also check \code{\link{dnn}} for details to common arguments.
 #'
@@ -170,8 +174,8 @@ cnn <- function(X,
   device <- check_device(device)
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters)
-  if(is.null(baseloss)) baseloss <- loss_obj$baseloss
+  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss)
+  baseloss <- loss_obj$baseloss
 
   X_old <- X
   Y_old <- Y
