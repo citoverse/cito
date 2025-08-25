@@ -93,6 +93,8 @@ dnn(
 
 \item{tuning}{tuning options created with \code{\link{config_tuning}}}
 
+\item{hooks}{list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)}
+
 \item{X}{Feature matrix or data.frame, alternative data interface}
 
 \item{Y}{Response vector, factor, matrix or data.frame, alternative data interface}
@@ -136,10 +138,6 @@ If the training loss of the model doesn't fall below the baseline loss, the lear
 A common strategy is to try (manually) a few different learning rates to see if the learning rate is on the right scale.
 
 See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")}) for more help on training and debugging neural networks.
-}
-
-\section{Activation functions}{
-Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
 }
 
 \section{Loss functions / Likelihoods}{
@@ -224,6 +222,10 @@ As this is an experimental feature, we welcome feature requests and bug reports 
 For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
 }
 
+\section{Activation functions}{
+Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
+}
+
 \section{Training on graphic cards}{
 If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
 For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
@@ -304,7 +306,8 @@ m = dnn(Species~., data = iris, loss = "clogit", lr = 0.01)
 m = dnn(Species~., data = iris, loss = "multinomial", lr = 0.01)
 
 Y = t(stats::rmultinom(100, 10, prob = c(0.2, 0.2, 0.5)))
-m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))), loss = "multinomial", lr = 0.01)
+m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))),
+        loss = "multinomial", lr = 0.01)
 ## conditional logit for size > 1 is not supported yet
 
 

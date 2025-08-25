@@ -29,6 +29,7 @@
 #' @param bootstrap_parallel parallelize (CPU) bootstrapping
 #' @param bootstrap_blocking_variable variable/vector that will be used for blocked bootstrapping (should be a factor)
 #' @param tuning tuning options created with \code{\link{config_tuning}}
+#' @param hooks list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'

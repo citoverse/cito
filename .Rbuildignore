@@ -16,3 +16,4 @@
 ^_rest$
 tests/testthat/Rplots.pdf
 ^test_folder$
+^playground.R

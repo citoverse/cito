@@ -152,11 +152,14 @@ data <- list(Y=Y, X_cnn=X_cnn, X_dnn=X_dnn)
 architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
-mmn.fit <- mmn(Y ~ dnn(~., data=X_dnn, hidden = c(100,100,100), activation = "relu") + cnn(X=X_cnn, architecture = architecture),
-               dataList = data, loss = "mse", epochs = 50, validation = 0.1, lr = 0.05, device=device)
+mmn.fit <- mmn(Y ~
+                 dnn(~., data=X_dnn, hidden = c(100,100,100), activation = "relu") +
+                 cnn(X=X_cnn, architecture = architecture),
+               dataList = data, loss = "mse",
+               epochs = 1, validation = 0.1, lr = 0.05, device=device)
 
 ## If the loss is still decreasing you can continue training for additional epochs:
-mmn.fit <- continue_training(mmn.fit, epochs = 50)
+mmn.fit <- continue_training(mmn.fit, epochs = 1)
 }
 }
 }

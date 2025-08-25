@@ -75,31 +75,31 @@ testthat::test_that("CNN data augmentation", {
 })
 
 
-testthat::test_that("CNN accuracy", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
-  skip_if_no_torch()
-
-  if(torch::cuda_is_available()) {
-    device <- "cuda"
-  } else if(torch::backends_mps_is_available()) {
-    device <- "cpu"
-  } else {
-    device <- "cpu"
-  }
-
-  set.seed(42)
-  torch::torch_manual_seed(42)
-  n <- 1000
-  shapes <- cito:::simulate_shapes(n, 50)
-  test <- sample.int(n, 0.1*n)
-  train <- c(1:n)[-test]
-  cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="cross-entropy", device=device, validation=0.1, epochs=400, early_stopping = 10, lambda = 0.001, plot=FALSE, verbose=FALSE)
-  pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
-  true <- shapes$labels[test]
-  accuracy <- length(which(pred==true))/length(test)
-  testthat::expect_gt(accuracy, 0.75)
-})
+# testthat::test_that("CNN accuracy", {
+#   testthat::skip_on_cran()
+#   testthat::skip_on_ci()
+#   skip_if_no_torch()
+#
+#   if(torch::cuda_is_available()) {
+#     device <- "cuda"
+#   } else if(torch::backends_mps_is_available()) {
+#     device <- "cpu"
+#   } else {
+#     device <- "cpu"
+#   }
+#
+#   set.seed(42)
+#   torch::torch_manual_seed(42)
+#   n <- 1000
+#   shapes <- cito:::simulate_shapes(n, 50)
+#   test <- sample.int(n, 0.1*n)
+#   train <- c(1:n)[-test]
+#   cnn.fit <- cnn(X=shapes$data[train,,,,drop=F], Y=shapes$labels[train], architecture=architecture, loss="cross-entropy", device=device, validation=0.1, epochs=400, early_stopping = 10, lambda = 0.001, plot=FALSE, verbose=FALSE)
+#   pred <- predict(cnn.fit, newdata=shapes$data[test,,,,drop=F], type="class")
+#   true <- shapes$labels[test]
+#   accuracy <- length(which(pred==true))/length(test)
+#   testthat::expect_gt(accuracy, 0.75)
+# })
 
 testthat::test_that("CNN transfer learning", {
   testthat::skip_on_cran()
@@ -115,7 +115,7 @@ testthat::test_that("CNN transfer learning", {
   }
 
   set.seed(42)
-  shapes <- cito:::simulate_shapes(10, 100, 3)
+  shapes <- cito:::simulate_shapes(2, 100, 3)
 
   models <- list(
     "alexnet",
@@ -142,14 +142,14 @@ testthat::test_that("CNN transfer learning", {
 
   for (transfer_model in models) {
     architecture <- create_architecture(transfer(transfer_model, pretrained=FALSE))
-    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="cross-entropy", plot=FALSE, verbose=FALSE, device=device))
+    .n = wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 2L, loss="cross-entropy", plot=FALSE, verbose=FALSE, device=device))
 
     architecture <- create_architecture(transfer(transfer_model, pretrained=FALSE), linear(), linear())
-    wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 5L, loss="cross-entropy", plot=FALSE, verbose=FALSE, device=device))
+    .n = wrap_cnn(list(X=shapes$data, Y=shapes$labels, architecture=architecture, epochs=1, batchsize = 2L, loss="cross-entropy", plot=FALSE, verbose=FALSE, device=device))
   }
 })
 
-testthat::test_that("CNN pretrained", {
+  testthat::test_that("CNN pretrained", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()

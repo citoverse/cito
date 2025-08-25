@@ -171,27 +171,27 @@ testthat::test_that("DNN hyperparameter tuning",{
   skip_if_no_torch()
 
 
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(values=c("selu","relu")), tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(values=c("selu","relu")), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
 
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)), tuning=config_tuning(steps=2, CV = 2))}, NA)
 
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)),
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",epochs=3,lr=tune(values=c(0.01, 0.1)), bias=tune(),activation=tune(),dropout=tune(c(0.2, 0.3)),
                               tuning=config_tuning(steps=2, CV = 2))}, NA)
 
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy",lr=tune(values=c(0.01, 0.1)), epochs = tune(1, 4),bias=tune(),activation=tune(),dropout=tune(values=c(0.2, 0.3)),
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy",lr=tune(values=c(0.01, 0.1)), epochs = tune(1, 4),bias=tune(),activation=tune(),dropout=tune(values=c(0.2, 0.3)),
                               tuning=config_tuning(steps=2, CV = 2))}, NA)
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
-                              tuning=config_tuning(steps=2, CV = 2))}, NA)
-
-  testthat::expect_error({dnn(Species~., data=iris,loss="cross-entropy", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
                               tuning=config_tuning(steps=2, CV = 2))}, NA)
 
-  testthat::expect_error({dnn(Sepal.Length~., data=iris,loss="gaussian", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+  testthat::expect_error({.n = dnn(Species~., data=iris,loss="cross-entropy", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
+                              tuning=config_tuning(steps=2, CV = 2))}, NA)
+
+  testthat::expect_error({.n = dnn(Sepal.Length~., data=iris,loss="gaussian", lr=tune(values=c(0.01, 0.1)), epochs=tune(1, 4),batchsize = tune(values = c(10, 20)),bias=tune(),activation=tune(),dropout=tune(0.2, 0.3),
                               tuning=config_tuning(steps=2, CV = 2, parallel = 2L))}, NA)
 
   })

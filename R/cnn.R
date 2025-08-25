@@ -747,7 +747,8 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 }
 
 #' @export
-print.linear <- function(layer, input_shape, ...) {
+print.linear <- function(x, input_shape, ...) {
+  layer = x
 
   cat("-------------------------------------------------------------------------------\n")
   cat(paste0("Linear     |Input: ", prod(input_shape), "\n"))
@@ -765,7 +766,8 @@ print.linear <- function(layer, input_shape, ...) {
 }
 
 #' @export
-print.conv <- function(layer, input_shape, ...) {
+print.conv <- function(x, input_shape, ...) {
+  layer = x
 
   output_shape <- get_output_shape(input_shape = input_shape,
                                    n_kernels = layer[["n_kernels"]],
@@ -796,7 +798,8 @@ print.conv <- function(layer, input_shape, ...) {
 }
 
 #' @export
-print.avgPool <- function(layer, input_shape, ...) {
+print.avgPool <- function(x, input_shape, ...) {
+  layer = x
 
   output_shape <- get_output_shape(input_shape = input_shape,
                                    n_kernels = input_shape[1],
@@ -818,7 +821,8 @@ print.avgPool <- function(layer, input_shape, ...) {
 }
 
 #' @export
-print.maxPool <- function(layer, input_shape, ...) {
+print.maxPool <- function(x, input_shape, ...) {
+  layer = x
 
   output_shape <- get_output_shape(input_shape = input_shape,
                                    n_kernels = input_shape[1],
@@ -841,7 +845,8 @@ print.maxPool <- function(layer, input_shape, ...) {
 }
 
 #' @export
-print.transfer <- function(layer, input_shape, ...) {
+print.transfer <- function(x, input_shape, ...) {
+  layer = x
 
   output_shape <- get_transfer_output_shape(layer$name)
 

@@ -112,7 +112,8 @@ m = dnn(Species~., data = iris, loss = "clogit", lr = 0.01)
 m = dnn(Species~., data = iris, loss = "multinomial", lr = 0.01)
 
 Y = t(stats::rmultinom(100, 10, prob = c(0.2, 0.2, 0.5)))
-m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))), loss = "multinomial", lr = 0.01)
+m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))),
+        loss = "multinomial", lr = 0.01)
 ## conditional logit for size > 1 is not supported yet
 
 

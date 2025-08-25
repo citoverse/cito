@@ -4,6 +4,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
   model$net$train(TRUE)
   model$loss$train(TRUE)
   model$successfull = 1
+  model$use_model_epoch <- "last"
+  model$loaded_model_epoch <- "last"
 
   hooks = model$training_properties$hooks
   model$hooks_result = list()
@@ -101,15 +103,6 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     if(!is.null(hooks)) {
 
       # Assume that hooks is a list of functions...and we will just pass everything to the hooks, maybe as an environment?
-
-      # model$use_model_epoch <- 1
-      # model$loaded_model_epoch <- 1
-      # class(model) = "citodnn"
-      # model$net$eval()
-      # ce = conditionalEffects(model)
-      # ce_mean = lapply(ce, function(tmp) tmp$mean)
-      # model$net$train()
-      # model$hooks_result[epoch] = ce_mean
 
       hook_result = lapply(hooks, function(f) {
         environment(f) = environment()
