@@ -20,7 +20,7 @@ cito_dataset = torch::dataset(
         return(x[index, drop=FALSE])
       } else {
         X <- lapply(x[index], function(path) {
-          if(grepl(".png", path) | grepl(".jpeg", path)) return(self$load_image(path))
+          if(grepl(".png", path) | grepl(".jpeg", path) | grepl(".jpg", path)) return(self$load_image(path))
           else if(grepl(".tiff", path)) return(self$load_tiff(path))
           else stop(paste0("File format not supported: ", path))
         })

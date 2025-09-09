@@ -24,11 +24,11 @@
 #' @import checkmate
 #' @export
 
-config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"),
+config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "ignite_adam"),
                             verbose = FALSE, ... ){
 
   checkmate::qassert(verbose,"B1")
-  type <- match.arg(tolower(type), choices =  c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"))
+  type <- match.arg(tolower(type), choices =  c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "ignite_adam"))
   out <- list()
   out$optim <- type
   class(out) <- "cito_optim"
@@ -113,6 +113,19 @@ config_optimizer<- function(type = c("adam", "adadelta", "adagrad", "rmsprop", "
                                           check_var = "R1", verbose = verbose)
     out$nesterov <- check_call_config(mc = mc, "nesterov", standards =formals(torch::optim_sgd),
                                       check_var = "B1", verbose = verbose)
+  } else if(out$optim == "ignite_adam") {
+    if(verbose) cat("set ignite_adam optimizer with following values \n")
+
+
+    out$betas <- check_call_config(mc = mc, "betas", standards =formals(torch::optim_adam),
+                                   check_var = "R2", dim = 2, verbose = verbose)
+    out$eps <- check_call_config(mc = mc, "eps", standards =formals(torch::optim_adam),
+                                 check_var = "R1", verbose = verbose)
+    out$weight_decay <- check_call_config(mc = mc, "weight_decay", standards =formals(torch::optim_adam),
+                                          check_var = "R1", verbose = verbose)
+    out$amsgrad <- check_call_config(mc = mc, "amsgrad", standards =formals(torch::optim_adam),
+                                     check_var = "B1", verbose = verbose)
+
   }
 
   for(var in names(mc)[2:length(names(mc))]){
