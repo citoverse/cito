@@ -1,4 +1,9 @@
-get_data_loader = function(..., batch_size=25L, shuffle=TRUE, from_folder = FALSE, data_augmentation = NULL) {
+get_data_loader = function(...,
+                           batch_size=25L,
+                           shuffle=TRUE,
+                           from_folder = FALSE,
+                           data_augmentation = NULL,
+                           transformations = NULL) {
 
   if(from_folder | !is.null(data_augmentation)) ds = cito_dataset(..., data_augmentation = data_augmentation)
   else ds <- torch::tensor_dataset(...)

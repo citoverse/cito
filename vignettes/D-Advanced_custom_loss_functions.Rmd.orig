@@ -69,7 +69,7 @@ m = dnn(Y~X, data = df,
 The optimized parameters are saved in the parameter field:
 
 ```{r}
-exp(m$parameter$scale_par) # true scale parameter: 0.4!
+exp(m$loss$parameter$scale_par) # true scale parameter: 0.4!
 ```
 
 ### Example 2: Quantile regression

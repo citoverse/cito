@@ -111,7 +111,7 @@ nn.fit<- dnn(Sepal.Length~.,
              verbose = FALSE,
              custom_parameters = list(scale = 1.0)
 )
-nn.fit$parameters$scale
+nn.fit$loss$parameters$scale
 
 ## Multivariate normal likelihood with parametrized covariance matrix
 ## Sigma = L*L^t + D
