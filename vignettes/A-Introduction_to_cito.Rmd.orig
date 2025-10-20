@@ -76,18 +76,18 @@ To make the model portable (e.g. save and reload the model), the weights are sto
 
 Cito can handle many different response types. Common loss functions from ML but also likelihoods for statistical models are supported:
 
-|                 |                              |                                                                          |                                                             |
-|:----------------|:-----------------------------|:-------------------------------------------------------------------------|-------------------------------------------------------------|
-| Name            | Explanation                  | Example / Task                                                           | Meta-Code                                                   |
-| `mse`           | mean squared error           | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "mse")`                    |
-| `mae`           | mean absolute error          | Regression, predicting continuous values                                 | `dnn(Sepal.Length~., ..., loss = "msa")`                    |
-| `softmax`       | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "softmax")`                     |
-| `cross-entropy` | categorical cross entropy    | Multi-class, species classification                                      | `dnn(Species~., ..., loss = "cross-entropy")`               |
-| `gaussian`      | Normal likelihood            | Regression, residual error is also estimated (similar to `stats::lm()`)  | `dnn(Sepal.Length~., ..., loss = "gaussian")`               |
-| `binomial`      | Binomial likelihood          | Classification/Logistic regression, mortality (0/1 data)                 | `dnn(Presence~., ..., loss = "Binomial")`                   |
-| `poisson`       | Poisson likelihood           | Regression, count data, e.g. species abundances                          | `dnn(Abundance~., ..., loss = "Poisson")`                   |
-| `nbinom`        | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")`                    |
-| `mvp`           | Multivariate probit model    | Joint Species Distribution model                                         | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
+|  |  |  |  |
+|:---|:---|:---|----|
+| Name | Explanation | Example / Task | Meta-Code |
+| `mse` | mean squared error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "mse")` |
+| `mae` | mean absolute error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "msa")` |
+| `softmax` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "softmax")` |
+| `cross-entropy` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "cross-entropy")` |
+| `gaussian` | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")` |
+| `binomial` | Binomial likelihood | Classification/Logistic regression, mortality (0/1 data) | `dnn(Presence~., ..., loss = "Binomial")` |
+| `poisson` | Poisson likelihood | Regression, count data, e.g. species abundances | `dnn(Abundance~., ..., loss = "Poisson")` |
+| `nbinom` | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")` |
+| `mvp` | Multivariate probit model | Joint Species Distribution model | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
 
 Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
 
@@ -182,13 +182,13 @@ print(nn.fit)
 
 xAI can produce outputs that are similar to known outputs from statistical models:
 
-| xAI Method                                                                       | Explanation                                                                                                                                                                                      | Statistical equivalent    |
-|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------|
-| Feature importance (returned by `summary(nn.fit)`)                               | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features.                                    | `anova(model)`            |
-| Average conditional effects (ACE) (returned by `summary(nn.fit)`)                | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)`                 |
-| Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects.                                                                                         |                           |
-| Partial dependency plots (`PDP(nn.fit)`)                                         | Visualization of the response-effect curve.                                                                                                                                                      | `plot(allEffects(model))` |
-| Accumulated local effect plots (`ALE(nn.fit)`)                                   | Visualization of the response-effect curve. More robust against collinearity compared to PDPs                                                                                                    | `plot(allEffects(model))` |
+| xAI Method | Explanation | Statistical equivalent |
+|----|----|----|
+| Feature importance (returned by `summary(nn.fit)`) | Feature importance based on permutations. See [Fisher, Rudin, and Dominici (2018)](#0) Similar to how much variance in the data is explained by the features. | `anova(model)` |
+| Average conditional effects (ACE) (returned by `summary(nn.fit)`) | Average of local derivatives, approximation of linear effects. See [Scholbeck et al. (2022)](https://arxiv.org/abs/2201.08837) and [Pichler and Hartig (2023)](https://arxiv.org/abs/2306.10551) | `lm(Y~X)` |
+| Standard Deviation of Conditional Effects (SDCE) (returned by `summary(nn.fit)`) | Standard deviation of the average conditional effects. Correlates with the non-linearity of the effects. |  |
+| Partial dependency plots (`PDP(nn.fit)`) | Visualization of the response-effect curve. | `plot(allEffects(model))` |
+| Accumulated local effect plots (`ALE(nn.fit)`) | Visualization of the response-effect curve. More robust against collinearity compared to PDPs | `plot(allEffects(model))` |
 
 The `summary()` returns feature importance, ACE and SDCE:
 
@@ -355,17 +355,17 @@ We started to support automatic hyperparameter tuning under Cross Validation. Th
 
 We can mark hyperparameters that should be tuned by cito by setting their values to `tune()`, for example `dnn (..., lr = tune()`. `tune()` is a function that creates a range of random values for the given hyperparameter. You can also change the maximum and minimum range of these values. The following table lists the hyperparameters that can currently be tuned:
 
-| Hyperparameter | Example                                     | Details                                                                                                                                                                       |
-|:---------------|:--------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| hidden         | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
-| bias           | `dnn(…, bias=tune())`                       | Should the bias be turned on or off for all hidden layers                                                                                                                     |
-| lambda         | `dnn(…, lambda = tune(0.0001, 0.1))`        | lambda will be tuned within the range (0.0001, 0.1)                                                                                                                           |
-| alpha          | `dnn(…, lambda = tune(0.2, 0.4))`           | alpha will be tuned within the range (0.2, 0.4)                                                                                                                               |
-| activation     | `dnn(…, activation = tune())`               | activation functions of the hidden layers will be tuned                                                                                                                       |
-| dropout        | `dnn(…, dropout = tune())`                  | Dropout rate will be tuned (globally for all layers)                                                                                                                          |
-| lr             | `dnn(…, lr = tune())`                       | Learning rate will be tuned                                                                                                                                                   |
-| batchsize      | `dnn(…, batchsize = tune())`                | batch size will be tuned                                                                                                                                                      |
-| epochs         | `dnn(…, batchsize = tune())`                | batchsize will be tuned                                                                                                                                                       |
+| Hyperparameter | Example | Details |
+|:---|:---|:---|
+| hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
+| bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
+| lambda | `dnn(…, lambda = tune(0.0001, 0.1))` | lambda will be tuned within the range (0.0001, 0.1) |
+| alpha | `dnn(…, lambda = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
+| activation | `dnn(…, activation = tune())` | activation functions of the hidden layers will be tuned |
+| dropout | `dnn(…, dropout = tune())` | Dropout rate will be tuned (globally for all layers) |
+| lr | `dnn(…, lr = tune())` | Learning rate will be tuned |
+| batchsize | `dnn(…, batchsize = tune())` | batch size will be tuned |
+| epochs | `dnn(…, batchsize = tune())` | batchsize will be tuned |
 
 The hyperparameters are tuned by random search (i.e., random values for the hyperparameters within a specified range) and by cross-validation. The exact tuning regime can be specified with [config_tuning].
 

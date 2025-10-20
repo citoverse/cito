@@ -368,7 +368,7 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
 #' @param data data on which ALE is performed on, if NULL training data will be used.
 #' @param type ALE on which scale response or link, default is response
 #' @param K number of neighborhoods original feature space gets divided into
-#' @param ALE_type method on how the feature space is divided into neighborhoods.
+#' @param ALE_type method on how the feature bins are created for the neighborhoods.
 #' @param plot plot ALE or not
 #' @param parallel parallelize over bootstrap models or not
 #' @param ... arguments passed to \code{\link{predict}}
@@ -413,7 +413,7 @@ ALE.citodnn <- function(model,
                         data = NULL,
                         type = "response",
                         K = 10,
-                        ALE_type = c("equidistant", "quantile"),
+                        ALE_type = c("quantile", "equidistant"),
                         plot=TRUE,
                         parallel = FALSE, ...){
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
@@ -485,7 +485,7 @@ ALE.citodnnBootstrap <- function(model,
                                  data = NULL,
                                  type = "response",
                                  K = 10,
-                                 ALE_type = c("equidistant", "quantile"),
+                                 ALE_type = c("quantile", "equidistant"),
                                  plot=TRUE,
                                  parallel = FALSE,
                                  ...){
@@ -639,22 +639,35 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, type = "response"
           }
         }
       }else if ( ALE_type == "quantile"){
+        reduced_K <- FALSE
+        repeat{
+          quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
+          groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
+          groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
 
-        quants <- stats::quantile(data[,v],probs = seq(0,1,1/K))
-        groups <- lapply(c(2:(K+1)),function(i) return(which(data[,v] >= quants[i-1] & data[,v] < quants[i])))
-        groups[[length(groups)]] <- c(groups[[length(groups)]],which.max(data[,v]))
+          lens = sapply(groups, length)
+          if(!any(lens == 0)) {
 
-        df <- data.frame (
-          x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
-          y = unlist(lapply(seq_len(length(groups)), function(i){
-            perm_data <- data[groups[[i]],]
-            perm_data[,v] <- quants[i]
-            lower_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
-            perm_data[,v] <- quants[i+1]
-            upper_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
-            return(mean(upper_preds - lower_preds))
-          })))
+            df <- data.frame (
+              x = unlist(lapply(c(2:(K+1)), function(i)  return(unname((quants[i]+quants[i-1])/2)))),
+              y = unlist(lapply(seq_len(length(groups)), function(i){
+                perm_data <- data[groups[[i]],]
+                perm_data[,v] <- quants[i]
+                lower_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
+                perm_data[,v] <- quants[i+1]
+                upper_preds <- stats::predict(model, perm_data,type = type, ...)[,n_output,drop=FALSE]
+                return(mean(upper_preds - lower_preds))
+              })))
+            if(reduced_K){
+              if(verbose) message(paste0("Number of Neighborhoods reduced to ",K))
+            }
+            break
 
+          } else {
+            K <- K - 1
+            reduced_K <- TRUE
+          }
+        }
       }
       for ( i in seq_len(nrow(df))[-1]){
         df$y[i]<- df$y[i-1]+df$y[i]

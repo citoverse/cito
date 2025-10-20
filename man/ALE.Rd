@@ -24,7 +24,7 @@ ALE(
   data = NULL,
   type = "response",
   K = 10,
-  ALE_type = c("equidistant", "quantile"),
+  ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
   parallel = FALSE,
   ...
@@ -36,7 +36,7 @@ ALE(
   data = NULL,
   type = "response",
   K = 10,
-  ALE_type = c("equidistant", "quantile"),
+  ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
   parallel = FALSE,
   ...
@@ -53,7 +53,7 @@ ALE(
 
 \item{K}{number of neighborhoods original feature space gets divided into}
 
-\item{ALE_type}{method on how the feature space is divided into neighborhoods.}
+\item{ALE_type}{method on how the feature bins are created for the neighborhoods.}
 
 \item{plot}{plot ALE or not}
 

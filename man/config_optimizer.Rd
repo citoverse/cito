@@ -5,7 +5,7 @@
 \title{Creation of customized optimizer objects}
 \usage{
 config_optimizer(
-  type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd"),
+  type = c("adam", "adadelta", "adagrad", "rmsprop", "rprop", "sgd", "ignite_adam"),
   verbose = FALSE,
   ...
 )

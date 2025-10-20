@@ -347,7 +347,7 @@ nn.fit<- dnn(Sepal.Length~.,
              verbose = FALSE,
              custom_parameters = list(scale = 1.0)
 )
-nn.fit$parameters$scale
+nn.fit$loss$parameters$scale
 
 ## Multivariate normal likelihood with parametrized covariance matrix
 ## Sigma = L*L^t + D
@@ -379,6 +379,8 @@ as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
 
 }
 }
+
+
 }
 \seealso{
 \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},
