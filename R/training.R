@@ -11,13 +11,14 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
   model$hooks_result = list()
 
   ### Optimizer ###
-  if(init_optimizer) {
+  #if(init_optimizer) {
+  # always reinitiliaze optimizer, otherwise tensors will be disconnected from optimizer because of device mvs. (see below)
     optimizer <- get_optimizer(optimizer = model$training_properties$optimizer,
                                parameters = c(model$net$parameters, model$loss$parameters),
                                lr = model$training_properties$lr)
-  } else {
-    optimizer = model$optimizer # TODO check that optimizer exists
-  }
+  #} else {
+    #optimizer = model$optimizer # TODO check that optimizer exists
+  #}
   ### LR Scheduler ###
   scheduler <- NULL
   if(!is.null(model$training_properties$lr_scheduler)){
@@ -174,23 +175,23 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     if(!is.null(valid_dl)) {
       if(model$losses$valid_l[epoch] < best_val_loss) {
         best_val_loss = model$losses$valid_l[epoch]
-        model$net$to(device = "cpu")
-        model$loss$to(device = "cpu")
+        # model$net$to(device = "cpu") # do not move object back to cpu during training, otherwise tensors will be disconnected from optimizer!!!
+        # model$loss$to(device = "cpu")
         model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
         model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
-        model$net$to(device = device)
-        model$loss$to(device = device)
+        # model$net$to(device = device)
+        # model$loss$to(device = device)
         counter = 0
       }
     } else {
       if(model$losses$train_l[epoch] < best_train_loss) {
         best_train_loss = model$losses$train_l[epoch]
-        model$net$to(device = "cpu")
-        model$loss$to(device = "cpu")
+        # model$net$to(device = "cpu")
+        # model$loss$to(device = "cpu")
         model$best_epoch_net_state_dict <- torch::torch_serialize(model$net$state_dict())
         model$best_epoch_loss_state_dict <- torch::torch_serialize(model$loss$state_dict())
-        model$net$to(device = device)
-        model$loss$to(device = device)
+        # model$net$to(device = device)
+        # model$loss$to(device = device)
         counter = 0
       }
     }
