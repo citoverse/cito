@@ -443,7 +443,7 @@ ALE.citodnn <- function(model,
     variable = variable[!is_categorical]
   }
   p_ret <- sapply (variable,function(v){
-    results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, type = type, ...)
+    results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, type = type,...)
 
     results[sapply(results, is.null)] = NULL
 
@@ -838,12 +838,16 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
 #' To obtain uncertainties for these effects, enable the bootstrapping option in the `dnn(..)` function (see example).
 #'
 #' @param object object of class \code{citodnn}
+#' @param method Calculate the conditional effects analytically or via the finite difference
+#' @param subsample subsample data to decrease computational runtime, must be either FALSE or in the range of [0,1]
 #' @param interactions calculate interactions or not (computationally expensive)
 #' @param epsilon difference used to calculate derivatives
 #' @param device which device
 #' @param indices of variables for which the ACE are calculated
 #' @param data data which is used to calculate the ACE
+#' @param batchsize batchsize
 #' @param type ACE on which scale (response or link)
+#' @param return_vars return variances of variables (internally required)
 #' @param ... additional arguments that are passed to the predict function
 #'
 #' @return an S3 object of class \code{"conditionalEffects"} is returned.
@@ -864,48 +868,92 @@ conditionalEffects = function(object, interactions=FALSE, epsilon = 0.1, device 
 
 #' @rdname conditionalEffects
 #' @export
-conditionalEffects.citodnn =  function(object, interactions=FALSE, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = NULL, data = NULL, type = "response",...) {
-  if(is.null(data)) {
-    data = object$data$data
-    resp = object$data$Y
+conditionalEffects.citodnn =  function(object,
+                                       method = c("analytical", "finite"),
+                                       subsample = FALSE,
+                                       interactions=FALSE,
+                                       epsilon = 0.1,
+                                       device = c("cpu", "cuda", "mps"),
+                                       indices = NULL,
+                                       data = NULL,
+                                       batchsize = NULL,
+                                       type = "response",
+                                       return_vars = FALSE,
+                                       ...) {
+
+  method = match.arg(method)
+
+  if(method == "finite") {
+
+    if(is.logical(subsample)) {
+      indices_row = 1:nrow(object$data$X)
+    } else {
+      indices_row = sample.int(nrow(object$data$X), ceiling(subsample*nrow(object$data$X)))
+    }
+
+    if(is.null(data)) {
+      data = object$data$data
+      resp = object$data$Y
+    }
+    device <- match.arg(device)
+
+    object = check_model(object)
+    Y_name = as.character( object$call$formula[[2]] )
+    data = data[indices_row,-which( colnames(data) %in% Y_name), drop=FALSE]
+    # var_names = c(Y_name, colnames(data))
+
+    out = NULL
+
+    if(is.null(indices)) {
+      vars = get_var_names(object$training_properties$formula, object$data$data[1,])
+      indices = which(colnames(data) %in% vars[!sapply(data[,vars], is.factor)], arr.ind = TRUE)
+    }
+
+    for(n_prediction in 1:object$model_properties$output) {
+      result = ACE(
+        data = data,
+        predict_f = function(model, newdata) {
+          df = data.frame(newdata)
+          colnames(df) = colnames(data)
+          return(stats::predict(model, df, device = device, type = type, ...)[,n_prediction])
+        },
+        model = object, obs_level = TRUE,
+        interactions=interactions,
+        epsilon = epsilon,
+        max_indices = indices
+      )
+      tmp = list()
+      tmp$result = result
+      tmp$mean = apply(result, 2:3, mean)
+      colnames(tmp$mean) = colnames(data)[indices]
+      rownames(tmp$mean) = colnames(data)[indices]
+      tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
+      tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
+      tmp$interactions = interactions
+      out[[n_prediction]] = tmp
+    }
+
+  } else {
+   res =
+    ACEanalytical(object,
+                  interactions=interactions,
+                  subsample = subsample,
+                  device = device,
+                  indices = indices,
+                  data = data,
+                  batchsize = batchsize,
+                  type = type,
+                  return_vars)
+   out = list()
+   if(type == "response") {
+     out = res[[2]]
+   } else {
+     out = res[[1]]
+   }
+
   }
-  device <- match.arg(device)
+  if(return_vars) out$vars = res$vars
 
-  object = check_model(object)
-  Y_name = as.character( object$call$formula[[2]] )
-  data = data[,-which( colnames(data) %in% Y_name), drop=FALSE]
-  # var_names = c(Y_name, colnames(data))
-
-  out = NULL
-
-  if(is.null(indices)) {
-    vars = get_var_names(object$training_properties$formula, object$data$data[1,])
-    indices = which(colnames(data) %in% vars[!sapply(data[,vars], is.factor)], arr.ind = TRUE)
-  }
-
-  for(n_prediction in 1:object$model_properties$output) {
-    result = ACE(
-      data = data,
-      predict_f = function(model, newdata) {
-        df = data.frame(newdata)
-        colnames(df) = colnames(data)
-        return(stats::predict(model, df, device = device, type = type, ...)[,n_prediction])
-      },
-      model = object, obs_level = TRUE,
-      interactions=interactions,
-      epsilon = epsilon,
-      max_indices = indices
-    )
-    tmp = list()
-    tmp$result = result
-    tmp$mean = apply(result, 2:3, mean)
-    colnames(tmp$mean) = colnames(data)[indices]
-    rownames(tmp$mean) = colnames(data)[indices]
-    tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
-    tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
-    tmp$interactions = interactions
-    out[[n_prediction]] = tmp
-  }
   class(out) = "conditionalEffects"
   return(out)
 }
@@ -915,26 +963,263 @@ conditionalEffects.citodnn =  function(object, interactions=FALSE, epsilon = 0.1
 #' @export
 conditionalEffects.citodnnBootstrap = function(object, interactions=FALSE, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = NULL, data = NULL, type = "response",...) {
 
-  pb = progress::progress_bar$new(total = length(object$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
-  results_boot = list()
+  if(is.null(object$conditional_effects)) {
 
-  for(b in 1:length(object$models)) {
-    model_indv = object$models[[b]]
-    condEffs = conditionalEffects(model_indv, interactions=interactions, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = indices, data = data, type = type,...)
-    pb$tick()
-    results_boot[[b]] = condEffs
+    pb = progress::progress_bar$new(total = length(object$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
+    results_boot = list()
+
+    for(b in 1:length(object$models)) {
+      model_indv = object$models[[b]]
+      condEffs = conditionalEffects(model_indv, interactions=interactions, epsilon = 0.1, device = c("cpu", "cuda", "mps"), indices = indices, data = data, type = type,...)
+      pb$tick()
+      results_boot[[b]] = condEffs
+    }
+    out = list()
+
+    out$mean = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$mean), along = 0L), 2:3, mean))
+    out$se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$mean), along = 0L), 2:3, stats::sd))
+    out$abs = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$abs), along = 0L), 2:3, mean))
+    out$abs_se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$abs), along = 0L), 2:3, stats::sd))
+    out$sd = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$sd), along = 0L), 2:3, mean))
+    out$sd_se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$sd), along = 0L), 2:3, stats::sd))
+    class(out) = "conditionalEffectsBootstrap"
+  } else {
+
   }
-  out = list()
-
-  out$mean = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$mean), along = 0L), 2:3, mean))
-  out$se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$mean), along = 0L), 2:3, stats::sd))
-  out$abs = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$abs), along = 0L), 2:3, mean))
-  out$abs_se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$abs), along = 0L), 2:3, stats::sd))
-  out$sd = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$sd), along = 0L), 2:3, mean))
-  out$sd_se = lapply(1:length(results_boot[[1]]), function(i) apply(abind::abind(lapply(results_boot, function(r) r[[i]]$sd), along = 0L), 2:3, stats::sd))
-  class(out) = "conditionalEffectsBootstrap"
   return(out)
 }
+
+# interactions=FALSE
+# subsample = FALSE
+# device = "cpu"
+# indices = NULL
+# data = NULL
+# batchsize = NULL
+# type = "response"
+# return_vars = FALSE
+
+ACEanalytical = function(object,
+                         interactions=FALSE,
+                         subsample = FALSE,
+                         device = c("cpu", "cuda", "mps"),
+                         indices = NULL,
+                         data = NULL,
+                         batchsize = NULL,
+                         type = "response",
+                         return_vars = FALSE) {
+
+  device = match.arg(device)
+  object <- check_model(object)
+  device <- check_device(device)
+  object$net$to(device = device)
+  object$loss$to(device = device)
+  object$net$eval()
+
+  Z = NULL
+
+  if(is.null(data)){
+
+    if(is.logical(subsample)) {
+      indices_row = 1:nrow(object$data$X)
+    } else {
+      indices_row = sample.int(nrow(object$data$X), ceiling(subsample*nrow(object$data$X)))
+    }
+
+    sample_names <- rownames(object$data$X)[indices_row]
+    X = torch::torch_tensor(object$data$X)[indices_row]
+    if(!is.null(object$model_properties$embeddings)) {
+      Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long())[indices_row]
+    }
+  } else {
+
+    if(is.logical(subsample)) {
+      indices_row = 1:nrow(data)
+    } else {
+      indices_row = sample.int(nrow(data), ceiling(subsample*nrow(object$data$X)))
+    }
+
+    sample_names <- rownames(data)
+    if(is.data.frame(data)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data, xlev = object$data$xlvls)[,-1,drop=FALSE])[indices_row]
+    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(data), xlev = object$data$xlvls)[,-1,drop=FALSE])[indices_row]
+
+    if(!is.null(object$model_properties$embeddings)) {
+      tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
+        if(!is.factor(data[[term]])) stop(paste0(term, " must be factor."))
+        #TODO: check if newdata[[term]] has the same factor levels as object$data[[term]]
+        data[[term]] |> as.integer()
+      }) )
+      Z = torch::torch_tensor(tmp, dtype = torch::torch_long())[indices_row]
+    }
+  }
+
+
+  if(is.null(indices)) {
+    if(!length(object$data$xlvls) == 0) {
+      cat_vars_lvls = lapply(1:length(object$data$xlvls), function(i) sapply(object$data$xlvls[[i]], function(j) paste0(names(object$data$xlvls)[i],j, collapse = "")) ) |> unlist()
+      cont_indices = which(!colnames(object$data$X) %in% cat_vars_lvls, arr.ind = TRUE)
+      cat_indices = which(colnames(object$data$X) %in% cat_vars_lvls, arr.ind = TRUE)
+    } else {
+      cont_indices = 1:ncol(object$data$X)
+      cat_indices = NULL
+    }
+  } else {
+    tmp_indices = 1:ncol(object$data$X)
+    cont_indices = indices
+    cat_indies = which(!tmp_indices %in% indices, arr.ind = TRUE)
+    if(length(cat_indices) == 0) {
+      cat_indices = NULL
+    }
+  }
+
+  if(is.null(batchsize)) batchsize = object$training_properties$batchsize
+  #Y_torch <- object$loss$format_Y(object$data$Y)
+  if(is.null(Z)) {
+    dl <- get_data_loader(X, batch_size = batchsize, shuffle = FALSE)
+  } else {
+    dl <- get_data_loader(X, Z, batch_size = batchsize, shuffle = FALSE)
+  }
+
+  if(return_vars) {
+    var_vars = as.numeric(X[,cont_indices]$var(1))
+  }
+
+  grads = list()
+  grads_response = list()
+
+  if(inherits(object$loss, c("mean squared error loss","gaussian loss","mean absolute error loss" ))) {
+    skip_response = TRUE
+  } else {
+    skip_response = FALSE
+  }
+  coro::loop(for(b in dl) {
+
+    Xb = b[[1]]$to(device = device, non_blocking = TRUE)
+    #Yb = b[[2]]$to(device = device, non_blocking = TRUE)
+    if(!is.null(Z)) { Zb = b[[2]]$to(device = device, non_blocking = TRUE) }
+
+    if(!is.null(cat_indices)) {
+      Xconst = torch::torch_zeros_like(Xb)
+      Xconst[,cat_indices] =Xconst[,cat_indices] + Xb[,cat_indices]
+      Xgrad = torch::torch_tensor(Xb[, cont_indices,drop=FALSE], requires_grad = TRUE, device = Xb$device, dtype = Xb$dtype)
+      if(length(cont_indices) > 1) {Xconst[,cont_indices] = Xconst[,cont_indices] + Xgrad
+      } else{ Xconst[,cont_indices] = Xconst[,cont_indices] + Xgrad[,1] }
+
+    } else {
+      Xconst = torch::torch_zeros_like(Xb)
+      Xgrad = torch::torch_tensor(Xb[, cont_indices,drop=FALSE], requires_grad = TRUE, device = Xb$device, dtype = Xb$dtype)
+      if(length(cont_indices) > 1) {Xconst[,cont_indices] = Xconst[,cont_indices] + Xgrad
+      } else{ Xconst[,cont_indices] = Xconst[,cont_indices] + Xgrad[,1] }
+    }
+
+    pred =
+      if(is.null(Z)) {
+        object$net$forward(Xconst)
+      } else {
+        object$net$forward(Xconst, Zb)
+      }
+    # response
+    pred_response = object$loss$invlink(pred)
+
+    tmp_results =
+      lapply(1:object$model_properties$output, function(R) {
+        grads_response_inter = grads_inter = NULL
+
+        grads_b = torch::autograd_grad(pred[,R,drop=F], Xgrad, grad_outputs = torch::torch_ones_like(Xgrad)/Xgrad$shape[2], retain_graph = TRUE, create_graph = TRUE)[[1]]
+        if(skip_response) {
+          grads_response_b = grads_b
+        } else {
+          grads_response_b = torch::autograd_grad(pred_response[,R,drop=F], Xgrad, grad_outputs = torch::torch_ones_like(Xgrad)/Xgrad$shape[2], retain_graph = TRUE, create_graph = TRUE)[[1]]
+        }
+
+        if(interactions) {
+
+          if(type == "link") {
+            grads_inter = lapply(1:nrow(grads_b), function(j) sapply(1:length(cont_indices), function(i) as.matrix(torch::autograd_grad(grads_b[j,i], Xgrad, retain_graph = TRUE)[[1]])[j,]))
+            grads_inter = abind::abind(grads_inter, along = -1L)/2.0
+            #grads_interactions = abind::abind(grads_interactions, grads_response_inter, along = 1)
+          }
+
+          if(type == "response") {
+            if(skip_response & !is.null(grads_inter)) {
+              grads_response_inter = grads_inter
+            } else {
+              grads_response_inter = lapply(1:nrow(grads_response_b), function(j) sapply(1:length(cont_indices), function(i) as.matrix(torch::autograd_grad(grads_response_b[j,i], Xgrad, retain_graph = TRUE)[[1]])[j,]))
+              grads_response_inter = abind::abind(grads_response_inter, along = -1L)/2.0
+              #grads_interactions_response = abind::abind(grads_interactions_response, grads_response_inter, along = 1)
+            }
+          }
+        }
+
+        return(list(as.matrix(grads_b), as.matrix(grads_response_b),grads_inter, grads_response_inter))
+      })
+
+    grads_b = lapply(1:object$model_properties$output, function(R) {
+
+      grads_b_diag = lapply(1:nrow(tmp_results[[R]][[1]]), function(i) {
+
+        if(interactions && (type == "link")) d = tmp_results[[R]][[3]][i,,]
+        else d = matrix(NA, length(cont_indices), length(cont_indices))
+        diag(d) = tmp_results[[R]][[1]][i,]
+        d
+      })
+      return(abind::abind(grads_b_diag, along = -1))
+    })
+
+    grads_response_b = lapply(1:object$model_properties$output, function(R) {
+
+      grads_response_b_diag = lapply(1:nrow(tmp_results[[R]][[2]]), function(i) {
+        if(interactions && (type == "response")) d = tmp_results[[R]][[4]][i,,]
+        else d = matrix(NA, length(cont_indices), length(cont_indices))
+        diag(d) = tmp_results[[R]][[2]][i,]
+        d
+      })
+      return(abind::abind(grads_response_b_diag, along = -1))
+    })
+    grads = append(grads, abind::abind(grads_b, along = -1) |> list())
+    grads_response = append(grads_response, abind::abind(grads_response_b, along = -1) |> list())
+
+  })
+
+  ce = abind::abind(grads, along = 2L) |> asplit(MARGIN = 1L)
+  ce_response = abind::abind(grads_response, along = 2L)|> asplit(MARGIN = 1L)
+
+  out = list()
+  for(n_prediction in 1:object$model_properties$output) {
+    result = ce[[n_prediction]]
+    tmp = list()
+    tmp$result = result
+    tmp$mean = apply(result, 2:3, mean)
+    colnames(tmp$mean) = colnames(object$data$X)[cont_indices]
+    rownames(tmp$mean) = colnames(object$data$X)[cont_indices]
+    tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
+    tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
+    tmp$interactions = interactions
+    out[[n_prediction]] = tmp
+  }
+
+  out_response = list()
+  for(n_prediction in 1:object$model_properties$output) {
+    result = ce_response[[n_prediction]]
+    tmp = list()
+    tmp$result = result
+    tmp$mean = apply(result, 2:3, mean)
+    colnames(tmp$mean) = colnames(object$data$X)[cont_indices]
+    rownames(tmp$mean) = colnames(object$data$X)[cont_indices]
+    tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
+    tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
+    tmp$interactions = interactions
+    out_response[[n_prediction]] = tmp
+  }
+
+  out = list(out, out_response)
+
+  if(return_vars) {
+    out$vars = var_vars
+  }
+
+  return(out)
+}
+
 
 
 

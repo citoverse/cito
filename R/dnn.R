@@ -30,6 +30,7 @@
 #' @param bootstrap_blocking_variable variable/vector that will be used for blocked bootstrapping (should be a factor)
 #' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param hooks list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)
+#' @param ce calculate conditional effects at the end or not
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
@@ -200,6 +201,7 @@ dnn <- function(formula = NULL,
                 bootstrap_blocking_variable = NULL,
                 tuning = config_tuning(),
                 hooks = NULL,
+                ce = TRUE,
                 X = NULL,
                 Y = NULL) {
 
@@ -218,7 +220,7 @@ dnn <- function(formula = NULL,
   checkmate::qassert(shuffle, "B1")
   checkmate::qassert(early_stopping, "N1[1,]")
   checkmate::qassert(burnin, "N1[1,]")
-  checkmate::qassert(baseloss, c("0", "N1"))
+  checkmate::qassert(baseloss, c("0", "N1", "B1"))
   checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
@@ -389,6 +391,32 @@ dnn <- function(formula = NULL,
 
     out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
+
+    # calculate ce at the end...better to have them directly, let's set a cut-off for the observations to keep the computational load low
+
+    dims_data = dim(out$data$X)
+    if(dims_data[1] > 5000) subsample =  5000/dims_data[1]
+    else subsample = FALSE
+
+    if(ce) {
+      ce =
+        ACEanalytical(out,
+                      interactions=FALSE, # if the unsers wants them, they must be calculated afterwards using the conditionalEffects function, too expensive to calculate here!
+                      subsample = subsample,
+                      device = device_old,
+                      indices = NULL, # just for all numerical variables
+                      data = NULL,
+                      batchsize = batchsize,
+                      return_vars = TRUE) # type does not matter, will be calculate
+
+      out$conditional_effects = list(
+        link = ce[[1]],
+        response = ce[[2]],
+        vars = ce$vars
+      )
+    }
+
+
   } else {
     out <- list()
     class(out) <- "citodnnBootstrap"
@@ -546,25 +574,50 @@ residuals.citodnn <- function(object,...){
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
 #' @param n_permute number of permutations performed for the feature importance. Default is 10, where n euqals then number of samples in the training set.
+#' @param importance importance based on ce (exact) or on permutation importance (computationally expensive)
 #' @param device for calculating variable importance and conditional effects
 #' @param adjust_se adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )
 #' @param type on what scale should the average conditional effects be calculated ("response" or "link")
 #' @param ... additional arguments to
 #' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
 #' @export
-summary.citodnn <- function(object, n_permute = 10L, device = NULL, type = "response", ...){
+summary.citodnn <- function(object, importance = c("permutation", "ce"), n_permute = 10L, device = NULL, type = "response", ...){
   object <- check_model(object)
   out <- list()
+  importance = match.arg(importance)
   class(out) <- "summary.citodnn"
+  if(type == "response") out$conditionalEffects = object$conditional_effects$response
+  else out$conditionalEffects = object$conditional_effects$link
   if(is.null(device)) device = object$training_properties$device
-  out$importance <- get_importance(object, n_permute, device, ...)
-  if(!is.null(out$importance)) for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
-  out$conditionalEffects = conditionalEffects(object, device = device, type = type)
+  if(importance == "permutation") {
+    out$importance <- get_importance(object, n_permute, device, ...)
+  } else {
+    ce = out$conditionalEffects
+    col_names = colnames(ce[[1]]$mean)
+    ce = abind::abind(lapply(1:length(ce), function(i) ce[[i]]$result), along = -1)
+    ce = apply(ce, 2:4, sum)
+    ce = apply(ce, 1, diag)
+    if(is.vector(ce)) ce = matrix(ce, nrow = 1L)
+    ce = t(ce)
+    imps = colMeans(ce**2)
+    imps = imps*object$conditional_effects$vars
+    imps = imps / sum(imps)
+    out$importance = data.frame(variable = col_names, importance_1 = imps)
+  }
+  if(!is.null(out$importance) && (importance == "permutation")) for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
+  #out$conditionalEffects = conditionalEffects(object, device = device, type = type)
   out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
-  if(!is.matrix(out$ACE )) out$ACE= matrix(out$ACE , ncol = 1L)
+  if(!is.matrix(out$ACE )) {
+    name_col = names(out$ACE)
+    out$ACE= matrix(out$ACE , nrow = 1L)
+    rownames(out$ACE) = name_col[1]
+  }
   colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
   out$ASCE = sapply(out$conditionalEffects, function(R) diag(R$sd))
-  if(!is.matrix(out$ASCE )) out$ASCE = matrix(out$ASCE , ncol = 1L)
+  if(!is.matrix(out$ASCE )) {
+    name_col = names(out$ASCE)
+    out$ASCE = matrix(out$ASCE , nrow = 1L)
+  }
   colnames(out$ASCE) = paste0("Response_", 1:ncol(out$ASCE))
   rownames(out$ASCE) = rownames(out$ACE)
   return(out)

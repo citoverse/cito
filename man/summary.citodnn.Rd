@@ -5,7 +5,14 @@
 \alias{summary.citodnnBootstrap}
 \title{Summarize Neural Network of class citodnn}
 \usage{
-\method{summary}{citodnn}(object, n_permute = 10L, device = NULL, type = "response", ...)
+\method{summary}{citodnn}(
+  object,
+  importance = c("permutation", "ce"),
+  n_permute = 10L,
+  device = NULL,
+  type = "response",
+  ...
+)
 
 \method{summary}{citodnnBootstrap}(
   object,
@@ -18,6 +25,8 @@
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}
+
+\item{importance}{importance based on ce (exact) or on permutation importance (computationally expensive)}
 
 \item{n_permute}{number of permutations performed for the feature importance. Default is 10, where n euqals then number of samples in the training set.}
 

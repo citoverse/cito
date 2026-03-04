@@ -253,18 +253,32 @@ visualize.training <- function(losses,epoch, main, new = FALSE, baseline = NULL)
                    ylab= "loss",
                    las = 1)
     if(!is.na(losses$valid_l[1])) {
-      graphics::legend("topright",legend= c("training","validation", "baseline"),
-                       col= c("#5B84B1FF","#FC766AFF", "#00c49aAA"),lty=1, cex=0.8,
-                       title="Line types", bg='white', bty = "n")
+      if(!is.logical(baseline))  {
+        graphics::legend("topright",legend= c("training","validation", "baseline"),
+                         col= c("#5B84B1FF","#FC766AFF", "#00c49aAA"),lty=1, cex=0.8,
+                         title="Line types", bg='white', bty = "n")
+      } else {
+        graphics::legend("topright",legend= c("training","validation"),
+                         col= c("#5B84B1FF","#FC766AFF"),lty=1, cex=0.8,
+                         title="Line types", bg='white', bty = "n")
+      }
     } else {
-      graphics::legend("topright",legend= c("training", "baseline"),
-                       col= c("#5B84B1FF","#00c49aAA"),lty=1, cex=0.8,
-                       title="Line types", bg='white', bty = "n")
+      if(!is.logical(baseline))  {
+        graphics::legend("topright",legend= c("training", "baseline"),
+                         col= c("#5B84B1FF","#00c49aAA"),lty=1, cex=0.8,
+                         title="Line types", bg='white', bty = "n")
+      } else {
+        graphics::legend("topright",legend= c("training"),
+                         col= c("#5B84B1FF"),lty=1, cex=0.8,
+                         title="Line types", bg='white', bty = "n")
+        }
+
+
 
     }
     graphics::points(x=c(1),y=c(losses$train_l[1]),pch=19, col="#5B84B1FF", lty=1)
     graphics::points(x=c(1),y=c(losses$valid_l[1]),pch=18, col="#FC766AFF", lty=1)
-    graphics::abline(h = baseline, col = "#00c49aAA", lwd = 1.8)
+    if(!is.logical(baseline)) graphics::abline(h = baseline, col = "#00c49aAA", lwd = 1.8)
     if(epoch > 1){
       for ( i in c(2:epoch)){
         graphics::lines(c(i-1,i), c(losses$train_l[i-1],losses$train_l[i]), pch=19, col="#5B84B1FF", type="b", lty=1)

@@ -34,6 +34,7 @@ dnn(
   bootstrap_blocking_variable = NULL,
   tuning = config_tuning(),
   hooks = NULL,
+  ce = TRUE,
   X = NULL,
   Y = NULL
 )
@@ -94,6 +95,8 @@ dnn(
 \item{tuning}{tuning options created with \code{\link{config_tuning}}}
 
 \item{hooks}{list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)}
+
+\item{ce}{calculate conditional effects at the end or not}
 
 \item{X}{Feature matrix or data.frame, alternative data interface}
 

@@ -14,6 +14,7 @@ ALE(
   K = 10,
   ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
+  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -26,6 +27,7 @@ ALE(
   K = 10,
   ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
+  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -38,6 +40,7 @@ ALE(
   K = 10,
   ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
+  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -56,6 +59,8 @@ ALE(
 \item{ALE_type}{method on how the feature bins are created for the neighborhoods.}
 
 \item{plot}{plot ALE or not}
+
+\item{center}{center ALE or not}
 
 \item{parallel}{parallelize over bootstrap models or not}
 
