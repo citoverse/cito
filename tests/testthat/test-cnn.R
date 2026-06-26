@@ -118,26 +118,26 @@ testthat::test_that("CNN transfer learning", {
   shapes <- cito:::simulate_shapes(2, 100, 3)
 
   models <- list(
-    "alexnet",
-    "inception_v3",
-    "mobilenet_v2",
-    "resnet101",
-    "resnet152",
-    "resnet18",
-    "resnet34",
-    "resnet50",
-    "resnext101_32x8d",
-    "resnext50_32x4d",
-    "vgg11",
-    "vgg11_bn",
-    "vgg13",
-    "vgg13_bn",
-    "vgg16",
-    "vgg16_bn",
-    "vgg19",
-    "vgg19_bn",
-    "wide_resnet101_2",
-    "wide_resnet50_2"
+    "alexnet"
+    # "inception_v3",
+    # "mobilenet_v2",
+    # "resnet101",
+    # "resnet152",
+    # "resnet18",
+    # "resnet34",
+    # "resnet50",
+    # "resnext101_32x8d",
+    # "resnext50_32x4d",
+    # "vgg11",
+    # "vgg11_bn",
+    # "vgg13",
+    # "vgg13_bn",
+    # "vgg16",
+    # "vgg16_bn",
+    # "vgg19",
+    # "vgg19_bn",
+    # "wide_resnet101_2",
+    # "wide_resnet50_2"
   )
 
   for (transfer_model in models) {

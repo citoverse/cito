@@ -23,6 +23,7 @@ dnn(
   batchsize = NULL,
   shuffle = TRUE,
   epochs = 100,
+  weights = NULL,
   early_stopping = Inf,
   burnin = Inf,
   baseloss = NULL,
@@ -74,9 +75,11 @@ dnn(
 
 \item{epochs}{epochs the training goes on for}
 
-\item{early_stopping}{if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.}
+\item{weights}{weights or other values (can be also a matrix) that the likelihood has access to}
 
-\item{burnin}{training is aborted if the trainings loss is not below the baseline loss after burnin epochs}
+\item{early_stopping}{if set to an integer, training stops when the loss has increased for the specified number of epochs in a row. The validation loss is used when a validation set is available, otherwise the training loss is used.}
+
+\item{burnin}{training is aborted if the training loss is not below the baseline loss after burnin epochs}
 
 \item{baseloss}{baseloss, if null baseloss corresponds to intercept only models}
 
@@ -94,9 +97,9 @@ dnn(
 
 \item{tuning}{tuning options created with \code{\link{config_tuning}}}
 
-\item{hooks}{list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)}
+\item{hooks}{list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)}
 
-\item{ce}{calculate conditional effects at the end or not}
+\item{ce}{whether to calculate the conditional effects after training}
 
 \item{X}{Feature matrix or data.frame, alternative data interface}
 
@@ -115,7 +118,7 @@ The list consists of the following attributes:
 \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
 \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
 \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
-\item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+\item{last_epoch_loss_state_dict}{Serialized state dict of loss from the last training epoch.}
 \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 }
@@ -144,18 +147,20 @@ See the troubleshooting vignette (\code{vignette("B-Training_neural_networks")})
 }
 
 \section{Loss functions / Likelihoods}{
-We support loss functions and likelihoods for different tasks:\tabular{lll}{
-   Name \tab Explanation \tab Example / Task \cr
-   mse \tab mean squared error \tab Regression, predicting continuous values \cr
-   mae \tab mean absolute error \tab Regression, predicting continuous values \cr
-   cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \cr
-   gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \cr
-   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \cr
-   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \cr
-   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \cr
-   mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \cr
-   multinomial \tab Multinomial likelihood \tab step selection in animal movement models \cr
-   clogit \tab conditional binomial \tab step selection in animal movement models \cr
+We support loss functions and likelihoods for different tasks:\tabular{llll}{
+   Name \tab Explanation \tab Example / Task \tab Data Type \cr
+   mse \tab mean squared error \tab Regression, predicting continuous values \tab \code{numeric} (vector, matrix, or data.frame) \cr
+   mae \tab mean absolute error \tab Regression, predicting continuous values \tab \code{numeric} (vector, matrix, or data.frame) \cr
+   cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \tab \code{factor} or \code{character} (vector, or 1-column matrix/data.frame) \cr
+   softmax \tab categorical cross entropy (deprecated alias for \code{cross-entropy}) \tab Multi-class, species classification \tab \code{factor} or \code{character} (vector, or 1-column matrix/data.frame) \cr
+   gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \tab \code{numeric} (vector, matrix, or data.frame) \cr
+   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \tab \code{factor}/\code{character} (vector or 1-column matrix/data.frame), or \code{integer} matrix/data.frame with exactly 2 columns (successes, failures) \cr
+   bernoulli \tab Bernoulli likelihood \tab Classification, binary (0/1) outcome per observation \tab \code{integer} (0/1 only), vector, matrix, or data.frame \cr
+   poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \tab \code{numeric} (vector, matrix, or data.frame); not enforced as integer \cr
+   nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \tab \code{numeric} (vector, matrix, or data.frame); not enforced as integer \cr
+   mvp \tab multivariate probit model \tab joint species distribution model, multi species (presence absence) \tab \code{integer} (0/1 only) matrix/data.frame with \eqn{\ge}2 columns; vectors/factors not accepted \cr
+   multinomial \tab Multinomial likelihood \tab step selection in animal movement models \tab \code{factor}/\code{character} (vector or 1-column matrix/data.frame), or \code{integer} matrix/data.frame with \eqn{\ge}2 columns \cr
+   clogit \tab conditional binomial \tab step selection in animal movement models \tab \code{factor}/\code{character} (vector or 1-column matrix/data.frame), or \code{integer} matrix/data.frame with \eqn{\ge}2 columns \cr
 }
 }
 
@@ -212,7 +217,6 @@ We have implemented experimental support for hyperparameter tuning. We can mark 
    dropout \tab \verb{dnn(…, dropout = tune())} \tab Dropout rate will be tuned (globally for all layers) \cr
    lr \tab \verb{dnn(…, lr = tune())} \tab Learning rate will be tuned \cr
    batchsize \tab \verb{dnn(…, batchsize = tune())} \tab batch size will be tuned \cr
-   epochs \tab \verb{dnn(…, batchsize = tune())} \tab batchsize will be tuned \cr
 }
 
 
@@ -238,6 +242,7 @@ Note: GPU training is optional, and the package can still be used for training o
 
 \examples{
 \donttest{
+
 if(torch::torch_is_installed()){
 library(cito)
 
@@ -294,7 +299,7 @@ nn.fit<- dnn(Species~.,
 analyze_training(nn.fit)
 
 ## Summary for xAI metrics (can take some time):
-summary(nn.fit)
+summary(nn.fit, importance = "permutation", type = "link")
 ## Now with standard errors and p-values
 ## Note: Take the p-values with a grain of salt! We do not know yet if they are
 ## correct (e.g. if you use regularization, they are likely conservative == too
@@ -379,11 +384,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
-
 }
 }
-
-
 }
 \seealso{
 \code{\link{predict.citodnn}}, \code{\link{plot.citodnn}},  \code{\link{coef.citodnn}},\code{\link{print.citodnn}}, \code{\link{summary.citodnn}}, \code{\link{continue_training}}, \code{\link{analyze_training}}, \code{\link{PDP}}, \code{\link{ALE}},

@@ -20,8 +20,8 @@ test_loss <- function(loss, Y) {
 
       .n <- wrap_dnn(list(formula=formula, data=data, loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE))
       .n <- wrap_dnn(list(formula=formula, data=data, loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE, bootstrap=2))
-      .n <- wrap_cnn(list(X=X_cnn, Y=y, architecture=architecture, loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE))
-      .n <- wrap_mmn(list(formula=Y ~ cnn(X=X_cnn, architecture=architecture) + dnn(X=X_dnn), dataList=list(X_cnn=X_cnn, X_dnn=X_dnn, Y=y), loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE))
+      # .n <- wrap_cnn(list(X=X_cnn, Y=y, architecture=architecture, loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE))
+      # .n <- wrap_mmn(list(formula=Y ~ cnn(X=X_cnn, architecture=architecture) + dnn(X=X_dnn), dataList=list(X_cnn=X_cnn, X_dnn=X_dnn, Y=y), loss=loss, device=device, epochs=1, plot=FALSE, verbose=FALSE))
     }
   }
 

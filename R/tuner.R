@@ -57,7 +57,7 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
 
 
 #' @import tibble
-tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_torch, loss, device) {
+tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tuning, Y_torch, loss, device) {
 
   parallel = tuning$parallel
   NGPU = tuning$NGPU
@@ -83,10 +83,10 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
   tune_df = tibble::tibble(steps = 1:steps, test = 0, train = 0, models =  NA)
   for(i in 1:length(tuner)) {
     if(names(tuner)[[i]] == "hidden") {
-      s = (lapply(1:steps, function(j) tuner[[i]]$sample()))
+      s = (lapply(1:steps, function(j) tuner[[i]]$sampler()))
       tune_df[["hidden"]] = s
     } else {
-      tune_df[[names(tuner)[i]]] = sapply(1:steps, function(j) tuner[[i]]$sample())
+      tune_df[[names(tuner)[i]]] = sapply(1:steps, function(j) tuner[[i]]$sampler())
     }
   }
 
@@ -120,6 +120,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
           #if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
           #else parameters$Y = Y[-cv]
           parameters$data = data[-cv,,drop=FALSE]
+          if(!is.null(weights)) parameters$weights = weights[-cv,,drop=FALSE]
           m = do.call(dnn, parameters)
 
           loss.fkt <- m$loss
@@ -131,8 +132,16 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
             break
           } else {
             pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
-            tune_df$test[i] = tune_df$test[i]+as.numeric(
-              loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv]$to(device = device))$sum()$cpu())
+            if(is.null(weights)) {
+              tune_df$test[i] = tune_df$test[i]+as.numeric(
+                loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device),
+                         Y_torch[cv]$to(device = device))$sum()$cpu())
+            } else {
+              tune_df$test[i] = tune_df$test[i]+as.numeric(
+                loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device),
+                         Y_torch[cv]$to(device = device),
+                         torch::torch_tensor(weights, device = device)[cv,drop=FALSE])$sum()$cpu())
+            }
           }
         }
       pb$tick(tokens = list(hp = format_hp, test_loss = round(tune_df$test[i], digits = 3)))
@@ -187,7 +196,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
         #if(is.matrix(Y)) parameters$Y = Y[-cv,,drop=FALSE]
         #else parameters$Y = Y[-cv]
         parameters$data = data[-cv,,drop=FALSE]
-
+        if(!is.null(weights)) parameters$weights = weights[-cv,,drop=FALSE]
 
         m = do.call(dnn, parameters)
 
@@ -201,8 +210,16 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
           break
         } else {
           pred = stats::predict(m, newdata = data[cv,,drop=FALSE], type = "response")
-          tune_df$test[i] = tune_df$test[i]+as.numeric(
-            loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv]$to(device = device))$sum()$cpu())
+          if(is.null(weights)) {
+            tune_df$test[i] = tune_df$test[i]+as.numeric(
+              loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device), Y_torch[cv]$to(device = device))$sum()$cpu())
+          } else {
+            tune_df$test[i] = tune_df$test[i]+as.numeric(
+              loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device),
+                       Y_torch[cv]$to(device = device),
+                       torch::torch_tensor(weights[cv], device = device)
+                       )$sum()$cpu())
+          }
         }
       }
       return(tune_df[i,])
@@ -216,6 +233,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, data, formula, tuning, Y_t
   #parameters$Y = Y
   #parameters$Z = Z
   parameters$data = data
+  parameters$weights = weights # reset to the full weights for the final model fit (was subset per CV fold above)
 
   parameters$bootstrap = tuning$bootstrap
   parameters$bootstrap_parallel = tuning$bootstrap_parallel

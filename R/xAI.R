@@ -4,43 +4,31 @@
 #'
 #'
 #' @param model a model created by \code{\link{dnn}}
-#' @param variable variable as string for which the PDP should be done. If none is supplied it is done for all variables.
-#' @param data specify new data PDP should be performed . If NULL, PDP is performed on the training data.
-#' @param ice Individual Conditional Dependence will be shown if TRUE
-#' @param resolution.ice resolution in which ice will be computed
-#' @param plot plot PDP or not
-#' @param parallel parallelize over bootstrap models or not
+#' @param variable variable (as a string) for which the PDP should be computed. If none is supplied, it is computed for all variables.
+#' @param data new data on which the PDP should be computed. If NULL, the PDP is computed on the training data.
+#' @param ice if TRUE, the Individual Conditional Expectation (ICE) curves are also shown
+#' @param resolution.ice resolution (number of grid points) at which the ICE curves are computed
+#' @param plot whether to plot the PDP
+#' @param parallel whether to parallelize over the bootstrap models
 #' @param ... arguments passed to \code{\link{predict}}
 #'
 #'
 #' @details
 #'
 #' # Description
-#' Performs a Partial Dependency Plot (PDP) estimation to analyze the relationship between a selected feature and the target variable.
+#' Performs a partial dependence plot (PDP) estimation to analyze the relationship between a selected feature and the model's predictions.
 #'
 #' The PDP function estimates the partial function \eqn{\hat{f}_S}{}:
 #'
 #' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 #'
-#' with a Monte Carlo Estimation:
+#' using a Monte Carlo estimation, i.e. it computes the average prediction over the data while the selected feature is held fixed at a given value and the remaining features are kept at their observed values.
 #'
-#' \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
-#' using a Monte Carlo estimation method. It calculates the average prediction of the target variable for different values of the selected feature while keeping other features constant.
+#' For categorical features, every observation is set to each level of the feature in turn, the average prediction per level is calculated, and the result is shown as a bar plot.
 #'
-#' For categorical features, all data instances are used, and each instance is set to one level of the categorical feature. The average prediction per category is then calculated and visualized in a bar plot.
+#' If `ice = TRUE`, the Individual Conditional Expectation (ICE) curves are also shown, with the PDP highlighted in yellow. Each ICE curve illustrates how the prediction for a single observation changes as the feature varies. ICE curves are computed on a value grid rather than at every observed feature value, and are not available for categorical features.
 #'
-#' If the `ice` parameter is set to `TRUE`, the Individual Conditional Expectation (ICE) curves are also shown. These curves illustrate how each individual data sample reacts to changes in the feature value. Please note that this option is not available for categorical features. Unlike PDP, the ICE curves are computed using a value grid instead of utilizing every value of every data entry.
-#'
-#' Note: The PDP analysis provides valuable insights into the relationship between a specific feature and the target variable, helping to understand the feature's impact on the model's predictions.
-#' If a categorical feature is analyzed, all data instances are used and set to each level.
-#' Then an average is calculated per category and put out in a bar plot.
-#'
-#' If ice is set to true additional the individual conditional dependence will be shown and the original PDP will be colored yellow.
-#' These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
-#' Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
-#'
-#'
-#' @return A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+#' @return A list of plots made with 'ggplot2', one for each selected variable.
 #' @seealso \code{\link{ALE}}
 #' @example /inst/examples/PDP-example.R
 #' @export
@@ -364,11 +352,13 @@ getPDP = function(model, data, K, v, ice = FALSE, resolution.ice,  perm_data , l
 #'
 #'
 #' @param model a model created by \code{\link{dnn}}
-#' @param variable variable as string for which the PDP should be done
-#' @param data data on which ALE is performed on, if NULL training data will be used.
+#' @param variable variable (as a string) for which the ALE should be computed. If none is supplied, it is computed for all variables.
+#' @param data data on which the ALE is computed; if NULL, the training data is used
 #' @param type ALE on which scale response or link, default is response
-#' @param K number of neighborhoods original feature space gets divided into
-#' @param ALE_type method on how the feature bins are created for the neighborhoods.
+#' @param analytical Analytical ALE based on conditional effects or not
+#' @param center center ALE or not (only available for analytical ALE)
+#' @param K number of neighborhoods the original feature space is divided into
+#' @param ALE_type method by which the feature bins (neighborhoods) are created
 #' @param plot plot ALE or not
 #' @param parallel parallelize over bootstrap models or not
 #' @param ... arguments passed to \code{\link{predict}}
@@ -401,6 +391,8 @@ ALE <- function(model,
                 variable = NULL,
                 data = NULL,
                 type = "response",
+                analytical = FALSE,
+                center = FALSE,
                 K = 10,
                 ALE_type = c("equidistant", "quantile"),
                 plot=TRUE,
@@ -412,6 +404,8 @@ ALE.citodnn <- function(model,
                         variable = NULL,
                         data = NULL,
                         type = "response",
+                        analytical = TRUE,
+                        center = FALSE,
                         K = 10,
                         ALE_type = c("quantile", "equidistant"),
                         plot=TRUE,
@@ -442,8 +436,12 @@ ALE.citodnn <- function(model,
     cat("Categorical features are not yet supported.\n")
     variable = variable[!is_categorical]
   }
+  if(analytical) {
+    predictions = stats::predict(model, data, type = type,...)
+  }
   p_ret <- sapply (variable,function(v){
-    results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, type = type,...)
+    if(!analytical) results = getALE(model = model, v = v, ALE_type = ALE_type, data = data, K = K, type = type,...)
+    else results = getALEce(model = model, v = v, data = data, type = type, predictions = predictions, center = center,...)
 
     results[sapply(results, is.null)] = NULL
 
@@ -484,6 +482,8 @@ ALE.citodnnBootstrap <- function(model,
                                  variable = NULL,
                                  data = NULL,
                                  type = "response",
+                                 analytical = TRUE,
+                                 center = FALSE,
                                  K = 10,
                                  ALE_type = c("quantile", "equidistant"),
                                  plot=TRUE,
@@ -522,8 +522,12 @@ ALE.citodnnBootstrap <- function(model,
         # cat("Categorical features are not yet supported.\n")
         variable = variable[!is_categorical]
       }
+      if(analytical) {
+        predictions = stats::predict(model, data, type = type,...)
+      }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, ALE_type = ALE_type,type = type, data = data, K = K, verbose = FALSE, ...)
+        if(!analytical) results = getALE(model = model_indv, v = v, ALE_type = ALE_type,type = type, data = data, K = K, verbose = FALSE, ...)
+        else results = getALEce(model = model_indv, v = v, type = type, data = data, verbose = FALSE, predictions = predictions,center = center,...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -540,7 +544,6 @@ ALE.citodnnBootstrap <- function(model,
       backend = parabar::start_backend(parallel)
       parabar::export(backend, ls(environment()), environment())
     }
-
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
     results_boot <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
       model_indv = model$models[[b]]
@@ -560,8 +563,12 @@ ALE.citodnnBootstrap <- function(model,
         # cat("Categorical features are not yet supported.\n")
         variable = variable[!is_categorical]
       }
+      if(analytical) {
+        predictions = stats::predict(model, data, type = type,...)
+      }
       p_ret <- sapply (variable,function(v){
-        results = getALE(model = model_indv, v = v, ALE_type = ALE_type, data = data, K = K, verbose = FALSE, ...)
+        if(!analytical) results = getALE(model = model_indv, v = v, ALE_type = ALE_type,type = type, data = data, K = K, verbose = FALSE, ...)
+        else results = getALEce(model = model_indv, v = v, type = type, data = data, verbose = FALSE, predictions = predictions, center = center,...)
         results[sapply(results, is.null)] = NULL
         return(results)
       })
@@ -598,6 +605,178 @@ ALE.citodnnBootstrap <- function(model,
     names(p_ret) = paste0(model$loss$responses, "_",names(p_ret))
   }
   return(invisible(p_ret))
+}
+
+
+
+
+# ALE_ce =function(X, ce, predictions = NULL, center = FALSE) {
+#   stopifnot(nrow(X) == nrow(ce), ncol(X) == ncol(ce))
+#   vars = colnames(X)
+#
+#   ales = lapply(seq_len(ncol(X)), function(j) {
+#     xj = X[, j]
+#     gj = ce[, j]
+#     ux = sort(unique(xj))
+#     if (length(ux) == 1L) {
+#       return(data.frame(
+#         x   = ux,
+#         ale = 0,
+#         var = if (!is.null(vars)) vars[j] else j
+#       ))
+#     }
+#     g_mean = vapply(ux, function(val) {
+#       idx = which(xj == val)
+#       mean(gj[idx], na.rm = TRUE)
+#     }, numeric(1))
+#
+#     dx = diff(ux)
+#     g_mid = (g_mean[-1] + g_mean[-length(g_mean)]) / 2
+#     increments = g_mid * dx
+#
+#     ale_vals = c(0, cumsum(increments)) #+ mean(predictions)
+#     if(!center) ale_vals = ale_vals - mean(ale_vals) + mean(predictions)
+#     else ale_vals = ale_vals - mean(ale_vals)
+#     data.frame(
+#       x   = ux,
+#       ale = ale_vals,
+#       var = if (!is.null(vars)) vars[j] else j
+#     )
+#   })
+#   do.call(rbind, ales)
+# }
+
+ale_weights <- function(xj, ux, weighted) {
+  if (isFALSE(weighted)) return(rep(1, length(ux)))     # unweighted -> equal
+  if (weighted == "frequency") {
+    w <- as.numeric(table(factor(xj, levels = ux)))      # degenerate for continuous
+  } else { # "density": meaningful for continuous, down-weights isolated tails
+    dens <- stats::density(xj)
+    w    <- stats::approx(dens$x, dens$y, xout = ux, rule = 2)$y
+    w[is.na(w) | w < 0] <- 0
+  }
+  if (sum(w) == 0) w <- rep(1, length(ux))
+  w / sum(w)
+}
+
+ale_curve_from_ce <- function(xj, gj, weighted = "density", trim = 0) {
+
+  keep <- rep(TRUE, length(xj))
+  if (trim > 0) {
+    qs   <- stats::quantile(xj, probs = c(trim, 1 - trim), na.rm = TRUE)
+    keep <- xj >= qs[1] & xj <= qs[2]
+    xj   <- xj[keep]
+    gj   <- gj[keep]
+  }
+
+  ux <- sort(unique(xj))
+  if (length(ux) == 1L) {
+    return(list(ux = ux, ale_vals = 0, w = 1, keep = keep))
+  }
+
+  # mean local derivative within each unique-x bin
+  g_mean   <- vapply(ux, function(val) mean(gj[xj == val], na.rm = TRUE), numeric(1))
+
+  # trapezoidal accumulation -> uncentered ALE curve on grid ux
+  dx       <- diff(ux)
+  g_mid    <- (g_mean[-1] + g_mean[-length(g_mean)]) / 2
+  ale_vals <- c(0, cumsum(g_mid * dx))
+
+  w <- ale_weights(xj, ux, weighted)
+
+  list(ux = ux, ale_vals = ale_vals, w = w, keep = keep)
+}
+
+
+
+
+# getALEce = function(model, ALE_type, data, ce = NULL, v, verbose = TRUE, type = "response", center = FALSE,predictions = NULL,...) {
+#   if(is.null(ce)) {
+#     ce = model$conditional_effects
+#   }
+#
+#   row_indices = ce$row_indices
+#
+#   if(is.null(predictions)) predictions = stats::predict(model, data[row_indices,,drop=FALSE], type = type,...)
+#   return(
+#     lapply(1:model$model_properties$output, function(n_output) {
+#       ce_tmp = ce[[type]][[n_output]]$result
+#       v_idx = which(v == rownames(ce[[type]][[n_output]]$mean), arr.ind = TRUE)
+#       xj = data[row_indices, v]
+#       gj = ce_tmp[, v_idx, v_idx]
+#       ux = sort(unique(xj))
+#       if (length(ux) == 1L) {
+#       df = data.frame(
+#           x   = ux,
+#           y = 0,
+#         )
+#       }
+#       g_mean = vapply(ux, function(val) {
+#         idx = which(xj == val)
+#         mean(gj[idx], na.rm = TRUE)
+#       }, numeric(1))
+#
+#       dx = diff(ux)
+#       g_mid = (g_mean[-1] + g_mean[-length(g_mean)]) / 2
+#       increments = g_mid * dx
+#
+#       ale_vals = c(0, cumsum(increments)) #+ mean(predictions)
+#       if(!center) ale_vals = ale_vals - mean(ale_vals) + mean(predictions[,n_output,drop=FALSE])
+#       else ale_vals = ale_vals - mean(ale_vals)
+#       df = data.frame(
+#         x   = ux,
+#         y = ale_vals
+#       )
+#
+#       #if(!is.null(model$data$ylvls)) {
+#       label = paste0(v," \U2192 ", model$loss$responses[n_output])
+#       # TODO model$data$responses[n_output]
+#       #} else {
+#       #  label = "ALE"
+#       #}
+#       return(list(df = df, label = label, data = data[,v], v = v))
+#     }))
+#
+# }
+
+getALEce = function(model, ALE_type, data, ce = NULL, v, verbose = TRUE,
+                    type = "response", center = FALSE, predictions = NULL,
+                    trim = 0, ...) {
+  if (is.null(ce)) ce = model$conditional_effects
+
+  row_indices = ce$row_indices
+
+  if (is.null(predictions)) predictions = stats::predict(model, data[row_indices, , drop = FALSE], type = type, ...)
+
+  return(
+    lapply(1:model$model_properties$output, function(n_output) {
+      ce_tmp = ce[[type]][[n_output]]$result
+      v_idx  = which(v == rownames(ce[[type]][[n_output]]$mean), arr.ind = TRUE)
+      xj     = data[row_indices, v]
+      gj     = ce_tmp[, v_idx, v_idx]
+
+      curve = ale_curve_from_ce(xj, gj, weighted = FALSE, trim = trim)
+      ux       = curve$ux
+      ale_vals = curve$ale_vals
+
+      if (length(ux) == 1L) {
+        df = data.frame(x = ux, y = 0)
+      } else {
+        # centering referenced to the SAME (trimmed) subset used for the curve
+        if (!center) {
+          pred_sub = predictions[curve$keep, n_output, drop = FALSE]
+          ale_vals = ale_vals - mean(ale_vals) + mean(pred_sub)
+        } else {
+          ale_vals = ale_vals - mean(ale_vals)
+        }
+        df = data.frame(x = ux, y = ale_vals)
+      }
+
+      label = paste0(v, " \U2192 ", model$loss$responses[n_output])
+      # NOTE: data returned for the rug is the trimmed feature, matching the curve
+      return(list(df = df, label = label, data = xj, v = v))
+    })
+  )
 }
 
 
@@ -685,7 +864,28 @@ getALE = function(model, ALE_type, data, K, v, verbose = TRUE, type = "response"
 
 
 
-get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", out_of_bag = FALSE, ...){
+get_importance<- function(model,
+                          n_permute= NULL,
+                          data = NULL,
+                          type = c("response", "link"),
+                          importance = c("permutation", "ce", "ale"),
+                          device = "cpu",
+                          out_of_bag = FALSE, ...){
+
+  type = match.arg(type)
+  importance = match.arg(importance)
+  model = check_model(model)
+  softmax = FALSE
+  loss = model$loss
+  if(inherits(loss, "cross-entropy loss")) softmax = TRUE
+  n_outputs = model$model_properties$output
+  if(softmax) n_outputs = 1
+
+  if(!model$conditional_effects$any && importance %in% c("ce", "ale")) {
+    importance = "permutation"
+  }
+
+  if(importance == "permutation") {
 
   if(out_of_bag) {
     model$data$data = model$data$original$data[-model$data$indices,]
@@ -695,87 +895,162 @@ get_importance<- function(model, n_permute= NULL, data = NULL, device = "cpu", o
   }
 
   if(is.null(n_permute)) n_permute <- ceiling(sqrt(nrow(model$data$data))*3)
-  model<- check_model(model)
-  softmax = FALSE
 
-  loss<- model$loss
+
+
 
   # if(!inherits(loss, c("cross-entropy loss", "mean squared error loss", "mean absolute error loss"))) {
   #   return(NULL)
   # }
 
-  if(inherits(loss, "cross-entropy loss")) softmax = TRUE
+
+    true = model$data$Y
+
+    if(softmax) true = torch::torch_tensor(true, dtype = torch::torch_long())$squeeze(2)
+    else true = torch::torch_tensor(true, dtype = torch::torch_float32())
 
 
+    out = NULL
 
-  true = model$data$Y
+    for(n_prediction in 1:n_outputs) {
 
-  if(softmax) true = torch::torch_tensor(true, dtype = torch::torch_long())$squeeze(2)
-  else true = torch::torch_tensor(true, dtype = torch::torch_float32())
+      if(n_outputs > 1) true_tmp = true[,n_prediction,drop=FALSE]
+      else true_tmp = true
 
-  n_outputs = model$model_properties$output
+      if(!softmax) org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)[,n_prediction,drop=FALSE]) ,true = true_tmp)$mean())
+      else org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)) ,true = true_tmp)$mean())
 
-  if(softmax) {
-    n_outputs = 1
-  }
+      importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
+                               importance = c(0))
 
-  out = NULL
+      for(i in seq_len(nrow(importance))){
 
-  for(n_prediction in 1:n_outputs) {
+        new_err <-c()
+        if(n_permute < ((nrow(model$data$data)**2)-1)){
+          for(k in seq_len(n_permute)){
 
-    if(n_outputs > 1) true_tmp = true[,n_prediction,drop=FALSE]
-    else true_tmp = true
+            perm_preds <- c()
 
-    if(!softmax) org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)[,n_prediction,drop=FALSE]) ,true = true_tmp)$mean())
-    else org_err <- as.numeric(loss( pred = torch::torch_tensor(stats::predict(model,model$data$data, type = "link", device = device, ...)) ,true = true_tmp)$mean())
+            perm_data <- model$data$data
+            perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = FALSE),importance$variable[i]]
 
-    importance <- data.frame(variable = get_var_names(model$training_properties$formula, model$data$data[1,]),
-                             importance = c(0))
-
-    for(i in seq_len(nrow(importance))){
-
-      new_err <-c()
-      if(n_permute < ((nrow(model$data$data)**2)-1)){
-        for(k in seq_len(n_permute)){
-
-          perm_preds <- c()
-
-          perm_data <- model$data$data
-          perm_data[, importance$variable[i]] <- perm_data[sample.int(n = nrow(perm_data),replace = FALSE),importance$variable[i]]
-
-          if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...)[,n_prediction,drop=FALSE])
-          else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...))
-
-          new_err <- append(new_err, as.numeric(loss(pred = torch::torch_tensor(perm_preds),
-                                                     true = true_tmp)$mean() ))
-
-
-        }
-      }else{
-        for(j in seq_len(nrow(model$data$data))){
-          perm_data <- model$data$data[j,]
-          for(k in seq_len(nrow(model$data$data))[-j]){
-            perm_data[i] <- model$data$data[k,i]
             if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...)[,n_prediction,drop=FALSE])
             else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...))
-            true <- append(true_tmp, model$data$Y[j])
+
+            new_err <- append(new_err, as.numeric(loss(pred = torch::torch_tensor(perm_preds),
+                                                       true = true_tmp)$mean() ))
+
+
+          }
+        }else{
+          for(j in seq_len(nrow(model$data$data))){
+            perm_data <- model$data$data[j,]
+            for(k in seq_len(nrow(model$data$data))[-j]){
+              perm_data[i] <- model$data$data[k,i]
+              if(!softmax) perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...)[,n_prediction,drop=FALSE])
+              else perm_preds <- rbind(perm_preds, stats::predict(model, perm_data, type = "link", device = device, ...))
+              true <- append(true_tmp, model$data$Y[j])
+            }
           }
         }
-      }
 
-      importance$importance[i] <- mean(new_err)/org_err
+        importance$importance[i] <- mean(new_err)/org_err
+
+      }
+      colnames(importance)[2] = paste0("importance_", n_prediction)
+      if(n_prediction > 1) importance = importance[,2,drop=FALSE]
+      out[[n_prediction]] = importance
 
     }
-    colnames(importance)[2] = paste0("importance_", n_prediction)
-    if(n_prediction > 1) importance = importance[,2,drop=FALSE]
-    out[[n_prediction]] = importance
 
+    return(do.call(cbind, out))
+
+  } else if(importance == "ale") {
+
+    return(get_importance_ale_var(model, data = data, type = type, weighted = "density"))
+
+  } else {
+    ce = model$conditional_effects[[type]]
+    col_names = colnames(ce[[1]]$mean)
+    ce = abind::abind(lapply(1:length(ce), function(i) ce[[i]]$result), along = -1)
+    ce = ce**2
+    if(n_outputs == 1) {
+      ce = apply(ce, 2:4, sum)
+      ce = apply(ce, 1, diag)
+      if(is.vector(ce)) ce = matrix(ce, nrow = 1L)
+      ce = t(ce)
+      ce = colMeans(ce)
+      imps = ce
+      imps = imps*model$conditional_effects$vars
+      out = data.frame(variable = col_names, importance_1 = imps)
+    } else {
+      out = data.frame(variable = col_names)
+      for(i in 1:n_outputs) {
+        ce_sub = ce[i,,,,drop=FALSE]
+        ce_sub = abind::adrop(ce_sub, drop = 1)
+        ce_sub = diag(apply(ce_sub, 2:3, mean))
+        if(is.vector(ce_sub)) ce_sub = matrix(ce_sub, nrow = 1L)
+        imps = t(ce_sub)
+        imps = imps*model$conditional_effects$vars
+        out[[paste0("importance_", i)]] = imps
+      }
+    }
+    #imps = imps / sum(imps)
+    return(out)
   }
-
-  return(do.call(cbind, out))
 }
 
+get_importance_ale_var <- function(model,
+                                   data = NULL,
+                                   type = "response",
+                                   weighted = "density",
+                                   trim = 0) {
 
+  if (is.null(model$conditional_effects) ||
+      isFALSE(model$conditional_effects$any)) {
+    stop("No conditional effects stored on the model; fit with conditional effects enabled.")
+  }
+  if (!isFALSE(weighted)) weighted <- match.arg(weighted, c("density", "frequency"))
+
+  if (is.null(data)) data <- model$data$data
+
+  ce       <- model$conditional_effects
+  ce_scale <- ce[[type]]
+  if (is.null(ce_scale)) stop(sprintf("No conditional effects stored for type = '%s'.", type))
+
+  row_indices <- ce$row_indices
+  n_output    <- model$model_properties$output
+  var_names   <- rownames(ce_scale[[1]]$mean)
+
+  out <- data.frame(variable = var_names, stringsAsFactors = FALSE)
+
+  for (n in seq_len(n_output)) {
+
+    ce_tmp <- ce_scale[[n]]$result          # obs x var x var
+
+    imps <- vapply(var_names, function(v) {
+
+      v_idx <- which(v == rownames(ce_scale[[n]]$mean))
+      xj    <- data[row_indices, v]
+      gj    <- ce_tmp[, v_idx, v_idx]        # per-obs df/dx_v (diagonal)
+
+      curve <- ale_curve_from_ce(xj, gj, weighted = weighted, trim = trim)
+      if (length(curve$ux) == 1L) return(0)
+
+      # distribution-weighted variance of the (uncentered) curve;
+      # centering is irrelevant: Var(ale - c) = Var(ale)
+      w  <- curve$w
+      mu <- sum(w * curve$ale_vals)
+      sum(w * (curve$ale_vals - mu)^2)
+
+    }, numeric(1))
+
+    out[[paste0("importance_", n)]] <- as.numeric(imps)
+  }
+
+  rownames(out) <- NULL
+  out
+}
 
 
 
@@ -839,7 +1114,7 @@ ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interact
 #'
 #' @param object object of class \code{citodnn}
 #' @param method Calculate the conditional effects analytically or via the finite difference
-#' @param subsample subsample data to decrease computational runtime, must be either FALSE or in the range of [0,1]
+#' @param subsample subsample data to decrease computational runtime, must be either FALSE or in the range of `[0,1]`
 #' @param interactions calculate interactions or not (computationally expensive)
 #' @param epsilon difference used to calculate derivatives
 #' @param device which device
@@ -1052,7 +1327,6 @@ ACEanalytical = function(object,
     }
   }
 
-
   if(is.null(indices)) {
     if(!length(object$data$xlvls) == 0) {
       cat_vars_lvls = lapply(1:length(object$data$xlvls), function(i) sapply(object$data$xlvls[[i]], function(j) paste0(names(object$data$xlvls)[i],j, collapse = "")) ) |> unlist()
@@ -1065,10 +1339,20 @@ ACEanalytical = function(object,
   } else {
     tmp_indices = 1:ncol(object$data$X)
     cont_indices = indices
-    cat_indies = which(!tmp_indices %in% indices, arr.ind = TRUE)
+    cat_indices = which(!tmp_indices %in% indices, arr.ind = TRUE)
     if(length(cat_indices) == 0) {
       cat_indices = NULL
     }
+  }
+
+  if(length(cont_indices) == 0) {
+    return(list(
+      link = list(),
+      response = list(),
+      vars = 0,
+      row_indices = 1,
+      any = FALSE
+    ))
   }
 
   if(is.null(batchsize)) batchsize = object$training_properties$batchsize
@@ -1216,6 +1500,9 @@ ACEanalytical = function(object,
   if(return_vars) {
     out$vars = var_vars
   }
+
+  out$row_indices = indices_row
+  out$any = TRUE
 
   return(out)
 }

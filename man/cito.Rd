@@ -41,6 +41,7 @@ Check out the vignettes for more details on training NN and how a typical workfl
 
 \examples{
 \donttest{
+
 if(torch::torch_is_installed()){
 library(cito)
 
@@ -97,7 +98,7 @@ nn.fit<- dnn(Species~.,
 analyze_training(nn.fit)
 
 ## Summary for xAI metrics (can take some time):
-summary(nn.fit)
+summary(nn.fit, importance = "permutation", type = "link")
 ## Now with standard errors and p-values
 ## Note: Take the p-values with a grain of salt! We do not know yet if they are
 ## correct (e.g. if you use regularization, they are likely conservative == too
@@ -182,11 +183,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
-
 }
 }
-
-
 }
 \seealso{
 Useful links:

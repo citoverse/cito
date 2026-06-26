@@ -62,7 +62,7 @@ conditionalEffects(
 
 \item{method}{Calculate the conditional effects analytically or via the finite difference}
 
-\item{subsample}{subsample data to decrease computational runtime, must be either FALSE or in the range of \link{0,1}}
+\item{subsample}{subsample data to decrease computational runtime, must be either FALSE or in the range of \verb{[0,1]}}
 
 \item{batchsize}{batchsize}
 

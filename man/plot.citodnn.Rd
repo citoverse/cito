@@ -5,12 +5,21 @@
 \alias{plot.citodnnBootstrap}
 \title{Creates graph plot which gives an overview of the network architecture.}
 \usage{
-\method{plot}{citodnn}(x, node_size = 1, scale_edges = FALSE, ...)
+\method{plot}{citodnn}(x, plot_type = c("ALE", "arch"), node_size = 1, scale_edges = FALSE, ...)
 
-\method{plot}{citodnnBootstrap}(x, node_size = 1, scale_edges = FALSE, which_model = 1, ...)
+\method{plot}{citodnnBootstrap}(
+  x,
+  plot_type = c("ALE", "arch"),
+  node_size = 1,
+  scale_edges = FALSE,
+  which_model = 1,
+  ...
+)
 }
 \arguments{
 \item{x}{a model created by \code{\link{dnn}}}
+
+\item{plot_type}{plot ALE or architecture}
 
 \item{node_size}{size of node in plot}
 

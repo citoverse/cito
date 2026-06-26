@@ -7,6 +7,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
   model$use_model_epoch <- "last"
   model$loaded_model_epoch <- "last"
 
+  has_weights = model$training_properties$has_weights
+
   hooks = model$training_properties$hooks
   model$hooks_result = list()
 
@@ -48,13 +50,25 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       optimizer$zero_grad()
 
       b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
-      if(inherits(model, "citommn")) {
-        output <- model$net(b[-length(b)])
+
+      weights <- if (has_weights) b[[length(b) - 1]] else NULL
+      inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
+      target = b[[length(b)]]
+
+      if (inherits(model, "citommn")) {
+        output <- model$net(inputs)
       } else {
-        if(inherits(model, "citodnn") && model$net$has_embeddings) output <- model$net(b[[1]], b[[2]])
-        else output <- model$net(b[[1]])
+        if (inherits(model, "citodnn") && model$net$has_embeddings)
+          output <- model$net(inputs[[1]], inputs[[2]])
+        else
+          output <- model$net(inputs[[1]])
       }
-      loss <- model$loss(output, b[[length(b)]])$mean()
+
+      loss <- if (has_weights) {
+        model$loss(output, target, weights = weights)$mean()
+      } else  {
+        model$loss(output, target)$mean()
+      }
 
       if(regularize){
         regularization_loss <- regularize_weights(parameters = model$net$parameters,
@@ -94,7 +108,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     model$losses$train_l[epoch] <- mean(train_l)
 
     if(epoch >= model$training_properties$burnin) {
-      if(model$losses$train_l[epoch] > model$training_properties$base_loss) {
+      if(model$losses$train_l[epoch] > model$training_properties$baseloss) {
         if(model$training_properties$verbose) cat("Cancel training because loss is still above baseline, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
         model$successfull = 0
         break
@@ -127,13 +141,22 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
 
       coro::loop(for (b in valid_dl) {
         b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
-        if(inherits(model, "citommn")) {
-          output <- model$net(b[-length(b)])
+
+        weights <- if (has_weights) b[[length(b) - 1]] else NULL
+        inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
+        target  <- b[[length(b)]]
+
+        if (inherits(model, "citommn")) {
+          output <- model$net(inputs)
         } else {
-          if(inherits(model, "citodnn") && model$net$has_embeddings) output <- model$net(b[[1]], b[[2]])
-          else output <- model$net(b[[1]])
+          if (inherits(model, "citodnn") && model$net$has_embeddings)
+            output <- model$net(inputs[[1]], inputs[[2]])
+          else
+            output <- model$net(inputs[[1]])
         }
-        loss <- model$loss(output, b[[length(b)]])$mean()
+
+        loss <- if (has_weights) model$loss(output, target, weights = weights)$mean()
+                else model$loss(output, target)$mean()
         valid_l <- c(valid_l, loss$item())
       })
       model$losses$valid_l[epoch] <- mean(valid_l)
@@ -352,7 +375,7 @@ analyze_training<- function(object){
                          xaxis = list(zeroline = FALSE),
                          yaxis = list(zeroline = FALSE,
                                       fixedrange = FALSE,
-                                      title = "Trainings loss"))
+                                      title = "Training loss"))
 
     return(fig)
   }
@@ -384,7 +407,7 @@ analyze_training<- function(object){
                          xaxis = list(zeroline = FALSE),
                          yaxis = list(zeroline = FALSE,
                                       fixedrange = FALSE,
-                                      title = "Trainings loss"))
+                                      title = "Training loss"))
     return(fig)
   }
 
@@ -461,7 +484,7 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "reduce_on_
                                     check_var = F, verbose = verbose)
     out$eps <- check_call_config(mc = mc, "eps", standards = formals(torch::lr_reduce_on_plateau),
                                  check_var = "R1", verbose = verbose)
-    out$threshold <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_reduce_on_plateau),
+    out$verbose <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_reduce_on_plateau),
                                        check_var = "B1", verbose = verbose)
 
 

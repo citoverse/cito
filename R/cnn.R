@@ -17,6 +17,7 @@
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
 #' @param epochs Number of epochs to train the model. Default is 100.
+#' @param weights weights or other values (can be also a matrix) that the likelihood has access to
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
 #' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
 #' @param baseloss Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.
@@ -36,7 +37,7 @@
 #' \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
 #' \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
 #' \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
-#' \item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+#' \item{last_epoch_loss_state_dict}{Serialized state dict of loss from the last training epoch.}
 #' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 #' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 #'
@@ -106,6 +107,7 @@ cnn <- function(X,
                 shuffle = TRUE,
                 data_augmentation = NULL,
                 epochs = 100,
+                weights = NULL,
                 early_stopping = Inf,
                 burnin = Inf,
                 baseloss = NULL,
@@ -127,7 +129,7 @@ cnn <- function(X,
   checkmate::qassert(epochs, "X1[0,)")
   checkmate::qassert(early_stopping, "N1[1,]")
   checkmate::qassert(burnin, "N1[1,]")
-  checkmate::qassert(baseloss, c("0", "N1"))
+  checkmate::qassert(baseloss, c("0", "N1", "B1"))
   checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
   checkmate::qassert(verbose, "B1")
@@ -182,6 +184,8 @@ cnn <- function(X,
 
   from_folder = FALSE
 
+  if(!is.null(weights)) weights = matrix(weights, nrow = ifelse(is.vector(Y), length(Y), nrow(Y)))
+
   if(is.character(X)) {
     X = list.files(X, full.names = TRUE)
     from_folder = TRUE
@@ -195,8 +199,7 @@ cnn <- function(X,
   if(!is.null(data_augmentation)) data_augmentation <- check_data_augmentation(data_augmentation)
 
   if(length(validation) == 1 && validation == 0) {
-    train_dl <- get_data_loader(X, Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
-    valid_dl <- NULL
+    valid <- NULL
   } else {
     n_samples <- dim(Y)[1]
     if(length(validation) > 1) {
@@ -205,10 +208,14 @@ cnn <- function(X,
     } else {
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     }
-    train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)
-    valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)
   }
+
+  weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
+  dls <- build_loaders(list(X), Y, weights = weights_torch, valid = valid,
+                       batch_size = batchsize, shuffle = shuffle,
+                       from_folder = from_folder, data_augmentation = data_augmentation)
+  train_dl <- dls$train_dl
+  valid_dl <- dls$valid_dl
 
   # TODO infer form the train_dl!
   input_shape <- dim(train_dl$dataset$.getbatch(1)[[1]])[-1] #dim(X)[-1]
@@ -236,14 +243,16 @@ cnn <- function(X,
                               baseloss = baseloss,
                               device = device_old,
                               plot = plot,
-                              verbose = verbose)
+                              verbose = verbose,
+                              has_weights = ifelse(is.null(weights), FALSE, TRUE))
 
   out <- list()
   class(out) <- "citocnn"
+  out$version = "1.2"
   out$net <- net
   out$call <- match.call()
   out$loss <- loss_obj
-  out$data <- list(X = X_old, Y = Y_old)
+  out$data <- list(X = X_old, Y = Y_old, weights = weights) # weights stored so continue_training() can reuse them
   if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
@@ -267,6 +276,7 @@ cnn <- function(X,
 #' }
 #' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.
 #' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
+#' @param return_embeddings Return embeddings instead of predictions
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 #'
@@ -277,6 +287,7 @@ predict.citocnn <- function(object,
                             type=c("link", "response", "class"),
                             device = NULL,
                             batchsize = NULL,
+                            return_embeddings = FALSE,
                             ...) {
 
   checkmate::assert(checkmate::checkNull(newdata), checkmate::checkCharacter(newdata),
@@ -326,15 +337,17 @@ predict.citocnn <- function(object,
 
   pred <- NULL
   coro::loop(for(b in dl) {
-    if(is.null(pred)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu"))
-    else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
+    if(is.null(pred)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), return_embeddings = return_embeddings))$to(device="cpu"))
+    else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), return_embeddings = return_embeddings))$to(device="cpu")))
   })
 
   if(!is.null(sample_names)) rownames(pred) <- sample_names
 
-  if(!is.null(object$loss$responses)) {
-    colnames(pred) <- object$loss$responses
-    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+  if(!return_embeddings) {
+    if(!is.null(object$loss$responses)) {
+      colnames(pred) <- object$loss$responses
+      if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+    }
   }
 
   return(pred)

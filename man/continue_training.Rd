@@ -19,6 +19,7 @@ continue_training(model, ...)
   init_optimizer = TRUE,
   X = NULL,
   Y = NULL,
+  weights = NULL,
   ...
 )
 
@@ -40,6 +41,7 @@ continue_training(model, ...)
   epochs = 32,
   X = NULL,
   Y = NULL,
+  weights = NULL,
   device = NULL,
   changed_params = NULL,
   init_optimizer = TRUE,
@@ -74,6 +76,8 @@ continue_training(model, ...)
 \item{X}{Predictor data. If not provided X from original training will be used}
 
 \item{Y}{Target data. If not provided Y from original training will be used}
+
+\item{weights}{observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data (citodnn and citocnn only)}
 
 \item{parallel}{train bootstrapped model in parallel}
 

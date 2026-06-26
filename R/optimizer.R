@@ -179,7 +179,8 @@ get_optimizer <- function(optimizer, lr, parameters){
                     "adagrad" =  do.call(torch::optim_adagrad,param_optimizer),
                     "rmsprop"  = do.call(torch::optim_rmsprop,param_optimizer),
                     "rprop" = do.call(torch::optim_rprop,param_optimizer),
-                    "sgd" = do.call(torch::optim_sgd,param_optimizer))
+                    "sgd" = do.call(torch::optim_sgd,param_optimizer),
+                    "ignite_adam" = do.call(torch::optim_ignite_adam,param_optimizer))
   }
 
   return(optim)

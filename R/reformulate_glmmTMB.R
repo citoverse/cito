@@ -331,7 +331,7 @@ splitForm <- function(formula,
   ## nobars() will get rid of any *naked* RE terms
   ## FIXME ... let noSpecials handle naked bar-terms if desired ?
   ## (would adding "|" to reTrmClasses work?)
-  fixedFormula <- noSpecials(lme4::nobars(formula))
+  fixedFormula <- noSpecials(reformulas::nobars(formula))
 
   list(fixedFormula  = fixedFormula,
        reTrmFormulas = reTrmFormulas,

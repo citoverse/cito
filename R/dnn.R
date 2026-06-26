@@ -19,8 +19,9 @@
 #' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
-#' @param early_stopping if set to integer, training will stop if loss has gotten higher for defined number of epochs in a row, will use validation loss is available.
-#' @param burnin training is aborted if the trainings loss is not below the baseline loss after burnin epochs
+#' @param weights weights or other values (can be also a matrix) that the likelihood has access to
+#' @param early_stopping if set to an integer, training stops when the loss has increased for the specified number of epochs in a row. The validation loss is used when a validation set is available, otherwise the training loss is used.
+#' @param burnin training is aborted if the training loss is not below the baseline loss after burnin epochs
 #' @param baseloss baseloss, if null baseloss corresponds to intercept only models
 #' @param device device on which network should be trained on. mps correspond to M1/M2 GPU devices.
 #' @param plot plot training loss
@@ -29,8 +30,8 @@
 #' @param bootstrap_parallel parallelize (CPU) bootstrapping
 #' @param bootstrap_blocking_variable variable/vector that will be used for blocked bootstrapping (should be a factor)
 #' @param tuning tuning options created with \code{\link{config_tuning}}
-#' @param hooks list of functions that are exectued after each epoch (can be used to calculate summary statistics after each epoch)
-#' @param ce calculate conditional effects at the end or not
+#' @param hooks list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)
+#' @param ce whether to calculate the conditional effects after training
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
@@ -58,18 +59,20 @@
 #'
 #' We support loss functions and likelihoods for different tasks:
 #'
-#' | Name| Explanation| Example / Task|
-#' | :--- | :--- | :--- |
-#' | mse | mean squared error |Regression, predicting continuous values|
-#' | mae | mean absolute error | Regression, predicting continuous values |
-#' | cross-entropy | categorical cross entropy |Multi-class, species classification|
-#' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	|
-#' | binomial | Binomial likelihood | Classification/Logistic regression, mortality|
-#' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances|
-#' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter |
-#' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) |
-#' | multinomial | Multinomial likelihood | step selection in animal movement models |
-#' | clogit | conditional binomial | step selection in animal movement models |
+#' | Name| Explanation| Example / Task| Data Type |
+#' | :--- | :--- | :--- | :--- |
+#' | mse | mean squared error |Regression, predicting continuous values| `numeric` (vector, matrix, or data.frame) |
+#' | mae | mean absolute error | Regression, predicting continuous values | `numeric` (vector, matrix, or data.frame) |
+#' | cross-entropy | categorical cross entropy |Multi-class, species classification| `factor` or `character` (vector, or 1-column matrix/data.frame) |
+#' | softmax | categorical cross entropy (deprecated alias for `cross-entropy`) | Multi-class, species classification | `factor` or `character` (vector, or 1-column matrix/data.frame) |
+#' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	| `numeric` (vector, matrix, or data.frame) |
+#' | binomial | Binomial likelihood | Classification/Logistic regression, mortality| `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with exactly 2 columns (successes, failures) |
+#' | bernoulli | Bernoulli likelihood | Classification, binary (0/1) outcome per observation | `integer` (0/1 only), vector, matrix, or data.frame |
+#' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances| `numeric` (vector, matrix, or data.frame); not enforced as integer |
+#' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter | `numeric` (vector, matrix, or data.frame); not enforced as integer |
+#' | mvp | multivariate probit model | joint species distribution model, multi species (presence absence) | `integer` (0/1 only) matrix/data.frame with \eqn{\ge}2 columns; vectors/factors not accepted |
+#' | multinomial | Multinomial likelihood | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \eqn{\ge}2 columns |
+#' | clogit | conditional binomial | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \eqn{\ge}2 columns |
 #'
 #' # Finding the right architecture
 #'
@@ -129,7 +132,6 @@
 #'   | dropout | `dnn(…, dropout = tune())`  | Dropout rate will be tuned (globally for all layers)|
 #'   | lr | `dnn(…, lr = tune())`  |Learning rate will be tuned|
 #'   | batchsize | `dnn(…, batchsize = tune())`  | batch size will be tuned |
-#'   | epochs | `dnn(…, batchsize = tune())`  | batchsize will be tuned |
 #'
 #'   The hyperparameters are tuned by random search (i.e., random values for the hyperparameters within a specified range) and by cross-validation. The exact tuning regime can be specified with [config_tuning].
 #'
@@ -164,7 +166,7 @@
 #' \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
 #' \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
 #' \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
-#' \item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+#' \item{last_epoch_loss_state_dict}{Serialized state dict of loss from the last training epoch.}
 #' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 #' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 
@@ -190,6 +192,7 @@ dnn <- function(formula = NULL,
                 batchsize = NULL,
                 shuffle = TRUE,
                 epochs = 100,
+                weights = NULL,
                 early_stopping = Inf,
                 burnin = Inf,
                 baseloss = NULL,
@@ -248,14 +251,33 @@ dnn <- function(formula = NULL,
   device <- check_device(device)
 
 
+  if(!is.null(weights)) {
+    if(is.vector(weights)) weights = matrix(weights, ncol = 1L)
+
+    if(!is.null(data) ) {
+      if(!is.null(rownames(data))) {
+        rownames(weights) = rownames(data)
+      } else {
+        rownames(weights) = 1:nrow(weights)
+      }
+    }
+  }
+
   tmp_data = get_X_Y(formula, X, Y, data)
   old_formula = tmp_data$old_formula
   X = tmp_data$X
   Y = tmp_data$Y
   Z = tmp_data$Z
+
+  #FE = tmp_data$FE
   formula = tmp_data$formula
   Z_formula = tmp_data$Z_terms
+  #FE_formula = tmp_data$FE_terms
   data = tmp_data$data
+
+  if(!is.null(weights)) {
+    weights = weights[rownames(X),,drop=FALSE]
+  }
 
   if(!is.null(Z)) {
 
@@ -285,7 +307,7 @@ dnn <- function(formula = NULL,
   }
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss)
+  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
 
   response_column <- NULL
   if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out
@@ -307,7 +329,7 @@ dnn <- function(formula = NULL,
     parameters[!nzchar(names(parameters))] = NULL
     parameters$custom_parameters = custom_parameters
     #parameters$hidden = hidden
-    model = tuning_function(tuner, parameters, X, Y, Z, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
+    model = tuning_function(tuner, parameters, X, Y, Z, weights, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
     return(model)
   }
 
@@ -317,12 +339,7 @@ dnn <- function(formula = NULL,
     baseloss <- loss_obj$baseloss
 
     if(length(validation) == 1 && validation == 0) {
-      if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
-      } else {
-        train_dl <- get_data_loader(X_torch, Z_torch, Y_torch, batch_size = batchsize, shuffle = shuffle)
-      }
-      valid_dl <- NULL
+      valid <- NULL
     } else {
       n_samples <- dim(Y_torch)[1]
       if(length(validation) > 1) {
@@ -331,15 +348,14 @@ dnn <- function(formula = NULL,
       } else {
         valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
       }
-      train <- c(1:n_samples)[-valid]
-      if(is.null(Z_torch)) {
-        train_dl <- get_data_loader(X_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid, drop=F], Y_torch[valid, drop=F], batch_size = batchsize, shuffle = shuffle)
-      } else {
-        train_dl <- get_data_loader(X_torch[train, drop=F], Z_torch[train, drop=F], Y_torch[train, drop=F], batch_size = batchsize, shuffle = shuffle)
-        valid_dl <- get_data_loader(X_torch[valid, drop=F], Z_torch[valid, drop=F], Y_torch[valid, drop=F], batch_size = batchsize, shuffle = shuffle)
-      }
     }
+
+    inputs <- if(is.null(Z_torch)) list(X_torch) else list(X_torch, Z_torch)
+    weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
+    dls <- build_loaders(inputs, Y_torch, weights = weights_torch, valid = valid,
+                         batch_size = batchsize, shuffle = shuffle)
+    train_dl <- dls$train_dl
+    valid_dl <- dls$valid_dl
 
     model_properties <- list(input = ncol(X),
                              output = loss_obj$y_dim,
@@ -369,18 +385,21 @@ dnn <- function(formula = NULL,
                                 verbose = verbose,
                                 formula = formula, #redundant: in out$call, also all variables in training_properties should be changeable in continue_training
                                 embeddings = embeddings, #redundant: in model_properties, also all variables in training_properties should be changeable in continue_training
-                                hooks = hooks)
+                                hooks = hooks,
+                                has_weights = ifelse(is.null(weights), FALSE, TRUE))
 
     out <- list()
     class(out) <- "citodnn"
     out$net <- net
     out$call <- match.call()
+    out$version = "1.2"
     out$call$formula <- stats::terms.formula(formula, data=data) #suggestion: put formula and Z_formula back together to get nice looking formula of what the network actually does (e.g. for print.citodnn)
     out$Z_formula = Z_formula #redundant: inferable from old_formula
     out$old_formula = old_formula #redundant: see above
     out$loss <- loss_obj
     out$response_column <- response_column #redundant: inferable from old_formula
     out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #redundant to save X, Y and Z?
+    out$data$weights <- weights # stored so continue_training() can reuse them
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
@@ -394,9 +413,10 @@ dnn <- function(formula = NULL,
 
     # calculate ce at the end...better to have them directly, let's set a cut-off for the observations to keep the computational load low
 
-    dims_data = dim(out$data$X)
-    if(dims_data[1] > 5000) subsample =  5000/dims_data[1]
-    else subsample = FALSE
+    # dims_data = dim(out$data$X)
+    # if(dims_data[1] > 5000) subsample =  5000/dims_data[1]
+    # else
+    subsample = FALSE
 
     if(ce) {
       ce =
@@ -412,7 +432,9 @@ dnn <- function(formula = NULL,
       out$conditional_effects = list(
         link = ce[[1]],
         response = ce[[2]],
-        vars = ce$vars
+        vars = ce$vars,
+        row_indices = ce$row_indices,
+        any = ce$any
       )
     }
 
@@ -449,7 +471,7 @@ dnn <- function(formula = NULL,
           bias = bias, validation = validation, lambda = lambda, alpha = alpha, lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer, batchsize = batchsize, shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
+          bootstrap_parallel = FALSE, weights = if(is.null(weights)) NULL else weights[indices, , drop = FALSE]
         ))
         m$data$indices = indices
         m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
@@ -486,7 +508,7 @@ dnn <- function(formula = NULL,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
           bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
-          bootstrap_parallel = FALSE
+          bootstrap_parallel = FALSE, weights = if(is.null(weights)) NULL else weights[indices, , drop = FALSE]
         ))
         m$data$indices = indices
         m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
@@ -556,70 +578,89 @@ residuals.citodnn <- function(object,...){
 
 
 
-#' Summarize Neural Network of class citodnn
+#' Summarize a Neural Network of class citodnn
 #'
-#' Performs a Feature Importance calculation based on Permutations
+#' Calculates feature importance and average conditional effects for a trained model.
 #'
 #' @details
 #'
-#' Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
+#' The summary reports the feature importance (following Fisher, Rudin, and Dominici, 2018) together with the mean and standard deviation of the average conditional effects (following Pichler & Hartig, 2023).
 #'
-#' Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
+#' Feature importances are interpreted similarly to an ANOVA: main and interaction effects are absorbed into the individual features. They are also sensitive to collinearity between features, i.e. if two features are collinear, their importances may be overestimated.
 #'
-#' Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
+#' Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to the coefficients in a linear regression model.
 #'
-#' The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
+#' The standard deviation of the ACE quantifies the non-linearity of a feature effect: higher values indicate stronger non-linearities.
 #'
-#' For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
+#' For the permutation importance, the predictive mean squared error is evaluated on the original and on the permuted feature (\eqn{e_{perm}} and \eqn{e_{orig}}), and the importance of feature j is reported as \eqn{FI_j = e_{perm}/e_{orig}}.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
-#' @param n_permute number of permutations performed for the feature importance. Default is 10, where n euqals then number of samples in the training set.
-#' @param importance importance based on ce (exact) or on permutation importance (computationally expensive)
-#' @param device for calculating variable importance and conditional effects
-#' @param adjust_se adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )
-#' @param type on what scale should the average conditional effects be calculated ("response" or "link")
-#' @param ... additional arguments to
-#' @return summary.citodnn returns an object of class "summary.citodnn", a list with components
+#' @param n_permute number of permutations used to compute the permutation feature importance. Default is 10.
+#' @param importance method used to compute feature importance: "ale" or "ce" (both derived from the conditional effects), or "permutation" (computationally expensive)
+#' @param device device used to calculate the feature importance and conditional effects
+#' @param adjust_se if TRUE, the standard errors of the importance are multiplied by 1/sqrt(3)
+#' @param type scale on which the average conditional effects are calculated ("response" or "link")
+#' @param ... additional arguments (currently not used)
+#' @return an object of class "summary.citodnn" containing the feature importance and average conditional effects
 #' @export
-summary.citodnn <- function(object, importance = c("permutation", "ce"), n_permute = 10L, device = NULL, type = "response", ...){
+summary.citodnn <- function(object,
+                            importance = c("ale","ce", "permutation"),
+                            n_permute = 10L,
+                            device = NULL,
+                            type = c("response", "link"),
+                            ...){
   object <- check_model(object)
   out <- list()
+  type <- match.arg(type)
   importance = match.arg(importance)
   class(out) <- "summary.citodnn"
-  if(type == "response") out$conditionalEffects = object$conditional_effects$response
-  else out$conditionalEffects = object$conditional_effects$link
-  if(is.null(device)) device = object$training_properties$device
-  if(importance == "permutation") {
-    out$importance <- get_importance(object, n_permute, device, ...)
-  } else {
-    ce = out$conditionalEffects
-    col_names = colnames(ce[[1]]$mean)
-    ce = abind::abind(lapply(1:length(ce), function(i) ce[[i]]$result), along = -1)
-    ce = apply(ce, 2:4, sum)
-    ce = apply(ce, 1, diag)
-    if(is.vector(ce)) ce = matrix(ce, nrow = 1L)
-    ce = t(ce)
-    imps = colMeans(ce**2)
-    imps = imps*object$conditional_effects$vars
-    imps = imps / sum(imps)
-    out$importance = data.frame(variable = col_names, importance_1 = imps)
+
+
+  if(is.null(object$conditional_effects)) {
+
+    ce =
+      ACEanalytical(object,
+                    interactions=FALSE, # if the unsers wants them, they must be calculated afterwards using the conditionalEffects function, too expensive to calculate here!
+                    device = device,
+                    indices = NULL, # just for all numerical variables
+                    data = NULL,
+                    batchsize = object$training_properties$batchsize,
+                    return_vars = TRUE) # type does not matter, will be calculate
+
+    object$conditional_effects = list(
+      link = ce[[1]],
+      response = ce[[2]],
+      vars = ce$vars
+    )
+
   }
+
+  out$conditionalEffects = object$conditional_effects[[type]]
+
+  if(is.null(device)) device = object$training_properties$device
+
+  if(!object$conditional_effects$any) {
+    message("No continuous variables were detected. Switching to importance = 'permutation' for factor support.")
+    importance = "permutation"
+  }
+
+  out$importance <- get_importance(object, n_permute = n_permute, device = device, type = type, importance = importance, ...)
   if(!is.null(out$importance) && (importance == "permutation")) for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
   #out$conditionalEffects = conditionalEffects(object, device = device, type = type)
-  out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
-  if(!is.matrix(out$ACE )) {
-    name_col = names(out$ACE)
-    out$ACE= matrix(out$ACE , nrow = 1L)
-    rownames(out$ACE) = name_col[1]
+
+
+  if(object$conditional_effects$any) {
+    out$ACE = sapply(out$conditionalEffects, function(R) diag(R$mean))
+    if(!is.matrix(out$ACE )) {
+      name_col = names(out$ACE)
+      out$ACE= matrix(out$ACE , nrow = 1L)
+      rownames(out$ACE) = name_col[1]
+    }
+  } else {
+    out$ACE = data.frame()
   }
-  colnames(out$ACE) = paste0("Response_", 1:ncol(out$ACE))
-  out$ASCE = sapply(out$conditionalEffects, function(R) diag(R$sd))
-  if(!is.matrix(out$ASCE )) {
-    name_col = names(out$ASCE)
-    out$ASCE = matrix(out$ASCE , nrow = 1L)
-  }
-  colnames(out$ASCE) = paste0("Response_", 1:ncol(out$ASCE))
-  rownames(out$ASCE) = rownames(out$ACE)
+  #colnames(out$ASCE) = paste0("Response_", 1:ncol(out$ASCE))
+  #rownames(out$ASCE) = rownames(out$ACE)
   return(out)
 }
 
@@ -637,12 +678,13 @@ print.summary.citodnn <- function(x, ... ){
   cat("\nFeature Importance:\n")
   print(x$importance)
   cat("\nAverage Conditional Effects:\n")
-  print(x$ACE)
-  cat("\nStandard Deviation of Conditional Effects:\n")
-  print(x$ASCE)
+  if(nrow(x$ACE) > 0) print(x$ACE)
+  else cli::cli_h3(cli::style_bold("No continuous variables were found."))
+  # cat("\nStandard Deviation of Conditional Effects:\n")
+  # print(x$ASCE)
   out$importance = x$importance
   out$ACE = x$ACE
-  out$ASCE = x$ASCE
+  #out$ASCE = x$ASCE
   return(invisible(out))
 }
 
@@ -650,20 +692,52 @@ print.summary.citodnn <- function(x, ... ){
 
 #' @rdname summary.citodnn
 #' @export
-summary.citodnnBootstrap <- function(object, n_permute = 10, device = NULL, adjust_se = FALSE, type = "response", ...){
+summary.citodnnBootstrap <- function(object,importance = c("ce", "permutation"), n_permute = 10, device = NULL, adjust_se = FALSE, type = c("response", "link"), ...){
   object$models <- lapply(object$models, check_model)
+  importance = match.arg(importance)
+  type <- match.arg(type)
   out <- list()
   class(out) <- "summary.citodnnBootstrap"
   if(is.null(device)) device = object$device
-  out$importance <- lapply(object$models, function(m) get_importance(m, n_permute, device = device, ...))
-  out$conditionalEffects <- lapply(object$models, function(m) conditionalEffects(m, device = device, type = type))
+
+  for(i in 1:length(object$models)) {
+    if(is.null(object$models[[i]]$conditional_effects)) {
+      ce =
+        ACEanalytical(object$models[[i]],
+                      interactions=FALSE, # if the unsers wants them, they must be calculated afterwards using the conditionalEffects function, too expensive to calculate here!
+                      device = device,
+                      indices = NULL, # just for all numerical variables
+                      data = NULL,
+                      batchsize = object$models[[i]]$training_properties$batchsize,
+                      return_vars = TRUE) # type does not matter, will be calculate
+
+      object$models[[i]]$conditional_effects = list(
+        link = ce[[1]],
+        response = ce[[2]],
+        vars = ce$vars
+      )
+    }
+  }
+
+  if(!object$models[[1]]$conditional_effects$any) {
+    message("No continuous variables were detected. Switching to importance = 'permutation' for factor support.")
+    importance = "permutation"
+  }
+
+  out$importance <- lapply(object$models, function(m) {
+      return(get_importance(m, n_permute, device=device, importance = importance, type = type, ...))
+    })
+  out$conditionalEffects <- lapply(object$models, function(m) {
+    return(m$conditional_effects[[type]])
+    })
 
   if(!is.null(out$importance[[1]])){
     res_imps = list()
     for(i in 2:ncol(out$importance[[1]])) {
       tmp = sapply(out$importance, function(X) X[,i, drop=FALSE])
       if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
-      imps = apply(tmp, 1, mean) - 1
+      imps = apply(tmp, 1, mean)
+      if(importance == "permutation") imps = imps -1
       imps_se = apply(tmp, 1, stats::sd)
 
       if(adjust_se) imps_se = imps_se * 1/sqrt(3)
@@ -689,48 +763,53 @@ summary.citodnnBootstrap <- function(object, n_permute = 10, device = NULL, adju
 
   res_ACE = list()
 
-  for(i in 1:length(out$conditionalEffects[[1]])) {
-    tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
-    if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
-    if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
-    eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, stats::sd)
+  if(object$models[[1]]$conditional_effects$any) {
+    for(i in 1:length(out$conditionalEffects[[1]])) {
+      tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$mean))
+      if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
+      if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
+      eff = apply(tmp, 1, mean)
+      eff_se = apply(tmp, 1, stats::sd)
 
-    coefmat = cbind(
-      as.vector(as.matrix(eff)),
-      as.vector(as.matrix(eff_se)),
-      as.vector(as.matrix(eff/eff_se)),
-      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
-    if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
-    res_ACE[[i]] = coefmat
+      coefmat = cbind(
+        as.vector(as.matrix(eff)),
+        as.vector(as.matrix(eff_se)),
+        as.vector(as.matrix(eff/eff_se)),
+        as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+      )
+      colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+      rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
+      if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
+      res_ACE[[i]] = coefmat
+    }
+    out$ACE_coefmat = do.call(rbind, res_ACE)
+  } else {
+    out$ACE_coefmat = data.frame()
   }
-  out$ACE_coefmat = do.call(rbind, res_ACE)
 
 
-  res_ASCE = list()
 
-  for(i in 1:length(out$conditionalEffects[[1]])) {
-    tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
-    if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
-    if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
-    eff = apply(tmp, 1, mean)
-    eff_se = apply(tmp, 1, stats::sd)
-
-    coefmat = cbind(
-      as.vector(as.matrix(eff)),
-      as.vector(as.matrix(eff_se)),
-      as.vector(as.matrix(eff/eff_se)),
-      as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
-    )
-    colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-    rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
-    if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
-    res_ASCE[[i]] = coefmat
-  }
-  out$ASCE_coefmat = do.call(rbind, res_ASCE)
+  # res_ASCE = list()
+  #
+  # for(i in 1:length(out$conditionalEffects[[1]])) {
+  #   tmp = sapply(1:length(out$conditionalEffects), function(j) diag(out$conditionalEffects[[j]][[i]]$sd))
+  #   if(inherits(tmp, "list")) tmp = do.call(cbind, tmp)
+  #   if(is.vector(tmp)) tmp = matrix(tmp, nrow = 1L)
+  #   eff = apply(tmp, 1, mean)
+  #   eff_se = apply(tmp, 1, stats::sd)
+  #
+  #   coefmat = cbind(
+  #     as.vector(as.matrix(eff)),
+  #     as.vector(as.matrix(eff_se)),
+  #     as.vector(as.matrix(eff/eff_se)),
+  #     as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
+  #   )
+  #   colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
+  #   rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
+  #   if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
+  #   res_ASCE[[i]] = coefmat
+  # }
+  # out$ASCE_coefmat = do.call(rbind, res_ASCE)
 
   return(out)
 }
@@ -755,22 +834,22 @@ print.summary.citodnnBootstrap <- function(x, ... ){
   #cat("\t##########################################################\n")
 
   #cat("\nAverage Conditional Effects:\n")
-  stats::printCoefmat(x$ACE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
-
+  if(nrow(x$ACE_coefmat) > 0) stats::printCoefmat(x$ACE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
+  else cli::cli_h3(cli::style_bold("No continuous variables were found."))
   #cat("\n\n\t##########################################################\n")
-  cat("\n\n")
-  cli::cli_h3(cli::style_bold("Standard Deviation of Conditional Effects \n"))
+  # cat("\n\n")
+  # cli::cli_h3(cli::style_bold("Standard Deviation of Conditional Effects \n"))
   #cat("\t##########################################################\n")
   #cat("\nAbsolute sum of Conditional Effects:\n")
 
-  res_ASCE = list()
+  #res_ASCE = list()
 
-  stats::printCoefmat(x$ASCE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
+  # stats::printCoefmat(x$ASCE_coefmat, signif.stars = getOption("show.signif.stars"), digits = 3, na.print = "")
 
 
   out$importance = x$res_imps
   out$ACE = x$res_ACE
-  out$AbsCE = x$res_ASCE
+  #out$AbsCE = x$res_ASCE
   return(invisible(out))
 }
 
@@ -806,6 +885,7 @@ coef.citodnnBootstrap <- function(object, ...) {
 #' @param device device on which network should be trained on.
 #' @param batchsize number of samples that are predicted at the same time
 #' @param reduce predictions from bootstrapped model are by default reduced (mean, optional median or none)
+#' @param return_embeddings Return embeddings instead of predictions
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
@@ -815,7 +895,9 @@ predict.citodnn <- function(object,
                             newdata = NULL,
                             type=c("link", "response", "class"),
                             device = NULL,
-                            batchsize = NULL, ...) {
+                            batchsize = NULL,
+                            return_embeddings = FALSE,
+                            ...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
                      checkmate::checkMatrix(newdata),
@@ -872,19 +954,22 @@ predict.citodnn <- function(object,
   pred <- NULL
   coro::loop(for(b in dl) {
     if(is.null(pred)) {
-      if(is.null(Z)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu"))
-      else pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE)))$to(device="cpu"))
+      if(is.null(Z)) pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), return_embeddings = return_embeddings))$to(device="cpu"))
+      else pred <- torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE), return_embeddings = return_embeddings))$to(device="cpu"))
     } else {
-      if(is.null(Z)) pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE)))$to(device="cpu")))
-      else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE)))$to(device="cpu")))
+      if(is.null(Z)) pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), return_embeddings = return_embeddings))$to(device="cpu")))
+      else pred <- rbind(pred, torch::as_array(link(object$net(b[[1]]$to(device = device, non_blocking= TRUE), b[[2]]$to(device = device, non_blocking = TRUE), return_embeddings = return_embeddings))$to(device="cpu")))
     }
   })
 
   if(!is.null(sample_names)) rownames(pred) <- sample_names
 
-  if(!is.null(object$loss$responses)) {
-    colnames(pred) <- object$loss$responses
-    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+  if(!return_embeddings) {
+
+    if(!is.null(object$loss$responses)) {
+      colnames(pred) <- object$loss$responses
+      if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+    }
   }
 
   return(pred)
@@ -925,70 +1010,82 @@ predict.citodnnBootstrap <- function(object,
 #' Creates graph plot which gives an overview of the network architecture.
 #'
 #' @param x a model created by \code{\link{dnn}}
+#' @param plot_type plot ALE or architecture
 #' @param node_size size of node in plot
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
 #' @return A plot made with 'ggraph' + 'igraph' that represents the neural network
 #' @example /inst/examples/plot.citodnn-example.R
 #' @export
-plot.citodnn<- function(x, node_size = 1, scale_edges = FALSE,...){
+plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_edges = FALSE,...){
 
-  if(x$net$has_embeddings) {
-    cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")
-    return(invisible(NULL))
-  }
+  plot_type = match.arg(plot_type)
 
-  sapply(c("igraph","ggraph","ggplot2"),function(x)
-    if (!requireNamespace(x, quietly = TRUE)) {
-      stop(
-        paste0("Package \"",x,"\" must be installed to use this function."),
-        call. = FALSE
-      )
-    })
-  checkmate::qassert(node_size, "R+[0,)")
-  checkmate::qassert(scale_edges, "B1")
+  if(plot_type == "arch") {
 
-  weights <- coef.citodnn(x)
-  input <- ncol(weights[[1]][1][[1]])
-  structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
-                                      to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
-                          value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))
-  x_pos<- c(rep(1,input))
-  y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
-  num_layer <-  2
+    if(x$net$has_embeddings) {
+      cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")
+      return(invisible(NULL))
+    }
 
-  if(length(weights[[1]])>1){
-    for (i in 2:length(weights[[1]])){
-      if (grepl("weight",names(weights[[1]][i]))){
-        structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
-                                                             to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
-                                                 value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
-        x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
-        y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
-        num_layer <- num_layer + 1
+    sapply(c("igraph","ggraph","ggplot2"),function(x)
+      if (!requireNamespace(x, quietly = TRUE)) {
+        stop(
+          paste0("Package \"",x,"\" must be installed to use this function."),
+          call. = FALSE
+        )
+      })
+    checkmate::qassert(node_size, "R+[0,)")
+    checkmate::qassert(scale_edges, "B1")
 
+    weights <- coef.citodnn(x)
+    input <- ncol(weights[[1]][1][[1]])
+    structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
+                                        to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
+                            value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))
+    x_pos<- c(rep(1,input))
+    y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
+    num_layer <-  2
+
+    if(length(weights[[1]])>1){
+      for (i in 2:length(weights[[1]])){
+        if (grepl("weight",names(weights[[1]][i]))){
+          structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
+                                                               to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
+                                                   value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
+          x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
+          y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
+          num_layer <- num_layer + 1
+
+        }
       }
     }
+    x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
+    y_pos <- c(y_pos, c(0,rep(1:input,each=2) *c(1,-1))[1:x$model_properties$output])
+
+
+    graph<- igraph::graph_from_data_frame(structure)
+    layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
+
+    p<- ggraph::ggraph(layout)+
+      ggraph::geom_edge_link( ggplot2::aes(width = abs(structure$value))) +
+      ggraph::geom_node_point(size = node_size)
+    print(p)
+  } else {
+    p = ALE(x)
   }
-  x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
-  y_pos <- c(y_pos, c(0,rep(1:input,each=2) *c(1,-1))[1:x$model_properties$output])
-
-
-  graph<- igraph::graph_from_data_frame(structure)
-  layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
-
-  p<- ggraph::ggraph(layout)+
-    ggraph::geom_edge_link( ggplot2::aes(width = abs(structure$value))) +
-    ggraph::geom_node_point(size = node_size)
-  print(p)
+  return(invisible(p))
 }
 
 
 #' @rdname plot.citodnn
+#' @param plot_type plot ALE or architecture
 #' @param which_model which model from the ensemble should be plotted
 #' @export
-plot.citodnnBootstrap <- function(x, node_size = 1, scale_edges = FALSE,which_model = 1,...){
- plot(x$models[[which_model]], node_size = node_size, scale_edges = scale_edges)
+plot.citodnnBootstrap <- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_edges = FALSE,which_model = 1,...){
+  plot_type = match.arg(plot_type)
+  if(plot_type == "arch") plot(x$models[[which_model]], plot_type = "arch", node_size = node_size, scale_edges = scale_edges)
+  else ALE(x, ...)
 }
 
 

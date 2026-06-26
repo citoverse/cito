@@ -1,7 +1,7 @@
 Package: cito
 Type: Package
 Title: Building and Training Neural Networks
-Version: 1.1.1
+Version: 1.2
 Authors@R:
     c(person(given = "Christian",
            family = "Amesöder",
@@ -41,7 +41,8 @@ Imports:
     torchvision,
     tibble,
     lme4,
-    rlang
+    rlang,
+    reformulas
 License: GPL (>= 3)
 Suggests:
     spelling,

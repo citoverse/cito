@@ -11,10 +11,11 @@ ALE(
   variable = NULL,
   data = NULL,
   type = "response",
+  analytical = FALSE,
+  center = FALSE,
   K = 10,
   ALE_type = c("equidistant", "quantile"),
   plot = TRUE,
-  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -24,10 +25,11 @@ ALE(
   variable = NULL,
   data = NULL,
   type = "response",
+  analytical = TRUE,
+  center = FALSE,
   K = 10,
   ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
-  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -37,10 +39,11 @@ ALE(
   variable = NULL,
   data = NULL,
   type = "response",
+  analytical = TRUE,
+  center = FALSE,
   K = 10,
   ALE_type = c("quantile", "equidistant"),
   plot = TRUE,
-  center = TRUE,
   parallel = FALSE,
   ...
 )
@@ -48,19 +51,21 @@ ALE(
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
-\item{variable}{variable as string for which the PDP should be done}
+\item{variable}{variable (as a string) for which the ALE should be computed. If none is supplied, it is computed for all variables.}
 
-\item{data}{data on which ALE is performed on, if NULL training data will be used.}
+\item{data}{data on which the ALE is computed; if NULL, the training data is used}
 
 \item{type}{ALE on which scale response or link, default is response}
 
-\item{K}{number of neighborhoods original feature space gets divided into}
+\item{analytical}{Analytical ALE based on conditional effects or not}
 
-\item{ALE_type}{method on how the feature bins are created for the neighborhoods.}
+\item{center}{center ALE or not (only available for analytical ALE)}
+
+\item{K}{number of neighborhoods the original feature space is divided into}
+
+\item{ALE_type}{method by which the feature bins (neighborhoods) are created}
 
 \item{plot}{plot ALE or not}
-
-\item{center}{center ALE or not}
 
 \item{parallel}{parallelize over bootstrap models or not}
 

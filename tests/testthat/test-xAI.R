@@ -7,7 +7,6 @@ testthat::test_that("summary", {
 
   set.seed(222)
 
-
   model = dnn(Sepal.Length~., data = datasets::iris, epoch = 2, verbose = FALSE)
   testthat::expect_error({summary(model)}, NA)
 
@@ -23,6 +22,21 @@ testthat::test_that("summary", {
   model = dnn(Species~., data = iris2, epoch = 5, loss = "binomial", lr = 0.1, verbose = TRUE)
   testthat::expect_error({summary(model)}, NA)
 
+
+  # a few special cases
+  ## only one continuous predictor
+  model = dnn(Sepal.Length~Petal.Length, data = datasets::iris, epoch = 2, verbose = FALSE)
+  testthat::expect_error({summary(model)}, NA)
+
+  model = dnn(Sepal.Length~Petal.Length, data = datasets::iris, epoch = 10, verbose = FALSE, bootstrap = 5)
+  testthat::expect_error({summary(model)}, NA)
+
+  ## only one factor
+  model = dnn(Sepal.Length~Species, data = datasets::iris, epoch = 2, verbose = FALSE)
+  testthat::expect_error({summary(model)}, NA)
+
+  model = dnn(Sepal.Length~Species, data = datasets::iris, epoch = 10, verbose = FALSE, bootstrap = 5)
+  testthat::expect_error({summary(model)}, NA)
 })
 
 

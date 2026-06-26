@@ -10,6 +10,7 @@
   type = c("link", "response", "class"),
   device = NULL,
   batchsize = NULL,
+  return_embeddings = FALSE,
   ...
 )
 }

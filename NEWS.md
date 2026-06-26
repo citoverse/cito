@@ -1,3 +1,14 @@
+# cito 1.2
+
+## New features
+
+* Analytical ce 
+* Analytical ALE
+* Importance based on ALE
+* MMN
+* weights argument for custom likelihoods
+
+
 # cito 1.1
 
 ## New features

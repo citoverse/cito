@@ -39,7 +39,7 @@
 #' \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
 #' \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
 #' \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
-#' \item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+#' \item{last_epoch_loss_state_dict}{Serialized state dict of loss from the last training epoch.}
 #' \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 #' \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 #'
@@ -106,6 +106,7 @@ mmn <- function(formula,
                 plot = TRUE,
                 verbose = TRUE) {
 
+  caller_env <- parent.frame()
   checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
   checkmate::qassert(custom_parameters, c("0", "L+"))
   checkmate::qassert(lr, "N1(0,)")
@@ -171,8 +172,7 @@ mmn <- function(formula,
   if(!is.null(data_augmentation)) data_augmentation <- check_data_augmentation(data_augmentation)
 
   if(length(validation) == 1 && validation == 0) {
-    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)))
-    valid_dl <- NULL
+    valid <- NULL
   } else {
     n_samples <- dim(Y)[1]
     if(length(validation) > 1) {
@@ -181,13 +181,15 @@ mmn <- function(formula,
     } else {
       valid <- sort(sample(c(1:n_samples), replace=FALSE, size = round(validation*n_samples)))
     }
-    train <- c(1:n_samples)[-valid]
-    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder, data_augmentation = data_augmentation)))
-    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = batchsize, shuffle = shuffle, from_folder = from_folder)))
   }
 
+  dls <- build_loaders(X, Y, valid = valid, batch_size = batchsize, shuffle = shuffle,
+                       from_folder = from_folder, data_augmentation = data_augmentation)
+  train_dl <- dls$train_dl
+  valid_dl <- dls$valid_dl
+
   model_properties <- list()
-  model_properties$subModules <- get_model_properties(formula[[3]], dataList)
+  model_properties$subModules <- get_model_properties(formula[[3]], dataList, caller_env)
   model_properties$fusion <- list(output = loss_obj$y_dim,
                                   hidden = fusion_hidden,
                                   activation = fusion_activation,
@@ -212,11 +214,13 @@ mmn <- function(formula,
                               baseloss = baseloss,
                               device = device_old,
                               plot = plot,
-                              verbose = verbose)
+                              verbose = verbose,
+                              has_weights = FALSE)
 
   out <- list()
   class(out) <- "citommn"
   out$net <- net
+  out$version = "1.2"
   out$call <- match.call()
   out$call$formula <- formula
   out$loss <- loss_obj
@@ -253,6 +257,7 @@ predict.citommn <- function(object,
                             type=c("link", "response", "class"),
                             device = NULL,
                             batchsize = NULL,
+                            return_embeddings = FALSE,
                             ...) {
 
   checkmate::assert(checkmate::checkNull(newdata),
@@ -297,15 +302,18 @@ predict.citommn <- function(object,
   pred <- NULL
   coro::loop(for(b in dl) {
     b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
-    if(is.null(pred)) pred <- torch::as_array(link(object$net(b))$to(device="cpu"))
-    else pred <- rbind(pred, torch::as_array(link(object$net(b))$to(device="cpu")))
+    if(is.null(pred)) pred <- torch::as_array(link(object$net(b, return_embeddings = return_embeddings))$to(device="cpu"))
+    else pred <- rbind(pred, torch::as_array(link(object$net(b, return_embeddings = return_embeddings))$to(device="cpu")))
   })
 
   #TODO: find a way to get sample_names as in predict.citodnn and predict.citocnn
 
-  if(!is.null(object$loss$responses)) {
-    colnames(pred) <- object$loss$responses
-    if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+  if(!return_embeddings) {
+
+    if(!is.null(object$loss$responses)) {
+      colnames(pred) <- object$loss$responses
+      if(type == "class") pred <- factor(apply(pred, 1, function(x) object$loss$responses[which.max(x)]), levels = object$loss$responses)
+    }
   }
 
   return(pred)
@@ -398,17 +406,18 @@ format_input_data <- function(formula, dataList) {
   return(inner(formula, list()))
 }
 
-get_model_properties <- function(formula, dataList) {
+get_model_properties <- function(formula, dataList, caller_env = parent.frame()) {
+  eval_env <- list2env(dataList, parent = caller_env)
   inner <- function(term, model_properties) {
     if(term[[1]] == "+") {
       model_properties <- inner(term[[2]], model_properties)
       model_properties <- inner(term[[3]], model_properties)
     } else if(term[[1]] == "dnn") {
       call <- match.call(dnn, term)
-      model_properties <- append(model_properties, list(eval(call, envir = dataList)))
+      model_properties <- append(model_properties, list(eval(call, envir = eval_env)))
     } else if(term[[1]] == "cnn") {
       call <- match.call(cnn, term)
-      model_properties <- append(model_properties, list(eval(call, envir = dataList)))
+      model_properties <- append(model_properties, list(eval(call, envir = eval_env)))
     }
     return(model_properties)
   }

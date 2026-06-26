@@ -24,3 +24,30 @@ e = function(dim = 1L, weights = NULL, train = TRUE, lambda = 0.0, alpha = 1.0) 
   }
   return(list(list(dim = dim, weights = weights,  train = train, lambda = lambda, alpha = alpha)))
 }
+
+
+#' #' Fixed effects
+#' #'
+#' #' Can be used to add fixed effects to the DNN
+#' #'
+#' #' @param weights matrix, to use custom fe weights
+#' #' @param train logical, should the fixed effects be trained or not
+#' #' @param lambda regularization strength on the embeddings
+#' #' @param alpha mix between L1 and L2 regularization
+#' #'
+#' #' @details The fe() structure must be used in the function interface. Although not document in the function signature, the first argument to the fe() structure is the formula of the fixed effects
+#' #'
+#' #' predictors + fe(Temp + Precpipcation ...)
+#' #'
+#' #' For more details, see the example below
+#' #'
+#' #'
+#' #' @example /inst/examples/e-example.R
+#' #' @export
+#'
+#' fe = function( weights = NULL, train = TRUE, lambda = 0.0, alpha = 1.0) {
+#'   if(!is.null(weights)) {
+#'     dim = ncol(weights)
+#'   }
+#'   return(list(list(weights = weights,  train = train, lambda = lambda, alpha = alpha)))
+#' }

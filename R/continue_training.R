@@ -10,6 +10,7 @@
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X Predictor data. If not provided X from original training will be used
 #' @param Y Target data. If not provided Y from original training will be used
+#' @param weights observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data (citodnn and citocnn only)
 #' @param dataList A list containing the data for training the model. The list should contain all variables used in the formula. If not provided dataList from original training will be used
 #' @param device can be used to overwrite device used in previous training
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
@@ -34,6 +35,7 @@ continue_training.citodnn <- function(model,
                               init_optimizer = TRUE,
                               X = NULL,
                               Y = NULL,
+                              weights = NULL,
                               ...) {
 
   if(is.null(device)) device = model$training_properties$device
@@ -57,6 +59,12 @@ continue_training.citodnn <- function(model,
 
   if(!is.null(X) & is.null(Y)) stop("Y missing.")
 
+  # weights: an explicitly supplied 'weights' argument takes precedence; otherwise
+  # reuse the weights stored during the original training when continuing on the
+  # original data (mirrors how data/X/Y are reused).
+  if(is.null(weights) && !new_validation_split) weights <- model$data$weights
+  if(!is.null(weights) && is.vector(weights)) weights <- matrix(weights, ncol = 1L)
+
   tmp_data = get_X_Y(model$old_formula, X, Y, data)
   X = tmp_data$X
   Y = tmp_data$Y
@@ -66,13 +74,18 @@ continue_training.citodnn <- function(model,
   Y <- model$loss$format_Y(Y)
   if(!is.null(Z)) Z = torch::torch_tensor(Z, dtype=torch::torch_long())
 
+  has_weights <- !is.null(weights)
+  model$training_properties$has_weights <- has_weights
+  if(has_weights) {
+    if(nrow(weights) != dim(X)[1]) stop(paste0("weights (", nrow(weights), " rows) must have the same number of samples as the data (", dim(X)[1], ")."))
+    weights <- torch::torch_tensor(weights)
+  }
+
+  bs <- model$training_properties$batchsize
+  sh <- model$training_properties$shuffle
+
   if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
-    if(is.null(Z)) {
-      train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    } else {
-      train_dl <- get_data_loader(X, Z, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    }
-    valid_dl <- NULL
+    valid <- NULL
   } else {
     n_samples <- dim(Y)[1]
     if(new_validation_split | is.null(model$data$validation)) {
@@ -86,15 +99,12 @@ continue_training.citodnn <- function(model,
     } else {
       valid <- model$data$validation
     }
-    train <- c(1:n_samples)[-valid]
-    if(is.null(Z)) {
-      train_dl <- get_data_loader(X[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid, drop=F], Y[valid, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    } else {
-      train_dl <- get_data_loader(X[train, drop=F], Z[train, drop=F], Y[train, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-      valid_dl <- get_data_loader(X[valid, drop=F], Z[valid, drop=F], Y[valid, drop=F], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle)
-    }
   }
+
+  inputs <- if(is.null(Z)) list(X) else list(X, Z)
+  dls <- build_loaders(inputs, Y, weights = weights, valid = valid, batch_size = bs, shuffle = sh)
+  train_dl <- dls$train_dl
+  valid_dl <- dls$valid_dl
 
   model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
 
@@ -150,6 +160,7 @@ continue_training.citocnn <- function(model,
                                       epochs = 32,
                                       X = NULL,
                                       Y = NULL,
+                                      weights = NULL,
                                       device = NULL,
                                       changed_params = NULL,
                                       init_optimizer = TRUE,
@@ -183,6 +194,11 @@ continue_training.citocnn <- function(model,
     new_validation_split = FALSE
   }
 
+  # weights: explicit argument takes precedence; otherwise reuse the weights stored
+  # during the original training when continuing on the original data.
+  if(is.null(weights) && !new_validation_split) weights <- model$data$weights
+  if(!is.null(weights) && is.vector(weights)) weights <- matrix(weights, ncol = 1L)
+
   from_folder = FALSE
 
   Y <- model$loss$format_Y(Y)
@@ -196,9 +212,18 @@ continue_training.citocnn <- function(model,
     if(dim(Y)[1] != dim(X)[1]) stop(paste0("Y (", dim(Y)[1], ") has to have an equal number of samples as X (", dim(X)[1], ")."))
   }
 
+  has_weights <- !is.null(weights)
+  model$training_properties$has_weights <- has_weights
+  if(has_weights) {
+    if(nrow(weights) != dim(Y)[1]) stop(paste0("weights (", nrow(weights), " rows) must have the same number of samples as the data (", dim(Y)[1], ")."))
+    weights <- torch::torch_tensor(weights)
+  }
+
+  bs <- model$training_properties$batchsize
+  sh <- model$training_properties$shuffle
+
   if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
-    train_dl <- get_data_loader(X, Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
-    valid_dl <- NULL
+    valid <- NULL
   } else {
     n_samples <- dim(Y)[1]
     if(new_validation_split | is.null(model$data$validation)) {
@@ -212,10 +237,12 @@ continue_training.citocnn <- function(model,
     } else {
       valid <- model$data$validation
     }
-    train <- c(1:n_samples)[-valid]
-    train_dl <- get_data_loader(X[train, drop=FALSE], Y[train, drop=FALSE], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
-    valid_dl <- get_data_loader(X[valid, drop=FALSE], Y[valid, drop=FALSE], batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)
   }
+
+  dls <- build_loaders(list(X), Y, weights = weights, valid = valid, batch_size = bs, shuffle = sh,
+                       from_folder = from_folder)
+  train_dl <- dls$train_dl
+  valid_dl <- dls$valid_dl
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
 
@@ -270,8 +297,7 @@ continue_training.citommn <- function(model,
   Y <- model$loss$format_Y(Y)
 
   if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
-    train_dl <- do.call(get_data_loader, append(X, list(Y, batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
-    valid_dl <- NULL
+    valid <- NULL
   } else {
     n_samples <- dim(Y)[1]
     if(new_validation_split | is.null(model$data$validation)) {
@@ -285,10 +311,12 @@ continue_training.citommn <- function(model,
     } else {
       valid <- model$data$validation
     }
-    train <- c(1:n_samples)[-valid]
-    train_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[train, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
-    valid_dl <- do.call(get_data_loader, append(lapply(append(X, Y), function(x) x[valid, drop=F]), list(batch_size = model$training_properties$batchsize, shuffle = model$training_properties$shuffle, from_folder = from_folder)))
   }
+
+  dls <- build_loaders(X, Y, valid = valid, batch_size = model$training_properties$batchsize,
+                       shuffle = model$training_properties$shuffle, from_folder = from_folder)
+  train_dl <- dls$train_dl
+  valid_dl <- dls$valid_dl
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
 

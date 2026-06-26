@@ -3,55 +3,56 @@
 \name{summary.citodnn}
 \alias{summary.citodnn}
 \alias{summary.citodnnBootstrap}
-\title{Summarize Neural Network of class citodnn}
+\title{Summarize a Neural Network of class citodnn}
 \usage{
 \method{summary}{citodnn}(
   object,
-  importance = c("permutation", "ce"),
+  importance = c("ale", "ce", "permutation"),
   n_permute = 10L,
   device = NULL,
-  type = "response",
+  type = c("response", "link"),
   ...
 )
 
 \method{summary}{citodnnBootstrap}(
   object,
+  importance = c("ce", "permutation"),
   n_permute = 10,
   device = NULL,
   adjust_se = FALSE,
-  type = "response",
+  type = c("response", "link"),
   ...
 )
 }
 \arguments{
 \item{object}{a model of class citodnn created by \code{\link{dnn}}}
 
-\item{importance}{importance based on ce (exact) or on permutation importance (computationally expensive)}
+\item{importance}{method used to compute feature importance: "ale" or "ce" (both derived from the conditional effects), or "permutation" (computationally expensive)}
 
-\item{n_permute}{number of permutations performed for the feature importance. Default is 10, where n euqals then number of samples in the training set.}
+\item{n_permute}{number of permutations used to compute the permutation feature importance. Default is 10.}
 
-\item{device}{for calculating variable importance and conditional effects}
+\item{device}{device used to calculate the feature importance and conditional effects}
 
-\item{type}{on what scale should the average conditional effects be calculated ("response" or "link")}
+\item{type}{scale on which the average conditional effects are calculated ("response" or "link")}
 
-\item{...}{additional arguments to}
+\item{...}{additional arguments (currently not used)}
 
-\item{adjust_se}{adjust standard errors for importance (standard errors are multiplied with 1/sqrt(3) )}
+\item{adjust_se}{if TRUE, the standard errors of the importance are multiplied by 1/sqrt(3)}
 }
 \value{
-summary.citodnn returns an object of class "summary.citodnn", a list with components
+an object of class "summary.citodnn" containing the feature importance and average conditional effects
 }
 \description{
-Performs a Feature Importance calculation based on Permutations
+Calculates feature importance and average conditional effects for a trained model.
 }
 \details{
-Performs the feature importance calculation as suggested by  Fisher, Rudin, and Dominici (2018), and the mean and standard deviation of the average conditional Effects as suggested by Pichler & Hartig (2023).
+The summary reports the feature importance (following Fisher, Rudin, and Dominici, 2018) together with the mean and standard deviation of the average conditional effects (following Pichler & Hartig, 2023).
 
-Feature importances are in their interpretation similar to a ANOVA. Main and interaction effects are absorbed into the features. Also, feature importances are prone to collinearity between features, i.e. if two features are collinear, the importances might be overestimated.
+Feature importances are interpreted similarly to an ANOVA: main and interaction effects are absorbed into the individual features. They are also sensitive to collinearity between features, i.e. if two features are collinear, their importances may be overestimated.
 
-Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to effects in a linear regression model.
+Average conditional effects (ACE) are similar to marginal effects and approximate linear effects, i.e. their interpretation is similar to the coefficients in a linear regression model.
 
-The standard deviation of the ACE informs about the non-linearity of the feature effects. Higher values correlate with stronger non-linearities.
+The standard deviation of the ACE quantifies the non-linearity of a feature effect: higher values indicate stronger non-linearities.
 
-For each feature n permutation get done and original and permuted predictive mean squared error (\eqn{e_{perm}} & \eqn{e_{orig}}) get evaluated with \eqn{ FI_j= e_{perm}/e_{orig}}. Based on Mean Squared Error.
+For the permutation importance, the predictive mean squared error is evaluated on the original and on the permuted feature (\eqn{e_{perm}} and \eqn{e_{orig}}), and the importance of feature j is reported as \eqn{FI_j = e_{perm}/e_{orig}}.
 }

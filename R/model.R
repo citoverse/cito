@@ -71,7 +71,7 @@ build_dnn = function(model_properties) {
         }
         self$has_embeddings = TRUE
       },
-      forward = function(input_hidden, input_embeddings) {
+      forward = function(input_hidden, input_embeddings, return_embeddings = FALSE) {
         n_em = length(embeddings$dims)
         embeds =
           lapply(1:n_em, function(j) {
@@ -81,6 +81,11 @@ build_dnn = function(model_properties) {
         x = torch::torch_cat(c(embeds, input_hidden ), 2L)
         for(i in 1:length(layers)) {
           x = self[[paste0("l_",i)]](x)
+          if(return_embeddings) {
+            if(i == (length(layers)-1)) {
+              return(x)
+            }
+          }
         }
         return(x)
       }
@@ -108,9 +113,14 @@ build_dnn = function(model_properties) {
         }
         self$has_embeddings = FALSE
       },
-      forward = function(x) {
+      forward = function(x, return_embeddings = FALSE) {
         for(i in 1:length(layers)) {
           x = self[[paste0("l_",i)]](x)
+          if(return_embeddings) {
+            if(i == (length(layers)-1)) {
+              return(x)
+            }
+          }
         }
         return(x)
       }
@@ -131,6 +141,7 @@ build_cnn <- function(model_properties) {
   counter <- 1
   flattened <- FALSE
   transfer <- FALSE
+  flattened_counter = 0L
   for(layer in architecture) {
     if(inherits(layer, "transfer")) {
       if(input_dim != 2) stop("The pretrained models only work for 2D convolutions.")
@@ -209,6 +220,7 @@ build_cnn <- function(model_properties) {
     } else if(inherits(layer, "linear")) {
       if(!flattened) {
         net_layers[[counter]] <- torch::nn_flatten()
+        flattened_counter = counter
         counter <- counter+1
         input_shape <- prod(input_shape)
         flattened <- T
@@ -236,6 +248,7 @@ build_cnn <- function(model_properties) {
 
   if(!flattened) {
     net_layers[[counter]] <- torch::nn_flatten()
+    flattened_counter = counter
     counter <- counter+1
     input_shape <- prod(input_shape)
   }
@@ -248,10 +261,14 @@ build_cnn <- function(model_properties) {
       for(i in 1:length(net_layers)) {
         self[[paste0("l_",i)]] = net_layers[[i]]
       }
+      self$flattened_counter = flattened_counter
     },
-    forward = function(x) {
+    forward = function(x, return_embeddings = FALSE) {
       for(i in 1:length(net_layers)) {
         x = self[[paste0("l_",i)]](x)
+        if(return_embeddings) {
+          if(i == self$flattened_counter) return(x)
+        }
       }
       return(x)
     }
@@ -273,7 +290,7 @@ build_mmn <- function(model_properties) {
       self$subModules <- torch::nn_module_list(subModules)
       self$fusion <- fusion
     },
-    forward = function(input) {
+    forward = function(input, return_embeddings = FALSE) {
       i <- 1
       fusion_input <- list()
       for(j in 1:length(self$subModules)) {
@@ -285,7 +302,7 @@ build_mmn <- function(model_properties) {
           i <- i + 1
         }
       }
-      return(self$fusion(torch::torch_cat(fusion_input, dim = 2L)))
+      return(self$fusion(torch::torch_cat(fusion_input, dim = 2L), return_embeddings = return_embeddings))
     }
   )
 

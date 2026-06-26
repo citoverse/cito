@@ -42,49 +42,38 @@ PDP(
 \arguments{
 \item{model}{a model created by \code{\link{dnn}}}
 
-\item{variable}{variable as string for which the PDP should be done. If none is supplied it is done for all variables.}
+\item{variable}{variable (as a string) for which the PDP should be computed. If none is supplied, it is computed for all variables.}
 
-\item{data}{specify new data PDP should be performed . If NULL, PDP is performed on the training data.}
+\item{data}{new data on which the PDP should be computed. If NULL, the PDP is computed on the training data.}
 
-\item{ice}{Individual Conditional Dependence will be shown if TRUE}
+\item{ice}{if TRUE, the Individual Conditional Expectation (ICE) curves are also shown}
 
-\item{resolution.ice}{resolution in which ice will be computed}
+\item{resolution.ice}{resolution (number of grid points) at which the ICE curves are computed}
 
-\item{plot}{plot PDP or not}
+\item{plot}{whether to plot the PDP}
 
-\item{parallel}{parallelize over bootstrap models or not}
+\item{parallel}{whether to parallelize over the bootstrap models}
 
 \item{...}{arguments passed to \code{\link{predict}}}
 }
 \value{
-A list of plots made with 'ggplot2' consisting of an individual plot for each defined variable.
+A list of plots made with 'ggplot2', one for each selected variable.
 }
 \description{
 Calculates the Partial Dependency Plot for one feature, either numeric or categorical. Returns it as a plot.
 }
 \section{Description}{
-Performs a Partial Dependency Plot (PDP) estimation to analyze the relationship between a selected feature and the target variable.
+Performs a partial dependence plot (PDP) estimation to analyze the relationship between a selected feature and the model's predictions.
 
 The PDP function estimates the partial function \eqn{\hat{f}_S}{}:
 
 \eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
 
-with a Monte Carlo Estimation:
+using a Monte Carlo estimation, i.e. it computes the average prediction over the data while the selected feature is held fixed at a given value and the remaining features are kept at their observed values.
 
-\eqn{\hat{f}_S(x_S)=\frac{1}{n}\sum_{i=1}^n\hat{f}(x_S,x^{(i)}_{C})}{}
-using a Monte Carlo estimation method. It calculates the average prediction of the target variable for different values of the selected feature while keeping other features constant.
+For categorical features, every observation is set to each level of the feature in turn, the average prediction per level is calculated, and the result is shown as a bar plot.
 
-For categorical features, all data instances are used, and each instance is set to one level of the categorical feature. The average prediction per category is then calculated and visualized in a bar plot.
-
-If the \code{ice} parameter is set to \code{TRUE}, the Individual Conditional Expectation (ICE) curves are also shown. These curves illustrate how each individual data sample reacts to changes in the feature value. Please note that this option is not available for categorical features. Unlike PDP, the ICE curves are computed using a value grid instead of utilizing every value of every data entry.
-
-Note: The PDP analysis provides valuable insights into the relationship between a specific feature and the target variable, helping to understand the feature's impact on the model's predictions.
-If a categorical feature is analyzed, all data instances are used and set to each level.
-Then an average is calculated per category and put out in a bar plot.
-
-If ice is set to true additional the individual conditional dependence will be shown and the original PDP will be colored yellow.
-These lines show, how each individual data sample reacts to changes in the feature. This option is not available for categorical features.
-Unlike PDP the ICE curves are computed with a value grid instead of utilizing every value of every data entry.
+If \code{ice = TRUE}, the Individual Conditional Expectation (ICE) curves are also shown, with the PDP highlighted in yellow. Each ICE curve illustrates how the prediction for a single observation changes as the feature varies. ICE curves are computed on a value grid rather than at every observed feature value, and are not available for categorical features.
 }
 
 \examples{

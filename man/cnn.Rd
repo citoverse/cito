@@ -21,6 +21,7 @@ cnn(
   shuffle = TRUE,
   data_augmentation = NULL,
   epochs = 100,
+  weights = NULL,
   early_stopping = Inf,
   burnin = Inf,
   baseloss = NULL,
@@ -60,6 +61,8 @@ cnn(
 
 \item{epochs}{Number of epochs to train the model. Default is 100.}
 
+\item{weights}{weights or other values (can be also a matrix) that the likelihood has access to}
+
 \item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is Inf.}
 
 \item{burnin}{Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.}
@@ -85,7 +88,7 @@ The list consists of the following attributes:
 \item{best_epoch_net_state_dict}{Serialized state dict of net from the best training epoch.}
 \item{best_epoch_loss_state_dict}{Serialized state dict of loss from the best training epoch.}
 \item{last_epoch_net_state_dict}{Serialized state dict of net from the last training epoch.}
-\item{last_epoch_net_state_dict}{Serialized state dict of loss from the last training epoch.}
+\item{last_epoch_loss_state_dict}{Serialized state dict of loss from the last training epoch.}
 \item{use_model_epoch}{String, either "best" or "last". Determines whether the parameters (e.g. weights, biases) from the best or the last training epoch are used (e.g. for prediction).}
 \item{loaded_model_epoch}{String, shows from which training epoch the parameters are currently loaded in \code{net} and \code{loss}.}
 }

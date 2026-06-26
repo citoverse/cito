@@ -11,6 +11,7 @@
   type = c("link", "response", "class"),
   device = NULL,
   batchsize = NULL,
+  return_embeddings = FALSE,
   ...
 )
 
@@ -34,6 +35,8 @@
 \item{device}{device on which network should be trained on.}
 
 \item{batchsize}{number of samples that are predicted at the same time}
+
+\item{return_embeddings}{Return embeddings instead of predictions}
 
 \item{...}{additional arguments}
 
