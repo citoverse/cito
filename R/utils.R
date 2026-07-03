@@ -1128,6 +1128,16 @@ get_X_Y = function(formula, X, Y, data) {
   attr(X, "assign") <- attr(tmp, "assign")[-1]
   Y <- stats::model.response(stats::model.frame(formula, data))
 
+  # model.matrix()/model.frame() drop rows containing NAs (default na.omit),
+  # so X and Y may have fewer rows than the original `data`. Keep `data` in sync
+  # with the observations actually used, otherwise every downstream consumer
+  # (predict, permutation importance, conditional effects, ALE, out-of-bag, ...)
+  # that mixes `data` with X/Y will misalign and, for losses like cross-entropy,
+  # fail with a batch_size mismatch.
+  if(!is.null(rownames(X)) && nrow(data) != nrow(X)) {
+    data <- data[rownames(X), , drop = FALSE]
+  }
+
   if(is.null(Specials$terms)) {
     out = list(X = X, Y = Y, formula = formula, data = data, Z = NULL, Z_terms = NULL)
   } else {
