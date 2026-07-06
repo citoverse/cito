@@ -7,7 +7,8 @@
 cnn(
   X,
   Y = NULL,
-  architecture,
+  architecture = NULL,
+  custom = NULL,
   loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson",
     "mvp", "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
@@ -35,7 +36,9 @@ cnn(
 
 \item{Y}{The target data. The allowed formats of the target data differ between loss functions. See \code{\link{dnn}} for more information.}
 
-\item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.}
+\item{architecture}{An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information. Ignored if custom is provided.}
+
+\item{custom}{custom network architecture, replaces the architecture argument. Either an \code{\link[torch]{nn_module}} generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer). The forward method receives a float tensor of shape (batch, input_shape) and must return a tensor of shape (batch, output). See \code{\link{dnn}} for details}
 
 \item{loss}{The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".}
 

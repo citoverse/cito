@@ -7,6 +7,11 @@
 * Importance based on ALE
 * MMN
 * weights argument for custom likelihoods
+* custom argument for dnn() and cnn(): user-provided nn_module architectures, also usable as submodules within mmn()
+
+## Bug fixes
+
+* models saved with saveRDS are now rebuilt via build_model() when reloaded (invalid pointer state)
 
 
 # cito 1.1

@@ -8,6 +8,7 @@
 #' @param activation activation functions, can be of length one, or a vector of different activation functions for each layer
 #' @param bias whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.
 #' @param dropout dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})
+#' @param custom custom network architecture, replaces the default MLP that is built from hidden, activation, bias, and dropout (these are ignored if custom is provided). Either an \code{\link[torch]{nn_module}} generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer). See details
 #' @param loss loss after which network should be optimized. Can also be distribution from the stats package or own function, see details
 #' @param custom_parameters List of parameters/variables to be optimized. Can be used in a custom loss function. See Vignette for example.
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
@@ -141,6 +142,19 @@
 #'
 #' For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
 #'
+#' # Custom architectures
+#'
+#' Instead of the default MLP, a custom \code{\link[torch]{nn_module}} can be passed via the `custom` argument. The module must fulfill the following contract:
+#'
+#' - If the initialize method has arguments named `input`, `output`, or `embeddings`, they are filled in automatically by cito (unless provided in `args`): `input` = number of columns of the model.matrix built from the formula (for cnn() the input shape), `output` = the output dimension expected by the loss (within mmn(): `output_dim`), `embeddings` = named vector with the number of levels of each e() term. This way the number of predictors does not have to be hard coded in the custom module.
+#' - forward(x) receives a 2D float tensor (batch, ncol(X), i.e. the columns of the model.matrix built from the formula) and must return a 2D tensor (batch, output), where output matches the dimension expected by the loss (checked at fit time).
+#' - The output must be on the link scale, i.e. the raw output of the last linear layer. Do not apply softmax/sigmoid/exp in the forward method, the loss functions apply the (inverse) link internally (e.g. the cross-entropy loss applies softmax, the poisson loss applies exp) and \code{predict(..., type = "response")} returns predictions on the response scale via the loss' invlink. Applying the link twice prevents the model from converging properly.
+#' - If embeddings (e()) are used in the formula, forward(x, z) receives a second 2D long tensor with the 1-based factor codes (one column per e() term, in formula order). Embedding layers, including their initialization and regularization, must be handled inside the custom module, e(weights=), e(train=), e(lambda=), and e(alpha=) are therefore not supported.
+#' - The forward method should be differentiable with respect to x if conditionalEffects/summary are to be used.
+#' - lambda/alpha regularization is applied to all parameters of the custom module with more than one dimension.
+#' - If a generator is passed (recommended), the model can be saved/loaded with saveRDS as usual, but the generator's enclosing environment must not capture torch tensors. If an instantiated module is passed, it is serialized via \code{\link[torch]{torch_serialize}} internally.
+#' - Architecture hyperparameters (hidden, activation, bias, dropout) are ignored and cannot be tuned; tuning of training hyperparameters (lr, lambda, alpha, batchsize) is still supported.
+#'
 #' # Activation functions
 #'
 #' Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid"
@@ -181,6 +195,7 @@ dnn <- function(formula = NULL,
                 activation = "selu",
                 bias = TRUE,
                 dropout = 0.0,
+                custom = NULL,
                 loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
@@ -217,6 +232,10 @@ dnn <- function(formula = NULL,
                                 batchsize = batchsize,
                                 epochs = epochs,
                                 lr = lr)
+
+  if(!is.null(custom)) {
+    if(any(c("hidden", "activation", "bias", "dropout") %in% names(tuner))) stop("Architecture hyperparameters (hidden, activation, bias, dropout) cannot be tuned when a custom module is provided.")
+  }
 
   checkmate::qassert(custom_parameters, c("0", "L+"))
   checkmate::qassert(validation, c("N1[0,1)","X>1[1,)"))
@@ -293,6 +312,8 @@ dnn <- function(formula = NULL,
     embeddings = NULL
   }
 
+  if(!is.null(custom)) custom = check_custom(custom, Z_args = embeddings$args, in_mmn = is.null(Y))
+
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
     if(any(inherits(hidden, "tune"), inherits(activation, "tune"), inherits(bias, "tune"), inherits(dropout, "tune"))) stop("Tuning of hyperparameters is not supported within mmn().")
@@ -301,7 +322,8 @@ dnn <- function(formula = NULL,
                              activation = activation,
                              bias = bias,
                              dropout = dropout,
-                             embeddings = embeddings)
+                             embeddings = embeddings,
+                             custom = custom)
     class(model_properties) <- "citodnn_properties"
     return(model_properties)
   }
@@ -328,6 +350,7 @@ dnn <- function(formula = NULL,
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
     parameters$custom_parameters = custom_parameters
+    parameters$custom = custom # force evaluation, the symbol would not be resolvable in tuning_function()
     #parameters$hidden = hidden
     model = tuning_function(tuner, parameters, X, Y, Z, weights, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
     return(model)
@@ -363,10 +386,12 @@ dnn <- function(formula = NULL,
                              activation = activation,
                              bias = bias,
                              dropout = dropout,
-                             embeddings = embeddings)
+                             embeddings = embeddings,
+                             custom = custom)
     class(model_properties) <- "citodnn_properties"
 
     net <- build_dnn(model_properties)
+    if(!is.null(custom)) check_custom_output(net, model_properties, loss_obj)
 
     training_properties <- list(optimizer = optimizer,
                                 lr = lr,
@@ -467,10 +492,10 @@ dnn <- function(formula = NULL,
         #call$bootstrap <- NULL
         #m = eval(call)
         m = do.call(dnn, args = list(
-          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation, custom = custom, ce = ce,
           bias = bias, validation = validation, lambda = lambda, alpha = alpha, lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer, batchsize = batchsize, shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
-          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
+          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping, baseloss = baseloss, burnin = burnin,
           bootstrap_parallel = FALSE, weights = if(is.null(weights)) NULL else weights[indices, , drop = FALSE]
         ))
         m$data$indices = indices
@@ -504,10 +529,10 @@ dnn <- function(formula = NULL,
             }) |> c()
         }
         m = do.call(dnn, args = list(
-          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation,
+          formula = old_formula, data = data[indices,], loss = loss, hidden = hidden, activation = activation, custom = custom, ce = ce,
           bias = bias, validation = validation,lambda = lambda, alpha = alpha,lr = lr, dropout = dropout, hooks = hooks,
           optimizer = optimizer,batchsize = batchsize,shuffle = shuffle, epochs = epochs, plot = FALSE, verbose = FALSE,
-          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping,
+          bootstrap = NULL, device = device_old, custom_parameters = custom_parameters, lr_scheduler = lr_scheduler, early_stopping = early_stopping, baseloss = baseloss, burnin = burnin,
           bootstrap_parallel = FALSE, weights = if(is.null(weights)) NULL else weights[indices, , drop = FALSE]
         ))
         m$data$indices = indices
@@ -1022,6 +1047,13 @@ plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_ed
   plot_type = match.arg(plot_type)
 
   if(plot_type == "arch") {
+
+    if(!is.null(x$model_properties$custom)) {
+      cat("Custom architectures cannot be visualized.\n")
+      x = check_model(x)
+      print(x$net)
+      return(invisible(NULL))
+    }
 
     if(x$net$has_embeddings) {
       cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")

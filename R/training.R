@@ -58,7 +58,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       if (inherits(model, "citommn")) {
         output <- model$net(inputs)
       } else {
-        if (inherits(model, "citodnn") && model$net$has_embeddings)
+        if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
           output <- model$net(inputs[[1]], inputs[[2]])
         else
           output <- model$net(inputs[[1]])
@@ -149,7 +149,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
         if (inherits(model, "citommn")) {
           output <- model$net(inputs)
         } else {
-          if (inherits(model, "citodnn") && model$net$has_embeddings)
+          if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
             output <- model$net(inputs[[1]], inputs[[2]])
           else
             output <- model$net(inputs[[1]])

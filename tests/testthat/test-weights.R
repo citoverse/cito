@@ -6,9 +6,9 @@ set.seed(42)
 # custom loss that declares a 'weights' argument receives them. cito always
 # passes this argument when it is present in the signature, supplying NULL when
 # the model carries no weights (e.g. continuing training on new, unweighted
-# data), so a robust weighted loss must handle weights = NULL. The helper also
-# accepts 'weights' either as an R matrix (used when the baseline loss is
-# computed) or as a torch_tensor (used during training).
+# data), so a robust weighted loss must handle weights = NULL. 'weights' is
+# always passed as a torch_tensor (during training from the dataloader batches,
+# and also when the baseline loss is computed).
 weighted_mse <- function(pred, true, weights = NULL) {
   l <- torch::nnf_mse_loss(pred, true, reduction = "none")
   if(is.null(weights)) return(l)
@@ -152,4 +152,32 @@ testthat::test_that("CNN weights are accepted, stored and reused", {
                validation = 0.25, epochs = 2L, verbose = FALSE, plot = FALSE)
     continue_training(m_v, epochs = 1L)
   }, NA)
+})
+
+
+testthat::test_that("weighted custom loss receives torch tensors for the baseloss and within bootstrapping", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  # tensor-only weighted loss (e.g. citoMove), uses tensor methods on weights and
+  # therefore fails if cito passes weights as an R matrix
+  weighted_mse_tensor = function(pred, true, weights = NULL) {
+    l = torch::nnf_mse_loss(pred, true, reduction = "none")
+    if(is.null(weights)) return(l)
+    return(l * weights$log1p())
+  }
+
+  # baseloss = NULL (default) computes the baseloss with weights, must pass a tensor
+  testthat::expect_error({m = dnn(Y ~ X1 + X2, data = df, loss = weighted_mse_tensor, weights = w,
+                                  epochs = 2L, verbose = FALSE, plot = FALSE)}, NA)
+
+  # same within bootstrapping (each replicate re-calls dnn())
+  testthat::expect_error({mb = dnn(Y ~ X1 + X2, data = df, loss = weighted_mse_tensor, weights = w,
+                                   bootstrap = 2L, epochs = 2L, verbose = FALSE, plot = FALSE)}, NA)
+
+  # baseloss (and burnin) must be forwarded to the bootstrap replicates
+  testthat::expect_error({mb = dnn(Y ~ X1 + X2, data = df, loss = weighted_mse_tensor, weights = w,
+                                   baseloss = FALSE, bootstrap = 2L, epochs = 2L, verbose = FALSE, plot = FALSE)}, NA)
+  testthat::expect_true(isFALSE(mb$models[[1]]$training_properties$baseloss))
 })

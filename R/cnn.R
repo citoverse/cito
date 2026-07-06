@@ -4,7 +4,8 @@
 #'
 #' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.
 #' @param Y The target data. The allowed formats of the target data differ between loss functions. See \code{\link{dnn}} for more information.
-#' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information.
+#' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information. Ignored if custom is provided.
+#' @param custom custom network architecture, replaces the architecture argument. Either an \code{\link[torch]{nn_module}} generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer). If the initialize method has arguments named input or output, they are filled in automatically (input = input shape, e.g. c(channels, height, width), output = output dimension expected by the loss). The forward method receives a float tensor of shape (batch, input_shape) and must return a tensor of shape (batch, output). See \code{\link{dnn}} for details
 #' @param loss The loss function to be used. Options include "mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "nbinom", "mvp", "multinomial", and "clogit". You can also specify your own loss function. See Details for more information. Default is "mse".
 #' @param custom_parameters Parameters for the custom loss function. See the vignette for an example. Default is NULL.
 #' @param optimizer The optimizer to be used. Options include "sgd", "adam", "adadelta", "adagrad", "rmsprop", "rprop", and "ignite_adam". See \code{\link{config_optimizer}} for further adjustments to the optimizer. Default is "sgd".
@@ -94,7 +95,8 @@
 #' @export
 cnn <- function(X,
                 Y = NULL,
-                architecture,
+                architecture = NULL,
+                custom = NULL,
                 loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson", "mvp", "nbinom", "multinomial", "clogit", "softmax"),
                 custom_parameters = NULL,
                 optimizer = c("sgd","adam","adadelta", "adagrad", "rmsprop", "rprop", "ignite_adam"),
@@ -115,7 +117,12 @@ cnn <- function(X,
                 plot = TRUE,
                 verbose = TRUE) {
 
-  if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
+  if(is.null(custom)) {
+    if(!inherits(architecture, "citoarchitecture")) stop("architecture is not an object of class 'citoarchitecture'. See ?create_architecture for more info.")
+  } else {
+    if(!is.null(architecture)) stop("Please provide either architecture or custom, not both.")
+    custom = check_custom(custom, in_mmn = is.null(Y))
+  }
 
   checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X))
   checkmate::qassert(custom_parameters, c("0", "L+"))
@@ -146,10 +153,11 @@ cnn <- function(X,
       input_shape <- dim(X)[-1]
     }
 
-    architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
+    if(is.null(custom)) architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
     model_properties <- list(input = input_shape,
-                             architecture = architecture)
+                             architecture = architecture,
+                             custom = custom)
     class(model_properties) <- "citocnn_properties"
     return(model_properties)
   }
@@ -219,14 +227,16 @@ cnn <- function(X,
 
   # TODO infer form the train_dl!
   input_shape <- dim(train_dl$dataset$.getbatch(1)[[1]])[-1] #dim(X)[-1]
-  architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
+  if(is.null(custom)) architecture <- adjust_architecture(architecture = architecture, input_dim = length(input_shape)-1)
 
   model_properties <- list(input = input_shape,
                            output = loss_obj$y_dim,
-                           architecture = architecture)
+                           architecture = architecture,
+                           custom = custom)
   class(model_properties) <- "citocnn_properties"
 
   net <- build_cnn(model_properties)
+  if(!is.null(custom)) check_custom_output(net, model_properties, loss_obj)
 
   training_properties <- list(optimizer = optimizer,
                               lr = lr,
@@ -365,7 +375,8 @@ predict.citocnn <- function(object,
 print.citocnn <- function(x, ...){
   x <- check_model(x)
   print(x$call)
-  print(x$model_properties$architecture, x$model_properties$input, x$model_properties$output)
+  if(!is.null(x$model_properties$custom)) print(x$net)
+  else print(x$model_properties$architecture, x$model_properties$input, x$model_properties$output)
   return(invisible(x))
 }
 
@@ -392,6 +403,11 @@ summary.citocnn <- function(object, ...){
 #' @export
 plot.citocnn <- function(x, ...){
   x <- check_model(x)
+  if(!is.null(x$model_properties$custom)) {
+    cat("Custom architectures cannot be visualized.\n")
+    print(x$net)
+    return(invisible(x))
+  }
   plot(x$model_properties$architecture, x$model_properties$input, x$model_properties$output)
   return(invisible(x))
 }

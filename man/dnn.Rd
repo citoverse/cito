@@ -11,6 +11,7 @@ dnn(
   activation = "selu",
   bias = TRUE,
   dropout = 0,
+  custom = NULL,
   loss = c("mse", "mae", "cross-entropy", "bernoulli", "gaussian", "binomial", "poisson",
     "mvp", "nbinom", "multinomial", "clogit", "softmax"),
   custom_parameters = NULL,
@@ -52,6 +53,8 @@ dnn(
 \item{bias}{whether use biases in the layers, can be of length one, or a vector (number of hidden layers + 1 (last layer)) of logicals for each layer.}
 
 \item{dropout}{dropout rate, probability of a node getting left out during training (see \code{\link[torch]{nn_dropout}})}
+
+\item{custom}{custom network architecture, replaces the default MLP that is built from hidden, activation, bias, and dropout (these are ignored if custom is provided). Either an \code{\link[torch]{nn_module}} generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer). See details}
 
 \item{loss}{loss after which network should be optimized. Can also be distribution from the stats package or own function, see details}
 
@@ -227,6 +230,18 @@ Note that hyperparameter tuning can be expensive. We have implemented an option 
 As this is an experimental feature, we welcome feature requests and bug reports on our github site.
 
 For the custom values, all hyperparameters except for the hidden layers require a vector of values. Hidden layers expect a two-column matrix where the first column is the number of hidden nodes and the second column corresponds to the number of hidden layers.
+}
+
+\section{Custom architectures}{
+Instead of the default MLP, a custom \code{\link[torch]{nn_module}} can be passed via the \code{custom} argument. The module must fulfill the following contract:
+\itemize{
+\item forward(x) receives a 2D float tensor (batch, ncol(X), i.e. the columns of the model.matrix built from the formula) and must return a 2D tensor (batch, output), where output matches the dimension expected by the loss (checked at fit time).
+\item If embeddings (e()) are used in the formula, forward(x, z) receives a second 2D long tensor with the 1-based factor codes (one column per e() term, in formula order). Embedding layers, including their initialization and regularization, must be handled inside the custom module, e(weights=), e(train=), e(lambda=), and e(alpha=) are therefore not supported.
+\item The forward method should be differentiable with respect to x if conditionalEffects/summary are to be used.
+\item lambda/alpha regularization is applied to all parameters of the custom module with more than one dimension.
+\item If a generator is passed (recommended), the model can be saved/loaded with saveRDS as usual, but the generator's enclosing environment must not capture torch tensors. If an instantiated module is passed, it is serialized via \code{\link[torch]{torch_serialize}} internally.
+\item Architecture hyperparameters (hidden, activation, bias, dropout) are ignored and cannot be tuned; tuning of training hyperparameters (lr, lambda, alpha, batchsize) is still supported.
+}
 }
 
 \section{Activation functions}{

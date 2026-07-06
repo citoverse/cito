@@ -225,7 +225,8 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
         if(is.null(baseloss)) {
 
           if(is.null(weights)) self$baseloss <- as.numeric(self$forward(self$link(Y_base), self$format_Y(Y))$mean())
-          else self$baseloss <- as.numeric(self$forward(self$link(Y_base), self$format_Y(Y), weights)$mean())
+          # weights as tensor, custom loss functions receive the weights as torch tensors during training (from the dataloader batches)
+          else self$baseloss <- as.numeric(self$forward(self$link(Y_base), self$format_Y(Y), torch::torch_tensor(as.matrix(weights), dtype = torch::torch_float32()))$mean())
         }
         else self$baseloss = baseloss
       },
@@ -977,6 +978,9 @@ check_model <- function(object) {
   pointer_check_net <- tryCatch(object$net$state_dict(), error = function(e) e)
   pointer_check_loss <- tryCatch(object$loss$state_dict(), error = function(e) e)
   if(inherits(pointer_check_net, "error") || inherits(pointer_check_loss, "error")) {
+    # net was deserialized (e.g. readRDS) and holds invalid pointers, rebuild it from
+    # model_properties, the state dict is then loaded below into the fresh net
+    object$net = build_model(object)
     object$loaded_model_epoch <- "none"
   }
 
@@ -1004,6 +1008,63 @@ check_model <- function(object) {
   object$loss$eval()
 
   return(object)
+}
+
+
+# normalize the custom argument of dnn()/cnn() to list(module=, args=, output_dim=) or list(serialized=, output_dim=)
+# and check for unsupported combinations with e()
+check_custom = function(custom, Z_args = NULL, in_mmn = FALSE) {
+
+  if(inherits(custom, "nn_module_generator")) {
+    custom = list(module = custom, args = list())
+  } else if(inherits(custom, "nn_module")) {
+    # instantiated modules cannot be re-instantiated for saveRDS/readRDS, serialize them instead
+    custom = list(serialized = torch::torch_serialize(custom))
+  } else if(is.list(custom)) {
+    # lists can be already normalized when dnn()/cnn() is re-called internally (bootstrapping, tuning)
+    if(is.null(custom$serialized)) {
+      if(is.null(custom$module) || !inherits(custom$module, "nn_module_generator")) stop("custom$module must be an nn_module generator, see ?torch::nn_module.")
+      if(is.null(custom$args)) custom$args = list()
+      if(!is.list(custom$args)) stop("custom$args must be a list of arguments passed to the initialize method of custom$module.")
+    }
+    if(!is.null(custom$output_dim)) checkmate::qassert(custom$output_dim, "X1[1,)")
+  } else {
+    stop("custom must be an nn_module generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer).")
+  }
+
+  if(in_mmn && is.null(custom$output_dim)) stop("Custom modules used within mmn() must specify output_dim, e.g. dnn(..., custom = list(module = your_module, args = list(...), output_dim = 10L)).")
+
+  if(!is.null(Z_args)) {
+    for(a in Z_args) {
+      if(!is.null(a$weights) || !isTRUE(a$train) || a$lambda > 0) stop("e(weights=), e(train=FALSE), and e(lambda>0) are not supported in combination with custom modules. Handle embedding initialization and regularization inside your custom module.")
+    }
+  }
+
+  return(custom)
+}
+
+
+# fit-time check that a custom module returns the output dimension expected by the loss
+check_custom_output = function(net, model_properties, loss_obj = NULL) {
+  dummy_X = torch::torch_rand(c(2L, model_properties$input))
+  if(isTRUE(net$has_embeddings)) {
+    dummy_Z = torch::torch_ones(c(2L, length(model_properties$embeddings$dims)), dtype = torch::torch_long())
+    out = tryCatch(net(dummy_X, dummy_Z), error = function(e) e)
+  } else {
+    out = tryCatch(net(dummy_X), error = function(e) e)
+  }
+  if(inherits(out, "error")) stop(paste0("The custom module failed on a dummy forward pass with input of shape (2, ", paste(model_properties$input, collapse = ", "), "): ", conditionMessage(out)))
+  if(length(dim(out)) != 2 || dim(out)[2] != model_properties$output) stop(paste0("The custom module returns output of shape (", paste(dim(out), collapse = ", "), ") but the loss expects (n, ", model_properties$output, ")."))
+
+  # common pitfall: the loss functions expect predictions on the link scale (e.g. logits),
+  # applying softmax/sigmoid/exp in forward prevents the model from converging properly
+  if(inherits(loss_obj, "cross-entropy loss")) {
+    out_r = torch::as_array(out)
+    if(all(out_r >= 0) && all(out_r <= 1) && all(abs(rowSums(out_r) - 1) < 1e-4)) {
+      warning("The output of the custom module looks like probabilities (softmax applied in forward?). The cross-entropy loss expects predictions on the link scale (logits, i.e. the raw output of the last linear layer), softmax is applied internally by the loss (and by predict(..., type = 'response')). Remove the softmax from the forward method.")
+    }
+  }
+  invisible(NULL)
 }
 
 

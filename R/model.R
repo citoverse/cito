@@ -18,7 +18,53 @@ build_model <- function(object) {
 }
 
 
+# builds a cito-compatible net from a user-provided nn_module
+# the adapter provides the classname, the has_embeddings field, and the (x, z, return_embeddings) signature
+# that the training loop, the predict methods, mmn() and the xAI functions rely on
+build_custom = function(model_properties, classname) {
+  custom = model_properties$custom
+
+  if(!is.null(custom$serialized)) {
+    inner = torch::torch_load(custom$serialized) # user passed an instantiated module
+  } else {
+    # the generator has the same formals as the initialize method, if it accepts
+    # input/output/embeddings, they are filled in automatically (unless provided in args),
+    # so that custom modules don't have to hard code e.g. the number of predictors
+    args = custom$args
+    supported = names(formals(custom$module))
+    output = model_properties$output
+    if(is.null(output)) output = custom$output_dim # within mmn() there is no output, submodules are sized via output_dim
+    if("input" %in% supported && is.null(args$input)) args$input = model_properties$input
+    if("output" %in% supported && is.null(args$output)) args$output = output
+    if("embeddings" %in% supported && is.null(args$embeddings)) args$embeddings = model_properties$embeddings$dims
+    inner = do.call(custom$module, args)
+  }
+
+  has_embeddings = !is.null(model_properties$embeddings)
+  pass_re = "return_embeddings" %in% names(formals(inner))
+
+  self = NULL
+  adapter = torch::nn_module(
+    classname = classname,
+    initialize = function() {
+      self$custom = inner
+      self$has_embeddings = has_embeddings
+    },
+    forward = function(x, z = NULL, return_embeddings = FALSE) {
+      if(return_embeddings && !pass_re) stop("return_embeddings is not supported for this custom module. Add a return_embeddings argument to the forward method of your custom module.")
+      args = list(x)
+      if(has_embeddings) args = append(args, list(z))
+      if(pass_re) args = append(args, list(return_embeddings = return_embeddings))
+      return(do.call(self$custom, args))
+    }
+  )
+  return(adapter())
+}
+
+
 build_dnn = function(model_properties) {
+  if(!is.null(model_properties$custom)) return(build_custom(model_properties, classname = "DNN"))
+
   input = model_properties$input
   output = model_properties$output
   hidden = model_properties$hidden
@@ -132,6 +178,8 @@ build_dnn = function(model_properties) {
 
 
 build_cnn <- function(model_properties) {
+  if(!is.null(model_properties$custom)) return(build_custom(model_properties, classname = "CNN"))
+
   input_shape = model_properties$input
   output_shape = model_properties$output
   architecture = model_properties$architecture
@@ -310,7 +358,11 @@ build_mmn <- function(model_properties) {
 
   fusion_input <- 0
   for(i in 1:length(subModules)) {
-    if(inherits(subModules[[i]], "DNN") && subModules[[i]]$has_embeddings) {
+    if(!is.null(model_properties$subModules[[i]]$custom)) {
+      # output_dim is enforced by check_custom(in_mmn = TRUE), no dummy forward necessary
+      # (a dummy forward could fail for custom modules that expect non-float inputs)
+      fusion_input <- fusion_input + model_properties$subModules[[i]]$custom$output_dim
+    } else if(inherits(subModules[[i]], "DNN") && subModules[[i]]$has_embeddings) {
       tempX <- torch::torch_rand(c(2, model_properties$subModules[[i]]$input))
       tempZ <- lapply(model_properties$subModules[[i]]$embeddings$dims, function(x) {
         return(torch::torch_randint(1,x+1,c(2,1), dtype = torch::torch_long()))
