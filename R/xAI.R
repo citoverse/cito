@@ -1054,52 +1054,132 @@ get_importance_ale_var <- function(model,
 
 
 
-ACE = function(data, predict_f, model, epsilon = 0.1, obs_level = FALSE,interactions=TRUE,max_indices = NULL, ...) {
+# finite difference version of ACEanalytical, returns the same object structure:
+# list([[1]] = link scale, [[2]] = response scale, vars =, row_indices =, any =)
+# where each scale is a list over the outputs of list(result, mean, abs, sd, interactions)
+ACE = function(object,
+               interactions = FALSE,
+               subsample = FALSE,
+               device = c("cpu", "cuda", "mps"),
+               indices = NULL,
+               data = NULL,
+               epsilon = 0.1,
+               type = "response",
+               return_vars = FALSE,
+               ...) {
 
-  x0 = data
-  if(is.null(max_indices)) n = 1:ncol(x0)
-  else n = max_indices
-  f = function(x0) predict_f(model, x0, ...)
-  h = epsilon*apply(data[,max_indices,drop=FALSE], 2, stats::sd)
-  H = array(NA, c(nrow(x0), length(n), length(n)))
-  hh = diag(h, length(n))
-  f_x0 = f(x0)
-  N = nrow(x0)
-  if(length(n) > 1) {
-    for (i in 1:(length(n)-1)) {
-      i_idx = n[i]
-      hi <- hh[, i]
-      hi = matrix(hi, N, length(n), byrow = TRUE )
-      x0_tmp = x0
-      x0_tmp[,n] = x0_tmp[,n] + hi
-      H[,i, i] =  (f(x0_tmp) - f_x0 )/h[i]
-      if(interactions) {
-        for (j in (i + 1):length(n)) {
-          j_idx = n[j]
-          hj = hh[, j]
-          hj = matrix(hj, N, length(n), byrow = TRUE )
-          x0_tmp_pp = x0_tmp_pn = x0_tmp_np = x0_tmp_nn = x0
-          x0_tmp_pp[,n] = x0_tmp_pp[,n] + hi + hj
-          x0_tmp_pn[,n] = x0_tmp_pn[,n] + hi - hj
-          x0_tmp_np[,n] = x0_tmp_np[,n] - hi + hj
-          x0_tmp_nn[,n] = x0_tmp_nn[,n] - hi - hj
-          H[,i, j] = (f(x0_tmp_pp) - f(x0_tmp_pn) - f(x0_tmp_np) + f(x0_tmp_nn))/(4 * h[i]^2)
-          H[,j, i] = H[,i, j]
+  device = match.arg(device)
+  object = check_model(object)
+
+  if(is.null(data)) data = object$data$data
+
+  if(is.logical(subsample)) {
+    indices_row = 1:nrow(data)
+  } else {
+    indices_row = sample.int(nrow(data), ceiling(subsample*nrow(data)))
+  }
+
+  Y_name = as.character(object$call$formula[[2]])
+  data = data[indices_row, !colnames(data) %in% Y_name, drop = FALSE]
+
+  if(is.null(indices)) {
+    vars = get_var_names(object$training_properties$formula, object$data$data[1,])
+    indices = which(colnames(data) %in% vars[!sapply(data[,vars,drop=FALSE], is.factor)], arr.ind = TRUE)
+  }
+
+  if(length(indices) == 0) {
+    return(list(
+      link = list(),
+      response = list(),
+      vars = 0,
+      row_indices = 1,
+      any = FALSE
+    ))
+  }
+
+  # finite difference kernel, unchanged numerics of the former ACE() implementation
+  kernel = function(f, with_interactions) {
+    x0 = data
+    n = indices
+    h = epsilon*apply(data[,n,drop=FALSE], 2, stats::sd)
+    H = array(NA, c(nrow(x0), length(n), length(n)))
+    hh = diag(h, length(n))
+    f_x0 = f(x0)
+    N = nrow(x0)
+    if(length(n) > 1) {
+      for (i in 1:(length(n)-1)) {
+        hi = hh[, i]
+        hi = matrix(hi, N, length(n), byrow = TRUE )
+        x0_tmp = x0
+        x0_tmp[,n] = x0_tmp[,n] + hi
+        H[,i, i] =  (f(x0_tmp) - f_x0 )/h[i]
+        if(with_interactions) {
+          for (j in (i + 1):length(n)) {
+            hj = hh[, j]
+            hj = matrix(hj, N, length(n), byrow = TRUE )
+            x0_tmp_pp = x0_tmp_pn = x0_tmp_np = x0_tmp_nn = x0
+            x0_tmp_pp[,n] = x0_tmp_pp[,n] + hi + hj
+            x0_tmp_pn[,n] = x0_tmp_pn[,n] + hi - hj
+            x0_tmp_np[,n] = x0_tmp_np[,n] - hi + hj
+            x0_tmp_nn[,n] = x0_tmp_nn[,n] - hi - hj
+            H[,i, j] = (f(x0_tmp_pp) - f(x0_tmp_pn) - f(x0_tmp_np) + f(x0_tmp_nn))/(4 * h[i]^2)
+            H[,j, i] = H[,i, j]
+          }
         }
       }
     }
+    hi = hh[, length(n)]
+    hi = matrix(hi, N, length(n), byrow = TRUE )
+    x0_tmp = x0
+    x0_tmp[,n] = x0_tmp[,n] + hi
+    H[, length(n), length(n)] = ( f(x0_tmp) - f_x0 )/h[length(n)]
+    return(H)
   }
 
-  hi = hh[, length(n)]
-  hi = matrix(hi, N, length(n), byrow = TRUE )
-  x0_tmp = x0
-  x0_tmp[,n] = x0_tmp[,n] + hi
-  H[, length(n), length(n)] <-  ( f(x0_tmp) - f_x0 )/h[length(n)]
-  effs = apply(H, 2:3, mean)
-  abs = apply(H, 2:3, function(d) mean(abs(d)))
-  sds = apply(H, 2:3, stats::sd)
-  if(!obs_level) return(list(effs = effs, abs = abs, sds = sds))
-  else return(H)
+  H_scale = function(type_scale) {
+    # as in ACEanalytical, interactions are only calculated on the requested scale
+    with_interactions = interactions && (type_scale == type)
+    lapply(1:object$model_properties$output, function(n_prediction) {
+      f = function(x0) {
+        df = data.frame(x0)
+        colnames(df) = colnames(data)
+        return(stats::predict(object, df, device = device, type = type_scale, ...)[,n_prediction])
+      }
+      return(kernel(f, with_interactions))
+    })
+  }
+
+  H_link = H_scale("link")
+  # the link is the identity for these losses (see ACEanalytical), the link results can only be
+  # reused if no interactions are requested on the response scale (they are only calculated on the requested scale)
+  if(inherits(object$loss, c("mean squared error loss", "gaussian loss", "mean absolute error loss")) && !(interactions && type == "response")) H_response = H_link
+  else H_response = H_scale("response")
+
+  build_scale = function(H_list) {
+    lapply(1:object$model_properties$output, function(n_prediction) {
+      result = H_list[[n_prediction]]
+      tmp = list()
+      tmp$result = result
+      tmp$mean = apply(result, 2:3, mean)
+      colnames(tmp$mean) = colnames(data)[indices]
+      rownames(tmp$mean) = colnames(data)[indices]
+      tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
+      tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
+      tmp$interactions = interactions
+      return(tmp)
+    })
+  }
+
+  out = list(build_scale(H_link), build_scale(H_response))
+
+  if(return_vars) {
+    out$vars = apply(data[,indices,drop=FALSE], 2, stats::var)
+  }
+
+  out$row_indices = indices_row
+  out$any = TRUE
+
+  return(out)
 }
 
 
@@ -1158,56 +1238,19 @@ conditionalEffects.citodnn =  function(object,
 
   method = match.arg(method)
 
+  # ACE (finite differences) and ACEanalytical return the same object structure
   if(method == "finite") {
-
-    if(is.logical(subsample)) {
-      indices_row = 1:nrow(object$data$X)
-    } else {
-      indices_row = sample.int(nrow(object$data$X), ceiling(subsample*nrow(object$data$X)))
-    }
-
-    if(is.null(data)) {
-      data = object$data$data
-      resp = object$data$Y
-    }
-    device <- match.arg(device)
-
-    object = check_model(object)
-    Y_name = as.character( object$call$formula[[2]] )
-    data = data[indices_row,-which( colnames(data) %in% Y_name), drop=FALSE]
-    # var_names = c(Y_name, colnames(data))
-
-    out = NULL
-
-    if(is.null(indices)) {
-      vars = get_var_names(object$training_properties$formula, object$data$data[1,])
-      indices = which(colnames(data) %in% vars[!sapply(data[,vars], is.factor)], arr.ind = TRUE)
-    }
-
-    for(n_prediction in 1:object$model_properties$output) {
-      result = ACE(
-        data = data,
-        predict_f = function(model, newdata) {
-          df = data.frame(newdata)
-          colnames(df) = colnames(data)
-          return(stats::predict(model, df, device = device, type = type, ...)[,n_prediction])
-        },
-        model = object, obs_level = TRUE,
-        interactions=interactions,
-        epsilon = epsilon,
-        max_indices = indices
-      )
-      tmp = list()
-      tmp$result = result
-      tmp$mean = apply(result, 2:3, mean)
-      colnames(tmp$mean) = colnames(data)[indices]
-      rownames(tmp$mean) = colnames(data)[indices]
-      tmp$abs = apply(result, 2:3, function(d) sum(abs(d)))
-      tmp$sd = apply(result, 2:3, function(d) stats::sd(d))
-      tmp$interactions = interactions
-      out[[n_prediction]] = tmp
-    }
-
+    res =
+      ACE(object,
+          interactions = interactions,
+          subsample = subsample,
+          device = device,
+          indices = indices,
+          data = data,
+          epsilon = epsilon,
+          type = type,
+          return_vars = return_vars,
+          ...)
   } else {
    res =
     ACEanalytical(object,
@@ -1219,14 +1262,15 @@ conditionalEffects.citodnn =  function(object,
                   batchsize = batchsize,
                   type = type,
                   return_vars)
-   out = list()
-   if(type == "response") {
-     out = res[[2]]
-   } else {
-     out = res[[1]]
-   }
-
   }
+
+  out = list()
+  if(type == "response") {
+    out = res[[2]]
+  } else {
+    out = res[[1]]
+  }
+
   if(return_vars) out$vars = res$vars
 
   class(out) = "conditionalEffects"

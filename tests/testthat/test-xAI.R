@@ -135,3 +135,37 @@ testthat::test_that("ALE", {
 
 
 
+
+
+testthat::test_that("conditionalEffects finite and analytical return the same object structure", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  set.seed(222)
+
+  model = dnn(Sepal.Length~., data = datasets::iris, epochs = 5L, verbose = FALSE, plot = FALSE)
+
+  ce_analytical = conditionalEffects(model, method = "analytical")
+  ce_finite = conditionalEffects(model, method = "finite")
+
+  # same structure
+  testthat::expect_equal(length(ce_finite), length(ce_analytical))
+  testthat::expect_equal(names(ce_finite[[1]]), names(ce_analytical[[1]]))
+  testthat::expect_equal(dim(ce_finite[[1]]$result), dim(ce_analytical[[1]]$result))
+  testthat::expect_equal(dimnames(ce_finite[[1]]$mean), dimnames(ce_analytical[[1]]$mean))
+
+  # both methods should approximate the same effects
+  testthat::expect_true(all(abs(diag(ce_finite[[1]]$mean) - diag(ce_analytical[[1]]$mean)) < 0.1))
+
+  testthat::expect_error({.n = print(ce_finite)}, NA)
+  testthat::expect_error({.n = print(ce_analytical)}, NA)
+
+  # multi-output + interactions + subsample
+  model = dnn(cbind(Sepal.Length, Sepal.Width)~., data = datasets::iris, epochs = 5L, verbose = FALSE, plot = FALSE)
+  ce_analytical = conditionalEffects(model, method = "analytical", interactions = TRUE)
+  ce_finite = conditionalEffects(model, method = "finite", interactions = TRUE, subsample = 0.5)
+  testthat::expect_equal(length(ce_finite), length(ce_analytical))
+  testthat::expect_equal(names(ce_finite[[1]]), names(ce_analytical[[1]]))
+  testthat::expect_equal(dim(ce_finite[[1]]$result)[2:3], dim(ce_analytical[[1]]$result)[2:3])
+})

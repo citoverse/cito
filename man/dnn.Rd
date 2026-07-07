@@ -37,6 +37,7 @@ dnn(
   tuning = config_tuning(),
   hooks = NULL,
   ce = TRUE,
+  ce_method = c("analytical", "finite"),
   X = NULL,
   Y = NULL
 )
@@ -103,6 +104,8 @@ dnn(
 \item{hooks}{list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)}
 
 \item{ce}{whether to calculate the conditional effects after training}
+
+\item{ce_method}{analytical or finite method}
 
 \item{X}{Feature matrix or data.frame, alternative data interface}
 
@@ -235,7 +238,9 @@ For the custom values, all hyperparameters except for the hidden layers require 
 \section{Custom architectures}{
 Instead of the default MLP, a custom \code{\link[torch]{nn_module}} can be passed via the \code{custom} argument. The module must fulfill the following contract:
 \itemize{
+\item If the initialize method has arguments named \code{input}, \code{output}, or \code{embeddings}, they are filled in automatically by cito (unless provided in \code{args}): \code{input} = number of columns of the model.matrix built from the formula (for cnn() the input shape), \code{output} = the output dimension expected by the loss (within mmn(): \code{output_dim}), \code{embeddings} = named vector with the number of levels of each e() term. This way the number of predictors does not have to be hard coded in the custom module.
 \item forward(x) receives a 2D float tensor (batch, ncol(X), i.e. the columns of the model.matrix built from the formula) and must return a 2D tensor (batch, output), where output matches the dimension expected by the loss (checked at fit time).
+\item The output must be on the link scale, i.e. the raw output of the last linear layer. Do not apply softmax/sigmoid/exp in the forward method, the loss functions apply the (inverse) link internally (e.g. the cross-entropy loss applies softmax, the poisson loss applies exp) and \code{predict(..., type = "response")} returns predictions on the response scale via the loss' invlink. Applying the link twice prevents the model from converging properly.
 \item If embeddings (e()) are used in the formula, forward(x, z) receives a second 2D long tensor with the 1-based factor codes (one column per e() term, in formula order). Embedding layers, including their initialization and regularization, must be handled inside the custom module, e(weights=), e(train=), e(lambda=), and e(alpha=) are therefore not supported.
 \item The forward method should be differentiable with respect to x if conditionalEffects/summary are to be used.
 \item lambda/alpha regularization is applied to all parameters of the custom module with more than one dimension.

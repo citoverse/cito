@@ -33,6 +33,7 @@
 #' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param hooks list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)
 #' @param ce whether to calculate the conditional effects after training
+#' @param ce_method analytical or finite method
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
 #'
@@ -220,6 +221,7 @@ dnn <- function(formula = NULL,
                 tuning = config_tuning(),
                 hooks = NULL,
                 ce = TRUE,
+                ce_method = c("analytical", "finite"),
                 X = NULL,
                 Y = NULL) {
 
@@ -249,6 +251,7 @@ dnn <- function(formula = NULL,
 
 
   device <- match.arg(device)
+  ce_method = match.arg(ce_method)
 
   # if(!is.function(loss) & !inherits(loss,"family")){
   #   loss <- match.arg(loss)
@@ -444,8 +447,12 @@ dnn <- function(formula = NULL,
     subsample = FALSE
 
     if(ce) {
+
+      if(ce_method == "analytical") ace_function =  ACEanalytical
+      else ace_function = ACE
+
       ce =
-        ACEanalytical(out,
+        ace_function(out,
                       interactions=FALSE, # if the unsers wants them, they must be calculated afterwards using the conditionalEffects function, too expensive to calculate here!
                       subsample = subsample,
                       device = device_old,
