@@ -199,7 +199,7 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Christian Amesöder \email{Christian.Amesoeder@informatik.uni-regensburg.de}
+  \item Christian Ames<c3><b6>der \email{Christian.Amesoeder@informatik.uni-regensburg.de}
 }
 
 Other contributors:

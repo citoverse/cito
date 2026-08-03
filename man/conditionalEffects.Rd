@@ -8,12 +8,16 @@
 \usage{
 conditionalEffects(
   object,
+  method = c("analytical", "finite"),
+  subsample = FALSE,
   interactions = FALSE,
   epsilon = 0.1,
   device = c("cpu", "cuda", "mps"),
   indices = NULL,
   data = NULL,
+  batchsize = NULL,
   type = "response",
+  return_vars = FALSE,
   ...
 )
 
@@ -34,17 +38,25 @@ conditionalEffects(
 
 \method{conditionalEffects}{citodnnBootstrap}(
   object,
+  method = c("analytical", "finite"),
+  subsample = FALSE,
   interactions = FALSE,
   epsilon = 0.1,
   device = c("cpu", "cuda", "mps"),
   indices = NULL,
   data = NULL,
+  batchsize = NULL,
   type = "response",
+  return_vars = FALSE,
   ...
 )
 }
 \arguments{
 \item{object}{object of class \code{citodnn}}
+
+\item{method}{Calculate the conditional effects analytically or via the finite difference}
+
+\item{subsample}{subsample data to decrease computational runtime, must be either FALSE or in the range of \verb{[0,1]}}
 
 \item{interactions}{calculate interactions or not (computationally expensive)}
 
@@ -56,17 +68,13 @@ conditionalEffects(
 
 \item{data}{data which is used to calculate the ACE}
 
-\item{type}{ACE on which scale (response or link)}
-
-\item{...}{additional arguments that are passed to the predict function}
-
-\item{method}{Calculate the conditional effects analytically or via the finite difference}
-
-\item{subsample}{subsample data to decrease computational runtime, must be either FALSE or in the range of \verb{[0,1]}}
-
 \item{batchsize}{batchsize}
 
+\item{type}{ACE on which scale (response or link)}
+
 \item{return_vars}{return variances of variables (internally required)}
+
+\item{...}{additional arguments that are passed to the predict function}
 }
 \value{
 an S3 object of class \code{"conditionalEffects"} is returned.

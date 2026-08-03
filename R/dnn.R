@@ -32,7 +32,7 @@
 #' @param bootstrap_blocking_variable variable/vector that will be used for blocked bootstrapping (should be a factor)
 #' @param tuning tuning options created with \code{\link{config_tuning}}
 #' @param hooks list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)
-#' @param ce whether to calculate the conditional effects after training
+#' @param ce whether to calculate the conditional effects after training. TRUE calculates them on at most 5000 observations, and on fewer if the model has many features (the stored effects grow with the number of features squared); a number sets the number of observations directly. FALSE turns them off, in which case \code{\link{conditionalEffects}} and the "ce"/"ale" importances calculate them on demand.
 #' @param ce_method analytical or finite method
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
@@ -333,6 +333,7 @@ dnn <- function(formula = NULL,
 
   if(is.character(loss)) loss <- match.arg(loss)
   loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
+  assert_weights_supported(loss, weights)
 
   response_column <- NULL
   if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out
@@ -353,7 +354,11 @@ dnn <- function(formula = NULL,
     parameters = as.list(match.call())
     parameters[!nzchar(names(parameters))] = NULL
     parameters$custom_parameters = custom_parameters
-    parameters$custom = custom # force evaluation, the symbol would not be resolvable in tuning_function()
+    # force evaluation, the symbols would not be resolvable in tuning_function()
+    parameters$custom = custom
+    parameters$loss = loss
+    parameters$hooks = hooks
+    parameters$lr_scheduler = lr_scheduler
     #parameters$hidden = hidden
     model = tuning_function(tuner, parameters, X, Y, Z, weights, data, old_formula, tuning, Y_torch, loss, device_old) # add Z....
     return(model)
@@ -429,7 +434,7 @@ dnn <- function(formula = NULL,
     out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #redundant to save X, Y and Z?
     out$data$weights <- weights # stored so continue_training() can reuse them
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
-    data_tmp = data[, labels(stats::terms(formula, data = data)), drop=FALSE]
+    data_tmp = data[, intersect(all.vars(stats::terms(formula, data = data)), colnames(data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
     out$data$xlvls <- out$data$xlvls[!names(out$data$xlvls) %in% as.character(formula[[2]])]
     if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
@@ -439,14 +444,21 @@ dnn <- function(formula = NULL,
     out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
 
-    # calculate ce at the end...better to have them directly, let's set a cut-off for the observations to keep the computational load low
+    # conditional effects are calculated here so that summary(), ALE() and the importances
+    # are available without a second pass over the data; the rows are capped so that this
+    # stays cheap on large data (see ce_subsample)
+    if(!isFALSE(ce)) {
+      subsample = ce_subsample(ce, nrow(out$data$X), ncol(out$data$X), model_properties$output)
+      if(is.na(subsample)) {
+        if(verbose) message("Data too wide to calculate the conditional effects after training, skipping them. Use conditionalEffects(), or dnn(ce = <number of rows>) to force them.")
+        ce = FALSE
+      } else if(!isFALSE(subsample) && verbose) {
+        message(paste0("Conditional effects calculated on ", ceiling(subsample*nrow(out$data$X)),
+                       " of ", nrow(out$data$X), " observations. Use dnn(ce = <number of rows>) to change this."))
+      }
+    }
 
-    # dims_data = dim(out$data$X)
-    # if(dims_data[1] > 5000) subsample =  5000/dims_data[1]
-    # else
-    subsample = FALSE
-
-    if(ce) {
+    if(!isFALSE(ce)) {
 
       if(ce_method == "analytical") ace_function =  ACEanalytical
       else ace_function = ACE
@@ -518,8 +530,9 @@ dnn <- function(formula = NULL,
       if(is.numeric(bootstrap_parallel)) {
         backend = parabar::start_backend(bootstrap_parallel)
         parabar::export(backend, ls(environment()), environment())
+        # the workers resolve dnn() from their own library, so cito has to be attached there
         parabar::evaluate(backend, {
-          require(torch)
+          requireNamespace("cito", quietly = TRUE)
           torch::torch_set_num_threads(2L)
           torch::torch_set_num_interop_threads(2L)
         })
@@ -662,7 +675,9 @@ summary.citodnn <- function(object,
     object$conditional_effects = list(
       link = ce[[1]],
       response = ce[[2]],
-      vars = ce$vars
+      vars = ce$vars,
+      row_indices = ce$row_indices,
+      any = ce$any
     )
 
   }
@@ -746,7 +761,9 @@ summary.citodnnBootstrap <- function(object,importance = c("ce", "permutation"),
       object$models[[i]]$conditional_effects = list(
         link = ce[[1]],
         response = ce[[2]],
-        vars = ce$vars
+        vars = ce$vars,
+        row_indices = ce$row_indices,
+        any = ce$any
       )
     }
   }
@@ -783,7 +800,7 @@ summary.citodnnBootstrap <- function(object,importance = c("ce", "permutation"),
       colnames(coefmat) = c("Importance", "Std.Err", "Z value", "Pr(>|z|)")
       resp = object$loss$responses[i-1]
       if(inherits(object$loss, "cross-entropy loss")) resp = object$response_column
-      rownames(coefmat) = paste0(out$importance[[1]]$variable, " \U2192 ", resp)
+      rownames(coefmat) = paste0(out$importance[[1]]$variable, " -> ", resp)
       if(ncol(out$importance[[1]]) > 2) coefmat = rbind(coefmat, c(NA))
       res_imps[[i-1]] = coefmat
     }
@@ -810,7 +827,7 @@ summary.citodnnBootstrap <- function(object,importance = c("ce", "permutation"),
         as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
       )
       colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-      rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
+      rownames(coefmat) = paste0( rownames(out$conditionalEffects[[1]][[1]]$mean), " -> ", object$loss$responses[i])
       if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
       res_ACE[[i]] = coefmat
     }
@@ -837,7 +854,7 @@ summary.citodnnBootstrap <- function(object,importance = c("ce", "permutation"),
   #     as.vector(as.matrix(stats::pnorm(abs(eff/eff_se), lower.tail = FALSE)*2))
   #   )
   #   colnames(coefmat) = c("ACE", "Std.Err", "Z value", "Pr(>|z|)")
-  #   rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " \U2192 ", object$loss$responses[i])
+  #   rownames(coefmat) = paste0(rownames(out$conditionalEffects[[1]][[1]]$mean), " -> ", object$loss$responses[i])
   #   if(i != length(out$conditionalEffects[[1]])) coefmat = rbind(coefmat, c(NA))
   #   res_ASCE[[i]] = coefmat
   # }

@@ -59,13 +59,13 @@ df = df[-indices,]
 
 ### Adjusting optimization parameters - Convergence
 
-We will first try a simple DNN with default values and the binomial likelihood. We use 30% of the data as validation holdout to check for overfitting:
+We will first try a simple DNN with default values and the Bernoulli likelihood (the response is a 0/1 presence-absence vector). We use 30% of the data as validation holdout to check for overfitting:
 
 ```{r}
 library(cito)
 model = dnn(Presence~., data = df,
             batchsize = 100L,
-            validation = 0.3, loss = "binomial",
+            validation = 0.3, loss = "bernoulli",
             verbose = FALSE)
 ```
 
@@ -75,7 +75,7 @@ We see that the training and test losses were still decreasing which means we di
 model = dnn(Presence~., data = df,
             batchsize = 100L,
             lr = 0.05,
-            validation = 0.3, loss = "binomial",
+            validation = 0.3, loss = "bernoulli",
             verbose = FALSE)
 ```
 
@@ -86,7 +86,7 @@ model = dnn(Presence~., data = df,
             batchsize = 100L,
             hidden = c(100L, 100L, 100L),
             lr = 0.05,
-            validation = 0.3, loss = "binomial",
+            validation = 0.3, loss = "bernoulli",
             verbose = FALSE)
 ```
 
@@ -100,7 +100,7 @@ model = dnn(Presence~., data = df,
             lr = 0.05,
             lambda = 0.001,
             alpha = 1.0,
-            validation = 0.3, loss = "binomial",
+            validation = 0.3, loss = "bernoulli",
             verbose = FALSE)
 ```
 
@@ -118,7 +118,7 @@ model = dnn(Presence~., data = df,
             lr = 0.05,
             lambda = 0.001,
             alpha = 1.0,
-            validation = 0.3, loss = "binomial",
+            validation = 0.3, loss = "bernoulli",
             verbose = FALSE,
             lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
             early_stopping = 14 # stop training when validation loss didn't decrease for 10 epochs
@@ -141,7 +141,7 @@ model_boot = dnn(Presence~., data = df,
                  lr = 0.05,
                  lambda = 0.001,
                  alpha = 1.0,
-                 validation = 0.3, loss = "binomial",
+                 validation = 0.3, loss = "bernoulli",
                  verbose = FALSE,
                  lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
                  early_stopping = 14, # stop training when validation loss didn't decrease for 10 epochs
@@ -171,11 +171,7 @@ We can now predict the habitat suitability of the elephant (Note that spatial de
 ```{r}
 library(raster)
 library(sp)
-library(rsample)
-library(latticeExtra)
-library(sp)
 library(ggplot2)
-library(maptools)
 customPredictFun = function(model, data) {
   return(apply(predict(model, data, reduce = "none"), 2:3, mean)[,1])
 }
@@ -247,14 +243,14 @@ df = cbind(eucalypts$PA, scale(eucalypts$env))
 head(df)
 ```
 
-We will use the binomial likelihood - each species occurrence data will be modelled by a binomial likelihood. Build simple model:
+We will use the Bernoulli likelihood - each species occurrence will be modelled by a Bernoulli likelihood. Build simple model:
 
 ```{r}
 model = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
             data = df,
             lr = 0.1,
             verbose = FALSE,
-            loss = "binomial")
+            loss = "bernoulli")
 ```
 
 Plot model:
@@ -274,7 +270,7 @@ head(predict(model))
 ```{r}
 model_boot = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
                  data = df,
-                 loss = "binomial",
+                 loss = "bernoulli",
                                   epochs = 200L,
                  hidden = c(50L, 50L),
                  batchsize = 50L,
@@ -330,7 +326,7 @@ jsdm = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)
 
 Building the covariance matrix which corresponds to the biotic associations:
 ```{r}
-L = jsdm$parameter$paramter
+L = as.matrix(jsdm$loss$parameter)
 biotic_association = cov2cor(L%*%t(L) + diag(1, 12))
 fields::image.plot(biotic_association)
 ```

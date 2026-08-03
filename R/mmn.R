@@ -97,7 +97,6 @@ mmn <- function(formula,
                 batchsize = NULL,
                 shuffle = TRUE,
                 data_augmentation = NULL,
-                image_transformation_functions = list(),
                 epochs = 100,
                 early_stopping = Inf,
                 burnin = Inf,
@@ -106,7 +105,11 @@ mmn <- function(formula,
                 plot = TRUE,
                 verbose = TRUE) {
 
-  caller_env <- parent.frame()
+  # symbols in the formula that are not in dataList (e.g. the architecture object) are
+  # resolved where the formula was written, parent.frame() would be wrong whenever mmn()
+  # is called indirectly (do.call, a wrapper function, lapply, ...)
+  caller_env <- environment(formula)
+  if(is.null(caller_env)) caller_env <- parent.frame()
   checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
   checkmate::qassert(custom_parameters, c("0", "L+"))
   checkmate::qassert(lr, "N1(0,)")
@@ -248,6 +251,7 @@ mmn <- function(formula,
 #' }
 #' @param device Device to be used for making predictions. Options are "cpu", "cuda", and "mps". If \code{NULL}, the function uses the same device that was used when training the model. Default is \code{NULL}.
 #' @param batchsize An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.
+#' @param return_embeddings return the embeddings (output of the last hidden layer of the fusion network) instead of the predictions. Default is \code{FALSE}.
 #' @param ... Additional arguments (currently not used).
 #' @return A matrix of predictions. If \code{type} is \code{"class"}, a factor of predicted class labels is returned.
 #'
@@ -443,7 +447,7 @@ check_mmn_formula <- function(formula) {
         if(length(call$formula) != 2) stop(paste0("In '", deparse1(term), "': response (left side of ~) of 'formula' must not be specified."))
       }
       args <- names(formals(dnn))
-      allowed_args <- c("formula", "data", "hidden", "activation", "bias", "dropout", "X")
+      allowed_args <- c("formula", "data", "hidden", "activation", "bias", "dropout", "X", "custom")
       for(arg in setdiff(args, allowed_args)) {
         if(!is.null(call[[arg]])) warning(paste0("In '", deparse1(term), "': Specifying '", arg, "' here has no effect. When using dnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
       }
@@ -451,9 +455,9 @@ check_mmn_formula <- function(formula) {
       call <- match.call(cnn, term)
       if(!is.null(call$Y)) stop(paste0("In '", deparse1(term), "': 'Y' must not be specified."))
       if(is.null(call$X)) stop(paste0("In '", deparse1(term), "': 'X' must be specified."))
-      if(is.null(call$architecture)) stop(paste0("In '", deparse1(term), "': 'architecture' must be specified."))
+      if(is.null(call$architecture) & is.null(call$custom)) stop(paste0("In '", deparse1(term), "': either 'architecture' or 'custom' must be specified."))
       args <- names(formals(cnn))
-      allowed_args <- c("X", "architecture")
+      allowed_args <- c("X", "architecture", "custom")
       for(arg in setdiff(args, allowed_args)) {
         if(!is.null(call[[arg]])) warning(paste0("In '", deparse1(term), "': Specifying '", arg, "' here has no effect. When using cnn() within mmn() only the following arguments are important: ", paste0(allowed_args, collapse = ", ")))
       }

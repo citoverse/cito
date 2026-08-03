@@ -103,7 +103,7 @@ dnn(
 
 \item{hooks}{list of functions that are executed after each epoch (can be used to calculate summary statistics after each epoch)}
 
-\item{ce}{whether to calculate the conditional effects after training}
+\item{ce}{whether to calculate the conditional effects after training. TRUE calculates them on at most 5000 observations, and on fewer if the model has many features (the stored effects grow with the number of features squared); a number sets the number of observations directly. FALSE turns them off, in which case \code{\link{conditionalEffects}} and the "ce"/"ale" importances calculate them on demand.}
 
 \item{ce_method}{analytical or finite method}
 

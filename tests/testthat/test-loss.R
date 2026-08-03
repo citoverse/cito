@@ -182,3 +182,44 @@ testthat::test_that("test clogit", {
   test_loss("clogit", Y)
 })
 
+
+
+testthat::test_that("nbinom exposes the dispersion parameter and can simulate", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  set.seed(42)
+  df <- data.frame(X = runif(80))
+  df$Y <- rpois(80, exp(1 + 0.5 * df$X))
+
+  m <- dnn(Y ~ X, data = df, loss = "nbinom", epochs = 5L, verbose = FALSE, plot = FALSE)
+
+  theta <- m$loss$parameter_link()
+  testthat::expect_true(is.numeric(theta))
+  testthat::expect_length(theta, 1L)
+  testthat::expect_true(all(theta > 0))
+
+  pred <- predict(m, type = "response")
+  sims <- m$loss$simulate(pred)
+  testthat::expect_equal(length(sims), nrow(pred))
+  testthat::expect_true(all(sims >= 0))
+
+  # multi-response
+  df2 <- data.frame(X = df$X, Y1 = df$Y, Y2 = rpois(80, 3))
+  m2 <- dnn(cbind(Y1, Y2) ~ X, data = df2, loss = "nbinom", epochs = 3L, verbose = FALSE, plot = FALSE)
+  testthat::expect_length(m2$loss$parameter_link(), 2L)
+  testthat::expect_equal(dim(m2$loss$simulate(predict(m2, type = "response"))), c(80L, 2L))
+})
+
+
+testthat::test_that("loss = 'binomial' points 0/1 responses at bernoulli", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  df <- data.frame(X = rnorm(60), Y = rbinom(60, 1, 0.5))
+  testthat::expect_error(dnn(Y ~ X, data = df, loss = "binomial", epochs = 1L, verbose = FALSE, plot = FALSE),
+                         "bernoulli")
+  testthat::expect_error(dnn(Y ~ X, data = df, loss = "bernoulli", epochs = 1L, verbose = FALSE, plot = FALSE), NA)
+})

@@ -97,7 +97,7 @@ makeOp <- function(x, y, op=NULL) {
 
 addForm0 <- function(f1,f2) {
   tilde <- as.symbol("~")
-  if (!identical(utils::head(f2),tilde)) {
+  if (!identical(head_lang(f2),tilde)) {
     f2 <- makeOp(f2,tilde)
   }
   if (length(f2)==3) warning("discarding LHS of second argument")
@@ -144,7 +144,7 @@ expandAllGrpVar <- function(bb) {
           ## unary operator such as diag(1|f/g)
           ## return diag(...) + diag(...) + ...
           return(lapply(esfun(x[[2]]),
-                        makeOp, y=utils::head(x)))
+                        makeOp, y=head_lang(x)))
         }
         if (length(x)==3) {
           ## binary operator
@@ -164,18 +164,13 @@ expandAllGrpVar <- function(bb) {
   }
 }
 
-#' @export
-head.formula <- function(x, ...) {
-  x[[1]]
+# head of a language object. glmmTMB registers this as head.formula/head.call/head.name,
+# but exporting those methods changes head() for every formula in the session and requires
+# importing the generic, so cito uses a plain function instead
+head_lang = function(x) {
+  if(is.name(x)) return(x)
+  return(x[[1]])
 }
-
-#' @export
-head.call <- function(x, ...) {
-  x[[1]]
-}
-
-#' @export
-head.name <- function(x, ...) { x }
 
 findbars_x <- function(term,
                        debug=FALSE,
@@ -206,7 +201,7 @@ findbars_x <- function(term,
       if (debug) cat("special: ",deparse(term),"\n")
       return(term)
     }
-    if (utils::head(term) == as.name(target)) {  ## found x | g
+    if (head_lang(term) == as.name(target)) {  ## found x | g
       if (debug) {
         tt <- if (target == '|') "bar" else sprintf('"%s"', target)
         cat(sprintf("%s term: %s\n", tt, deparse(term)))
@@ -214,7 +209,7 @@ findbars_x <- function(term,
       if (is.null(ds)) return(term)
       return(makeOp(term, ds))
     }
-    if (utils::head(term) == as.name("||")) {
+    if (head_lang(term) == as.name("||")) {
       if (expand_doublevert_method == "diag_special") {
         return(makeOp(makeOp(term[[2]], term[[3]],
                              op = quote(`|`)),
@@ -226,7 +221,7 @@ findbars_x <- function(term,
       }
       stop("unknown doublevert method ", expand_doublevert_method)
     }
-    if (utils::head(term) == as.name("(")) {  ## found (...)
+    if (head_lang(term) == as.name("(")) {  ## found (...)
       if (debug) cat("paren term:",deparse(term),"\n")
       return(fbx(term[[2]]))
     }
@@ -418,7 +413,7 @@ inForm <- function(form, value) {
 extractForm <- function(term,value) {
   if (!inForm(term,value)) return(NULL)
   if (is.name(term) || !is.language(term)) return(NULL)
-  if (identical(utils::head(term),value)) {
+  if (identical(head_lang(term),value)) {
     return(list(term))
   }
   if (length(term) == 2) {
@@ -431,7 +426,7 @@ extractForm <- function(term,value) {
 drophead <- function(term,value) {
   if (!inForm(term,value)) return(term)
   if (is.name(term) || !is.language(term)) return(term)
-  if (identical(utils::head(term),value)) {
+  if (identical(head_lang(term),value)) {
     return(term[[2]])
   }
   if (length(term) == 2) {
@@ -479,7 +474,7 @@ no_specials <- function(term, specials = c("|", "||", "s")) {
     return(lapply(term, no_specials))
   }
   for (ss in specials) {
-    if (identical(utils::head(term), as.name(ss))) return(term)
+    if (identical(head_lang(term), as.name(ss))) return(term)
   }
   if (length(term) == 3) stop("don't know what to do")
   return(no_specials(term[[2]], specials))

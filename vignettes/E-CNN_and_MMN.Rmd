@@ -1,7 +1,7 @@
 ---
-title: "Convultions neural networks and Multi modal neural networks"
+title: "Convolutional neural networks and multi-modal neural networks"
 author: "Maximilian Pichler"
-date: "2025-05-27"
+date: "2026-07-31"
 abstract: "This vignette demonstrates the use of CITO for complex data (CNN) and a mixture of complex and tabular data (MMN). CNN can be used for various tasks, such as image classification ('Is this image a dog or a cat?') and ecological tasks, such as multi-deep species distribution models (deepSDM), where the input could be an environmental time series or remote sensing data and the goal is to predict species occurrences. MMN extends CNN by combining complex data, such as satellite images, and tabular data, such as environmental or spatial information. Furthermore, MMN can combine complex data of different dimensions and scales (e.g. LiDAR 3D inputs and coloured 2D optical satellite images). This vignette explains how to prepare the data and suggests an example project structure."
 output:
  rmarkdown::html_vignette:
@@ -11,7 +11,7 @@ output:
       toc: true
       theme: cerulean
 vignette: >
-  %\VignetteIndexEntry{Convultions neural networks and Multi modal neural networks}
+  %\VignetteIndexEntry{Convolutional neural networks and multi-modal neural networks}
   %\VignetteEncoding{UTF-8}
   %\VignetteEngine{knitr::rmarkdown}
 editor_options:
@@ -188,7 +188,7 @@ Note:
 2. Be aware of convergence issues; the loss should be higher than the baseline loss.
 3. Use the validation split to monitor overfitting; training can be cancelled automatically based on the validation loss using early stopping.
 
-All of these points are described in the [Introduction to cito vignette](https://cran.r-project.org/web/packages/cito/vignettes/A-Introduction_to_cito.html) and apply to the `dnn()` and `cnn()` functions.
+All of these points are described in the [Introduction to cito vignette](https://CRAN.R-project.org/package=cito) and apply to the `dnn()` and `cnn()` functions.
 
 When the model is trained, we can make predictions via the `predict` method:
 
@@ -293,7 +293,7 @@ Note:
 2. Be aware of convergence issues; the loss should be higher than the baseline loss.
 3. Use the validation split to monitor overfitting; training can be cancelled automatically based on the validation loss using early stopping.
 
-All of these points are described in the [Introduction to cito vignette](https://cran.r-project.org/web/packages/cito/vignettes/A-Introduction_to_cito.html) and apply to the `dnn()` and `cnn()` functions.
+All of these points are described in the [Introduction to cito vignette](https://CRAN.R-project.org/package=cito) and apply to the `dnn()` and `cnn()` functions.
 
 
 ## Computational Considerations and Constraints

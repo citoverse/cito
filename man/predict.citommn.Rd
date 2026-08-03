@@ -30,6 +30,8 @@
 
 \item{batchsize}{An integer specifying the number of samples to be processed at the same time. If \code{NULL}, the function uses the same batchsize that was used when training the model. Default is \code{NULL}.}
 
+\item{return_embeddings}{return the embeddings (output of the last hidden layer of the fusion network) instead of the predictions. Default is \code{FALSE}.}
+
 \item{...}{Additional arguments (currently not used).}
 }
 \value{

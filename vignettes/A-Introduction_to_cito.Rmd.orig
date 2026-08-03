@@ -121,13 +121,13 @@ nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 12, loss = "mse", verbose=F
 
 ```
 
-You can plot the network structure to give you a visual feedback of the created object. e aware that this may take some time for large networks.
+You can plot the network structure to give you a visual feedback of the created object. Be aware that this may take some time for large networks.
 
 ```{r plotnn, eval=TRUE}
 plot(nn.fit)
 ```
 
-The neural network 5 input nodes (3 continuoues features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
+The neural network has 5 input nodes (3 continuous features, Sepal.Width, Petal.Length, Petal.Width and the contrasts for the Species variable (n_classes - 1)) and 1 output node for the response (Sepal.Length).
 
 ### Baseline loss
 
@@ -155,17 +155,17 @@ nn.fit <- dnn(Sepal.Length~., data = data, epochs = 32,
               loss= "mse", validation = 0.2)
 ```
 
-Weights oft the last and the epoch with the lowest validation loss are saved:
+The weights of the last epoch and of the epoch with the lowest validation loss are saved:
 
 ```{r epoch1,eval=TRUE}
-length(nn.fit$weights)
+nn.fit$use_model_epoch
 ```
 
 The default is to use the weights of the last epoch. But we can also tell the model to use the weights with the lowest validation loss:
 
 ```{r}
-nn.fit$use_model_epoch = 1 # Default, use last epoch
-nn.fit$use_model_epoch = 2 # Use weights from epoch with lowest validation loss
+nn.fit$use_model_epoch = "last" # Default, use last epoch
+nn.fit$use_model_epoch = "best" # Use weights from epoch with lowest validation loss
 ```
 
 ### Methods

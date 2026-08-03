@@ -217,7 +217,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tu
             tune_df$test[i] = tune_df$test[i]+as.numeric(
               loss.fkt(torch::torch_tensor(loss.fkt$link(torch::torch_tensor(pred, dtype=torch::torch_float32(), device = "cpu")), dtype=torch::torch_float32(), device = device),
                        Y_torch[cv]$to(device = device),
-                       torch::torch_tensor(weights[cv], device = device)
+                       torch::torch_tensor(weights[cv, , drop = FALSE], device = device)
                        )$sum()$cpu())
           }
         }

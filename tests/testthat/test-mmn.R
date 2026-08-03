@@ -67,3 +67,61 @@ testthat::test_that("MMN architecture folder inputs png/jpeg and tiffs", {
   unlink("test_folder_png", recursive = TRUE)
   unlink("test_folder_tiff", recursive = TRUE)
 })
+
+
+testthat::test_that("MMN with tabular and image data", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  set.seed(42)
+  n <- 60
+  shapes <- simulate_shapes(n, 20)
+  tab <- data.frame(X1 = rnorm(n), X2 = rnorm(n))
+  dataList <- list(Y = rnorm(n), tab = tab, img = shapes$data)
+  architecture <- create_architecture(conv(3), maxPool(), linear(5))
+
+  wrap_mmn(list(formula = Y ~ dnn(~., data = tab) + cnn(X = img, architecture = architecture),
+                dataList = dataList, loss = "mse", epochs = 2L, verbose = FALSE, plot = FALSE))
+
+  m <- mmn(Y ~ dnn(~., data = tab) + cnn(X = img, architecture = architecture),
+           dataList = dataList, loss = "mse", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_s3_class(m, "citommn")
+  testthat::expect_equal(nrow(predict(m)), n)
+
+  # saveRDS/readRDS has to rebuild the net (invalid pointers)
+  f <- tempfile(fileext = ".RDS")
+  saveRDS(m, f)
+  testthat::expect_error({.p <- predict(readRDS(f))}, NA)
+})
+
+
+testthat::test_that("MMN accepts custom submodules", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  set.seed(42)
+  n <- 60
+  shapes <- simulate_shapes(n, 20)
+  tab <- data.frame(X1 = rnorm(n), X2 = rnorm(n))
+  dataList <- list(Y = rnorm(n), tab = tab, img = shapes$data)
+  architecture <- create_architecture(conv(3), maxPool(), linear(5))
+
+  custom_dnn <- torch::nn_module(initialize = function(input, output) {self$l <- torch::nn_linear(input, output)},
+                                 forward = function(x) self$l(x))
+  custom_cnn <- torch::nn_module(initialize = function(output) {self$l <- torch::nn_linear(400, output)},
+                                 forward = function(x) self$l(torch::torch_flatten(x, start_dim = 2)))
+
+  # custom submodules are supported, so they must not warn
+  testthat::expect_no_warning({
+    m <- mmn(Y ~ dnn(~., data = tab, custom = list(module = custom_dnn, output_dim = 4L)) +
+                 cnn(X = img, architecture = architecture),
+             dataList = dataList, loss = "mse", epochs = 1L, verbose = FALSE, plot = FALSE)
+  })
+  testthat::expect_equal(nrow(predict(m)), n)
+
+  m <- mmn(Y ~ dnn(~., data = tab) + cnn(X = img, custom = list(module = custom_cnn, output_dim = 5L)),
+           dataList = dataList, loss = "mse", epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(nrow(predict(m)), n)
+})

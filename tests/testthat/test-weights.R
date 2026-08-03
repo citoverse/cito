@@ -181,3 +181,46 @@ testthat::test_that("weighted custom loss receives torch tensors for the baselos
                                    baseloss = FALSE, bootstrap = 2L, epochs = 2L, verbose = FALSE, plot = FALSE)}, NA)
   testthat::expect_true(isFALSE(mb$models[[1]]$training_properties$baseloss))
 })
+
+
+testthat::test_that("weights are rejected for likelihoods that cannot use them", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  # the built-in likelihoods have no weights argument, this has to fail before training starts
+  testthat::expect_error(dnn(Y ~ X1 + X2, data = df, loss = "mse", weights = w,
+                             epochs = 1L, verbose = FALSE, plot = FALSE), "custom loss")
+  testthat::expect_error(dnn(Y ~ X1 + X2, data = df, loss = "gaussian", weights = w,
+                             epochs = 1L, verbose = FALSE, plot = FALSE), "custom loss")
+
+  # a custom loss without a weights argument cannot use them either
+  unweighted <- function(pred, true) torch::nnf_mse_loss(pred, true, reduction = "none")
+  testthat::expect_error(dnn(Y ~ X1 + X2, data = df, loss = unweighted, weights = w,
+                             epochs = 1L, verbose = FALSE, plot = FALSE), "custom loss")
+})
+
+
+testthat::test_that("tuning works with a custom loss that is not defined globally", {
+  testthat::skip_on_cran()
+  testthat::skip_on_ci()
+  skip_if_no_torch()
+
+  # the loss reaches tuning_function() as a symbol, it has to be evaluated before
+  local({
+    local_loss <- function(pred, true, weights = NULL) {
+      l <- torch::nnf_mse_loss(pred, true, reduction = "none")
+      if(is.null(weights)) return(l)
+      if(!inherits(weights, "torch_tensor")) weights <- torch::torch_tensor(as.matrix(weights), dtype = pred$dtype)
+      l * weights
+    }
+    testthat::expect_error({
+      m <- dnn(Y ~ X1 + X2, data = df, loss = local_loss, lr = tune(values = c(0.01, 0.1)),
+               epochs = 2L, tuning = config_tuning(steps = 2, CV = 2), verbose = FALSE, plot = FALSE)
+    }, NA)
+    testthat::expect_error({
+      m <- dnn(Y ~ X1 + X2, data = df, loss = local_loss, weights = w, lr = tune(values = c(0.01, 0.1)),
+               epochs = 2L, tuning = config_tuning(steps = 2, CV = 2), verbose = FALSE, plot = FALSE)
+    }, NA)
+  })
+})

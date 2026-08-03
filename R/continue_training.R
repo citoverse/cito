@@ -69,6 +69,10 @@ continue_training.citodnn <- function(model,
   X = tmp_data$X
   Y = tmp_data$Y
   Z = tmp_data$Z
+  data = tmp_data$data
+  X_r = X
+  Z_r = Z
+  weights_r = weights
 
   X <- torch::torch_tensor(X, dtype = torch::torch_float32())
   Y <- model$loss$format_Y(Y)
@@ -107,6 +111,25 @@ continue_training.citodnn <- function(model,
   valid_dl <- dls$valid_dl
 
   model <- train_model(model = model,epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
+
+  # predict(), summary() and the xAI functions all read model$data, so it has to describe
+  # the data the model was last trained on. xlvls is kept, the contrasts of the original
+  # fit define the input layer and must stay valid for newdata
+  model$data$X = X_r
+  model$data$Y = as.matrix(Y)
+  model$data$data = data
+  model$data$Z = Z_r
+  model$data$weights = weights_r
+  model$data$validation = valid
+
+  # the stored conditional effects refer to the weights before this call, summary(), plot()
+  # and the analytical ALE would otherwise report the effects of the previous model
+  if(!is.null(model$conditional_effects)) {
+    ce = ACEanalytical(model, interactions = FALSE, subsample = FALSE, device = model$training_properties$device,
+                       indices = NULL, data = NULL, batchsize = model$training_properties$batchsize, return_vars = TRUE)
+    model$conditional_effects = list(link = ce[[1]], response = ce[[2]], vars = ce$vars,
+                                     row_indices = ce$row_indices, any = ce$any)
+  }
 
   return(model)
 }
@@ -151,6 +174,10 @@ continue_training.citodnnBootstrap <- function(model,
     parabar::stop_backend(backend)
 
   }
+
+  # all replicates were continued on the same new data, the ensemble has to report it too
+  if(!is.null(data) | !is.null(X)) model$data[names(model$models[[1]]$data)] = model$models[[1]]$data
+
   return(model)
 }
 
@@ -201,6 +228,9 @@ continue_training.citocnn <- function(model,
 
   from_folder = FALSE
 
+  X_r = X
+  Y_r = Y
+  weights_r = weights
   Y <- model$loss$format_Y(Y)
 
   if(is.character(X)) {
@@ -245,6 +275,11 @@ continue_training.citocnn <- function(model,
   valid_dl <- dls$valid_dl
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
+
+  model$data$X = X_r
+  model$data$Y = Y_r
+  model$data$weights = weights_r
+  model$data$validation = valid
 
   return(model)
 }
@@ -319,6 +354,9 @@ continue_training.citommn <- function(model,
   valid_dl <- dls$valid_dl
 
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
+
+  model$data$dataList = dataList
+  model$data$validation = valid
 
   return(model)
 }

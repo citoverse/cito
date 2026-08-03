@@ -23,7 +23,6 @@ mmn(
   batchsize = NULL,
   shuffle = TRUE,
   data_augmentation = NULL,
-  image_transformation_functions = list(),
   epochs = 100,
   early_stopping = Inf,
   burnin = Inf,

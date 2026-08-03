@@ -270,7 +270,11 @@ regularize_weights <- function (parameters, alpha, lambda){
 visualize.training <- function(losses,epoch, main, new = FALSE, baseline = NULL){
   if (epoch==1|new){
 
-    graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,max(losses$train_l,losses$valid_l,baseline,na.rm=T)),
+    # training that aborted on an NA loss leaves no finite value to scale the axis with
+    ymax = suppressWarnings(max(losses$train_l, losses$valid_l, baseline, na.rm = TRUE))
+    if(!is.finite(ymax)) ymax = 1
+
+    graphics::plot(c(),c(),xlim=c(1,nrow(losses)),ylim=c(0,ymax),
                    main= main,
                    xlab= "epoch",
                    ylab= "loss",
@@ -462,6 +466,12 @@ config_lr_scheduler <- function(type = c("lambda", "multiplicative", "reduce_on_
                                      check_var = "B1", verbose = verbose)
 
   }else if (out$lr_scheduler == "multiplicative"){
+    if("lr_lambda" %in% names(mc)){
+      out$lr_lambda <- mc$lr_lambda
+      if (verbose) cat(paste0("lr_lambda: [", out$lr_lambda, "]\n"))
+    } else{
+      warning("You need to supply lr_lambda to this function")
+    }
     out$last_epoch <- check_call_config(mc = mc, "last_epoch", standards = formals(torch::lr_multiplicative),
                                         check_var = "R1", verbose = verbose)
     out$verbose <- check_call_config(mc = mc, "verbose", standards = formals(torch::lr_multiplicative),

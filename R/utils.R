@@ -93,6 +93,7 @@ cito_dataset = torch::dataset(
     return(img)
   },
   load_tiff = function(path) {
+    if(!requireNamespace("tiff", quietly = TRUE)) stop("Package \"tiff\" must be installed to read .tiff files.", call. = FALSE)
     img_list <- tiff::readTIFF(path, all = TRUE)
     img_list <- lapply(img_list, function(img) {
       img <- torch::torch_tensor(img, dtype = torch::torch_float32())
@@ -147,6 +148,10 @@ assert_Y_classification <- function(Y) {
 }
 
 assert_Y_binomial <- function(Y) {
+  # 0/1 data was accepted by loss = "binomial" up to cito 1.1 and is now handled by "bernoulli"
+  if(is.numeric(Y) && is.null(dim(Y)) && all(stats::na.omit(Y) %in% c(0, 1))) {
+    stop("loss = 'binomial' expects a factor/character response or an integer matrix/data.frame with two columns (successes, failures). For a 0/1 response use loss = 'bernoulli'.")
+  }
   checkmate::assert(checkmate::checkCharacter(Y, any.missing = TRUE, all.missing = FALSE),
                     checkmate::checkFactor(Y, any.missing = TRUE, all.missing = FALSE),
                     checkmate::checkMatrix(Y, mode = "character", any.missing = TRUE, all.missing = FALSE, ncols = 1),
@@ -184,7 +189,29 @@ assert_Y_dim <- function(y_dim, ncol_Y) {
   }
 }
 
+# Rows used for the conditional effects that dnn()/cnn()/mmn() calculate after training.
+# The stored array grows with n*p^2, so on wide or long data it dominates the fitted object
+# and the runtime. The effects are only ever consumed as averages (feature importance, ALE),
+# and a few thousand observations reproduce the full-data values to within a percent, so the
+# rows are capped. Returns the fraction to pass to `subsample`, FALSE for all rows, or NA
+# when the effects are too expensive to be worth calculating at all.
+ce_subsample = function(ce, n, p, n_out, budget = 512*1024^2, max_rows = 5000, min_rows = 100) {
+  rows = if(is.numeric(ce)) min(ce, n) else min(max_rows, n, floor(budget/(2*n_out*p^2*8)))
+  if(rows < min_rows) return(if(n < min_rows) FALSE else NA)
+  if(rows >= n) return(FALSE)
+  rows/n
+}
+
+# the built-in likelihoods do not take a weights argument, without this check the model
+# fails in the middle of the first epoch with "unused argument (weights = weights)"
+assert_weights_supported = function(loss, weights) {
+  if(is.null(weights)) return(invisible(NULL))
+  if(is.function(loss) && "weights" %in% names(formals(loss))) return(invisible(NULL))
+  stop("'weights' are only supported for custom loss functions with a 'weights' argument, see the 'weights' section in ?dnn.")
+}
+
 get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL) {
+  self <- NULL
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)
   if(is.character(loss) && loss == "softmax") {
@@ -704,8 +731,11 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
 
         return(torch::torch_tensor(Y, dtype = torch::torch_float32()))
       },
-      simulate = function(pred) { #Not used atm
-        theta_tmp = as.numeric((1.0/(torch::nnf_softplus(self$parameter)+0.0001))$cpu)
+      parameter_link = function() {
+        as.numeric((1.0/(torch::nnf_softplus(self$parameter)+0.0001))$cpu())
+      },
+      simulate = function(pred) {
+        theta_tmp = self$parameter_link()
         probs = 1.0 - theta_tmp/(theta_tmp + pred)
         total_count = theta_tmp
 
@@ -887,6 +917,7 @@ get_pretrained_model <- function(transfer, pretrained, rgb) {
 
 replace_first_conv_layer <- function(torch_model, in_channels) {
   tmp <- "torch_model"
+  children <- NULL
   while(TRUE) {
     eval(parse(text = paste0("children <- names(", tmp, "$children)")))
     if(is.null(children)) stop("Could not find first convolutional layer of pretrained model. Pls report this to the developers of 'cito'.")
@@ -969,8 +1000,10 @@ re_init = function(param, param_r) {
 # check if model is loaded and if current parameters are the desired ones
 check_model <- function(object) {
 
-  if(!object$version >= 1.2) {
-    warning("The model is not compatible with the current cito version and errors may occur. Please install an older cito version from CRAN or refit your model.")
+  # models fitted with cito <= 1.1 have no version field and store the epoch as an integer,
+  # their weights cannot be loaded into the current model objects
+  if(is.null(object$version) || numeric_version(object$version) < "1.2") {
+    stop("The model was fitted with cito <= 1.1 and is not compatible with the current version. Please refit the model or install the cito version it was fitted with.")
   }
 
   if(!inherits(object, c("citodnn", "citocnn", "citommn"))) stop("model not of class citodnn, citocnn or citommn")
@@ -993,12 +1026,7 @@ check_model <- function(object) {
       object$net$load_state_dict(torch::torch_load(object$last_epoch_net_state_dict))
       object$loss$load_state_dict(torch::torch_load(object$last_epoch_loss_state_dict))
     } else {
-      warning("'object$use_model_epoch' must be either 'best' or 'last'.")
-
-      ## This is code for backward comp. for cito versions <= 1.1
-      object = check_model_v11(object)
-      object$use_model_epoch = "last"
-      return(object)
+      stop("'object$use_model_epoch' must be either 'best' or 'last'.")
     }
 
     object$loaded_model_epoch <- object$use_model_epoch

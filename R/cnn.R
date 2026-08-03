@@ -184,7 +184,8 @@ cnn <- function(X,
   device <- check_device(device)
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss)
+  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
+  assert_weights_supported(loss, weights)
   baseloss <- loss_obj$baseloss
 
   X_old <- X
@@ -192,7 +193,7 @@ cnn <- function(X,
 
   from_folder = FALSE
 
-  if(!is.null(weights)) weights = matrix(weights, nrow = ifelse(is.vector(Y), length(Y), nrow(Y)))
+  if(!is.null(weights)) weights = matrix(weights, nrow = if(is.null(nrow(Y))) length(Y) else nrow(Y))
 
   if(is.character(X)) {
     X = list.files(X, full.names = TRUE)
@@ -753,8 +754,8 @@ print.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
   if (missing(input_shape)) {
     message("For a more detailed output specify the input_shape (and output_shape) argument(s)! See ?print.citoarchitecture for more information!")
-    class(x) <- "list"
-    print(x)
+    # the layer print methods require an input shape, so print the settings instead
+    print(lapply(x, unclass))
   } else {
     x <- adjust_architecture(x, length(input_shape)-1)
 
@@ -1034,7 +1035,7 @@ plot.citoarchitecture <- function(x, input_shape, output_shape = NULL, ...) {
 
 augment_flip <- function(x) {
   for(i in 3:x$dim()) {
-    if(runif(1)>0.5) x <- x$flip(i)
+    if(stats::runif(1)>0.5) x <- x$flip(i)
   }
   return(x)
 }

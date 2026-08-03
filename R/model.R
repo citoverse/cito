@@ -303,6 +303,7 @@ build_cnn <- function(model_properties) {
 
   if(!is.null(output_shape)) net_layers[[counter]] <- torch::nn_linear(in_features = input_shape, out_features = output_shape)
 
+  self = NULL
   create_cnn <- torch::nn_module(
     classname = "CNN",
     initialize = function() {

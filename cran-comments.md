@@ -1,3 +1,33 @@
+# Version 1.2
+## cito submission 1 <DATE>
+
+Dear CRAN Team,
+
+this is a major update. It adds convolutional (`cnn()`) and multi-modal (`mmn()`) neural
+networks, user-provided architectures via the `custom` argument, analytical conditional
+effects and accumulated local effects, additional likelihoods, and a number of bug fixes.
+The minimum R version was raised to 4.1.0 because the package now uses the native pipe.
+
+Best,
+Max Pichler
+
+### Successful R CMD checks under
+
+Locally:
+* <OS> (R <version>) (CPU and mps devices)
+* <OS> (for GPU device)
+
+Github actions:
+* macOS-latest (release)
+* Ubuntu R-release, and R-development
+* Windows-latest R-release
+
+Win-builder
+* R-release, R-development, and R-oldrelease
+
+Spelling has been checked (potential errors are intended).
+
+
 # Version 1.1
 ## cito submission 2 2024/03/18
 
