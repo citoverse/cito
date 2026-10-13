@@ -104,12 +104,7 @@ testthat::test_that("parallel bootstrapping", {
   testthat::skip_on_cran()
   testthat::skip_on_ci()
   skip_if_no_torch()
-  # the workers resolve dnn() from their own library, so this only tests the version under
-  # development when that is also the installed one (not the case under devtools::load_all())
-  desc <- file.path(.libPaths()[1], "cito", "DESCRIPTION")
-  installed <- if(file.exists(desc)) as.character(read.dcf(desc, "Version")) else NA
-  testthat::skip_if(is.na(installed) || installed != as.character(utils::packageVersion("cito")),
-                    "installed cito differs from the version under test")
+  skip_if_not_installed_version()
 
   testthat::expect_error({
     m <- dnn(Y ~ X1 + X2, data = df, epochs = 2L, bootstrap = 2L, bootstrap_parallel = 2L,

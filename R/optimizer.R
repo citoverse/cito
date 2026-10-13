@@ -159,12 +159,17 @@ get_optimizer <- function(optimizer, lr, parameters){
 
   }else{
 
-    param_optimizer <- list(params = parameters)
-    for (i in seq_len(length(names(optimizer)))){
-      if(names(optimizer)[i]!= "optim") {
-        param_optimizer <- append(param_optimizer,unlist(unname(optimizer[i])))
-      }
-    }
+    # keep the names: unlist(unname(.)) turned vector-valued parameters (adam's betas,
+    # rprop's etas/step_sizes) into several unnamed values, which then shifted every
+    # following argument into the wrong positional slot
+    args <- optimizer[names(optimizer) != "optim"]
+    # values not given in the call are taken from the torch formals and are still unevaluated
+    args <- lapply(args, function(a) {
+      if(is.list(a) && length(a) == 1) a <- a[[1]]
+      if(is.language(a)) a <- eval(a)
+      a
+    })
+    param_optimizer <- c(list(params = parameters), args)
     if("lr"%in% names(param_optimizer)){
       warning("two lr available, lr of config_optimizer object gets set as lr")
     }else{

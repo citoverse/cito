@@ -346,7 +346,8 @@ dnn <- function(formula = NULL,
     Z_torch = NULL
   }
 
-  if(is.null(batchsize)) batchsize = round(0.1*dim(Y_torch)[1])
+  # a batchsize of 0 gives a dataloader of length Inf that yields empty batches forever
+  if(is.null(batchsize)) batchsize = max(1L, round(0.1*dim(Y_torch)[1]))
 
   ### Hyperparameter tuning ###
   #TODO: Adjust for new loss objects
@@ -980,15 +981,20 @@ predict.citodnn <- function(object,
       Z = torch::torch_tensor(object$data$Z, dtype = torch::torch_long())
     }
   } else {
-    sample_names <- rownames(newdata)
-    if(is.data.frame(newdata)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE])
-    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(newdata), xlev = object$data$xlvls)[,-1,drop=FALSE])
+    had_rownames <- !is.null(rownames(newdata))
+    if(!is.data.frame(newdata)) newdata <- data.frame(newdata)
+    mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE]
+    # model.matrix drops rows containing NAs, so the names and the embedding codes have to
+    # follow the rows it kept, otherwise predictions are misaligned or the naming errors
+    sample_names <- if(had_rownames) rownames(mm) else NULL
+    X <- torch::torch_tensor(mm)
 
     if(!is.null(object$model_properties$embeddings)) {
+      keep <- if(is.null(rownames(mm))) seq_len(nrow(newdata)) else rownames(mm)
       tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
         if(!is.factor(newdata[[term]])) stop(paste0(term, " must be factor."))
         #TODO: check if newdata[[term]] has the same factor levels as object$data[[term]]
-        newdata[[term]] |> as.integer()
+        newdata[keep, term] |> as.integer()
       }) )
       Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
     }
@@ -1041,16 +1047,23 @@ predict.citodnnBootstrap <- function(object,
                      checkmate::checkDataFrame(newdata),
                      checkmate::checkScalarNA(newdata))
 
-  predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = type, device = device, batchsize = batchsize))
-  predictions = abind::abind(predictions, along = 0L)
+  type <- match.arg(type)
   reduce <- match.arg(reduce)
-  if(reduce == "mean") {
-    return(apply(predictions, 2:3, mean))
-  } else if(reduce == "median") {
-    return(apply(predictions, 2:3, stats::median))
-  } else {
-    return(predictions)
+
+  # a factor per replicate cannot be aggregated, so for type = "class" the replicates are
+  # averaged on the response scale and the class is taken from the aggregate
+  predictions = lapply(object$models, function(m) stats::predict(m, newdata = newdata, type = if(type == "class") "response" else type, device = device, batchsize = batchsize))
+  predictions = abind::abind(predictions, along = 0L)
+
+  if(reduce == "none") return(predictions)
+
+  aggregated = if(reduce == "mean") apply(predictions, 2:3, mean) else apply(predictions, 2:3, stats::median)
+
+  if(type == "class") {
+    responses = object$models[[1]]$loss$responses
+    return(factor(responses[apply(aggregated, 1, which.max)], levels = responses))
   }
+  return(aggregated)
 }
 
 

@@ -56,6 +56,15 @@
 * the nbinom likelihood exposes the dispersion via parameter_link() again, and simulate() works
 * permutation importance no longer has an unreachable exhaustive branch that errored for large n_permute
 * visualize.training() no longer errors when the loss is NA for every epoch (aborted training)
+* dnn(), cnn() and mmn() no longer hang on data sets with 5 or fewer observations. The default batchsize is round(0.1*n), which was 0 there, and a dataloader with batch_size = 0 has length Inf and yields empty batches forever
+* predict(model, type = "class") works for bootstrapped models. The replicates are now averaged on the response scale and the class is taken from the aggregate, previously the per-replicate factors were passed to abind() and the call errored
+* predict(model, newdata = ) works when newdata contains NAs. model.matrix() drops those rows, but the sample names and the embedding codes were still taken from the full newdata, which errored or misaligned the predictions
+* config_optimizer() accepts vector-valued parameters (adam's betas, rprop's etas and step_sizes). The parameter names were dropped when the optimizer was built, so those values were passed positionally and shifted every following argument
+* continue_training() passes changed_params on to the replicates of a bootstrapped model instead of ignoring it
+* blocked hyperparameter tuning no longer warns about a recycling mismatch when the number of blocks is not a multiple of CV
+* conditionalEffects(data = ) works when the new data contains NAs. Those rows are dropped from the model frame, but the row indices were still drawn from the full data, which aborted the analytical method inside torch ("index out of bounds") and made the finite method fail on a length mismatch
+* the mvp likelihood returns one value per observation like every other likelihood, instead of a single reduced value
+* the development notes at the repository root (and E-CNN_and_MMN.md) are excluded from the build, they were shipped in the tarball before
 * weighted cross-validation in the hyperparameter tuning subsets matrix weights by row
 * print() of a citoarchitecture without an input_shape no longer errors
 * models fitted with cito <= 1.1 are rejected with an informative message instead of an internal error
@@ -98,7 +107,7 @@
 * early stopping (ignored validation loss)
 * weights are only saved for best and last epoch
 * gaussian likelihood works now properly
-* reguarlization loss is not visualized
+* regularization loss is not visualized
 * reduce lr on plateau works now with validation loss
 
 

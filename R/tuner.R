@@ -73,8 +73,9 @@ tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tu
       message("WARNING: CV > number of unique values in blocking factor...setting CV = number of levles")
       tuning$CV = length(unique(tuning$blocking))
     }
-    set = sample(matrix(1:tuning$CV, nrow = length(unique(tuning$blocking)))[,1])
-    #sample(tuning$CV, size = length(unique(tuning$blocking)), replace = TRUE)
+    # same assignment as matrix(1:CV, nrow = n_blocks)[,1] but without the recycling warning
+    # when the number of blocks is not a multiple of CV
+    set = sample(rep_len(1:tuning$CV, length(unique(tuning$blocking))))
     set = set[as.integer((tuning$blocking))]
     test_indices = lapply(unique(set), function(s) which(set == s, arr.ind = TRUE))
   }

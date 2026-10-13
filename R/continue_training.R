@@ -152,7 +152,7 @@ continue_training.citodnnBootstrap <- function(model,
     pb = progress::progress_bar$new(total = length(model$models), format = "[:bar] :percent :eta", width = round(getOption("width")/2))
 
     for(b in 1:length(model$models)) {
-      model$models[[b]] = continue_training(model$models[[b]], epochs = epochs, data = data, device = device, changed_params = NULL, init_optimizer = init_optimizer, X = X, Y = Y)
+      model$models[[b]] = continue_training(model$models[[b]], epochs = epochs, data = data, device = device, changed_params = changed_params, init_optimizer = init_optimizer, X = X, Y = Y)
       pb$tick()
     }
   } else {
@@ -168,7 +168,7 @@ continue_training.citodnnBootstrap <- function(model,
 
     parabar::configure_bar(type = "modern", format = "[:bar] :percent :eta", width = round(getOption("width")/2))
     model$models <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
-      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, changed_params = NULL, init_optimizer = init_optimizer, X = X, Y = Y))
+      return(continue_training(model$models[[b]], epochs = epochs, data = data, device = device, changed_params = changed_params, init_optimizer = init_optimizer, X = X, Y = Y))
 
     })
     parabar::stop_backend(backend)

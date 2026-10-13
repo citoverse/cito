@@ -203,7 +203,8 @@ cnn <- function(X,
   }
 
   Y <- loss_obj$format_Y(Y)
-  if(is.null(batchsize)) batchsize = round(0.1*dim(Y)[1])
+  # a batchsize of 0 gives a dataloader of length Inf that yields empty batches forever
+  if(is.null(batchsize)) batchsize = max(1L, round(0.1*dim(Y)[1]))
 
   if(!is.null(data_augmentation)) data_augmentation <- check_data_augmentation(data_augmentation)
 

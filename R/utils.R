@@ -612,7 +612,8 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
         logprob = logprob$sum(3)
         maxlogprob = torch::torch_amax(logprob, dim = 1)
         Eprob = (exp(logprob-maxlogprob))$mean(dim = 1)
-        return((-log(Eprob) - maxlogprob)$mean())
+        # unreduced, one value per observation: train_model() reduces with $mean()
+        return(-log(Eprob) - maxlogprob)
       },
       link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())},
       invlink = function(x) {torch::torch_sigmoid(x*1.7012)},

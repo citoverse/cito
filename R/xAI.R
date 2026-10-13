@@ -906,7 +906,8 @@ get_importance<- function(model,
   n_outputs = model$model_properties$output
   if(softmax) n_outputs = 1
 
-  if(!model$conditional_effects$any && importance %in% c("ce", "ale")) {
+  # conditional_effects is NULL for a model fitted with ce = FALSE, !NULL$any would error
+  if(!isTRUE(model$conditional_effects$any) && importance %in% c("ce", "ale")) {
     importance = "permutation"
   }
 
@@ -1082,11 +1083,19 @@ ACE = function(object,
 
   if(is.null(data)) data = object$data$data
 
+  if(!is.data.frame(data)) data = data.frame(data)
+
+  # the finite differences are taken on `data` itself but evaluated through predict(), which
+  # drops rows with NAs in the model frame, so those rows have to go before the indices are drawn
+  keep = rownames(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data, xlev = object$data$xlvls))
+  keep = if(is.null(keep)) seq_len(nrow(data)) else match(keep, rownames(data))
+
   if(is.logical(subsample)) {
-    indices_row = 1:nrow(data)
+    take = seq_along(keep)
   } else {
-    indices_row = sample.int(nrow(data), ceiling(subsample*nrow(data)))
+    take = sample.int(length(keep), ceiling(subsample*length(keep)))
   }
+  indices_row = keep[take]
 
   Y_name = as.character(object$call$formula[[2]])
   data = data[indices_row, !colnames(data) %in% Y_name, drop = FALSE]
@@ -1360,15 +1369,20 @@ ACEanalytical = function(object,
     }
   } else {
 
-    if(is.logical(subsample)) {
-      indices_row = 1:nrow(data)
-    } else {
-      indices_row = sample.int(nrow(data), ceiling(subsample*nrow(data)))
-    }
+    if(!is.data.frame(data)) data <- data.frame(data)
+    mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data, xlev = object$data$xlvls)[,-1,drop=FALSE]
+    # model.matrix drops rows containing NAs, so the subsample and the returned row_indices
+    # have to refer to the rows it kept, otherwise X is indexed out of bounds
+    kept <- match(rownames(mm), rownames(data))
 
-    sample_names <- rownames(data)
-    if(is.data.frame(data)) X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data, xlev = object$data$xlvls)[,-1,drop=FALSE])[indices_row]
-    else X <- torch::torch_tensor(stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data.frame(data), xlev = object$data$xlvls)[,-1,drop=FALSE])[indices_row]
+    if(is.logical(subsample)) {
+      take = seq_along(kept)
+    } else {
+      take = sample.int(length(kept), ceiling(subsample*length(kept)))
+    }
+    indices_row = kept[take]
+
+    X <- torch::torch_tensor(mm)[take]
 
     if(!is.null(object$model_properties$embeddings)) {
       tmp = do.call(cbind, lapply(object$Z_formula, function(term) {

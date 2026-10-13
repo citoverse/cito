@@ -17,3 +17,10 @@
 tests/testthat/Rplots.pdf
 ^test_folder$
 ^playground.R
+^CONTEXT\.md$
+^STATUS\.md$
+^HISTORY\.md$
+^INSIGHTS\.md$
+^E-CNN_and_MMN\.md$
+^ace_uncertainty_prototype\.R$
+^manuscript$

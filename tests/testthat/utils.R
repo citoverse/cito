@@ -3,6 +3,15 @@ skip_if_no_torch = function() {
     skip("required torch version not available for testing")
 }
 
+# parallel workers are fresh R sessions that resolve cito from their own library, so anything
+# using parallel = only tests the version under development when that is also the installed one
+skip_if_not_installed_version = function() {
+  desc = file.path(.libPaths()[1], "cito", "DESCRIPTION")
+  installed = if(file.exists(desc)) as.character(read.dcf(desc, "Version")) else NA
+  testthat::skip_if(is.na(installed) || installed != as.character(utils::packageVersion("cito")),
+                    "installed cito differs from the version under test")
+}
+
 wrap_dnn = function(pars) {
   testthat::expect_error({model = do.call(dnn, pars)}, NA)
   testthat::expect_error({.n = predict(model, newdata=pars$data)}, NA)

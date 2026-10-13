@@ -1,5 +1,5 @@
 # Version 1.2
-## cito submission 1 <DATE>
+## cito submission 1 <TODO: date of upload, YYYY/MM/DD — not submitted as of 2026-09-06>
 
 Dear CRAN Team,
 
@@ -11,11 +11,20 @@ The minimum R version was raised to 4.1.0 because the package now uses the nativ
 Best,
 Max Pichler
 
+### Reverse dependencies
+
+Checked against CRAN on 2026-09-06: no packages Depend on, Import from or LinkTo 'cito'. Two
+packages Suggest it, 'biomod2' and 'caretSDM'.
+<TODO: run revdepcheck on those two before uploading>
+
 ### Successful R CMD checks under
 
 Locally:
-* <OS> (R <version>) (CPU and mps devices)
-* <OS> (for GPU device)
+* Ubuntu 26.04.1 LTS (R 4.5.2, x86_64-pc-linux-gnu) (CPU device)
+* <TODO: GPU device. The Linux machine the CUDA run of 2026-08-12 used has been retired; re-run
+  R CMD check on the current CUDA machine before submitting.>
+* <TODO: mps device. No macOS machine is available any more; either re-check on one or drop the
+  claim, which version 1.1 made.>
 
 Github actions:
 * macOS-latest (release)
@@ -24,6 +33,9 @@ Github actions:
 
 Win-builder
 * R-release, R-development, and R-oldrelease
+
+<TODO: the fixes for this version are not committed, so neither the workflow above nor win-builder
+has run on the code being submitted. Push first, then confirm both.>
 
 Spelling has been checked (potential errors are intended).
 
