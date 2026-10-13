@@ -45,6 +45,14 @@ build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
        valid_dl = assemble(valid, NULL))
 }
 
+# GeoTIFF tags make libtiff warn four times per file; those are not defects and would otherwise
+# drown a run over a few thousand tiles. Every other warning is left alone.
+quiet_tiff = function(expr) {
+  withCallingHandlers(expr, warning = function(w) {
+    if(grepl("Unknown field with tag", conditionMessage(w), fixed = TRUE)) invokeRestart("muffleWarning")
+  })
+}
+
 cito_dataset = torch::dataset(
   initialize = function(..., data_augmentation) {
     self$inputs = list(...)
@@ -57,8 +65,10 @@ cito_dataset = torch::dataset(
         return(x[index, drop=FALSE])
       } else {
         X <- lapply(x[index], function(path) {
-          if(grepl(".png", path) | grepl(".jpeg", path) | grepl(".jpg", path)) return(self$load_image(path))
-          else if(grepl(".tiff", path)) return(self$load_tiff(path))
+          # anchored and case-insensitive: the old pattern missed .JPG/.PNG/.tif, which most
+          # cameras produce, and matched ".png" anywhere in the path, so "x.png.bak" got through
+          if(grepl("\\.(png|jpe?g)$", path, ignore.case = TRUE)) return(self$load_image(path))
+          else if(grepl("\\.tiff?$", path, ignore.case = TRUE)) return(self$load_tiff(path))
           else stop(paste0("File format not supported: ", path))
         })
         return(torch::torch_stack(X))
@@ -89,12 +99,20 @@ cito_dataset = torch::dataset(
     img <- torch::torch_tensor(torchvision::base_loader(path), torch::torch_float32())
     if(img$ndim == 2) img <- img$unsqueeze(3)
     img <- img$permute(c(3, 1, 2))
-    img <- img/255
+    # jpeg/png/tiff readers all return [0, 1] already, so dividing by 255 again scaled every
+    # folder input down by that factor and left TIFF inconsistent with JPEG/PNG
     return(img)
   },
   load_tiff = function(path) {
     if(!requireNamespace("tiff", quietly = TRUE)) stop("Package \"tiff\" must be installed to read .tiff files.", call. = FALSE)
-    img_list <- tiff::readTIFF(path, all = TRUE)
+    info <- quiet_tiff(tiff::readTIFF(path, info = TRUE, payload = FALSE))
+    # readTIFF returns wrong pixels for separate planes without erroring, so this refuses
+    # instead of training on them
+    if(isTRUE(info$planar.config[1] == "separate"))
+      stop(paste0(path, " stores its bands as separate planes (PLANARCONFIG_SEPARATE), which ",
+                  "tiff::readTIFF() decodes incorrectly. Rewrite the file with pixel interleave."),
+           call. = FALSE)
+    img_list <- quiet_tiff(tiff::readTIFF(path, all = TRUE))
     img_list <- lapply(img_list, function(img) {
       img <- torch::torch_tensor(img, dtype = torch::torch_float32())
       if(img$ndim == 2) img <- img$unsqueeze(3)

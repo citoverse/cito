@@ -65,6 +65,10 @@
 * conditionalEffects(data = ) works when the new data contains NAs. Those rows are dropped from the model frame, but the row indices were still drawn from the full data, which aborted the analytical method inside torch ("index out of bounds") and made the finite method fail on a length mismatch
 * the mvp likelihood returns one value per observation like every other likelihood, instead of a single reduced value
 * the development notes at the repository root (and E-CNN_and_MMN.md) are excluded from the build, they were shipped in the tarball before
+* multi-band TIFFs that store their bands as separate planes (GDAL's INTERLEAVE=BAND) are no longer read incorrectly. tiff::readTIFF() returns wrong pixel values for that layout without raising an error, so models were trained on corrupted inputs. Such files are now refused with an explanatory message instead of being read silently
+* images read from a folder are no longer scaled down by a factor of 255. base_loader() returns values in [0, 1] and cito divided by 255 on top of that, so JPEG and PNG inputs reached the network in [0, 1/255] while TIFF inputs, which were not divided, reached it in [0, 1]
+* folder inputs with .JPG, .PNG, .JPEG or .tif extensions are read instead of being rejected. The file type was matched case-sensitively, .tif was missing entirely, and the pattern was unanchored with an unescaped dot, so a file called "x.png.bak" was passed to the image reader while "photo.JPG" was not
+* GeoTIFF tags no longer raise four warnings per file
 * weighted cross-validation in the hyperparameter tuning subsets matrix weights by row
 * print() of a citoarchitecture without an input_shape no longer errors
 * models fitted with cito <= 1.1 are rejected with an informative message instead of an internal error

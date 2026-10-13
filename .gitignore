@@ -13,3 +13,12 @@ vignettes_build/D-Advanced_custom_loss_functions_cache/
 vignettes/C-Example_Species_distribution_modeling_files/
 vignettes/D-Advanced_custom_loss_functions_files/
 tests/testthat/Rplots.pdf
+
+# project notes: excluded from the build and never pushed
+CLAUDE.md
+CONTEXT.md
+STATUS.md
+HISTORY.md
+INSIGHTS.md
+AUDIT.md
+VISIBILITY.md
