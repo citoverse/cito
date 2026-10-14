@@ -3,12 +3,21 @@ get_data_loader = function(...,
                            shuffle=TRUE,
                            from_folder = FALSE,
                            data_augmentation = NULL,
-                           transformations = NULL) {
+                           transformations = NULL,
+                           num_workers = 0L,
+                           num_threads = 4L) {
 
-  if(from_folder | !is.null(data_augmentation)) ds = cito_dataset(..., data_augmentation = data_augmentation)
-  else ds <- torch::tensor_dataset(...)
+  if(from_folder | !is.null(data_augmentation)) {
+    ds = cito_dataset(..., data_augmentation = data_augmentation, worker_safe = num_workers > 0L,
+                      num_threads = num_threads)
+  } else {
+    # a tensor_dataset holds tensors, which cannot be shipped to a worker process
+    num_workers = 0L
+    ds <- torch::tensor_dataset(...)
+  }
 
-  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
+  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE,
+                          num_workers = num_workers)
 
   return(dl)
 }
@@ -23,7 +32,7 @@ get_data_loader = function(...,
 # only to the training loader, never to the validation loader.
 build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
                           batch_size, shuffle, from_folder = FALSE,
-                          data_augmentation = NULL) {
+                          data_augmentation = NULL, num_workers = 0L, num_threads = 4L) {
 
   assemble <- function(idx, augment) {
     pick <- function(x) if(is.null(idx)) x else x[idx, drop = FALSE]
@@ -32,7 +41,8 @@ build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
     parts <- c(parts, list(pick(target)))
     do.call(get_data_loader,
             c(parts, list(batch_size = batch_size, shuffle = shuffle,
-                          from_folder = from_folder, data_augmentation = augment)))
+                          from_folder = from_folder, data_augmentation = augment,
+                          num_workers = num_workers, num_threads = num_threads)))
   }
 
   if(is.null(valid)) {
@@ -54,8 +64,15 @@ quiet_tiff = function(expr) {
 }
 
 cito_dataset = torch::dataset(
-  initialize = function(..., data_augmentation) {
-    self$inputs = list(...)
+  initialize = function(..., data_augmentation, worker_safe = FALSE, num_threads = 4L) {
+    inputs = list(...)
+    # a torch tensor is an external pointer and cannot be serialized into a callr worker,
+    # so for num_workers > 0 the tensors are kept as R arrays and rebuilt per batch
+    if(worker_safe) inputs = lapply(inputs, function(x) if(inherits(x, "torch_tensor")) as.array(x$cpu()) else x)
+    self$inputs = inputs
+    self$use_magick = requireNamespace("magick", quietly = TRUE)
+    self$decoder = cito_decoder_available()
+    self$num_threads = num_threads
     self$data_augmentation = data_augmentation
   },
   .getbatch = function(index) {
@@ -63,7 +80,11 @@ cito_dataset = torch::dataset(
     batch = lapply(self$inputs, function(x) {
       if(inherits(x, "torch_tensor")) {
         return(x[index, drop=FALSE])
+      } else if(!is.character(x)) {
+        return(torch::torch_tensor(abind::asub(x, index, dims = 1, drop = FALSE)))
       } else {
+        batch <- self$decode_batch(x[index])
+        if(!is.null(batch)) return(batch)
         X <- lapply(x[index], function(path) {
           # anchored and case-insensitive: the old pattern missed .JPG/.PNG/.tif, which most
           # cameras produce, and matched ".png" anywhere in the path, so "x.png.bak" got through
@@ -92,26 +113,56 @@ cito_dataset = torch::dataset(
     return(batch)
   },
   .length = function() {
-    if(inherits(self$inputs[[1]], "torch_tensor")) return(dim(self$inputs[[1]])[1])
-    else return(length(self$inputs[[1]]))
+    x = self$inputs[[1]]
+    if(is.character(x)) return(length(x))
+    return(dim(x)[1])
+  },
+  # whole batch through the compiled decoder; NULL means "not applicable, use the R readers"
+  decode_batch = function(paths) {
+    if(!any(self$decoder)) return(NULL)
+    res <- cito_decode_batch(paths, self$num_threads)
+    if(!isTRUE(res$ok)) {
+      if(isTRUE(res$multipage)) return(NULL)
+      return(NULL)
+    }
+    bad <- which(nzchar(res$errors))
+    if(length(bad)) stop(paste0("cannot read ", paths[bad[1]], ": ", res$errors[bad[1]]))
+    dtype <- if(res$bits == 8L) "uint8" else "int16"
+    t <- torch::torch_tensor_from_buffer(res$data, shape = res$dim, dtype = dtype)
+    t <- t$to(dtype = torch::torch_float32())
+    # torch has no uint16, so 16-bit samples arrive signed and the top half wraps negative
+    if(res$bits == 16L) t <- torch::torch_where(t < 0, t + 65536, t)
+    return(t$permute(c(1, 4, 2, 3))/(2^res$bits - 1))
   },
   load_image = function(path) {
+    if(self$use_magick) {
+      # raw bytes straight into a tensor: base_loader materialises an R double array first,
+      # 24 MB for a 1024px RGB image against 3 MB, a constant ~7x (see AUDIT.md A8)
+      img_m <- magick::image_read(path)
+      # base_loader keeps an alpha channel, so dropping it here would silently change the
+      # number of input channels for RGBA PNGs
+      d <- magick::image_data(img_m, channels = if(isTRUE(magick::image_info(img_m)$matte)) "rgba" else "rgb")
+      img <- torch::torch_tensor_from_buffer(d, shape = rev(dim(d)), dtype = "uint8")
+      # R arrays are column-major and torch reads the buffer row-major, hence rev(dim(d))
+      return(img$permute(c(3, 1, 2))$to(dtype = torch::torch_float32())$div(255))
+    }
+    # jpeg/png/tiff readers all return [0, 1] already, so dividing by 255 again scaled every
+    # folder input down by that factor and left TIFF inconsistent with JPEG/PNG
     img <- torch::torch_tensor(torchvision::base_loader(path), torch::torch_float32())
     if(img$ndim == 2) img <- img$unsqueeze(3)
     img <- img$permute(c(3, 1, 2))
-    # jpeg/png/tiff readers all return [0, 1] already, so dividing by 255 again scaled every
-    # folder input down by that factor and left TIFF inconsistent with JPEG/PNG
     return(img)
   },
   load_tiff = function(path) {
     if(!requireNamespace("tiff", quietly = TRUE)) stop("Package \"tiff\" must be installed to read .tiff files.", call. = FALSE)
     info <- quiet_tiff(tiff::readTIFF(path, info = TRUE, payload = FALSE))
-    # readTIFF returns wrong pixels for separate planes without erroring, so this refuses
-    # instead of training on them
+    # readTIFF returns wrong pixels for separate planes without erroring (AUDIT.md A10), so this
+    # refuses instead of training on them; the compiled decoder reads that layout correctly
     if(isTRUE(info$planar.config[1] == "separate"))
-      stop(paste0(path, " stores its bands as separate planes (PLANARCONFIG_SEPARATE), which ",
-                  "tiff::readTIFF() decodes incorrectly. Rewrite the file with pixel interleave."),
-           call. = FALSE)
+      stop(paste0(path, " stores its bands as separate planes (PLANARCONFIG_SEPARATE), which the ",
+                  "fallback TIFF reader decodes incorrectly. Install the libtiff development ",
+                  "headers and reinstall cito to use the compiled decoder, or rewrite the file ",
+                  "with pixel interleave."), call. = FALSE)
     img_list <- quiet_tiff(tiff::readTIFF(path, all = TRUE))
     img_list <- lapply(img_list, function(img) {
       img <- torch::torch_tensor(img, dtype = torch::torch_float32())

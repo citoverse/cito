@@ -65,10 +65,14 @@
 * conditionalEffects(data = ) works when the new data contains NAs. Those rows are dropped from the model frame, but the row indices were still drawn from the full data, which aborted the analytical method inside torch ("index out of bounds") and made the finite method fail on a length mismatch
 * the mvp likelihood returns one value per observation like every other likelihood, instead of a single reduced value
 * the development notes at the repository root (and E-CNN_and_MMN.md) are excluded from the build, they were shipped in the tarball before
-* multi-band TIFFs that store their bands as separate planes (GDAL's INTERLEAVE=BAND) are no longer read incorrectly. tiff::readTIFF() returns wrong pixel values for that layout without raising an error, so models were trained on corrupted inputs. Such files are now refused with an explanatory message instead of being read silently
 * images read from a folder are no longer scaled down by a factor of 255. base_loader() returns values in [0, 1] and cito divided by 255 on top of that, so JPEG and PNG inputs reached the network in [0, 1/255] while TIFF inputs, which were not divided, reached it in [0, 1]
-* folder inputs with .JPG, .PNG, .JPEG or .tif extensions are read instead of being rejected. The file type was matched case-sensitively, .tif was missing entirely, and the pattern was unanchored with an unescaped dot, so a file called "x.png.bak" was passed to the image reader while "photo.JPG" was not
+* multi-band TIFFs that store their bands as separate planes (GDAL's INTERLEAVE=BAND) are no longer read incorrectly. tiff::readTIFF() returns wrong pixel values for that layout without raising an error, so models were trained on corrupted inputs. cito now reads such files through its compiled decoder, and the fallback reader refuses them with an explanatory message instead of continuing silently
+* folder images are decoded by a compiled reader when libjpeg, libpng and libtiff are available at install time, which is 9 to 14 times faster than the previous path and never materialises an R double array. Without those libraries cito falls back to the R readers, one format at a time
 * GeoTIFF tags no longer raise four warnings per file
+* folder inputs with .JPG, .PNG, .JPEG or .tif extensions are read instead of being rejected. The file type was matched case-sensitively, .tif was missing entirely, and the pattern was unanchored with an unescaped dot, so a file called "x.png.bak" was passed to the image reader while "photo.JPG" was not
+* RGBA images keep their alpha channel on every decode path
+* folder inputs are decoded through magick when it is installed, which builds the tensor from raw bytes instead of materialising an R double array first. Measured 3.2x on 1024px images; no change at 224px
+* cnn() gains num_workers for folder inputs. The dataset no longer stores tensors, which previously made torch's parallel dataloader fail with "external pointer is not valid"
 * weighted cross-validation in the hyperparameter tuning subsets matrix weights by row
 * print() of a citoarchitecture without an input_shape no longer errors
 * models fitted with cito <= 1.1 are rejected with an informative message instead of an internal error

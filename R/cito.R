@@ -29,6 +29,8 @@
 #'
 #' @example /inst/examples/dnn-example.R
 #'
+#' @useDynLib cito, .registration = TRUE
+#' @importFrom Rcpp sourceCpp
 #' @aliases cito-package
 #' @name cito
 "_PACKAGE"

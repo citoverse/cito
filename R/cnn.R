@@ -16,6 +16,8 @@
 #' @param validation Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
+#' @param num_workers (integer) Number of worker processes for the dataloader. Only effective for folder inputs. 0 decodes in the main process.
+#' @param num_threads (integer) Number of threads the compiled image decoder uses per batch. Only effective for folder inputs.
 #' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param weights weights or other values (can be also a matrix) that the likelihood has access to
@@ -108,6 +110,8 @@ cnn <- function(X,
                 batchsize = NULL,
                 shuffle = TRUE,
                 data_augmentation = NULL,
+                num_workers = 0L,
+                num_threads = 4L,
                 epochs = 100,
                 weights = NULL,
                 early_stopping = Inf,
@@ -223,7 +227,8 @@ cnn <- function(X,
   weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
   dls <- build_loaders(list(X), Y, weights = weights_torch, valid = valid,
                        batch_size = batchsize, shuffle = shuffle,
-                       from_folder = from_folder, data_augmentation = data_augmentation)
+                       from_folder = from_folder, data_augmentation = data_augmentation,
+                       num_workers = num_workers, num_threads = num_threads)
   train_dl <- dls$train_dl
   valid_dl <- dls$valid_dl
 
@@ -249,6 +254,8 @@ cnn <- function(X,
                               batchsize = batchsize,
                               shuffle = shuffle,
                               data_augmentation = data_augmentation,
+                              num_workers = num_workers,
+                              num_threads = num_threads,
                               epochs = epochs, #redundant?
                               early_stopping = early_stopping,
                               burnin = burnin,
