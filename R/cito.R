@@ -29,6 +29,8 @@
 #'
 #' @example /inst/examples/dnn-example.R
 #'
+#' @importFrom jpeg readJPEG
+#' @importFrom png readPNG
 #' @useDynLib cito, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @aliases cito-package

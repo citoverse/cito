@@ -1,6 +1,6 @@
-# Rtools ships pkg-config and the three libraries; querying it keeps us correct when CRAN's
-# recipes add a transitive dependency (libtiff already pulls lerc)
+# Rtools ships static libraries, so the dependency closure has to come from --static:
+# a bare --libs returns -ltiff alone and the link fails on its transitive dependencies
 PKG_CONFIG = pkg-config
 PKG_CPPFLAGS = -DHAVE_JPEG -DHAVE_PNG -DHAVE_TIFF $(shell $(PKG_CONFIG) --cflags libtiff-4 libjpeg libpng)
 PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
-PKG_LIBS = $(shell $(PKG_CONFIG) --libs libtiff-4 libjpeg libpng) $(SHLIB_OPENMP_CXXFLAGS)
+PKG_LIBS = $(shell $(PKG_CONFIG) --libs --static libtiff-4 libjpeg libpng) $(SHLIB_OPENMP_CXXFLAGS)

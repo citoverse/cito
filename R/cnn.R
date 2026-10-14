@@ -143,6 +143,8 @@ cnn <- function(X,
   checkmate::qassert(baseloss, c("0", "N1", "B1"))
   checkmate::qassert(device, "S+[3,)")
   checkmate::qassert(plot, "B1")
+  checkmate::qassert(num_workers, "X1[0,)")
+  checkmate::qassert(num_threads, "X1[1,)")
   checkmate::qassert(verbose, "B1")
 
   # Only return the model properties if no Y specified (Used in mmn())
@@ -352,7 +354,9 @@ predict.citocnn <- function(object,
     stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
   }
 
-  dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE, from_folder = from_folder)
+  nt <- if(is.null(object$training_properties$num_threads)) 4L else object$training_properties$num_threads
+  dl <- get_data_loader(newdata, batch_size = batchsize, shuffle = FALSE, from_folder = from_folder,
+                        num_threads = nt)
 
   pred <- NULL
   coro::loop(for(b in dl) {

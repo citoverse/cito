@@ -302,7 +302,9 @@ predict.citommn <- function(object,
     return(x)
   })
 
-  dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE, from_folder=from_folder)))
+  nt <- if(is.null(object$training_properties$num_threads)) 4L else object$training_properties$num_threads
+  dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE,
+                                                      from_folder = from_folder, num_threads = nt)))
 
   pred <- NULL
   coro::loop(for(b in dl) {

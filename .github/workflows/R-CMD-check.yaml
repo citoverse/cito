@@ -31,6 +31,7 @@ jobs:
       R_REMOTES_NO_ERRORS_FROM_WARNINGS: true
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       KMP_DUPLICATE_LIB_OK: TRUE
+      _R_CHECK_FORCE_SUGGESTS_: false
     steps:
       - uses: actions/checkout@v4
 
@@ -42,39 +43,25 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v2
 
-      - name: Query dependencies
+      # libjpeg, libpng and libtiff are what the compiled image decoder links against;
+      # without them configure degrades that format to the R reader and the decoder is untested
+      - name: Install system dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
-          install.packages("pak", repos = "https://r-lib.github.io/p/pak/dev/")
-          saveRDS(pak::pkg_deps("local::.", dependencies = TRUE), ".github/r-depends.rds")
-        shell: Rscript {0}
+          sudo apt-get update -y
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev \
+                                  libjpeg-dev libpng-dev libtiff5-dev \
+                                  libfontconfig1-dev libharfbuzz-dev libfribidi-dev \
+                                  libfreetype6-dev libgit2-dev
 
-      - name: Cache R packages
-        if: runner.os != 'Windows'
-        uses: actions/cache@v4
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install jpeg libpng libtiff pkg-config
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ matrix.config.os }}-${{ steps.install-r.outputs.installed-r-version }}-1-${{ hashFiles('.github/r-depends.rds') }}
-          restore-keys: ${{ matrix.config.os }}-${{ steps.install-r.outputs.installed-r-version }}-1-
-
-      - name: Install curl
-        if: runner.os == 'Linux'
-        run: sudo apt-get install -y curl
-      - name: Install system dependencies
-        if: runner.os == 'Linux'
-        run: |
-          pak::local_system_requirements(execute = TRUE)
-          pak::pkg_system_requirements("rcmdcheck", execute = TRUE)
-        shell: Rscript {0}
-
-      - name: Install dependencies
-        run: |
-          pak::local_install_dev_deps(upgrade = TRUE)
-          pak::pkg_install("rcmdcheck")
-        shell: Rscript {0}
-
-      - name: Install Pkg
-        run: |
-          Rscript -e "pak::local_install()"
+          extra-packages: any::rcmdcheck
+          needs: check
 
       - name: Check I
         env:

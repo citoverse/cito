@@ -269,8 +269,10 @@ continue_training.citocnn <- function(model,
     }
   }
 
+  nw <- if(is.null(model$training_properties$num_workers)) 0L else model$training_properties$num_workers
+  nt <- if(is.null(model$training_properties$num_threads)) 4L else model$training_properties$num_threads
   dls <- build_loaders(list(X), Y, weights = weights, valid = valid, batch_size = bs, shuffle = sh,
-                       from_folder = from_folder)
+                       from_folder = from_folder, num_workers = nw, num_threads = nt)
   train_dl <- dls$train_dl
   valid_dl <- dls$valid_dl
 
@@ -348,8 +350,11 @@ continue_training.citommn <- function(model,
     }
   }
 
+  nw <- if(is.null(model$training_properties$num_workers)) 0L else model$training_properties$num_workers
+  nt <- if(is.null(model$training_properties$num_threads)) 4L else model$training_properties$num_threads
   dls <- build_loaders(X, Y, valid = valid, batch_size = model$training_properties$batchsize,
-                       shuffle = model$training_properties$shuffle, from_folder = from_folder)
+                       shuffle = model$training_properties$shuffle, from_folder = from_folder,
+                       num_workers = nw, num_threads = nt)
   train_dl <- dls$train_dl
   valid_dl <- dls$valid_dl
 
