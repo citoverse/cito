@@ -199,7 +199,8 @@ Useful links:
 
 Authors:
 \itemize{
-  \item Christian Ames<c3><b6>der \email{Christian.Amesoeder@informatik.uni-regensburg.de}
+  \item Maximilian Pichler \email{maximilian.pichler@biologie.uni-regensburg.de} (\href{https://orcid.org/0000-0003-2252-8327}{ORCID})
+  \item Christian Amesöder \email{Christian.Amesoeder@informatik.uni-regensburg.de}
 }
 
 Other contributors:

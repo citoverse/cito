@@ -3,12 +3,21 @@ get_data_loader = function(...,
                            shuffle=TRUE,
                            from_folder = FALSE,
                            data_augmentation = NULL,
-                           transformations = NULL) {
+                           transformations = NULL,
+                           num_workers = 0L,
+                           num_threads = 4L) {
 
-  if(from_folder | !is.null(data_augmentation)) ds = cito_dataset(..., data_augmentation = data_augmentation)
-  else ds <- torch::tensor_dataset(...)
+  if(from_folder | !is.null(data_augmentation)) {
+    ds = cito_dataset(..., data_augmentation = data_augmentation, worker_safe = num_workers > 0L,
+                      num_threads = num_threads)
+  } else {
+    # a tensor_dataset holds tensors, which cannot be shipped to a worker process
+    num_workers = 0L
+    ds <- torch::tensor_dataset(...)
+  }
 
-  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE)
+  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE,
+                          num_workers = num_workers)
 
   return(dl)
 }
@@ -23,7 +32,7 @@ get_data_loader = function(...,
 # only to the training loader, never to the validation loader.
 build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
                           batch_size, shuffle, from_folder = FALSE,
-                          data_augmentation = NULL) {
+                          data_augmentation = NULL, num_workers = 0L, num_threads = 4L) {
 
   assemble <- function(idx, augment) {
     pick <- function(x) if(is.null(idx)) x else x[idx, drop = FALSE]
@@ -32,7 +41,8 @@ build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
     parts <- c(parts, list(pick(target)))
     do.call(get_data_loader,
             c(parts, list(batch_size = batch_size, shuffle = shuffle,
-                          from_folder = from_folder, data_augmentation = augment)))
+                          from_folder = from_folder, data_augmentation = augment,
+                          num_workers = num_workers, num_threads = num_threads)))
   }
 
   if(is.null(valid)) {
@@ -45,6 +55,21 @@ build_loaders <- function(inputs, target, weights = NULL, valid = NULL,
        valid_dl = assemble(valid, NULL))
 }
 
+# The compiled decoder dispatches on magic bytes, so the R readers must too: deciding by
+# extension made an extensionless PNG readable on one path and not the other, which put the
+# readability of a file at the mercy of which system library happened to be installed.
+sniff_format = function(path) {
+  b = readBin(path, "raw", 4L)
+  if(length(b) < 4L) return("unknown")
+  if(identical(b[1:3], as.raw(c(0xFF, 0xD8, 0xFF)))) return("jpeg")
+  if(identical(b[1:4], as.raw(c(0x89, 0x50, 0x4E, 0x47)))) return("png")
+  if(identical(b[1:2], as.raw(c(0x49, 0x49))) && b[4] == as.raw(0x00) &&
+     (b[3] == as.raw(42L) || b[3] == as.raw(43L))) return("tiff")
+  if(identical(b[1:2], as.raw(c(0x4D, 0x4D))) && b[3] == as.raw(0x00) &&
+     (b[4] == as.raw(42L) || b[4] == as.raw(43L))) return("tiff")
+  "unknown"
+}
+
 # GeoTIFF tags make libtiff warn four times per file; those are not defects and would otherwise
 # drown a run over a few thousand tiles. Every other warning is left alone.
 quiet_tiff = function(expr) {
@@ -54,8 +79,14 @@ quiet_tiff = function(expr) {
 }
 
 cito_dataset = torch::dataset(
-  initialize = function(..., data_augmentation) {
-    self$inputs = list(...)
+  initialize = function(..., data_augmentation, worker_safe = FALSE, num_threads = 4L) {
+    inputs = list(...)
+    # a torch tensor is an external pointer and cannot be serialized into a callr worker,
+    # so for num_workers > 0 the tensors are kept as R arrays and rebuilt per batch
+    if(worker_safe) inputs = lapply(inputs, function(x) if(inherits(x, "torch_tensor")) as.array(x$cpu()) else x)
+    self$inputs = inputs
+    self$decoder = cito_decoder_available()
+    self$num_threads = num_threads
     self$data_augmentation = data_augmentation
   },
   .getbatch = function(index) {
@@ -63,13 +94,16 @@ cito_dataset = torch::dataset(
     batch = lapply(self$inputs, function(x) {
       if(inherits(x, "torch_tensor")) {
         return(x[index, drop=FALSE])
+      } else if(!is.character(x)) {
+        return(torch::torch_tensor(abind::asub(x, index, dims = 1, drop = FALSE)))
       } else {
+        batch <- self$decode_batch(x[index])
+        if(!is.null(batch)) return(batch)
         X <- lapply(x[index], function(path) {
-          # anchored and case-insensitive: the old pattern missed .JPG/.PNG/.tif, which most
-          # cameras produce, and matched ".png" anywhere in the path, so "x.png.bak" got through
-          if(grepl("\\.(png|jpe?g)$", path, ignore.case = TRUE)) return(self$load_image(path))
-          else if(grepl("\\.tiff?$", path, ignore.case = TRUE)) return(self$load_tiff(path))
-          else stop(paste0("File format not supported: ", path))
+          fmt <- sniff_format(path)
+          if(fmt == "tiff") self$load_tiff(path)
+          else if(fmt == "unknown") stop(paste0("File format not supported: ", path))
+          else self$load_image(path, fmt)
         })
         return(torch::torch_stack(X))
       }
@@ -92,27 +126,78 @@ cito_dataset = torch::dataset(
     return(batch)
   },
   .length = function() {
-    if(inherits(self$inputs[[1]], "torch_tensor")) return(dim(self$inputs[[1]])[1])
-    else return(length(self$inputs[[1]]))
+    x = self$inputs[[1]]
+    if(is.character(x)) return(length(x))
+    return(dim(x)[1])
   },
-  load_image = function(path) {
-    img <- torch::torch_tensor(torchvision::base_loader(path), torch::torch_float32())
-    if(img$ndim == 2) img <- img$unsqueeze(3)
-    img <- img$permute(c(3, 1, 2))
-    # jpeg/png/tiff readers all return [0, 1] already, so dividing by 255 again scaled every
-    # folder input down by that factor and left TIFF inconsistent with JPEG/PNG
-    return(img)
+  # whole batch through the compiled decoder; NULL means "not applicable, use the R readers"
+  decode_batch = function(paths) {
+    if(!any(self$decoder)) return(NULL)
+    res <- cito_decode_batch(paths, self$num_threads)
+    # NULL means "the compiled path cannot read this batch", and the R readers take over.
+    # A genuine read failure is reported here rather than being rediscovered by the R reader.
+    if(!isTRUE(res$ok)) {
+      if(isTRUE(res$fallback)) return(NULL)
+      bad <- which(nzchar(res$errors))
+      if(length(bad)) stop(paste0("cannot read ", paths[bad[1]], ": ", res$errors[bad[1]]))
+      return(NULL)
+    }
+    bad <- which(nzchar(res$errors))
+    if(length(bad)) stop(paste0("cannot read ", paths[bad[1]], ": ", res$errors[bad[1]]))
+    dtype <- if(res$sformat == 2L) "float" else if(res$bits == 8L) "uint8" else "int16"
+    # torch_tensor_from_buffer() borrows the raw vector. $to(dtype) copies only when the dtype
+    # actually changes, so for a float32 file it is a no-op and the tensor would keep pointing
+    # at memory R is free to collect. clone() is the only guarantee.
+    t <- torch::torch_tensor_from_buffer(res$data, shape = res$dim, dtype = dtype)$clone()
+    t <- t$to(dtype = torch::torch_float32())
+    # torch has no uint16, so unsigned 16-bit arrives signed and the top half wraps negative
+    if(res$sformat == 0L && res$bits == 16L) t <- torch::torch_where(t < 0, t + 65536, t)
+    t <- t$permute(c(1, 4, 2, 3))
+    # only unsigned integer samples carry an implied [0, 1] scale; float embeddings and signed
+    # rasters such as elevation are physical quantities and must pass through untouched
+    if(res$sformat == 0L) t <- t/(2^res$bits - 1)
+    return(t)
+  },
+  # the reference decode. A third path through magick was tried and removed: it quantised
+  # 16-bit PNG to 8 and disagreed with base_loader on grey+alpha, so which libraries happened
+  # to be installed decided how many input channels a model was fitted with
+  load_image = function(path, fmt) {
+    # base_loader() would be the obvious call, but it dispatches on the file extension and so
+    # cannot read a file the compiled path can. Reading by sniffed format keeps the two in step;
+    # the 2-D expansion is what base_loader does to a greyscale image.
+    img <- if(fmt == "png") png::readPNG(path) else jpeg::readJPEG(path)
+    if(length(dim(img)) == 2L) img <- array(rep(img, 3L), dim = c(dim(img), 3L))
+    return(torch::torch_tensor(img, torch::torch_float32())$permute(c(3, 1, 2)))
   },
   load_tiff = function(path) {
     if(!requireNamespace("tiff", quietly = TRUE)) stop("Package \"tiff\" must be installed to read .tiff files.", call. = FALSE)
     info <- quiet_tiff(tiff::readTIFF(path, info = TRUE, payload = FALSE))
-    # readTIFF returns wrong pixels for separate planes without erroring, so this refuses
-    # instead of training on them
-    if(isTRUE(info$planar.config[1] == "separate"))
-      stop(paste0(path, " stores its bands as separate planes (PLANARCONFIG_SEPARATE), which ",
-                  "tiff::readTIFF() decodes incorrectly. Rewrite the file with pixel interleave."),
+    # readTIFF returns wrong pixels for separate planes without erroring (AUDIT.md A10), so this
+    # refuses instead of training on them; the compiled decoder reads that layout correctly
+    # readTIFF decodes subsampled YCbCr past the end of its scanline buffer: repeated reads of
+    # the same file return different values, sometimes +/-Inf. Refuse rather than hand that on.
+    if(isTRUE(grepl("ycbcr", paste(info$color.space, collapse = ""), ignore.case = TRUE)))
+      stop(paste0(path, " is YCbCr-encoded, which tiff::readTIFF() decodes incorrectly. Install ",
+                  "the libtiff development headers and reinstall cito, or rewrite the file as RGB."),
            call. = FALSE)
-    img_list <- quiet_tiff(tiff::readTIFF(path, all = TRUE))
+    if(isTRUE(info$sample.format[1] == "int"))
+      stop(paste0(path, " stores signed samples, which tiff::readTIFF() rescales as if they were ",
+                  "unsigned. Install the libtiff development headers and reinstall cito to read ",
+                  "it with the compiled decoder."), call. = FALSE)
+    if(isTRUE(info$planar.config[1] == "separate"))
+      stop(paste0(path, " stores its bands as separate planes (PLANARCONFIG_SEPARATE), which the ",
+                  "fallback TIFF reader decodes incorrectly. Install the libtiff development ",
+                  "headers and reinstall cito to use the compiled decoder, or rewrite the file ",
+                  "with pixel interleave."), call. = FALSE)
+    # A modern GeoTIFF carries more than the image: overviews at reduced resolution and, in
+    # essentially every COG, a 1-bit internal mask. readTIFF(all = TRUE) returns them all and
+    # then fails on the mask, so cito could read neither. Genuine pages share the first
+    # directory's geometry and bit depth; overviews differ in size, masks in depth.
+    dirs <- quiet_tiff(tiff::readTIFF(path, info = TRUE, payload = FALSE, all = TRUE))
+    keep <- which(dirs$width == dirs$width[1] & dirs$length == dirs$length[1] &
+                  dirs$bits.per.sample == dirs$bits.per.sample[1])
+    img_list <- quiet_tiff(tiff::readTIFF(path, all = keep))
+    if(!is.list(img_list)) img_list <- list(img_list)
     img_list <- lapply(img_list, function(img) {
       img <- torch::torch_tensor(img, dtype = torch::torch_float32())
       if(img$ndim == 2) img <- img$unsqueeze(3)

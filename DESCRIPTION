@@ -26,11 +26,13 @@ Description: The 'cito' package provides a user-friendly interface for training 
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Depends:
     R (>= 4.1.0)
 Imports:
+    Rcpp,
     coro,
+    jpeg,
+    png,
     checkmate,
     torch,
     gridExtra,
@@ -55,10 +57,12 @@ Suggests:
     ggplot2,
     knitr,
     tiff,
-    jpeg,
-    png,
     raster
+LinkingTo:
+    Rcpp
+SystemRequirements: libjpeg, libpng, libtiff (all optional; without them cito falls back to the R image readers)
 VignetteBuilder: knitr
 BugReports: https://github.com/citoverse/cito/issues
 URL: https://citoverse.github.io/cito/
 Language: en-US
+Config/roxygen2/version: 8.1.0

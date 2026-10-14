@@ -22,3 +22,6 @@ HISTORY.md
 INSIGHTS.md
 AUDIT.md
 VISIBILITY.md
+src/Makevars
+src/*.o
+src/*.so

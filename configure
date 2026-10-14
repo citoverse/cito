@@ -1,0 +1,67 @@
+#!/bin/sh
+# cito: the compiled image decoder is optional. If a library is missing the package still
+# builds and falls back to the R readers, so a missing -dev package must never fail the install.
+: "${R_HOME=$(R RHOME)}"
+PKGCONFIG=$(command -v pkg-config 2>/dev/null)
+# R's own compiler, because CRAN's macOS builds use clang with an -arch flag that a bare cc
+# does not carry; unquoted on purpose, it is a command plus flags
+PROBE_CC=$("${R_HOME}/bin/R" CMD config CC 2>/dev/null)
+[ -n "$PROBE_CC" ] || PROBE_CC=${CC:-cc}
+
+CPPFLAGS=""
+LIBS=""
+
+# compiles and links a probe; a header without a working library is the failure that would
+# otherwise only surface when R tries to load the shared object
+# The probe must *call* a symbol. A main() that references nothing links against a static
+# archive without pulling a single member, so the archive's own unresolved dependencies are
+# never seen -- and on macOS, where -undefined dynamic_lookup is in SHLIB_LDFLAGS, that
+# produces a cito.so that links and then fails at dlopen, taking the whole package with it.
+link_ok () {   # $1 header, $2 call, $3 cflags, $4 libs
+  # jpeglib.h uses FILE but does not include stdio.h itself, so the probe must
+  echo "#include <stdio.h>
+#include <stdlib.h>
+#include <$1>
+int main(void){ $2; return 0; }" | $PROBE_CC -xc - $3 $4 -o /dev/null 2>/dev/null
+}
+
+try_lib () {   # $1 pkg-config name, $2 macro, $3 fallback -l flag, $4 header, $5 probe call
+  if [ -n "$PKGCONFIG" ] && $PKGCONFIG --exists "$1" 2>/dev/null; then
+    cf=$($PKGCONFIG --cflags "$1")
+    for lf in "$($PKGCONFIG --libs "$1")" "$($PKGCONFIG --libs --static "$1")"; do
+      if link_ok "$4" "$5" "$cf" "$lf"; then
+        CPPFLAGS="$CPPFLAGS $cf -D$2"
+        LIBS="$LIBS $lf"
+        echo "cito: found $1 via pkg-config"
+        return 0
+      fi
+    done
+    echo "cito: $1 reported by pkg-config but does not link, trying the plain header"
+  fi
+  for d in /usr/include /usr/local/include /usr/include/$(uname -m)-linux-gnu \
+           /opt/homebrew/include /opt/R/arm64/include /opt/R/x86_64/include; do
+    [ -f "$d/$4" ] || continue
+    libdir="${d%/include}/lib"
+    ldflag=""
+    [ -d "$libdir" ] && ldflag="-L$libdir"
+    if link_ok "$4" "$5" "-I$d" "$ldflag $3"; then
+      CPPFLAGS="$CPPFLAGS -I$d -D$2"
+      LIBS="$LIBS $ldflag $3"
+      echo "cito: found $4 in $d"
+      return 0
+    fi
+  done
+  echo "cito: $1 not found, that format will use the R fallback reader"
+  return 1
+}
+
+try_lib libjpeg   HAVE_JPEG -ljpeg jpeglib.h "struct jpeg_error_mgr e; jpeg_std_error(&e)"
+try_lib libpng    HAVE_PNG  -lpng  png.h    "png_access_version_number()"
+try_lib libtiff-4 HAVE_TIFF -ltiff tiffio.h "TIFFGetVersion()"
+
+esc () { printf '%s' "$1" | sed -e 's/[&|\\]/\\\\&/g'; }
+sed -e "s|@CITO_CPPFLAGS@|$(esc "$CPPFLAGS")|" -e "s|@CITO_LIBS@|$(esc "$LIBS")|" \
+    src/Makevars.in > src/Makevars
+echo "cito: PKG_CPPFLAGS =$CPPFLAGS"
+echo "cito: PKG_LIBS =$LIBS"
+exit 0
