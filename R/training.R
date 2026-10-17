@@ -139,6 +139,10 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
 
       valid_l <- c()
 
+      # $train(FALSE) only switches dropout and batch norm; autograd stays on, so without this
+      # every validation batch builds a graph it never uses. On a fine-tuned MobileNetV2 that is
+      # the difference between fitting on a 24 GB card and an out-of-memory error.
+      torch::with_no_grad({
       coro::loop(for (b in valid_dl) {
         b <- lapply(b, function(x) x$to(device=device, non_blocking= TRUE))
 
@@ -158,6 +162,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
         loss <- if (has_weights) model$loss(output, target, weights = weights)$mean()
                 else model$loss(output, target)$mean()
         valid_l <- c(valid_l, loss$item())
+      })
       })
       model$losses$valid_l[epoch] <- mean(valid_l)
 

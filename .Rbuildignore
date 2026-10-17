@@ -28,3 +28,4 @@ tests/testthat/Rplots.pdf
 ^AUDIT\.md$
 ^VISIBILITY\.md$
 ^src/Makevars$
+^BirdSongRecognition$

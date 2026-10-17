@@ -314,6 +314,14 @@ assert_weights_supported = function(loss, weights) {
 }
 
 get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL) {
+  # The loss module's methods close over this frame, so an argument promise that is never forced
+  # keeps the caller's frame alive -- and that frame holds X. A fitted model then serialises the
+  # whole training set: 3.3 MB of X turned into a 4.8 MB saved object before this line existed.
+  force(loss)
+  force(Y)
+  force(custom_parameters)
+  force(baseloss)
+  force(weights)
   self <- NULL
   out <- list()
   if(is.character(loss)) loss <- tolower(loss)

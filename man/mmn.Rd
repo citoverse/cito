@@ -24,6 +24,7 @@ mmn(
   shuffle = TRUE,
   data_augmentation = NULL,
   epochs = 100,
+  weights = NULL,
   early_stopping = Inf,
   burnin = Inf,
   baseloss = NULL,
@@ -67,7 +68,9 @@ mmn(
 
 \item{data_augmentation}{A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.}
 
-\item{epochs}{Number of epochs to train the model. Default is 100.}
+\item{epochs}{Number of epochs to train the model.}
+
+\item{weights}{weights or other values (can be also a matrix) that the likelihood has access to Default is 100.}
 
 \item{early_stopping}{Number of epochs with no improvement after which training will be stopped. Default is Inf.}
 
