@@ -60,7 +60,7 @@ installed by:
 
 ``` r
 if(!require('devtools', quietly = TRUE)) install.packages('devtools')
-devtools::install_github('citoverse/cito')
+devtools::install_github('citoverse/cito', build_vignettes = T)
 ```
 
 ## Example
