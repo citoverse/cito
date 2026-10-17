@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - cpp-data-loader
   pull_request:
     branches:
       - main

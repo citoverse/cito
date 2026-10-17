@@ -25,3 +25,7 @@ VISIBILITY.md
 src/Makevars
 src/*.o
 src/*.so
+
+# manuscript and case study: working material, never pushed
+manuscript/
+BirdSongRecognition/

@@ -2,18 +2,35 @@
 % Please edit documentation in R/mmn.R
 \name{summary.citommn}
 \alias{summary.citommn}
+\alias{print.summary.citommn}
 \title{Summarize a fitted MMN model}
 \usage{
-\method{summary}{citommn}(object, ...)
+\method{summary}{citommn}(object, n_permute = 10L, device = NULL, ...)
+
+\method{print}{summary.citommn}(x, ...)
 }
 \arguments{
 \item{object}{A model created by \code{\link{mmn}}.}
 
+\item{n_permute}{Number of permutations per data stream. Default is 10.}
+
+\item{device}{Device on which to evaluate. Defaults to the device the model was trained on.}
+
 \item{...}{Additional arguments (currently not used).}
+
+\item{x}{a summary of a fitted MMN}
 }
 \value{
-The original model object \code{object}, returned invisibly.
+An object of class \code{"summary.citommn"} holding one row per data stream with the
+increase in loss, its standard deviation across permutations, and the share of the total.
 }
 \description{
-This function provides a summary of a Multi-Modal Neural Network (MMN) model created using the \code{\link{mmn}} function. It currently replicates the output of the \code{\link{print.citommn}} method.
+Reports the permutation importance of each data stream: one stream is shuffled across the batch
+while the others are left intact, and the increase in loss is what that stream contributed.
+}
+\details{
+This is the stream-level analogue of permutation importance for a DNN, and is the interpretive
+tool a multi-modal model admits, since per-feature effects are not comparable across modalities
+of different kinds. The standard deviation across permutations is reported beside the estimate,
+because a stream that contributes little can come out negative by chance.
 }

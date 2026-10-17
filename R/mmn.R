@@ -19,7 +19,8 @@
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
-#' @param epochs Number of epochs to train the model. Default is 100.
+#' @param epochs Number of epochs to train the model.
+#' @param weights weights or other values (can be also a matrix) that the likelihood has access to Default is 100.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
 #' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
 #' @param baseloss Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.
@@ -98,6 +99,7 @@ mmn <- function(formula,
                 shuffle = TRUE,
                 data_augmentation = NULL,
                 epochs = 100,
+                weights = NULL,
                 early_stopping = Inf,
                 burnin = Inf,
                 baseloss = NULL,
@@ -156,7 +158,10 @@ mmn <- function(formula,
   Y <- eval(formula[[2]], envir = dataList)
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss)
+  if(!is.null(weights))
+    weights <- matrix(weights, nrow = if(is.null(nrow(Y))) length(Y) else nrow(Y))
+  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
+  assert_weights_supported(loss, weights)
   baseloss <- loss_obj$baseloss
 
   X <- format_input_data(formula[[3]], dataList)
@@ -187,7 +192,8 @@ mmn <- function(formula,
     }
   }
 
-  dls <- build_loaders(X, Y, valid = valid, batch_size = batchsize, shuffle = shuffle,
+  weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
+  dls <- build_loaders(X, Y, weights = weights_torch, valid = valid, batch_size = batchsize, shuffle = shuffle,
                        from_folder = from_folder, data_augmentation = data_augmentation)
   train_dl <- dls$train_dl
   valid_dl <- dls$valid_dl
@@ -219,7 +225,7 @@ mmn <- function(formula,
                               device = device_old,
                               plot = plot,
                               verbose = verbose,
-                              has_weights = FALSE)
+                              has_weights = !is.null(weights))
 
   out <- list()
   class(out) <- "citommn"
@@ -287,11 +293,28 @@ predict.citommn <- function(object,
     link = function(a) a
   }
 
+  # format_input_data() returns tensors, which carry no dimnames, so the sample names have to be
+  # taken first. Without them metadata[rownames(pred), ] silently yields nothing downstream and an
+  # accuracy comes back as NA rather than as an error.
+  sample_names <- NULL
+  for(x in if(is.null(newdata)) object$data$dataList else newdata) {
+    nm <- if(is.character(x) && length(x) == 1L && dir.exists(x)) basename(list.files(x))
+          else if(!is.null(dim(x))) dimnames(x)[[1]]
+          else names(x)
+    if(!is.null(nm)) {
+      sample_names <- nm
+      break
+    }
+  }
+
   if(is.null(newdata)){
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList)
   } else {
-    #TODO check whether elements in newdata have the same dimensions as they had in object$data$dataList
     newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
+    # the training data is routinely dropped from a fitted MMN to keep the saved object small,
+    # so the per-stream shape check is skipped when it is gone rather than failing the predict
+    old <- try(format_input_data(object$call$formula[[3]], object$data$dataList), silent = TRUE)
+    check_newdata_shape(newdata, if(inherits(old, "try-error")) NULL else old)
   }
 
   from_folder = FALSE
@@ -313,7 +336,7 @@ predict.citommn <- function(object,
     else pred <- rbind(pred, torch::as_array(link(object$net(b, return_embeddings = return_embeddings))$to(device="cpu")))
   })
 
-  #TODO: find a way to get sample_names as in predict.citodnn and predict.citocnn
+  if(!is.null(sample_names) && length(sample_names) == nrow(pred)) rownames(pred) <- sample_names
 
   if(!return_embeddings) {
 
@@ -343,14 +366,254 @@ print.citommn <- function(x, ...){
 
 #' Summarize a fitted MMN model
 #'
-#' This function provides a summary of a Multi-Modal Neural Network (MMN) model created using the \code{\link{mmn}} function. It currently replicates the output of the \code{\link{print.citommn}} method.
+#' Reports the permutation importance of each data stream: one stream is shuffled across the batch
+#' while the others are left intact, and the increase in loss is what that stream contributed.
 #'
 #' @param object A model created by \code{\link{mmn}}.
+#' @param n_permute Number of permutations per data stream. Default is 10.
+#' @param device Device on which to evaluate. Defaults to the device the model was trained on.
 #' @param ... Additional arguments (currently not used).
-#' @return The original model object \code{object}, returned invisibly.
+#'
+#' @details
+#' This is the stream-level analogue of permutation importance for a DNN, and is the interpretive
+#' tool a multi-modal model admits, since per-feature effects are not comparable across modalities
+#' of different kinds. The standard deviation across permutations is reported beside the estimate,
+#' because a stream that contributes little can come out negative by chance.
+#'
+#' @return An object of class \code{"summary.citommn"} holding one row per data stream with the
+#'   increase in loss, its standard deviation across permutations, and the share of the total.
 #' @export
-summary.citommn <- function(object, ...){
-  return(print(object))
+summary.citommn <- function(object, n_permute = 10L, device = NULL, ...){
+  object <- check_model(object)
+  out <- list(call = object$call,
+              importance = modality_importance(object, n_permute = n_permute, device = device))
+  class(out) <- "summary.citommn"
+  return(out)
+}
+
+#' @rdname summary.citommn
+#' @param x a summary of a fitted MMN
+#' @export
+print.summary.citommn <- function(x, ...){
+  cat("Summary of Multi-Modal Neural Network\n\n")
+  cli::cli_h3(cli::style_bold("Permutation importance of the data streams"))
+  m <- as.matrix(x$importance[, c("loss_increase", "sd", "share"), drop = FALSE])
+  rownames(m) <- x$importance$modality
+  colnames(m) <- c("Loss increase", "SD", "Share")
+  print(round(m, 4))
+  cat(sprintf("\nBaseline loss %.4f, %d permutations per stream. A stream that contributes little\ncan come out negative by chance; compare the estimate against its SD before reading it.\n",
+              x$importance$baseline_loss[1], x$importance$n_permute[1]))
+  invisible(x)
+}
+
+# Permuting one data stream across the batch and refitting nothing: the increase in loss is what
+# that stream contributed. This is the stream-level analogue of permutation importance for a DNN,
+# and the only interpretive handle an MMN has, since per-pixel effects are not defined across
+# modalities of different kinds.
+modality_importance <- function(object, n_permute = 10L, device = NULL, batchsize = NULL) {
+  checkmate::qassert(n_permute, "X1[1,)")
+  object <- check_model(object)
+  if(is.null(device)) device <- object$training_properties$device
+  device <- check_device(device)
+  if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
+
+  inputs <- format_input_data(object$call$formula[[3]], object$data$dataList)
+  Y <- object$loss$format_Y(eval(object$call$formula[[2]], envir = object$data$dataList))
+  n <- dim(Y)[1]
+  labels <- modality_labels(object$call$formula[[3]])
+  if(length(labels) != length(inputs)) labels <- paste0("stream_", seq_along(inputs))
+
+  object$net$to(device = device)
+  object$loss$to(device = device)
+  run_loss <- function(ins) {
+    dl <- do.call(get_data_loader, append(lapply(ins, to_input_tensor), 
+                                          list(Y, batch_size = batchsize, shuffle = FALSE)))
+    total <- 0
+    count <- 0
+    coro::loop(for(b in dl) {
+      b <- lapply(b, function(z) z$to(device = device, non_blocking = TRUE))
+      out <- object$net(b[-length(b)])
+      l <- object$loss(out, b[[length(b)]])$mean()
+      total <- total + as.numeric(l)*dim(b[[length(b)]])[1]
+      count <- count + dim(b[[length(b)]])[1]
+    })
+    total/count
+  }
+
+  base <- run_loss(inputs)
+  draws <- lapply(seq_along(inputs), function(j) {
+    vapply(seq_len(n_permute), function(k) {
+      perm <- inputs
+      perm[[j]] <- permute_rows(perm[[j]], sample.int(n))
+      run_loss(perm)
+    }, numeric(1)) - base
+  })
+  inc <- vapply(draws, mean, numeric(1))
+  # a stream that contributes little can come out negative by chance, so the spread across
+  # permutations is reported beside the estimate rather than left for the reader to assume away
+  sd_inc <- vapply(draws, stats::sd, numeric(1))
+
+  share <- if(all(inc <= 0)) rep(NA_real_, length(inc)) else pmax(inc, 0)/sum(pmax(inc, 0))
+  data.frame(modality = labels, loss_increase = inc, sd = sd_inc, share = share,
+             baseline_loss = base, n_permute = n_permute, stringsAsFactors = FALSE)
+}
+
+# the submodule calls in formula order, so that the table names the streams the way the user wrote them
+modality_labels <- function(term) {
+  if(length(term) > 1 && term[[1]] == "+")
+    return(c(modality_labels(term[[2]]), modality_labels(term[[3]])))
+  deparse1(term)
+}
+
+permute_rows <- function(x, idx) {
+  if(is.character(x)) return(x[idx])
+  if(is.null(dim(x))) return(x[idx])
+  abind::asub(x, idx, dims = 1, drop = FALSE)
+}
+
+to_input_tensor <- function(x) {
+  if(is.character(x)) return(list.files(x, full.names = TRUE))
+  if(inherits(x, "torch_tensor")) return(x)
+  torch::torch_tensor(x, dtype = torch::torch_float32())
+}
+
+#' Plot a fitted MMN model
+#'
+#' Visualises either the permutation importance of the data streams or the architecture of a
+#' Multi-Modal Neural Network.
+#'
+#' @param x a model created by \code{\link{mmn}}
+#' @param plot_type \code{"importance"} draws the permutation importance of each data stream,
+#'   \code{"arch"} the architecture: one row per data stream with its submodel, the concatenation,
+#'   the fusion network and the output. \code{plot()} on a single \code{\link{create_architecture}}
+#'   object still draws that submodel's layers in full.
+#' @param n_permute number of permutations per data stream, only used for \code{"importance"}
+#' @param device device on which to evaluate, defaults to the device the model was trained on
+#' @param ... passed to \code{\link[graphics]{barplot}}, only used for \code{"importance"}
+#'
+#' @return invisibly, the importance table for \code{"importance"} and \code{NULL} otherwise
+#' @export
+plot.citommn <- function(x, plot_type = c("importance", "arch"), n_permute = 10L,
+                         device = NULL, ...) {
+  plot_type <- match.arg(plot_type)
+  if(plot_type == "arch") {
+    x <- check_model(x)
+    plot_mmn_architecture(x)
+    return(invisible(NULL))
+  }
+  imp <- modality_importance(x, n_permute = n_permute, device = device)
+  labels <- vapply(imp$modality, short_stream_label, character(1), USE.NAMES = FALSE)
+  op <- graphics::par(mar = c(5.1, max(4.1, 0.6*max(nchar(labels)) + 1.5), 4.1, 2.1))
+  on.exit(graphics::par(op))
+  # the whiskers reach past the bars, and a stream can come out negative, so neither end is given
+  xlim <- range(0, imp$loss_increase + imp$sd, imp$loss_increase - imp$sd)
+  mids <- graphics::barplot(imp$loss_increase, names.arg = labels, horiz = TRUE, las = 1,
+                            xlim = xlim, xlab = "Increase in loss when the stream is permuted",
+                            main = "Data stream importance", ...)
+  graphics::arrows(imp$loss_increase - imp$sd, mids, imp$loss_increase + imp$sd, mids,
+                   code = 3, angle = 90, length = 0.05)
+  return(invisible(imp))
+}
+
+# the deparsed submodule call is far too wide for an axis label, so the stream is named by the
+# data it reads, which is what distinguishes the streams from one another anyway
+short_stream_label <- function(term) {
+  nm <- stream_data_name(term)
+  if(is.null(nm)) return(term)
+  paste0(as.character(str2lang(term)[[1]]), "(", nm, ")")
+}
+
+stream_data_name <- function(term) {
+  cl <- str2lang(term)
+  fn <- as.character(cl[[1]])
+  if(!fn %in% c("cnn", "dnn")) return(NULL)
+  cl <- match.call(switch(fn, cnn = cnn, dnn = dnn), cl)
+  arg <- if(fn == "cnn") cl$X else cl$data
+  if(is.null(arg)) NULL else deparse1(arg)
+}
+
+# A multi-modal model is a graph, not a stack, so the drawing that helps is the streams side by
+# side feeding one fusion head; plot(architecture) still draws a single submodel's layers.
+plot_mmn_architecture <- function(x) {
+  props <- x$model_properties
+  subs <- props$subModules
+  n <- length(subs)
+  terms <- modality_labels(x$call$formula[[3]])
+  if(length(terms) != n) terms <- paste0("stream_", seq_len(n))
+  widths <- submodule_widths(x$net, subs)
+
+  data_box <- lapply(seq_len(n), function(i) {
+    nm <- stream_data_name(terms[i])
+    c(if(is.null(nm)) terms[i] else nm,
+      if(inherits(subs[[i]], "citocnn_properties")) paste(subs[[i]]$input, collapse = " x ")
+      else paste0(subs[[i]]$input, " features"))
+  })
+  sub_box <- lapply(seq_len(n), function(i)
+    c(if(inherits(subs[[i]], "citocnn_properties")) "CNN" else "DNN", stream_layers(subs[[i]]),
+      if(!is.na(widths[i])) paste0("output: ", widths[i])))
+  fusion_box <- c("Fusion", if(!anyNA(widths)) paste0("concatenated: ", sum(widths)),
+                  paste0("hidden ", paste(props$fusion$hidden, collapse = ", ")),
+                  props$fusion$activation[1])
+  out_box <- c("Output", paste0(props$fusion$output,
+                                if(props$fusion$output > 1) " responses" else " response"),
+               deparse1(x$call$loss))
+  boxes <- c(data_box, sub_box, list(fusion_box), list(out_box))
+  xl <- c(rep(0.01, n), rep(0.21, n), 0.60, 0.87)
+  xr <- c(rep(0.17, n), rep(0.52, n), 0.82, 0.99)
+
+  op <- graphics::par(mar = c(0.5, 0.5, 2.5, 0.5))
+  on.exit(graphics::par(op))
+  graphics::plot.new()
+  graphics::title(main = "Multi-modal architecture")
+
+  # the boxes are sized from their own rendered text, so a deep CNN does not spill out of its
+  # rectangle; strheight of a single line measures ink, not the line box, so the block is measured
+  h <- 1/n
+  pad <- graphics::strheight("Ag")
+  bh <- vapply(boxes, function(b) graphics::strheight(paste(b, collapse = "\n")), numeric(1)) + pad
+  lim <- c(rep(0.86*h, 2*n), 0.9, 0.9)
+  cex <- min(1, lim/bh, 0.92*(xr - xl)/vapply(boxes, function(b) max(graphics::strwidth(b)), numeric(1)))
+  bh <- bh*cex/2
+
+  ys <- 1 - (seq_len(n) - 0.5)*h
+  yc <- c(ys, ys, 0.5, 0.5)
+  cols <- c(rep("orange", n),
+            vapply(subs, function(p) if(inherits(p, "citocnn_properties")) "lightblue" else "lightgreen",
+                   character(1)), "lightyellow", "pink")
+  for(k in seq_along(boxes)) {
+    graphics::rect(xl[k], yc[k] - bh[k], xr[k], yc[k] + bh[k], col = cols[k])
+    graphics::text((xl[k] + xr[k])/2, yc[k], paste(boxes[[k]], collapse = "\n"), cex = cex)
+  }
+  for(i in seq_len(n)) {
+    graphics::arrows(0.17, ys[i], 0.21, ys[i], length = 0.08)
+    graphics::arrows(0.52, ys[i], 0.60, 0.5, length = 0.08)
+  }
+  graphics::arrows(0.82, 0.5, 0.87, 0.5, length = 0.08)
+}
+
+# the exact width each stream contributes to the fusion input, taken from the built module rather
+# than recomputed from the layer list, which would have to redo every shape calculation
+submodule_widths <- function(net, props) {
+  vapply(seq_along(props), function(j) {
+    if(!is.null(props[[j]]$custom$output_dim)) return(as.integer(props[[j]]$custom$output_dim))
+    w <- try(dim(net$subModules[[j]](torch::torch_rand(c(2L, props[[j]]$input))))[2], silent = TRUE)
+    if(inherits(w, "try-error")) NA_integer_ else as.integer(w)
+  }, integer(1))
+}
+
+stream_layers <- function(p) {
+  if(!is.null(p$custom)) return("custom module")
+  if(!inherits(p, "citocnn_properties"))
+    return(c(paste0("hidden ", paste(p$hidden, collapse = ", ")), p$activation[1]))
+  vapply(p$architecture, function(l) {
+    switch(class(l)[1],
+           transfer = paste0("transfer(", l$name, ")"),
+           conv     = paste0("conv(", l$n_kernels, ", ", paste(l$kernel_size, collapse = "x"), ")"),
+           maxPool  = paste0("maxPool(", paste(l$kernel_size, collapse = "x"), ")"),
+           avgPool  = paste0("avgPool(", paste(l$kernel_size, collapse = "x"), ")"),
+           linear   = paste0("linear(", l$n_neurons, ")"),
+           class(l)[1])
+  }, character(1))
 }
 
 #' Retrieve parameters of a fitted MMN model
@@ -373,6 +636,28 @@ coef.citommn <- function(object,...){
   if(!is.null(object$net$buffers)) out$net_buffers <- lapply(object$net$buffers, function(x) torch::as_array(x$to(device = "cpu")))
   if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
   return(out)
+}
+
+# Without this a wrong image size surfaces as a torch matmul error from several frames down, and
+# streams of differing length are silently truncated to the shortest.
+check_newdata_shape <- function(new, old) {
+  n <- vapply(new, function(x) if(is.character(x)) length(list.files(x)) else
+                               if(is.null(dim(x))) length(x) else dim(x)[1], numeric(1))
+  if(length(unique(n)) > 1L)
+    stop(paste0("The data streams have different numbers of samples (", paste(n, collapse = ", "),
+                "). Every stream must describe the same samples, in the same order."), call. = FALSE)
+  if(is.null(old) || length(old) != length(new)) return(invisible(TRUE))
+  for(i in seq_along(new)) {
+    if(is.character(new[[i]]) || is.character(old[[i]])) next
+    d_new <- dim(new[[i]])
+    d_old <- dim(old[[i]])
+    if(is.null(d_new) || is.null(d_old) || length(d_new) != length(d_old)) next
+    if(!identical(d_new[-1], d_old[-1]))
+      stop(paste0("Data stream ", i, " has shape ", paste(d_new[-1], collapse = "x"),
+                  " per sample, but the model was fitted on ", paste(d_old[-1], collapse = "x"),
+                  "."), call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 format_input_data <- function(formula, dataList) {

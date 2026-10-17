@@ -1,7 +1,7 @@
 ---
 title: "Convolutional neural networks and multi-modal neural networks"
 author: "Maximilian Pichler"
-date: "2026-07-31"
+date: "2026-10-17"
 abstract: "This vignette demonstrates the use of CITO for complex data (CNN) and a mixture of complex and tabular data (MMN). CNN can be used for various tasks, such as image classification ('Is this image a dog or a cat?') and ecological tasks, such as multi-deep species distribution models (deepSDM), where the input could be an environmental time series or remote sensing data and the goal is to predict species occurrences. MMN extends CNN by combining complex data, such as satellite images, and tabular data, such as environmental or spatial information. Furthermore, MMN can combine complex data of different dimensions and scales (e.g. LiDAR 3D inputs and coloured 2D optical satellite images). This vignette explains how to prepare the data and suggests an example project structure."
 output:
  rmarkdown::html_vignette:
@@ -182,6 +182,76 @@ model <- cnn(X = LiDAR, Y, architecture, loss = "binomial",
 
 ```
 
+A complete, runnable example on simulated data, so that the syntax above can be checked rather
+than taken on trust:
+
+
+``` r
+library(cito)
+set.seed(42)
+n <- 200
+shapes <- cito:::simulate_shapes(n = n, size = 20, channels = 3)
+covariates <- data.frame(Temp = runif(n), Precip = runif(n))
+# the images carry most of the signal, one covariate a little
+Y <- 3 * (as.integer(shapes$labels) - 1) + 0.4 * covariates$Temp + rnorm(n, sd = 0.2)
+
+arch <- create_architecture(conv(8), maxPool(), conv(8), maxPool(), linear(16))
+model <- mmn(Y ~ cnn(X = images, architecture = arch) +
+                 dnn(~ Temp + Precip, data = covariates),
+             dataList = list(Y = Y, images = shapes$data, covariates = covariates),
+             loss = "mse", epochs = 150L, lr = 0.02, verbose = FALSE, plot = FALSE)
+```
+
+`summary()` reports how much each data stream contributed, by shuffling it across the batch and
+measuring how much worse the model becomes. The standard deviation across permutations is given
+beside the estimate: a stream that contributes little can come out negative by chance.
+
+
+``` r
+summary(model, n_permute = 5L)
+#> Summary of Multi-Modal Neural Network
+#> 
+#> ── Permutation importance of the data streams
+#>                                        Loss increase     SD  Share
+#> cnn(X = images, architecture = arch)          4.1266 0.3839 0.9952
+#> dnn(~Temp + Precip, data = covariates)        0.0200 0.0027 0.0048
+#> 
+#> Baseline loss 0.0385, 5 permutations per stream. A stream that contributes little
+#> can come out negative by chance; compare the estimate against its SD before reading it.
+```
+
+
+``` r
+plot(model, n_permute = 5L)
+```
+
+<img src="E/E-unnamed-chunk-12-1.png" alt="" style="display: block; margin: auto;" />
+
+`plot_type = "arch"` draws the model itself: one row per data stream, its submodel, the width each
+stream contributes to the concatenated representation, and the fusion network on top.
+
+
+``` r
+plot(model, plot_type = "arch")
+```
+
+<img src="E/E-unnamed-chunk-13-1.png" alt="" style="display: block; margin: auto;" />
+
+Predicting on new data takes a named list with the same names:
+
+
+``` r
+newdata <- list(images = shapes$data[1:5, , , , drop = FALSE],
+                covariates = covariates[1:5, ])
+predict(model, newdata = newdata)
+#>        [,1]
+#> 1 3.3417935
+#> 2 3.2674866
+#> 3 0.3928080
+#> 4 0.2327462
+#> 5 0.2617482
+```
+
 Note:
 
 1. The format of Y depends on the loss and your task.
@@ -216,35 +286,41 @@ architecture_LiDAR <- create_architecture(transfer("resnet18"))
 architecture_RGBimages <- create_architecture(transfer("resnet18"))
 
 model =
-  mmn(df$Y ~
+  mmn(Y ~
       cnn(X = LiDAR, architecture = architecture_LiDAR) +
-      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      cnn(X = RGBimages, architecture = architecture_RGBimages) +
       dnn(~Temp+Precip, data = df),
+      dataList = list(Y = df$Y, LiDAR = LiDAR, RGBimages = RGBimages, df = df),
       loss = 'binomial',
       optimizer = "adam")
 
 ```
 
-**Important:** Tabular data must be within one data.frame, so here, the response variable `Y` is in the same data.frame as `Temp` and `Precip`!
+**Important:** every object the formula refers to is looked up in `dataList`, by name. The response
+is a bare name, not `df$Y`, and each `cnn(X = ...)` and `dnn(data = ...)` names an entry of the
+list. Writing `dnn(~., data = df)` would take every column of `df` as a predictor, including the
+response, so name the predictors explicitly or drop the response from the frame.
 
 For multiple responses:
 
 
 ``` r
 model =
-  mmn(cbind(df$Y1, df$Y2, df$Y3) ~
+  mmn(Y ~
       cnn(X = LiDAR, architecture = architecture_LiDAR) +
-      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      cnn(X = RGBimages, architecture = architecture_RGBimages) +
       dnn(~Temp+Precip, data = df),
+      dataList = list(Y = cbind(df$Y1, df$Y2, df$Y3), LiDAR = LiDAR,
+                      RGBimages = RGBimages, df = df),
       loss = 'binomial',
       optimizer = "adam")
 ```
 
-Newdata must be passed as list to the predict function. The datasets must have the same order as the model components in the mmn:
+`newdata` is a named list, with the same names the model was fitted with:
 
 
 ``` r
-predict(model, newdata = list(LiDAR, RGBimages, df), type = "response")
+predict(model, newdata = list(LiDAR = LiDAR, RGBimages = RGBimages, df = df), type = "response")
 ```
 
 
@@ -269,20 +345,23 @@ custom_joint_loss = function(pred, true) {
 }
 
 model =
-  mmn(cbind(df$Y1, df$Y2, df$Y3) ~
+  mmn(Y ~
       cnn(X = LiDAR, architecture = architecture_LiDAR) +
-      cnn(X = RGBimages , architecture = architecture_RGBimages) +
+      cnn(X = RGBimages, architecture = architecture_RGBimages) +
       dnn(~Temp+Precip, data = df),
+      dataList = list(Y = cbind(df$Y1, df$Y2, df$Y3), LiDAR = LiDAR,
+                      RGBimages = RGBimages, df = df),
       loss = custom_joint_loss,
       epochs = 5L,
       optimizer = "adam")
 ```
 
-As cito now lacks the inverse link functions, we have to apply them to the predictions ourselves:
+A custom loss has no inverse link that cito could know about, so `type = "response"` cannot help
+here and the links are applied to the predictions by hand:
 
 
 ``` r
-pred = predict(model, newdata = list(LiDAR, RGBimages, df))
+pred = predict(model, newdata = list(LiDAR = LiDAR, RGBimages = RGBimages, df = df))
 pred[,1] = plogis(pred[,1])
 pred[,3] = exp(pred[,3])
 ```
@@ -309,12 +388,15 @@ CNNs benefit significantly from GPU acceleration:
 
 ### 2. System Memory (RAM)
 
-Currently, all images must be loaded into a single R session:
+How much memory you need depends on how the images reach cito:
 
-- This approach limits the number of observations by your available system RAM.
-- We are implementing data loaders to stream only mini-batches into memory.
+- Passing an **array** holds every image in the session at once, so the number of observations is
+  bounded by your RAM. The table below is the calculation for that case.
+- Passing a **folder path** to `cnn(X = )` reads only the images of the current mini-batch, so the
+  dataset size is bounded by disk rather than by RAM. The table below then does not apply, and the
+  requirement is one batch at a time.
 
-#### Example Calculation (500 observations)
+#### Example calculation when the images are held in memory (500 observations)
 
 | Data Type                       | Dimensions             | Memory Usage           |
 |---------------------------------|------------------------|------------------------|
@@ -324,7 +406,8 @@ Currently, all images must be loaded into a single R session:
 | Model parameters (~2.24 M)      | —                      | < 0.1 GB (negligible)  |
 | **Total**                       |                        | **~503 GB**            |
 
-To run this dataset in a single R session you would need **~550 GB** of system RAM. By contrast, GPU memory is less constraining because only one batch is loaded at a time on the GPU. For `batch_size = 20`, a 12–14 GB GPU should suffice.
+Held in memory, that dataset would need **~550 GB** of system RAM; read from a folder, only one
+batch is resident at a time. By contrast, GPU memory is less constraining because only one batch is loaded at a time on the GPU. For `batch_size = 20`, a 12–14 GB GPU should suffice.
 
 
 **Summary**: The primary bottleneck is system RAM on the CPU, not VRAM on the GPU.
