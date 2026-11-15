@@ -243,7 +243,7 @@ df = cbind(eucalypts$PA, scale(eucalypts$env))
 head(df)
 ```
 
-We will use the Bernoulli likelihood - each species occurrence will be modelled by a Bernoulli likelihood. Build simple model:
+We will use the Bernoulli likelihood - each species occurrence will be modeled by a Bernoulli likelihood. Build simple model:
 
 ```{r}
 model = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,

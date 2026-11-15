@@ -454,6 +454,6 @@ plot(res, rank = FALSE)
 testOverdispersion(res)
 ```
 
-Better! But still not perfect, a challenge with maximum likelihood estimation and the negative binomial distribution is to get the theta estimate (disperson parameter) unbiased. The remaining pattern can probably be explained by the fact that the overdispersion was not perfectly estimated.
+Better! But still not perfect, a challenge with maximum likelihood estimation and the negative binomial distribution is to get the theta estimate (dispersion parameter) unbiased. The remaining pattern can probably be explained by the fact that the overdispersion was not perfectly estimated.
 
 However, it is still better than the Poisson distribution, so what do we get by switching to a negative binomial? The p-values of the xAI metrics may not be strongly as affected as in a statistical model because we are not estimating the standard errors (and thus the p-values) from the MLE surface. The bootstrap is independent of the likelihood. However, the negative binomial distribution better weights overdispersed values, so we can expect our model to make more accurate predictions.

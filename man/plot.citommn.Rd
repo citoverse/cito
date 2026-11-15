@@ -30,6 +30,6 @@ object still draws that submodel's layers in full.}
 invisibly, the importance table for \code{"importance"} and \code{NULL} otherwise
 }
 \description{
-Visualises either the permutation importance of the data streams or the architecture of a
+Visualizes either the permutation importance of the data streams or the architecture of a
 Multi-Modal Neural Network.
 }
