@@ -32,10 +32,67 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cito_raster_info
+Rcpp::List cito_raster_info(std::string path);
+RcppExport SEXP _cito_cito_raster_info(SEXP pathSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
+    rcpp_result_gen = Rcpp::wrap(cito_raster_info(path));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cito_raster_open
+SEXP cito_raster_open(std::string path, int nthreads, Rcpp::NumericVector center, Rcpp::NumericVector scale, double fill);
+RcppExport SEXP _cito_cito_raster_open(SEXP pathSEXP, SEXP nthreadsSEXP, SEXP centerSEXP, SEXP scaleSEXP, SEXP fillSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type center(centerSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type scale(scaleSEXP);
+    Rcpp::traits::input_parameter< double >::type fill(fillSEXP);
+    rcpp_result_gen = Rcpp::wrap(cito_raster_open(path, nthreads, center, scale, fill));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cito_raster_submit
+int cito_raster_submit(SEXP reader, Rcpp::IntegerVector x0, Rcpp::IntegerVector y0, int ww, int wh);
+RcppExport SEXP _cito_cito_raster_submit(SEXP readerSEXP, SEXP x0SEXP, SEXP y0SEXP, SEXP wwSEXP, SEXP whSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type reader(readerSEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type x0(x0SEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type y0(y0SEXP);
+    Rcpp::traits::input_parameter< int >::type ww(wwSEXP);
+    Rcpp::traits::input_parameter< int >::type wh(whSEXP);
+    rcpp_result_gen = Rcpp::wrap(cito_raster_submit(reader, x0, y0, ww, wh));
+    return rcpp_result_gen;
+END_RCPP
+}
+// cito_raster_fetch
+Rcpp::RawVector cito_raster_fetch(SEXP reader, int id);
+RcppExport SEXP _cito_cito_raster_fetch(SEXP readerSEXP, SEXP idSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type reader(readerSEXP);
+    Rcpp::traits::input_parameter< int >::type id(idSEXP);
+    rcpp_result_gen = Rcpp::wrap(cito_raster_fetch(reader, id));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cito_cito_decoder_available", (DL_FUNC) &_cito_cito_decoder_available, 0},
     {"_cito_cito_decode_batch", (DL_FUNC) &_cito_cito_decode_batch, 2},
+    {"_cito_cito_raster_info", (DL_FUNC) &_cito_cito_raster_info, 1},
+    {"_cito_cito_raster_open", (DL_FUNC) &_cito_cito_raster_open, 5},
+    {"_cito_cito_raster_submit", (DL_FUNC) &_cito_cito_raster_submit, 5},
+    {"_cito_cito_raster_fetch", (DL_FUNC) &_cito_cito_raster_fetch, 2},
     {NULL, NULL, 0}
 };
 

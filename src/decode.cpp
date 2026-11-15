@@ -11,6 +11,7 @@
 #include <map>
 #include <array>
 #include <memory>
+#include <algorithm>
 // each decoder is optional: configure defines the macro only when the library was found,
 // so a machine without the -dev packages still builds and falls back to the R readers
 extern "C" {
@@ -223,6 +224,14 @@ static void tiff_err_handler(const char*, const char* fmt, va_list ap) {
 
 struct TiffCloser { void operator()(TIFF* t) const { if(t) TIFFClose(t); } };
 
+// libtiff's handlers are process-global; whatever tiff or terra installed has to be put back.
+// An R allocation can longjmp past a destructor, so this must never span one.
+struct TiffHandlerGuard {
+  TIFFErrorHandler e, w;
+  TiffHandlerGuard() : e(TIFFSetErrorHandler(tiff_err_handler)), w(TIFFSetWarningHandler(NULL)) {}
+  ~TiffHandlerGuard() { TIFFSetErrorHandler(e); TIFFSetWarningHandler(w); }
+};
+
 static int tiff_probe_decode(const char* path, Meta& m, unsigned char* dst) {
   tiff_msg[0] = '\0';
   // libtiff reports through return codes rather than longjmp, so RAII is safe here and
@@ -415,11 +424,6 @@ Rcpp::List cito_decode_batch(Rcpp::CharacterVector paths, int nthreads = 1) {
   // An R allocation can longjmp past a C++ destructor, so the guard must never span one: it is
   // scoped tightly around the two phases that actually call libtiff.
 #ifdef HAVE_TIFF
-  struct TiffHandlerGuard {
-    TIFFErrorHandler e, w;
-    TiffHandlerGuard() : e(TIFFSetErrorHandler(tiff_err_handler)), w(TIFFSetWarningHandler(NULL)) {}
-    ~TiffHandlerGuard() { TIFFSetErrorHandler(e); TIFFSetWarningHandler(w); }
-  };
 #define CITO_TIFF_GUARD TiffHandlerGuard cito_tiff_guard_
 #else
 #define CITO_TIFF_GUARD do {} while(0)
@@ -524,3 +528,402 @@ Rcpp::List cito_decode_batch(Rcpp::CharacterVector paths, int nthreads = 1) {
     Rcpp::_["sformat"] = ref.sformat,
     Rcpp::_["errors"] = errs);
 }
+
+/* ---- windows from one large raster, read while the previous batch trains -------------------- */
+#ifdef HAVE_TIFF
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <deque>
+#include <future>
+#include <cmath>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
+// libtiff 4.5 gave handles their own error handlers. Only then may a read run on a thread of its
+// own: the global handlers belong to whatever tiff or terra installed and cannot be swapped
+// underneath R. Older libtiff reads synchronously, inside the usual guard.
+#if defined(TIFFLIB_VERSION) && TIFFLIB_VERSION >= 20221213
+#define CITO_RASTER_ASYNC 1
+#endif
+
+struct Raster {
+  int w = 0, h = 0, c = 0, bits = 0, sformat = 0, tiled = 0, separate = 0;
+  uint32_t bw = 0, bh = 0;                 // block = tile, or strip of rows_per_strip rows
+  double gt[6] = {0, 1, 0, 0, 0, 1};
+  int georef = 0, has_nodata = 0, point = 0;
+  double nodata = 0;
+};
+
+// GeoTIFF tags are unknown to libtiff and arrive as anonymous fields; how their count is passed
+// depends on the field definition, so it is looked up rather than assumed
+template<class T>
+static bool tag_array(TIFF* t, uint32_t tag, TIFFDataType type, std::vector<T>& out) {
+  const TIFFField* fi = TIFFFindField(t, tag, TIFF_ANY);
+  if(!fi || TIFFFieldDataType(fi) != type) return false;
+  void* p = NULL;
+  uint32_t n = 0;
+  if(TIFFFieldPassCount(fi)) {
+    if(TIFFFieldReadCount(fi) == TIFF_VARIABLE2) {
+      if(!TIFFGetField(t, tag, &n, &p)) return false;
+    } else {
+      uint16_t n16 = 0;
+      if(!TIFFGetField(t, tag, &n16, &p)) return false;
+      n = n16;
+    }
+  } else {
+    if(!TIFFGetField(t, tag, &p)) return false;
+    n = type == TIFF_ASCII ? (uint32_t)std::strlen((const char*)p) : (uint32_t)TIFFFieldReadCount(fi);
+  }
+  if(!p) return false;
+  out.assign((const T*)p, (const T*)p + n);
+  return true;
+}
+
+static std::string raster_geometry(TIFF* t, Raster& r) {
+  uint32_t w = 0, h = 0;
+  uint16_t spp = 1, bps = 8, fmt = SAMPLEFORMAT_UINT, planar = PLANARCONFIG_CONTIG;
+  TIFFGetField(t, TIFFTAG_IMAGEWIDTH, &w);
+  TIFFGetField(t, TIFFTAG_IMAGELENGTH, &h);
+  TIFFGetFieldDefaulted(t, TIFFTAG_SAMPLESPERPIXEL, &spp);
+  TIFFGetFieldDefaulted(t, TIFFTAG_BITSPERSAMPLE, &bps);
+  TIFFGetFieldDefaulted(t, TIFFTAG_SAMPLEFORMAT, &fmt);
+  TIFFGetFieldDefaulted(t, TIFFTAG_PLANARCONFIG, &planar);
+  const bool ok = (fmt == SAMPLEFORMAT_UINT && (bps == 8 || bps == 16 || bps == 32)) ||
+                  (fmt == SAMPLEFORMAT_INT && (bps == 8 || bps == 16 || bps == 32)) ||
+                  (fmt == SAMPLEFORMAT_IEEEFP && (bps == 32 || bps == 64));
+  if(!ok) return "unsupported sample type (" + std::to_string(bps) + " bit, format " + std::to_string(fmt) + ")";
+  r.w = (int)w;
+  r.h = (int)h;
+  r.c = (int)spp;
+  r.bits = (int)bps;
+  r.sformat = fmt == SAMPLEFORMAT_IEEEFP ? 2 : (fmt == SAMPLEFORMAT_INT ? 1 : 0);
+  r.separate = planar == PLANARCONFIG_SEPARATE;
+  r.tiled = TIFFIsTiled(t);
+  const size_t sample = (size_t)bps / 8 * (r.separate ? 1 : spp);
+  if(r.tiled) {
+    TIFFGetField(t, TIFFTAG_TILEWIDTH, &r.bw);
+    TIFFGetField(t, TIFFTAG_TILELENGTH, &r.bh);
+    if((size_t)TIFFTileSize(t) != (size_t)r.bw * r.bh * sample) return "unsupported tile layout";
+  } else {
+    uint32_t rps = h;
+    TIFFGetFieldDefaulted(t, TIFFTAG_ROWSPERSTRIP, &rps);
+    r.bw = w;
+    r.bh = std::min(rps, h);
+    if((size_t)TIFFScanlineSize(t) != (size_t)w * sample) return "unsupported strip layout";
+  }
+
+  std::vector<double> scale, tie, mat;
+  std::vector<uint16_t> keys;
+  std::vector<char> nd;
+  if(tag_array(t, 34264, TIFF_DOUBLE, mat) && mat.size() >= 8) {
+    r.gt[0] = mat[3]; r.gt[1] = mat[0]; r.gt[2] = mat[1];
+    r.gt[3] = mat[7]; r.gt[4] = mat[4]; r.gt[5] = mat[5];
+    r.georef = 1;
+  } else if(tag_array(t, 33550, TIFF_DOUBLE, scale) && tag_array(t, 33922, TIFF_DOUBLE, tie) &&
+            scale.size() >= 2 && tie.size() >= 6) {
+    r.gt[1] = scale[0];
+    r.gt[5] = -scale[1];
+    r.gt[0] = tie[3] - tie[0] * scale[0];
+    r.gt[3] = tie[4] + tie[1] * scale[1];
+    r.georef = 1;
+  }
+  // GTRasterTypeGeoKey = PixelIsPoint: the coordinates name pixel centres, not corners
+  if(tag_array(t, 34735, TIFF_SHORT, keys) && keys.size() >= 4)
+    for(size_t k = 4; k + 3 < keys.size(); k += 4)
+      if(keys[k] == 1025 && keys[k + 1] == 0 && keys[k + 3] == 2) r.point = 1;
+  if(r.georef && r.point) {
+    r.gt[0] -= 0.5 * r.gt[1] + 0.5 * r.gt[2];
+    r.gt[3] -= 0.5 * r.gt[4] + 0.5 * r.gt[5];
+  }
+  if(tag_array(t, 42113, TIFF_ASCII, nd) && !nd.empty()) {
+    std::string s(nd.begin(), nd.end());
+    char* end = NULL;
+    const double v = std::strtod(s.c_str(), &end);
+    if(end != s.c_str()) { r.nodata = v; r.has_nodata = 1; }
+  }
+  return "";
+}
+
+template<class T>
+static void convert(const unsigned char* src, size_t stride, int n, float* dst, size_t dst_stride,
+                    const Raster& r, double center, double scale, float fill) {
+  for(int i = 0; i < n; i++) {
+    T v;
+    std::memcpy(&v, src + i * stride, sizeof(T));
+    const double d = (double)v;
+    dst[i * dst_stride] = (std::isnan(d) || (r.has_nodata && d == r.nodata)) ? fill : (float)((d - center) / scale);
+  }
+}
+
+static void convert_run(const unsigned char* src, size_t stride, int n, float* dst, size_t dst_stride,
+                        const Raster& r, double center, double scale, float fill) {
+  if(r.sformat == 2) {
+    if(r.bits == 32) convert<float>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+    else convert<double>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+  } else if(r.sformat == 1) {
+    if(r.bits == 8) convert<int8_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+    else if(r.bits == 16) convert<int16_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+    else convert<int32_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+  } else {
+    if(r.bits == 8) convert<uint8_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+    else if(r.bits == 16) convert<uint16_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+    else convert<uint32_t>(src, stride, n, dst, dst_stride, r, center, scale, fill);
+  }
+}
+
+#ifdef CITO_RASTER_ASYNC
+static int raster_err_handler(TIFF*, void* user, const char*, const char* fmt, va_list ap) {
+  std::vsnprintf((char*)user, 200, fmt, ap);
+  return 1;
+}
+static int raster_warn_handler(TIFF*, void*, const char*, const char*, va_list) { return 1; }
+#endif
+
+// one per OpenMP thread: a handle and the last decoded block, which neighbouring windows reuse
+struct Slot {
+  TIFF* t = NULL;
+  std::vector<unsigned char> block;
+  long cached = -1;
+  char msg[200] = {0};
+  ~Slot() { if(t) TIFFClose(t); }
+};
+
+struct RasterReader {
+  std::string path;
+  Raster r;
+  int nthreads = 1;
+  std::vector<double> center, scale;
+  float fill = 0;
+  std::vector<std::unique_ptr<Slot>> slots;
+  std::map<int, std::shared_ptr<std::string>> errors;
+  std::map<int, Rcpp::RawVector> out;       // allocated and released on the main thread only
+  std::map<int, std::future<void>> jobs;
+  int next = 0;
+  std::deque<std::packaged_task<void()>> queue;
+  std::mutex mu;
+  std::condition_variable cv;
+  bool stop = false;
+  std::thread worker;
+
+  TIFF* open(Slot& s) {
+#ifdef CITO_RASTER_ASYNC
+    TIFFOpenOptions* o = TIFFOpenOptionsAlloc();
+    TIFFOpenOptionsSetErrorHandlerExtR(o, raster_err_handler, s.msg);
+    TIFFOpenOptionsSetWarningHandlerExtR(o, raster_warn_handler, NULL);
+    TIFF* t = TIFFOpenExt(path.c_str(), "r", o);
+    TIFFOpenOptionsFree(o);
+    return t;
+#else
+    tiff_msg[0] = '\0';
+    TIFF* t = TIFFOpen(path.c_str(), "r");
+    if(!t) std::snprintf(s.msg, sizeof(s.msg), "%s", tiff_msg);
+    return t;
+#endif
+  }
+
+  // the message of the failing call: per handle with libtiff >= 4.5, thread-local before
+  static const char* message(Slot& s) {
+#ifndef CITO_RASTER_ASYNC
+    if(!s.msg[0]) std::snprintf(s.msg, sizeof(s.msg), "%s", tiff_msg);
+#endif
+    return s.msg;
+  }
+
+  // block (bx, by) of sample plane `plane` into s.block
+  bool load(Slot& s, uint32_t bx, uint32_t by, int plane) {
+    const long id = ((long)plane * ((r.h + r.bh - 1) / r.bh) + by / r.bh) * ((r.w + r.bw - 1) / r.bw) + bx / r.bw;
+    if(s.cached == id) return true;
+    s.cached = -1;
+    s.msg[0] = '\0';
+    tmsize_t got = r.tiled ? TIFFReadEncodedTile(s.t, TIFFComputeTile(s.t, bx, by, 0, plane), s.block.data(), (tmsize_t)s.block.size())
+                           : TIFFReadEncodedStrip(s.t, TIFFComputeStrip(s.t, by, plane), s.block.data(), (tmsize_t)s.block.size());
+    if(got < 0) return false;
+    s.cached = id;
+    return true;
+  }
+
+  // one window into o (bands x wh x ww), already filled; the part outside the raster stays fill
+  bool window(Slot& s, int x0, int y0, int ww, int wh, float* o) {
+    const size_t bytes = (size_t)r.bits / 8;
+    const size_t px = r.separate ? bytes : bytes * r.c;
+    const int c0 = std::max(0, x0), c1 = std::min(r.w, x0 + ww);
+    const int r0 = std::max(0, y0), r1 = std::min(r.h, y0 + wh);
+    if(c0 >= c1 || r0 >= r1) return true;
+    for(int p = 0; p < (r.separate ? r.c : 1); p++)
+      for(uint32_t by = (r0 / r.bh) * r.bh; by < (uint32_t)r1; by += r.bh)
+        for(uint32_t bx = (c0 / r.bw) * r.bw; bx < (uint32_t)c1; bx += r.bw) {
+          if(!load(s, bx, by, p)) return false;
+          const int rr0 = std::max<int>(r0, by), rr1 = std::min<int>(r1, by + r.bh);
+          const int cc0 = std::max<int>(c0, bx), cc1 = std::min<int>(c1, bx + r.bw);
+          for(int row = rr0; row < rr1; row++)
+            for(int b = 0; b < (r.separate ? 1 : r.c); b++) {
+              const int band = r.separate ? p : b;
+              const unsigned char* src = s.block.data() + ((size_t)(row - by) * r.bw + (cc0 - bx)) * px + (r.separate ? 0 : b * bytes);
+              float* d = o + ((size_t)band * wh + (row - y0)) * ww + (cc0 - x0);
+              convert_run(src, px, cc1 - cc0, d, 1, r, center[band], scale[band], fill);
+            }
+        }
+    return true;
+  }
+
+  void read(const std::vector<int>& x0, const std::vector<int>& y0, int ww, int wh, float* dst, std::string* err) {
+    const int n = (int)x0.size();
+    const size_t per = (size_t)r.c * ww * wh;
+    std::mutex mu_err;
+    #ifdef _OPENMP
+    #pragma omp parallel for num_threads(nthreads) schedule(dynamic, 1)
+    #endif
+    for(int i = 0; i < n; i++) {
+      #ifdef _OPENMP
+      Slot& s = *slots[omp_get_thread_num()];
+      #else
+      Slot& s = *slots[0];
+      #endif
+      float* o = dst + per * i;
+      std::fill(o, o + per, fill);
+      std::string what;
+      try {
+        if(!s.t) {
+          s.msg[0] = '\0';
+          s.t = open(s);
+          if(s.t) s.block.resize(r.tiled ? (size_t)TIFFTileSize(s.t) : (size_t)TIFFStripSize(s.t));
+          else what = message(s)[0] ? message(s) : "cannot open raster";
+        }
+        if(s.t && !window(s, x0[i], y0[i], ww, wh, o)) what = message(s)[0] ? message(s) : "reading a raster block failed";
+      } catch(const std::exception& e) {
+        what = e.what();
+      } catch(...) {
+        what = "unknown error while reading the raster";
+      }
+      if(!what.empty()) {
+        std::lock_guard<std::mutex> lk(mu_err);
+        if(err->empty()) *err = what;
+      }
+    }
+  }
+
+  void start() {
+#ifdef CITO_RASTER_ASYNC
+    worker = std::thread([this]() {
+      for(;;) {
+        std::packaged_task<void()> job;
+        {
+          std::unique_lock<std::mutex> lk(mu);
+          cv.wait(lk, [this]() { return stop || !queue.empty(); });
+          if(queue.empty()) return;
+          job = std::move(queue.front());
+          queue.pop_front();
+        }
+        job();
+      }
+    });
+#endif
+  }
+
+  ~RasterReader() {
+    {
+      std::lock_guard<std::mutex> lk(mu);
+      stop = true;
+    }
+    cv.notify_one();
+    if(worker.joinable()) worker.join();
+  }
+};
+
+static Rcpp::List raster_list(const Raster& r) {
+  return Rcpp::List::create(
+    Rcpp::_["width"] = r.w, Rcpp::_["height"] = r.h, Rcpp::_["bands"] = r.c, Rcpp::_["bits"] = r.bits,
+    Rcpp::_["sformat"] = r.sformat, Rcpp::_["tiled"] = (bool)r.tiled,
+    Rcpp::_["block"] = Rcpp::IntegerVector::create(r.bw, r.bh),
+    Rcpp::_["geotransform"] = Rcpp::NumericVector(r.gt, r.gt + 6), Rcpp::_["georeferenced"] = (bool)r.georef,
+    Rcpp::_["nodata"] = r.has_nodata ? Rcpp::NumericVector::create(r.nodata) : Rcpp::NumericVector(0));
+}
+
+static std::string raster_probe(const std::string& path, Raster& r) {
+  TiffHandlerGuard guard;
+  tiff_msg[0] = '\0';
+  std::unique_ptr<TIFF, TiffCloser> t(TIFFOpen(path.c_str(), "r"));
+  if(!t) return tiff_msg[0] ? std::string(tiff_msg) : "cannot open TIFF";
+  return raster_geometry(t.get(), r);
+}
+
+// [[Rcpp::export]]
+Rcpp::List cito_raster_info(std::string path) {
+  Raster r;
+  std::string err = raster_probe(path, r);
+  if(!err.empty()) Rcpp::stop(path + ": " + err);
+  return raster_list(r);
+}
+
+// [[Rcpp::export]]
+SEXP cito_raster_open(std::string path, int nthreads, Rcpp::NumericVector center, Rcpp::NumericVector scale, double fill) {
+  Raster r;
+  std::string err = raster_probe(path, r);
+  if(!err.empty()) Rcpp::stop(path + ": " + err);
+  if(center.size() != r.c || scale.size() != r.c) Rcpp::stop("center and scale need one value per band");
+  RasterReader* rd = new RasterReader();
+  rd->path = path;
+  rd->r = r;
+  rd->nthreads = std::max(1, nthreads);
+  rd->center.assign(center.begin(), center.end());
+  rd->scale.assign(scale.begin(), scale.end());
+  rd->fill = (float)fill;
+  for(int k = 0; k < rd->nthreads; k++) rd->slots.emplace_back(new Slot());
+  rd->start();
+  return Rcpp::XPtr<RasterReader>(rd, true);
+}
+
+// queue the windows (top-left pixel x0, y0, all ww x wh) and return a ticket for cito_raster_fetch()
+// [[Rcpp::export]]
+int cito_raster_submit(SEXP reader, Rcpp::IntegerVector x0, Rcpp::IntegerVector y0, int ww, int wh) {
+  Rcpp::XPtr<RasterReader> rd(reader);
+  const int id = rd->next++;
+  Rcpp::RawVector buf((size_t)x0.size() * rd->r.c * ww * wh * sizeof(float));
+  rd->out[id] = buf;
+  float* dst = (float*) RAW(buf);
+  std::vector<int> x(x0.begin(), x0.end()), y(y0.begin(), y0.end());
+  RasterReader* p = rd.get();
+  std::shared_ptr<std::string> err(new std::string());
+  rd->errors[id] = err;
+  std::packaged_task<void()> job([p, x, y, ww, wh, dst, err]() { p->read(x, y, ww, wh, dst, err.get()); });
+  rd->jobs[id] = job.get_future();
+#ifdef CITO_RASTER_ASYNC
+  {
+    std::lock_guard<std::mutex> lk(rd->mu);
+    rd->queue.push_back(std::move(job));
+  }
+  rd->cv.notify_one();
+#else
+  {
+    TiffHandlerGuard guard;
+    job();
+  }
+#endif
+  return id;
+}
+
+// [[Rcpp::export]]
+Rcpp::RawVector cito_raster_fetch(SEXP reader, int id) {
+  Rcpp::XPtr<RasterReader> rd(reader);
+  auto j = rd->jobs.find(id);
+  if(j == rd->jobs.end()) Rcpp::stop("unknown raster batch");
+  j->second.wait();
+  rd->jobs.erase(j);
+  Rcpp::RawVector res = rd->out[id];
+  rd->out.erase(id);
+  const std::string err = *rd->errors[id];
+  rd->errors.erase(id);
+  if(!err.empty()) Rcpp::stop(rd->path + ": " + err);
+  return res;
+}
+#else
+// without libtiff the R side never gets here: raster_patches() checks cito_decoder_available().
+// No export markers: compileAttributes() ignores the #ifdef and would register them twice.
+static void no_tiff() { Rcpp::stop("cito was installed without libtiff, which raster inputs need"); }
+Rcpp::List cito_raster_info(std::string path) { no_tiff(); return Rcpp::List(); }
+SEXP cito_raster_open(std::string path, int nthreads, Rcpp::NumericVector center, Rcpp::NumericVector scale, double fill) { no_tiff(); return R_NilValue; }
+int cito_raster_submit(SEXP reader, Rcpp::IntegerVector x0, Rcpp::IntegerVector y0, int ww, int wh) { no_tiff(); return 0; }
+Rcpp::RawVector cito_raster_fetch(SEXP reader, int id) { no_tiff(); return Rcpp::RawVector(); }
+#endif /* HAVE_TIFF */
