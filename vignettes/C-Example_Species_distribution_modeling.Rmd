@@ -397,7 +397,7 @@ head(df)
 #> [6,]   -0.5939667  0.436133605 -0.2134535 -1.056073  0.1996271
 ```
 
-We will use the Bernoulli likelihood - each species occurrence will be modelled by a Bernoulli likelihood. Build simple model:
+We will use the Bernoulli likelihood - each species occurrence will be modeled by a Bernoulli likelihood. Build simple model:
 
 
 ``` r
