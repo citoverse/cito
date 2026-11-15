@@ -11,6 +11,10 @@ build_model <- function(object) {
     net <- build_mmn(object$model_properties)
   } else if(inherits(object, "citommn_properties")) {
     net <- build_mmn(object)
+  } else if(inherits(object, "citotnn")) {
+    net <- build_tnn(object$model_properties)
+  } else if(inherits(object, "citotnn_properties")) {
+    net <- build_tnn(object)
   } else {
     stop("Object not of class citodnn, citodnn_properties, citocnn, citocnn_properties, citommn or citommn_properties")
   }
@@ -387,3 +391,190 @@ build_mmn <- function(model_properties) {
 
 
 
+
+
+TNNEncoderLayer <- torch::nn_module(
+  "TNNEncoderLayer",
+
+  initialize = function(d_model, nhead, dim_feedforward, dropout) {
+    self$attn_dropout = dropout
+    self$nhead = as.integer(nhead)
+    self$head_dim = as.integer(d_model %/% nhead)
+    self$in_proj_weight = torch::nn_parameter(torch::torch_empty(3L * d_model, d_model))
+    self$in_proj_bias = torch::nn_parameter(torch::torch_zeros(3L * d_model))
+    torch::nn_init_xavier_uniform_(self$in_proj_weight)
+    self$out_proj = torch::nn_linear(d_model, d_model)
+    self$linear1 = torch::nn_linear(d_model, dim_feedforward)
+    self$linear2 = torch::nn_linear(dim_feedforward, d_model)
+    self$norm1 = torch::nn_layer_norm(d_model)
+    self$norm2 = torch::nn_layer_norm(d_model)
+    self$drop1 = torch::nn_dropout(dropout)
+    self$drop2 = torch::nn_dropout(dropout)
+    self$drop_ff = torch::nn_dropout(dropout)
+  },
+
+  # post-norm, as nn_transformer_encoder_layer(norm_first = FALSE); keep: [B, 1, T, T], TRUE = may attend
+  forward = function(x, keep) {
+    b = x$size(1)
+    n = x$size(2)
+    qkv = torch::torch_chunk(torch::nnf_linear(x, self$in_proj_weight, self$in_proj_bias), 3L, dim = 3L)
+    heads = lapply(qkv, function(z) z$view(c(b, n, self$nhead, self$head_dim))$transpose(2, 3))
+    o = torch::torch_scaled_dot_product_attention(heads[[1]], heads[[2]], heads[[3]], attn_mask = keep,
+                                                  dropout_p = if(self$training) self$attn_dropout else 0)
+    o = self$out_proj(o$transpose(2, 3)$reshape(c(b, n, self$nhead * self$head_dim)))
+    x = self$norm1(x + self$drop1(o))
+    self$norm2(x + self$drop2(self$linear2(self$drop_ff(torch::nnf_relu(self$linear1(x))))))
+  }
+)
+
+# Token order: modalities, column tokens (group by group), register, cls. Batch layout of the inputs:
+# modality streams, then value and known (observed) per token group, then, if the response is
+# tokenized, the fixed validation mask.
+TNN <- torch::nn_module(
+  "TNN",
+
+  initialize = function(subModules, projections, has_embeddings, props) {
+    d = props$emb_dim
+    self$subModules = torch::nn_module_list(subModules)
+    self$projections = torch::nn_module_list(projections)
+    self$has_embeddings = has_embeddings
+    self$n_modalities = length(subModules)
+    self$n_modal_inputs = length(subModules) + sum(has_embeddings)
+    self$group_sizes = vapply(props$groups, function(g) length(g$columns), integer(1))
+    self$response = props$response
+    self$use_register = props$register
+    self$use_cls = props$cls
+    if(length(props$groups) > 0) {
+      G = length(props$groups)
+      self$col_emb = torch::nn_embedding(sum(self$group_sizes), d)
+      self$val_w = torch::nn_parameter(torch::torch_empty(G, d)$normal_(0, 1))
+      self$val_b = torch::nn_parameter(torch::torch_zeros(G, d))
+      self$unknown = torch::nn_parameter(torch::torch_empty(G, d)$normal_(0, 1))
+    }
+    if(props$register) self$register = torch::nn_parameter(torch::torch_zeros(1L, 1L, d)$normal_(0, 0.02))
+    if(props$cls) {
+      self$cls = torch::nn_parameter(torch::torch_zeros(1L, 1L, d)$normal_(0, 0.02))
+      self$head = torch::nn_linear(d, props$y_dim)
+    }
+    self$layers = torch::nn_module_list(lapply(seq_len(props$layers), function(i)
+      TNNEncoderLayer(d, props$heads, props$ff_dim, props$dropout)))
+    if(!is.null(props$response)) {
+      S = self$group_sizes[props$response]
+      bound = 1 / sqrt(d)
+      self$out_w = torch::nn_parameter(torch::torch_empty(S, d)$uniform_(-bound, bound))
+      self$out_b = torch::nn_parameter(torch::torch_empty(S)$uniform_(-bound, bound))
+      self$always = torch::nn_buffer(torch::torch_tensor(props$masking$always, dtype = torch::torch_bool()))
+      self$random = torch::nn_buffer(torch::torch_tensor(props$masking$random, dtype = torch::torch_bool()))
+      self$never = torch::nn_buffer(torch::torch_tensor(props$masking$never, dtype = torch::torch_bool()))
+    }
+    self$keep = torch::nn_buffer(torch::torch_tensor(props$attention, dtype = torch::torch_bool()))
+  },
+
+  modality_tokens = function(modal) {
+    if(self$n_modalities == 0) return(NULL)
+    i = 1L
+    tokens = vector("list", self$n_modalities)
+    for(j in seq_len(self$n_modalities)) {
+      if(self$has_embeddings[j]) {
+        h = self$subModules[[j]](modal[[i]], modal[[i + 1L]])
+        i = i + 2L
+      } else {
+        h = self$subModules[[j]](modal[[i]])
+        i = i + 1L
+      }
+      tokens[[j]] = self$projections[[j]](h)$unsqueeze(2)
+    }
+    torch::torch_cat(tokens, dim = 2L)
+  },
+
+  # values: list of [B, K] float with 0 where unknown (a NA would give NaN gradients through v * w);
+  # known: list of [B, K] bool. Unknown tokens are never keys.
+  encode = function(mtok, values, known) {
+    B = if(is.null(mtok)) values[[1]]$size(1) else mtok$size(1)
+    dev = self$keep$device
+    parts = list()
+    pads = list()
+    if(!is.null(mtok)) {
+      parts = list(mtok)
+      pads = list(torch::torch_zeros(c(B, self$n_modalities), dtype = torch::torch_bool(), device = dev))
+    }
+    offset = 0L
+    for(g in seq_along(values)) {
+      K = self$group_sizes[g]
+      ids = torch::torch_arange(offset + 1L, offset + K, dtype = torch::torch_long(), device = dev)
+      offset = offset + K
+      v = values[[g]]$unsqueeze(3) * self$val_w[g, ] + self$val_b[g, ]
+      v = torch::torch_where(known[[g]]$unsqueeze(3), v, self$unknown[g, ])
+      parts[[length(parts) + 1L]] = self$col_emb(ids)$unsqueeze(1L) + v
+      pads[[length(pads) + 1L]] = known[[g]]$logical_not()
+    }
+    for(extra in c("register", "cls")) {
+      if(!isTRUE(self[[paste0("use_", extra)]])) next
+      parts[[length(parts) + 1L]] = self[[extra]]$expand(c(B, 1L, -1L))
+      pads[[length(pads) + 1L]] = torch::torch_zeros(c(B, 1L), dtype = torch::torch_bool(), device = dev)
+    }
+    x = torch::torch_cat(parts, dim = 2L)
+    keep = self$keep$unsqueeze(1L)$logical_and(torch::torch_cat(pads, dim = 2L)$logical_not()$unsqueeze(2L))$unsqueeze(2L)
+    for(i in seq_along(self$layers)) x = self$layers[[i]](x, keep)
+    x
+  },
+
+  response_logits = function(x) {
+    start = self$n_modalities + sum(self$group_sizes[seq_len(self$response - 1L)]) + 1L
+    h = x[, start:(start + self$group_sizes[self$response] - 1L), ]
+    (h * self$out_w$unsqueeze(1L))$sum(dim = 3L) + self$out_b$unsqueeze(1L)
+  },
+
+  split_input = function(input) {
+    m = self$n_modal_inputs
+    G = length(self$group_sizes)
+    list(modal = input[seq_len(m)],
+         values = lapply(seq_len(G), function(g) input[[m + 2L * g - 1L]]),
+         known = lapply(seq_len(G), function(g) input[[m + 2L * g]]$to(dtype = torch::torch_bool())))
+  },
+
+  # Training draws the hidden cells per minibatch here, because the input depends on them: a hidden
+  # cell enters as unknown. Evaluation (cito's validation loop) uses the fixed mask passed as last input.
+  forward = function(input, return_embeddings = FALSE) {
+    s = self$split_input(input)
+    mtok = self$modality_tokens(s$modal)
+    if(is.null(self$response)) {
+      x = self$encode(mtok, s$values, s$known)
+      h = x[, x$size(2), ]
+      return(if(return_embeddings) h else self$head(h))
+    }
+    r = self$response
+    obs = s$known[[r]]
+    hidden = if(self$training) {
+      p = torch::torch_rand(c(obs$size(1), 1L), device = obs$device)
+      rnd = torch::torch_rand(obs$shape, device = obs$device) < p
+      self$always$unsqueeze(1L)$logical_or(self$random$unsqueeze(1L)$logical_and(rnd))
+    } else {
+      input[[length(input)]]$to(dtype = torch::torch_bool())
+    }
+    hidden = hidden$logical_and(obs)
+    s$known[[r]] = obs$logical_and(hidden$logical_not())$logical_and(self$never$logical_not()$unsqueeze(1L))
+    list(pred = self$response_logits(self$encode(mtok, s$values, s$known)), hidden = hidden)
+  }
+)
+
+build_tnn <- function(model_properties) {
+  d = model_properties$emb_dim
+  subModules = list()
+  projections = list()
+  has_embeddings = logical(0)
+  for(p in model_properties$subModules) {
+    if(is.null(p$custom)) {
+      p$output = d
+      net = build_model(p)
+      proj = torch::nn_identity()
+    } else {
+      net = build_model(p)
+      proj = if(p$custom$output_dim == d) torch::nn_identity() else torch::nn_linear(p$custom$output_dim, d)
+    }
+    subModules = c(subModules, list(net))
+    projections = c(projections, list(proj))
+    has_embeddings = c(has_embeddings, inherits(net, "DNN") && isTRUE(net$has_embeddings))
+  }
+  TNN(subModules, projections, has_embeddings, model_properties)
+}

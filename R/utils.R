@@ -1152,7 +1152,7 @@ check_model <- function(object) {
     stop("The model was fitted with cito <= 1.1 and is not compatible with the current version. Please refit the model or install the cito version it was fitted with.")
   }
 
-  if(!inherits(object, c("citodnn", "citocnn", "citommn"))) stop("model not of class citodnn, citocnn or citommn")
+  if(!inherits(object, c("citodnn", "citocnn", "citommn", "citotnn"))) stop("model not of class citodnn, citocnn, citommn or citotnn")
 
   pointer_check_net <- tryCatch(object$net$state_dict(), error = function(e) e)
   pointer_check_loss <- tryCatch(object$loss$state_dict(), error = function(e) e)

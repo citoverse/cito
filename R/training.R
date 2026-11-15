@@ -55,7 +55,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
       target = b[[length(b)]]
 
-      if (inherits(model, "citommn")) {
+      if (inherits(model, c("citommn", "citotnn"))) {
         output <- model$net(inputs)
       } else {
         if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
@@ -150,7 +150,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
         inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
         target  <- b[[length(b)]]
 
-        if (inherits(model, "citommn")) {
+        if (inherits(model, c("citommn", "citotnn"))) {
           output <- model$net(inputs)
         } else {
           if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
@@ -194,7 +194,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     main <- switch (class(model),
       citodnn = "Training of DNN",
       citocnn = "Training of CNN",
-      citommn = "Training of MMN"
+      citommn = "Training of MMN",
+      citotnn = "Training of TNN"
     )
     if(model$training_properties$plot) visualize.training(model$losses,epoch, main = main, new = plot_new, baseline = model$training_properties$baseloss)
     plot_new <- FALSE
@@ -349,10 +350,10 @@ analyze_training<- function(object){
     )
   }
 
-  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn", "citommn"))) stop("Function requires an object of class citodnn, citodnnBootstrap, citocnn or citommn")
+  if(!inherits(object, c("citodnn", "citodnnBootstrap", "citocnn", "citommn", "citotnn"))) stop("Function requires an object of class citodnn, citodnnBootstrap, citocnn, citommn or citotnn")
 
 
-  if(inherits(object, c("citodnn", "citocnn", "citommn"))) {
+  if(inherits(object, c("citodnn", "citocnn", "citommn", "citotnn"))) {
     fig <- plotly::plot_ly(object$losses, type = 'scatter', mode = 'lines+markers',
                            width = 900)
 
@@ -379,6 +380,7 @@ analyze_training<- function(object){
     if(inherits(object, "citodnn")) title <- 'DNN Training'
     else if(inherits(object, "citocnn")) title <- 'CNN Training'
     else if(inherits(object, "citommn")) title <- 'MMN Training'
+    else if(inherits(object, "citotnn")) title <- "TNN Training"
     fig<- plotly::layout(fig,
                          title=title,
                          xaxis = list(zeroline = FALSE),
