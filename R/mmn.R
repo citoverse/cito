@@ -403,6 +403,9 @@ print.summary.citommn <- function(x, ...){
 # modalities of different kinds.
 modality_importance <- function(object, n_permute = 10L, device = NULL, batchsize = NULL) {
   checkmate::qassert(n_permute, "X1[1,)")
+  # mmn() does not store the weights, and a weighted loss called without them aborts in torch
+  if(isTRUE(object$training_properties$has_weights))
+    stop("The permutation importance is not available for an mmn() fitted with weights, which the model does not store.", call. = FALSE)
   object <- check_model(object)
   if(is.null(device)) device <- object$training_properties$device
   device <- check_device(device)
