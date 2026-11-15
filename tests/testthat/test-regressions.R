@@ -27,8 +27,12 @@ testthat::test_that("a fitted model does not carry the training data", {
 testthat::test_that("a validation split still yields a usable loss curve", {
   skip_if_no_torch()
   set.seed(2)
+  torch::torch_manual_seed(2)
   n = 300
-  df = data.frame(y = rnorm(n), x1 = rnorm(n), x2 = rnorm(n))
+  # with pure noise as the response the validation loss has nothing to fall to, and the check failed
+  # in about one run in three
+  df = data.frame(x1 = rnorm(n), x2 = rnorm(n))
+  df$y = df$x1 - 0.5 * df$x2 + rnorm(n, sd = 0.3)
   m = dnn(y ~ ., data = df, hidden = c(8L, 8L), epochs = 5L, validation = 0.3,
           verbose = FALSE, plot = FALSE)
   # the loop is wrapped in with_no_grad() for memory; the losses themselves must be unchanged
