@@ -16,8 +16,13 @@ get_data_loader = function(...,
     ds <- torch::tensor_dataset(...)
   }
 
-  dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE,
-                          num_workers = num_workers)
+  if(any(vapply(list(...), inherits, logical(1), "citoraster"))) {
+    dl <- torch::dataloader(ds, batch_size = batch_size, sampler = order_sampler(ds, shuffle), pin_memory = TRUE,
+                            num_workers = num_workers)
+  } else {
+    dl <- torch::dataloader(ds, batch_size = batch_size, shuffle = shuffle, pin_memory = TRUE,
+                            num_workers = num_workers)
+  }
 
   return(dl)
 }
@@ -88,11 +93,16 @@ cito_dataset = torch::dataset(
     self$decoder = cito_decoder_available()
     self$num_threads = num_threads
     self$data_augmentation = data_augmentation
+    self$readers = lapply(inputs, function(x) if(inherits(x, "citoraster")) new.env())
+    self$order = NULL
   },
   .getbatch = function(index) {
 
-    batch = lapply(self$inputs, function(x) {
-      if(inherits(x, "torch_tensor")) {
+    batch = lapply(seq_along(self$inputs), function(k) {
+      x = self$inputs[[k]]
+      if(inherits(x, "citoraster")) {
+        return(self$read_raster(x, self$readers[[k]], index))
+      } else if(inherits(x, "torch_tensor")) {
         return(x[index, drop=FALSE])
       } else if(!is.character(x)) {
         return(torch::torch_tensor(abind::asub(x, index, dims = 1, drop = FALSE)))
@@ -127,8 +137,32 @@ cito_dataset = torch::dataset(
   },
   .length = function() {
     x = self$inputs[[1]]
-    if(is.character(x)) return(length(x))
+    if(is.character(x) || inherits(x, "citoraster")) return(length(x))
     return(dim(x)[1])
+  },
+  # The batch after `index` is queued before this one is collected, so it is read while this one
+  # trains. A request that is not the queued batch (e.g. a single probe) is read directly.
+  read_raster = function(x, st, index) {
+    if(is.null(st$reader)) st$reader = cito_raster_open(x$raster, self$num_threads, x$center, x$scale, x$fill)
+    submit = function(i) {
+      o = raster_offsets(x, i)
+      cito_raster_submit(st$reader, o$x0, o$y0, x$size[1], x$size[2])
+    }
+    if(!is.null(st$pending) && identical(st$pending$index, index)) {
+      id = st$pending$id
+    } else {
+      if(!is.null(st$pending)) try(cito_raster_fetch(st$reader, st$pending$id), silent = TRUE)
+      id = submit(index)
+    }
+    st$pending = NULL
+    order = if(is.null(self$order)) seq_len(length(x)) else self$order
+    p = match(index[length(index)], order)
+    if(!is.na(p) && p < length(order)) {
+      nxt = order[(p + 1L):min(length(order), p + length(index))]
+      st$pending = list(index = nxt, id = submit(nxt))
+    }
+    buf = cito_raster_fetch(st$reader, id)
+    torch::torch_tensor_from_buffer(buf, shape = c(length(index), x$info$bands, x$size[2], x$size[1]), dtype = "float")$clone()
   },
   # whole batch through the compiled decoder; NULL means "not applicable, use the R readers"
   decode_batch = function(paths) {

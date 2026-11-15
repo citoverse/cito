@@ -167,13 +167,8 @@ mmn <- function(formula,
   X <- format_input_data(formula[[3]], dataList)
   check_newdata_shape(c(X, list(Y)), NULL)
 
-  from_folder = FALSE
-  if(any(sapply(X, is.character))) from_folder = TRUE
-
-  X <- lapply(X, function(x) {
-    if(is.character(x)) x = list.files(x, full.names = TRUE)
-    return(x)
-    })
+  from_folder = any(vapply(X, lazy_input, logical(1)))
+  X <- lapply(X, expand_input)
 
   Y <- loss_obj$format_Y(Y)
   # a batchsize of 0 gives a dataloader of length Inf that yields empty batches forever
@@ -300,6 +295,7 @@ predict.citommn <- function(object,
   sample_names <- NULL
   for(x in if(is.null(newdata)) object$data$dataList else newdata) {
     nm <- if(is.character(x) && length(x) == 1L && dir.exists(x)) basename(list.files(x))
+          else if(inherits(x, "citoraster")) rownames(x$coords)
           else if(!is.null(dim(x))) dimnames(x)[[1]]
           else names(x)
     if(!is.null(nm)) {
@@ -318,13 +314,8 @@ predict.citommn <- function(object,
     check_newdata_shape(newdata, if(inherits(old, "try-error")) NULL else old)
   }
 
-  from_folder = FALSE
-  if(any(sapply(newdata, is.character))) from_folder = TRUE
-
-  newdata <- lapply(newdata, function(x) {
-    if(is.character(x)) x = list.files(x, full.names = TRUE)
-    return(x)
-  })
+  from_folder = any(vapply(newdata, lazy_input, logical(1)))
+  newdata <- lapply(newdata, expand_input)
 
   nt <- if(is.null(object$training_properties$num_threads)) 4L else object$training_properties$num_threads
   dl <- do.call(get_data_loader, append(newdata, list(batch_size = batchsize, shuffle = FALSE,
@@ -470,13 +461,13 @@ modality_labels <- function(term) {
 }
 
 permute_rows <- function(x, idx) {
-  if(is.character(x)) return(x[idx])
+  if(lazy_input(x)) return(x[idx])
   if(is.null(dim(x))) return(x[idx])
   abind::asub(x, idx, dims = 1, drop = FALSE)
 }
 
 to_input_tensor <- function(x) {
-  if(is.character(x)) return(list.files(x, full.names = TRUE))
+  if(lazy_input(x)) return(expand_input(x))
   if(inherits(x, "torch_tensor")) return(x)
   torch::torch_tensor(x, dtype = torch::torch_float32())
 }
@@ -652,7 +643,7 @@ check_newdata_shape <- function(new, old) {
                 "). Every stream must describe the same samples, in the same order. Rows with NA in the data of a dnn() term are dropped; remove or impute them in every stream."), call. = FALSE)
   if(is.null(old) || length(old) != length(new)) return(invisible(TRUE))
   for(i in seq_along(new)) {
-    if(is.character(new[[i]]) || is.character(old[[i]])) next
+    if(lazy_input(new[[i]]) || lazy_input(old[[i]])) next
     d_new <- dim(new[[i]])
     d_old <- dim(old[[i]])
     if(is.null(d_new) || is.null(d_old) || length(d_new) != length(d_old)) next
@@ -693,7 +684,7 @@ format_input_data <- function(formula, dataList) {
       call <- match.call(cnn, term)
       if(!inherits(call$X, "name")) stop(paste0("In '", deparse1(term), "': X has to be assigned to a name that exists in dataList. E.g., mmn(Y ~ cnn(X=some_name, ...) + dnn(...), dataList=list(Y=Y, some_name=your_data, ...), ...)"))
       if(!as.character(call$X) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$X), "' in names of dataList."))
-      if(is.character(eval(call$X, envir = dataList))) input_data <- append(input_data, list(eval(call$X, envir = dataList)))
+      if(lazy_input(eval(call$X, envir = dataList))) input_data <- append(input_data, list(eval(call$X, envir = dataList)))
       else input_data <- append(input_data, list(torch::torch_tensor(eval(call$X, envir = dataList), dtype = torch::torch_float32())))
     }
     return(input_data)

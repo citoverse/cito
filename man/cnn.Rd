@@ -34,7 +34,7 @@ cnn(
 )
 }
 \arguments{
-\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0.}
+\item{X}{An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. Windows of one large raster are given with \code{\link{raster_patches}}.}
 
 \item{Y}{The target data. The allowed formats of the target data differ between loss functions. See \code{\link{dnn}} for more information.}
 

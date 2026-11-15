@@ -210,7 +210,7 @@ continue_training.citocnn <- function(model,
 
   if((is.null(X) & !is.null(Y)) | (!is.null(X) & is.null(Y))) stop("X and Y must either be both assigned or both NULL.")
 
-  if(!is.character(X) & !is.character(model$data$X)) {
+  if(!lazy_input(X) & !lazy_input(model$data$X)) {
     if(!is.null(X) && !all(dim(X)[-1] == dim(model$data$X)[-1])) stop(paste0("Wrong dimensions of X [",paste0(dim(X), collapse = ","),"]. Correct dimensions: [N,",paste0(dim(model$data$X)[-1]), "]"))
   }
 
@@ -233,8 +233,8 @@ continue_training.citocnn <- function(model,
   weights_r = weights
   Y <- model$loss$format_Y(Y)
 
-  if(is.character(X)) {
-    X <- list.files(X, full.names = TRUE)
+  if(lazy_input(X)) {
+    X <- expand_input(X)
     from_folder = TRUE
     if(dim(Y)[1] != length(X)) stop(paste0("Y (", dim(Y)[1], ") has to have an equal number of samples as X (", length(X), ")."))
   } else {
@@ -324,8 +324,7 @@ continue_training.citommn <- function(model,
   X <- format_input_data(model$call$formula[[3]], dataList)
   check_newdata_shape(c(X, list(Y)), NULL)
 
-  from_folder = FALSE
-  if(any(sapply(X, is.character))) from_folder = TRUE
+  from_folder = any(vapply(X, lazy_input, logical(1)))
 
   X <- lapply(X, function(x) {
     if(is.character(x)) x = list.files(x, full.names = TRUE)
