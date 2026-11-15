@@ -479,7 +479,7 @@ to_input_tensor <- function(x) {
 
 #' Plot a fitted MMN model
 #'
-#' Visualises either the permutation importance of the data streams or the architecture of a
+#' Visualizes either the permutation importance of the data streams or the architecture of a
 #' Multi-Modal Neural Network.
 #'
 #' @param x a model created by \code{\link{mmn}}
