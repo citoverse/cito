@@ -9,3 +9,19 @@ cito_decode_batch <- function(paths, nthreads = 1L) {
     .Call(`_cito_cito_decode_batch`, paths, nthreads)
 }
 
+cito_raster_info <- function(path) {
+    .Call(`_cito_cito_raster_info`, path)
+}
+
+cito_raster_open <- function(path, nthreads, center, scale, fill) {
+    .Call(`_cito_cito_raster_open`, path, nthreads, center, scale, fill)
+}
+
+cito_raster_submit <- function(reader, x0, y0, ww, wh) {
+    .Call(`_cito_cito_raster_submit`, reader, x0, y0, ww, wh)
+}
+
+cito_raster_fetch <- function(reader, id) {
+    .Call(`_cito_cito_raster_fetch`, reader, id)
+}
+
