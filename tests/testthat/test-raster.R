@@ -39,7 +39,7 @@ test_that("windows are exact for every layout, at the edges and outside", {
     list(f = "tiled_int16.tif", value = function(b, r, c) 10000 * b + 100 * r + c - 20000, nodata = 0),
     list(f = "point.tif", value = function(b, r, c) 10000 * b + 100 * r + c, nodata = NULL))
   for(cs in cases) {
-    X = raster_patches(raster_file(cs$f), centres(x0, y0), extent = 100, fill = -1)
+    X = suppressWarnings(raster_patches(raster_file(cs$f), centres(x0, y0), extent = 100, fill = -1))
     expect_equal(X$size, c(10L, 10L))
     expect_equal(X$info$geotransform, c(600000, 10, 0, 5300800, 0, -10), info = cs$f)
     got = read_all(X)
@@ -50,7 +50,7 @@ test_that("windows are exact for every layout, at the edges and outside", {
 test_that("center and scale are applied per band, fill is left alone", {
   skip_if_no_torch()
   skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
-  X = raster_patches(raster_file("raster.tif"), centres(x0, y0), extent = 100, center = c(1, 2, 3), scale = c(10, 100, 1000), fill = -1)
+  X = suppressWarnings(raster_patches(raster_file("raster.tif"), centres(x0, y0), extent = 100, center = c(1, 2, 3), scale = c(10, 100, 1000), fill = -1))
   e = expected(x0, y0, 10, fill = -1)
   for(b in 1:3) e[, b, , ][e[, b, , ] != -1] = (e[, b, , ][e[, b, , ] != -1] - b) / 10^b
   expect_equal(read_all(X), e, tolerance = 1e-6)
@@ -124,4 +124,12 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
   pt = predict(t, newdata = list(X = X[1:5], env = env[1:5, , drop = FALSE]))
   expect_equal(dim(pt), c(5L, 1L))
   expect_equal(summary(t, n_permute = 2L)$importance$modality, c("X", "env"))
+})
+
+test_that("windows entirely outside the raster are flagged, a zero scale is refused", {
+  skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
+  f = raster_file("raster.tif")
+  expect_warning(raster_patches(f, cbind(c(11.5, 600500), c(48.9, 5300400)), extent = 100), "1 of 2 windows")
+  expect_warning(raster_patches(f, centres(c(-9L, 99L), c(-9L, 79L)), extent = 100), NA)
+  expect_error(raster_patches(f, centres(10L, 10L), extent = 100, scale = 0), "scale")
 })
