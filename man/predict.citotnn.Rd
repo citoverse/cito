@@ -57,4 +57,6 @@ the \code{NA} cells are predicted. Cells whose value was given are returned as \
 \item \strong{leave-one-out} (\code{loo = TRUE}): each observed column is predicted from all other
 observed columns, by hiding it alone; one forward pass per column.
 }
+Only what the \code{masking} of the fit trained is answered: columns it never hid are not
+predicted, and values of columns it never gave do not condition (they are ignored with a warning).
 }

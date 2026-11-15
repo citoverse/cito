@@ -62,6 +62,7 @@ continue_training(model, ...)
 \method{continue_training}{citotnn}(
   model,
   epochs = 32,
+  dataList = NULL,
   device = NULL,
   changed_params = NULL,
   init_optimizer = TRUE,

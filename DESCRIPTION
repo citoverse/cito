@@ -34,7 +34,7 @@ Imports:
     jpeg,
     png,
     checkmate,
-    torch,
+    torch (>= 0.17.0),
     gridExtra,
     parabar,
     abind,

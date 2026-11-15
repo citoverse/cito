@@ -467,6 +467,8 @@ tnn_loaders = function(object) {
 #'   \item \strong{leave-one-out} (\code{loo = TRUE}): each observed column is predicted from all other
 #'     observed columns, by hiding it alone; one forward pass per column.
 #' }
+#' Only what the \code{masking} of the fit trained is answered: columns it never hid are not
+#' predicted, and values of columns it never gave do not condition (they are ignored with a warning).
 #'
 #' @param object A model fitted with \code{\link{tnn}}.
 #' @param newdata A list holding every data object the formula names except a tokenized response.
@@ -535,10 +537,15 @@ tnn_predict_tokens = function(object, data, newdata, Y, query, groups, loo, type
   r = props$response
   rname = object$data$spec$response
   cols = props$groups[[r]]$columns
-  n = tnn_rows(object, data, newdata)
+  if(!is.null(newdata) && rname %in% names(newdata)) message("The response in newdata is not used; conditioning values go into 'Y'.")
+  n = tnn_rows(object, data, if(is.null(Y)) 0L else if(is.null(dim(Y))) 1L else nrow(Y))
   if(!is.null(Y)) Y = align_columns(token_matrix(if(is.null(dim(Y)) && n == 1) matrix(Y, 1, dimnames = list(NULL, names(Y))) else Y, rname), cols, rname)
   if(!is.null(Y) && nrow(Y) != n) stop(sprintf("Y has %d rows, the other data %d.", nrow(Y), n), call. = FALSE)
-  targets = rep(TRUE, length(cols))
+  # the masking decides what the model was trained to do: only columns it hid can be predicted, and
+  # only columns it gave can condition
+  givable = !props$masking$always & !props$masking$never
+  hideable = props$masking$always | props$masking$random
+  targets = hideable
   if(loo && !is.null(query)) stop("Use either 'query' or 'loo = TRUE', not both.", call. = FALSE)
   if(!is.null(query)) {
     tok = data.frame(group = rname, name = cols, kind = "column")
@@ -546,14 +553,23 @@ tnn_predict_tokens = function(object, data, newdata, Y, query, groups, loo, type
     if(any(s$left & s$right)) stop("Columns on both sides of the query: ", paste(utils::head(cols[s$left & s$right], 5), collapse = ", "),
                                    ". Use loo = TRUE to predict each column from the others.", call. = FALSE)
     if(!any(s$left)) stop("The query predicts no column.", call. = FALSE)
+    if(any(s$left & !hideable)) stop("The masking never hid these columns in training, so they cannot be predicted: ",
+                                     paste(utils::head(cols[s$left & !hideable], 5), collapse = ", "), call. = FALSE)
+    if(any(s$right & !givable)) stop("The masking never gave these columns in training, so they cannot condition: ",
+                                     paste(utils::head(cols[s$right & !givable], 5), collapse = ", "), call. = FALSE)
     if(any(s$right) && is.null(Y)) stop("The query conditions on columns, so their values must be given in 'Y'.", call. = FALSE)
     Yq = matrix(NA_real_, n, length(cols), dimnames = list(NULL, cols))
     if(any(s$right)) Yq[, s$right] = Y[, s$right]
     Y = Yq
     targets = s$left
   }
+  if(!is.null(Y) && any(!is.na(Y[, !givable]))) {
+    warning("Values of columns that the masking never gave in training are ignored: ",
+            paste(utils::head(cols[!givable & colSums(!is.na(Y)) > 0], 5), collapse = ", "), call. = FALSE)
+    Y[, !givable] = NA
+  }
   if(is.null(Y)) Y = matrix(NA_real_, n, length(cols), dimnames = list(NULL, cols))
-  loo_cols = if(loo) which(colSums(!is.na(Y)) > 0 & targets) else integer(0)
+  loo_cols = if(loo) which(colSums(!is.na(Y)) > 0 & targets & givable) else integer(0)
   if(loo && length(loo_cols) == 0) stop("loo = TRUE needs observed values in 'Y'.", call. = FALSE)
   if(!loo && !anyNA(Y[, targets, drop = FALSE])) stop("Every cell of Y is observed, so there is nothing to predict. Use loo = TRUE to predict each column from the others.", call. = FALSE)
   data[[rname]] = Y
@@ -593,9 +609,9 @@ tnn_predict_tokens = function(object, data, newdata, Y, query, groups, loo, type
   pred
 }
 
-tnn_rows = function(object, data, newdata) tnn_inputs(object, replace_response(object, data))$n
+tnn_rows = function(object, data, n_Y) tnn_inputs(object, replace_response(object, data, n_Y))$n
 
-replace_response = function(object, data) {
+replace_response = function(object, data, n_Y = 0) {
   rname = object$data$spec$response
   cols = object$model_properties$groups[[object$model_properties$response]]$columns
   others = setdiff(names(data), rname)
@@ -606,7 +622,7 @@ replace_response = function(object, data) {
     n = if(is.character(x) && length(x) == 1 && dir.exists(x)) length(list.files(x)) else if(inherits(x, "citoraster")) length(x) else NROW(x)
     break
   }
-  if(is.null(n)) n = NROW(data[[rname]])
+  if(is.null(n)) n = if(n_Y > 0) n_Y else NROW(data[[rname]])
   data[[rname]] = matrix(NA_real_, n, length(cols), dimnames = list(NULL, cols))
   data
 }
@@ -639,8 +655,9 @@ print.citotnn = function(x, ...) {
 
 #' @rdname continue_training
 #' @export
-continue_training.citotnn = function(model, epochs = 32, device = NULL, changed_params = NULL, init_optimizer = TRUE, ...) {
+continue_training.citotnn = function(model, epochs = 32, dataList = NULL, device = NULL, changed_params = NULL, init_optimizer = TRUE, ...) {
   checkmate::qassert(epochs, "X1[1,)")
+  if(!is.null(dataList)) stop("continue_training() of a tnn() model continues on its training data; new data is not supported yet.", call. = FALSE)
   if(is.null(device)) device = model$training_properties$device
   device = check_device(device)
   model$use_model_epoch = "last"
@@ -709,7 +726,7 @@ tnn_importance = function(object, n_permute = 10L, device = NULL) {
   hidden = NULL
   if(token_mode) {
     Ym = token_matrix(Y, object$data$spec$response)
-    hidden = draw_validation_mask(Ym, seq_len(nrow(Ym)), props$masking)$mask
+    hidden = suppressMessages(draw_validation_mask(Ym, seq_len(nrow(Ym)), props$masking))$mask
     Ym[is.na(Ym)] = 0
     target = torch::torch_tensor(Ym, dtype = torch::torch_float32())
   } else {
@@ -732,22 +749,32 @@ tnn_importance = function(object, n_permute = 10L, device = NULL) {
   object$net$to(device = device)
   object$loss$to(device = device)
   on.exit(object$net$to(device = "cpu"), add = TRUE)
+  on.exit(object$loss$to(device = "cpu"), add = TRUE)
   scale = object$loss$eval_scale
   object$loss$eval_scale = NULL
   on.exit(object$loss$eval_scale <- scale, add = TRUE)
+  w = if(is.null(object$data$weights)) NULL else torch::torch_tensor(object$data$weights)
+  r = props$response
   run_loss = function(ins, unconditional = FALSE) {
-    dl = do.call(get_data_loader, c(ins, list(target, batch_size = object$training_properties$batchsize,
-                                              shuffle = FALSE, from_folder = inp$from_folder)))
+    dl = do.call(get_data_loader, c(ins, if(is.null(w)) list(target) else list(w, target),
+                                    list(batch_size = object$training_properties$batchsize,
+                                         shuffle = FALSE, from_folder = inp$from_folder)))
     total = 0
     count = 0
     torch::with_no_grad(coro::loop(for(b in dl) {
       b = lapply(b, function(z) z$to(device = device))
-      v = if(!unconditional) object$loss(object$net(b[-length(b)]), b[[length(b)]]) else {
-        s = object$net$split_input(b[-length(b)])
-        hid = b[[length(b) - 1L]]$logical_and(s$known[[props$response]])
-        s$known[[props$response]] = torch::torch_zeros_like(s$known[[props$response]])
-        pred = object$net$response_logits(object$net$encode(object$net$modality_tokens(s$modal), s$values, s$known))
-        object$loss$inner(pred, b[[length(b)]])[hid]
+      x = b[seq_along(ins)]
+      tgt = b[[length(b)]]
+      v = if(!token_mode) {
+        if(is.null(w)) object$loss(object$net(x), tgt) else object$loss(object$net(x), tgt, weights = b[[length(b) - 1L]])
+      } else if(!unconditional) {
+        out = object$net(x)
+        object$loss$inner(out$pred, tgt)[out$hidden]
+      } else {
+        s = object$net$split_input(x)
+        hid = x[[length(x)]]$logical_and(s$known[[r]])
+        s$known[[r]] = torch::torch_zeros_like(s$known[[r]])
+        object$loss$inner(object$net$response_logits(object$net$encode(object$net$modality_tokens(s$modal), s$values, s$known)), tgt)[hid]
       }
       total = total + as.numeric(v$sum()$cpu())
       count = count + v$numel()

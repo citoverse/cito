@@ -194,3 +194,50 @@ test_that("summary, plot and coef work in both modes", {
   expect_equal(summary(f2, n_permute = 2L)$importance$modality, c("env", "env.2", "tr"))
   expect_error(tnn(y ~ dnn(X = tr) + tokens(tr), dataList = d, epochs = 1L, plot = FALSE, verbose = FALSE), "unique")
 })
+
+test_that("predict() keeps to what the masking trained", {
+  skip_if_no_torch()
+  d = sim_tnn()
+  fit = fit_tokens(d, epochs = 2L, masking = sp1 ~ sp2)
+  Yc = d$Y
+  Yc[, 1] = NA
+  p = expect_warning(predict(fit, Y = Yc), "never gave")
+  expect_true(all(is.na(p[, -1])))
+  Yf = Yc
+  Yf[, 3:6] = 1 - Yf[, 3:6]
+  expect_equal(suppressWarnings(predict(fit, Y = Yf)), p)
+  expect_error(predict(fit, Y = Yc, query = sp3 ~ sp2), "never hid")
+  expect_error(predict(fit, Y = Yc, query = sp1 ~ sp3), "never gave")
+  expect_false(anyNA(predict(fit, Y = Yc, query = sp1 ~ sp2)[!is.na(Yc[, 2]), 1]))
+})
+
+test_that("leave-one-out equals hiding the column by hand", {
+  skip_if_no_torch()
+  d = sim_tnn()
+  fit = fit_tokens(d, epochs = 2L)
+  Y5 = d$Y[1:5, ]
+  Y5[is.na(Y5)] = 0
+  l = predict(fit, Y = Y5, newdata = list(env = d$env[1:5, ]), loo = TRUE)
+  for(j in c(1, 4)) {
+    h = Y5
+    h[, j] = NA
+    expect_equal(l[, j], predict(fit, Y = h, newdata = list(env = d$env[1:5, ]))[, j], tolerance = 1e-5)
+  }
+})
+
+test_that("weights, readRDS + continue_training and new data are handled", {
+  skip_if_no_torch()
+  d = sim_tnn()
+  wl = function(pred, true, weights) (pred - true)^2 * weights
+  fw = tnn(y ~ dnn(~ a, data = env) + tokens(tr), dataList = d, loss = wl, weights = runif(200), epochs = 2L, plot = FALSE, verbose = FALSE)
+  expect_true(all(is.finite(summary(fw, n_permute = 2L)$importance$loss_increase)))
+  mw = mmn(y ~ dnn(~ a, data = env), dataList = d, loss = wl, weights = runif(200), epochs = 1L, plot = FALSE, verbose = FALSE)
+  expect_error(summary(mw), "weights")
+  fit = fit_tokens(d, epochs = 2L, validation = 0.2)
+  f = tempfile(fileext = ".rds")
+  saveRDS(fit, f)
+  expect_error(continue_training(readRDS(f), epochs = 1L, verbose = FALSE, plot = FALSE), NA)
+  expect_error(continue_training(fit, epochs = 1L, dataList = d, verbose = FALSE, plot = FALSE), "not supported")
+  t = tnn(Y ~ tokens(Y), dataList = d, loss = "bernoulli", epochs = 1L, plot = FALSE, verbose = FALSE)
+  expect_equal(dim(predict(t, Y = d$Y[1:5, ])), c(5L, 6L))
+})
