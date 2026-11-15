@@ -36,6 +36,7 @@ Multilayer
 NCPU
 NGPU
 NN
+NoData
 ORCID
 PDP
 PDPs
@@ -118,6 +119,7 @@ et
 eucalypts
 euqals
 gelu
+georeferencing
 ggplot
 ggraph
 github
