@@ -543,8 +543,8 @@ Rcpp::List cito_decode_batch(Rcpp::CharacterVector paths, int nthreads = 1) {
 
 // libtiff 4.5 gave handles their own error handlers. Only then may a read run on a thread of its
 // own: the global handlers belong to whatever tiff or terra installed and cannot be swapped
-// underneath R. Older libtiff reads synchronously, inside the usual guard.
-#if defined(TIFFLIB_VERSION) && TIFFLIB_VERSION >= 20221213
+// underneath R. Older libtiff reads synchronously, inside the usual guard (-DCITO_RASTER_SYNC forces it).
+#if defined(TIFFLIB_VERSION) && TIFFLIB_VERSION >= 20221213 && !defined(CITO_RASTER_SYNC)
 #define CITO_RASTER_ASYNC 1
 #endif
 
