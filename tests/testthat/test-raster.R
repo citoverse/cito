@@ -133,3 +133,13 @@ test_that("windows entirely outside the raster are flagged, a zero scale is refu
   expect_warning(raster_patches(f, centres(c(-9L, 99L), c(-9L, 79L)), extent = 100), NA)
   expect_error(raster_patches(f, centres(10L, 10L), extent = 100, scale = 0), "scale")
 })
+
+test_that("loaders share one reader per raster", {
+  skip_if_no_torch()
+  skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
+  X = raster_patches(raster_file("raster.tif"), centres(c(10L, 20L, 30L), c(10L, 20L, 30L)), extent = 100, scale = 7)
+  before = length(ls(cito:::raster_readers))
+  for(i in 1:20) read_all(X)
+  expect_equal(length(ls(cito:::raster_readers)), before + 1L)
+  expect_equal(read_all(X), read_all(X))
+})

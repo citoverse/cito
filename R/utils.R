@@ -143,7 +143,11 @@ cito_dataset = torch::dataset(
   # The batch after `index` is queued before this one is collected, so it is read while this one
   # trains. A request that is not the queued batch (e.g. a single probe) is read directly.
   read_raster = function(x, st, index) {
-    if(is.null(st$reader)) st$reader = cito_raster_open(x$raster, self$num_threads, x$center, x$scale, x$fill)
+    if(is.null(st$reader)) {
+      st$reader = raster_reader(x, self$num_threads)
+      # a batch prefetched for a loader that is dropped mid-epoch is collected when the loader goes
+      reg.finalizer(st, function(e) if(!is.null(e$pending)) try(cito_raster_fetch(e$reader, e$pending$id), silent = TRUE))
+    }
     submit = function(i) {
       o = raster_offsets(x, i)
       cito_raster_submit(st$reader, o$x0, o$y0, x$size[1], x$size[2])

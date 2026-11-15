@@ -83,6 +83,16 @@ print.citoraster = function(x, ...) {
   invisible(x)
 }
 
+# One reader (a worker thread plus one TIFF handle per reader thread) per raster and setting, shared
+# by every loader: a reader per loader held them open until gc(), 125 descriptors after 150 predict() calls.
+raster_readers = new.env()
+
+raster_reader = function(x, nthreads) {
+  key = paste(x$raster, file.mtime(x$raster), nthreads, paste(x$center, collapse = ","), paste(x$scale, collapse = ","), x$fill)
+  if(is.null(raster_readers[[key]])) raster_readers[[key]] = cito_raster_open(x$raster, nthreads, x$center, x$scale, x$fill)
+  raster_readers[[key]]
+}
+
 # top-left pixel of every window
 raster_offsets = function(x, index) {
   gt = x$info$geotransform
