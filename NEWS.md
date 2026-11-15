@@ -38,6 +38,7 @@
 
 ## Bug fixes
 
+* summary() and plot() of an mmn() fitted with weights stop with an error instead of crashing the R session; the weights are not stored with the model, and a weighted loss called without them aborted in torch
 * models saved with saveRDS are now rebuilt via build_model() when reloaded (invalid pointer state)
 * baseloss and burnin are now forwarded to bootstrap replicates, and weighted (custom) losses receive the weights as torch tensor when the baseloss is computed
 * ACE() (conditionalEffects(..., method = "finite")) now returns the same object structure as ACEanalytical() (both scales, vars, row_indices), return_vars works with the finite method
