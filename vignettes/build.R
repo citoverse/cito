@@ -34,6 +34,10 @@ knitr::knit("E-CNN_and_MMN.Rmd.orig",
             output = "E-CNN_and_MMN.Rmd"
 )
 
+knitr::knit("F-Transformer_neural_networks.Rmd.orig",
+            output = "F-Transformer_neural_networks.Rmd"
+)
+
 setwd("../")
 
 pkgdown::build_site()
