@@ -55,6 +55,7 @@ SigmaDiag
 SigmaPar
 Srivastava
 TIFFs
+TNN
 Transferability
 VRAM
 Warton
@@ -144,6 +145,7 @@ maxPool
 maxPooling
 md
 metacommunity
+minibatch
 mlverse
 mmn
 mobilenet

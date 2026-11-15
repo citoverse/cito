@@ -6,6 +6,7 @@
 * Analytical ALE
 * Importance based on ALE
 * MMN
+* tnn(): a transformer over modality tokens (dnn()/cnn() terms as in mmn()) and column tokens (tokens(M)); attention, training masks and conditional queries are written as formulas, and a response entered as tokens(Y) is trained with a masked objective and predicted conditionally
 * CNN: cnn(), create_architecture(), conv(), linear(), maxPool(), avgPool() and transfer() are now exported
 * weights argument for custom likelihoods
 * custom argument for dnn() and cnn(): user-provided nn_module architectures, also usable as submodules within mmn()

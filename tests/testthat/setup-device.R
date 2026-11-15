@@ -6,7 +6,7 @@ local({
   if(!nzchar(dev)) return(invisible(NULL))
   choices = unique(c(dev, "cpu", "cuda", "mps"))
   envs = list(asNamespace("cito"), as.environment("package:cito"))
-  for(f in c("dnn", "cnn", "mmn")) {
+  for(f in c("dnn", "cnn", "mmn", "tnn")) {
     fun = get(f, envir = asNamespace("cito"))
     formals(fun)$device = choices
     for(e in envs) {
