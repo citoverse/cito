@@ -652,3 +652,152 @@ continue_training.citotnn = function(model, epochs = 32, device = NULL, changed_
               plot_new = TRUE, init_optimizer = init_optimizer)
 }
 
+#' Summarize a fitted TNN
+#'
+#' Permutation importance of every \code{dnn()}/\code{cnn()} token and every \code{tokens()} group:
+#' one is shuffled across rows while the others are left intact, and the increase in loss is what it
+#' contributed. With a tokenized response the loss is the loss of the cells hidden by one mask, drawn
+#' from the training scheme and fixed across permutations, and the table gains a row for the given
+#' values of the response: the increase in loss when every response cell is unknown, i.e. the
+#' conditional gain.
+#'
+#' @param object A model created by \code{\link{tnn}}.
+#' @param n_permute Number of permutations per stream.
+#' @param device Device on which to evaluate. Defaults to the training device.
+#' @param ... Not used.
+#'
+#' @details
+#' Evaluated on the training data. Permutation breaks the dependence between correlated streams and
+#' evaluates the network away from the data it was trained on, and the standard deviation is across
+#' permutations of one fitted model, not across fits. The conditional gain is not a measure of
+#' interactions between the response columns: shared responses to unmeasured predictors produce it too.
+#'
+#' @return An object of class \code{"summary.citotnn"} with the importance table.
+#' @export
+summary.citotnn = function(object, n_permute = 10L, device = NULL, ...) {
+  out = list(call = object$call, importance = tnn_importance(object, n_permute, device),
+             response_tokens = !is.null(object$model_properties$response))
+  class(out) = "summary.citotnn"
+  out
+}
+
+#' @rdname summary.citotnn
+#' @param x A summary of a fitted TNN.
+#' @export
+print.summary.citotnn = function(x, ...) {
+  cat("Summary of Transformer Neural Network\n\n")
+  cli::cli_h3(cli::style_bold("Permutation importance of the token streams"))
+  m = as.matrix(x$importance[, c("loss_increase", "sd", "share"), drop = FALSE])
+  rownames(m) = x$importance$modality
+  colnames(m) = c("Loss increase", "SD", "Share")
+  print(round(m, 4))
+  cat(sprintf("\nBaseline loss %.4f%s, %d permutations per stream. Compare an estimate against its SD before reading it.\n",
+              x$importance$baseline_loss[1], if(x$response_tokens) " (hidden cells of one fixed mask)" else "",
+              x$importance$n_permute[1]))
+  invisible(x)
+}
+
+tnn_importance = function(object, n_permute = 10L, device = NULL) {
+  checkmate::qassert(n_permute, "X1[1,)")
+  object = check_model(object)
+  if(is.null(device)) device = object$training_properties$device
+  device = check_device(device)
+  props = object$model_properties
+  token_mode = !is.null(props$response)
+  data = object$data$dataList
+  Y = data[[object$data$spec$response]]
+  hidden = NULL
+  if(token_mode) {
+    Ym = token_matrix(Y, object$data$spec$response)
+    hidden = draw_validation_mask(Ym, seq_len(nrow(Ym)), props$masking)$mask
+    Ym[is.na(Ym)] = 0
+    target = torch::torch_tensor(Ym, dtype = torch::torch_float32())
+  } else {
+    target = object$loss$format_Y(Y)
+  }
+  inp = tnn_inputs(object, data, hidden)
+  n = inp$n
+  # positions of each stream in the batch layout: modality inputs (two with embeddings), then value
+  # and known of each tokens() group
+  m_len = vapply(seq_along(props$subModules), function(j) 1L + isTRUE(object$net$has_embeddings[j]), integer(1))
+  ends = cumsum(m_len)
+  streams = lapply(seq_along(m_len), function(j) (ends[j] - m_len[j] + 1L):ends[j])
+  labels = props$modalities
+  off = sum(m_len)
+  for(g in seq_along(props$groups)) {
+    if(token_mode && g == props$response) next
+    streams = c(streams, list(off + c(2L * g - 1L, 2L * g)))
+    labels = c(labels, props$groups[[g]]$name)
+  }
+  object$net$to(device = device)
+  object$loss$to(device = device)
+  on.exit(object$net$to(device = "cpu"), add = TRUE)
+  scale = object$loss$eval_scale
+  object$loss$eval_scale = NULL
+  on.exit(object$loss$eval_scale <- scale, add = TRUE)
+  run_loss = function(ins, unconditional = FALSE) {
+    dl = do.call(get_data_loader, c(ins, list(target, batch_size = object$training_properties$batchsize,
+                                              shuffle = FALSE, from_folder = inp$from_folder)))
+    total = 0
+    count = 0
+    torch::with_no_grad(coro::loop(for(b in dl) {
+      b = lapply(b, function(z) z$to(device = device))
+      v = if(!unconditional) object$loss(object$net(b[-length(b)]), b[[length(b)]]) else {
+        s = object$net$split_input(b[-length(b)])
+        hid = b[[length(b) - 1L]]$logical_and(s$known[[props$response]])
+        s$known[[props$response]] = torch::torch_zeros_like(s$known[[props$response]])
+        pred = object$net$response_logits(object$net$encode(object$net$modality_tokens(s$modal), s$values, s$known))
+        object$loss$inner(pred, b[[length(b)]])[hid]
+      }
+      total = total + as.numeric(v$sum()$cpu())
+      count = count + v$numel()
+    }))
+    total / count
+  }
+  base = run_loss(inp$inputs)
+  draws = lapply(streams, function(idx) vapply(seq_len(n_permute), function(k) {
+    perm = sample.int(n)
+    ins = inp$inputs
+    for(i in idx) ins[[i]] = permute_rows(ins[[i]], perm)
+    run_loss(ins)
+  }, numeric(1)) - base)
+  if(token_mode) {
+    draws = c(draws, list(run_loss(inp$inputs, unconditional = TRUE) - base))
+    labels = c(labels, paste0(object$data$spec$response, " (given values)"))
+  }
+  inc = vapply(draws, mean, numeric(1))
+  sd_inc = vapply(draws, function(d) if(length(d) > 1) stats::sd(d) else NA_real_, numeric(1))
+  share = if(all(inc <= 0)) rep(NA_real_, length(inc)) else pmax(inc, 0) / sum(pmax(inc, 0))
+  data.frame(modality = labels, loss_increase = inc, sd = sd_inc, share = share,
+             baseline_loss = base, n_permute = n_permute, stringsAsFactors = FALSE)
+}
+
+#' Plot a fitted TNN
+#'
+#' @param x A model created by \code{\link{tnn}}.
+#' @param plot_type \code{"importance"} (the table of \code{\link{summary.citotnn}} as a bar chart) or
+#'   \code{"attention"} (which token may read which, as compiled from the \code{attention} rules).
+#' @param n_permute,device See \code{\link{summary.citotnn}}.
+#' @param ... Passed to \code{\link[graphics]{barplot}} or \code{\link[graphics]{image}}.
+#' @return Invisibly, the importance table or the attention matrix (rows read columns).
+#' @export
+plot.citotnn = function(x, plot_type = c("importance", "attention"), n_permute = 10L, device = NULL, ...) {
+  plot_type = match.arg(plot_type)
+  if(plot_type == "importance") {
+    imp = tnn_importance(x, n_permute, device)
+    return(plot_importance(imp, imp$modality, ...))
+  }
+  k = x$model_properties$attention
+  n = nrow(k)
+  op = graphics::par(mar = c(2.1, max(4.1, 0.6 * max(nchar(rownames(k))) + 1.5), 4.1, 2.1))
+  on.exit(graphics::par(op))
+  graphics::image(seq_len(n), seq_len(n), t(k[n:1, , drop = FALSE]), col = c("white", "grey30"), axes = FALSE,
+                  xlab = "", ylab = "", main = "Attention: rows read columns", ...)
+  graphics::axis(3, seq_len(n), colnames(k), las = 2, cex.axis = 0.7)
+  graphics::axis(2, seq_len(n), rev(rownames(k)), las = 1, cex.axis = 0.7)
+  invisible(k)
+}
+
+#' @rdname coef.citommn
+#' @export
+coef.citotnn = function(object, ...) coef.citommn(object, ...)

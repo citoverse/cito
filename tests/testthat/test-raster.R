@@ -117,4 +117,11 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
           dataList = list(Y = Y, X = X, env = env), loss = "mse", epochs = 2L, batchsize = 16L, plot = FALSE, verbose = FALSE)
   pm = predict(m, newdata = list(X = X[1:5], env = env[1:5, , drop = FALSE]))
   expect_equal(dim(pm), c(5L, 1L))
+  expect_equal(nrow(summary(m, n_permute = 2L)$importance), 2L)
+
+  t = tnn(Y ~ cnn(X = X, architecture = arch) + dnn(~a, data = env), dataList = list(Y = Y, X = X, env = env),
+          epochs = 2L, batchsize = 16L, plot = FALSE, verbose = FALSE)
+  pt = predict(t, newdata = list(X = X[1:5], env = env[1:5, , drop = FALSE]))
+  expect_equal(dim(pt), c(5L, 1L))
+  expect_equal(summary(t, n_permute = 2L)$importance$modality, c("X", "env"))
 })
