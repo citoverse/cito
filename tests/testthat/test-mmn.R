@@ -208,4 +208,6 @@ testthat::test_that("mmn() accepts weights and predict() checks the shape of new
 
   ok <- list(X_cnn = sh$data[1:5, , , , drop = FALSE], X_dnn = Xd[1:5, , drop = FALSE])
   testthat::expect_equal(nrow(predict(m, newdata = ok)), 5L)
+  # a weighted loss called without its weights aborted R from summary() and plot()
+  testthat::expect_error(summary(m), "weights")
 })
