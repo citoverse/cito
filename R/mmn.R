@@ -421,8 +421,9 @@ modality_importance <- function(object, n_permute = 10L, device = NULL, batchsiz
   object$net$to(device = device)
   object$loss$to(device = device)
   run_loss <- function(ins) {
-    dl <- do.call(get_data_loader, append(lapply(ins, to_input_tensor), 
-                                          list(Y, batch_size = batchsize, shuffle = FALSE)))
+    dl <- do.call(get_data_loader, append(lapply(ins, to_input_tensor),
+                                          list(Y, batch_size = batchsize, shuffle = FALSE,
+                                               from_folder = any(vapply(ins, lazy_input, logical(1))))))
     total <- 0
     count <- 0
     coro::loop(for(b in dl) {
@@ -497,11 +498,14 @@ plot.citommn <- function(x, plot_type = c("importance", "arch"), n_permute = 10L
     return(invisible(NULL))
   }
   imp <- modality_importance(x, n_permute = n_permute, device = device)
-  labels <- vapply(imp$modality, short_stream_label, character(1), USE.NAMES = FALSE)
+  plot_importance(imp, vapply(imp$modality, short_stream_label, character(1), USE.NAMES = FALSE), ...)
+}
+
+plot_importance <- function(imp, labels, ...) {
   op <- graphics::par(mar = c(5.1, max(4.1, 0.6*max(nchar(labels)) + 1.5), 4.1, 2.1))
   on.exit(graphics::par(op))
   # the whiskers reach past the bars, and a stream can come out negative, so neither end is given
-  xlim <- range(0, imp$loss_increase + imp$sd, imp$loss_increase - imp$sd)
+  xlim <- range(0, imp$loss_increase, imp$loss_increase + imp$sd, imp$loss_increase - imp$sd, na.rm = TRUE)
   mids <- graphics::barplot(imp$loss_increase, names.arg = labels, horiz = TRUE, las = 1,
                             xlim = xlim, xlab = "Increase in loss when the stream is permuted",
                             main = "Data stream importance", ...)
