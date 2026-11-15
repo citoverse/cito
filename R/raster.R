@@ -36,6 +36,9 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, f
   checkmate::assert_file_exists(raster)
   checkmate::qassert(extent, "N1(0,)")
   checkmate::qassert(fill, "N1")
+  checkmate::qassert(center, c("0", "N+()"))
+  checkmate::qassert(scale, c("0", "N+()"))
+  if(any(scale == 0)) stop("scale must not be 0.", call. = FALSE)
   if(!isTRUE(cito_decoder_available()[3])) stop("cito was installed without libtiff, which raster_patches() needs.", call. = FALSE)
   coords = as.matrix(coords)
   if(ncol(coords) != 2L || !is.numeric(coords) || anyNA(coords)) stop("coords must have two numeric columns, x and y, without NA.", call. = FALSE)
@@ -53,9 +56,15 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, f
   if(!info$tiled && as.numeric(info$width) * info$height > 4e6)
     warning(raster, " is stored in strips, so every window decompresses full-width rows. ",
             "A tiled copy reads windows up to 1000x faster, see ?raster_patches.", call. = FALSE)
-  structure(list(raster = normalizePath(raster), coords = coords, size = as.integer(size),
-                 center = per_band(center, 0), scale = per_band(scale, 1), fill = fill, info = info),
-            class = "citoraster")
+  out = structure(list(raster = normalizePath(raster), coords = coords, size = as.integer(size),
+                       center = per_band(center, 0), scale = per_band(scale, 1), fill = fill, info = info),
+                  class = "citoraster")
+  # a coordinate system mismatch puts every window outside, and the model then trains on constants
+  o = raster_offsets(out, seq_len(nrow(coords)))
+  outside = o$x0 + size[1] <= 0 | o$x0 >= info$width | o$y0 + size[2] <= 0 | o$y0 >= info$height
+  if(any(outside)) warning(sum(outside), " of ", length(outside), " windows lie entirely outside ", basename(raster),
+                           " and consist of fill only. Are coords in the coordinate system of the raster?", call. = FALSE)
+  out
 }
 
 #' @export
