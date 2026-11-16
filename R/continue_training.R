@@ -338,6 +338,7 @@ continue_training.citommn <- function(model,
   Y <- eval(model$call$formula[[2]], envir = dataList)
 
   X <- format_input_data(model$call$formula[[3]], dataList, mmn_masked(model))
+  check_newdata_shape(c(X, list(Y)), NULL)
 
   from_folder = any(vapply(X, lazy_input, logical(1)))
 

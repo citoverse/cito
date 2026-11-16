@@ -307,6 +307,9 @@ dnn <- function(formula = NULL,
       } else {
         rownames(weights) = 1:nrow(weights)
       }
+    } else if(!is.null(X) && !is.null(Y)) {
+      # the row names get_X_Y() gives the X/Y interface, which weights are matched by
+      rownames(weights) = rownames(cbind(data.frame(Y), data.frame(X)))
     }
   }
 

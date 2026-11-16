@@ -41,6 +41,8 @@
 
 ## Bug fixes
 
+* dnn(X = , Y = , weights = ) with a weighted custom loss no longer fails with "no 'dimnames' attribute"
+* mmn() stops with an informative error when its data streams have different numbers of rows (e.g. after rows with NA were dropped from a dnn() term) instead of a torch indexing error
 * summary() and plot() of an mmn() fitted with weights stop with an error instead of crashing the R session; the weights are not stored with the model, and a weighted loss called without them aborted in torch
 * models saved with saveRDS are now rebuilt via build_model() when reloaded (invalid pointer state)
 * baseloss and burnin are now forwarded to bootstrap replicates, and weighted (custom) losses receive the weights as torch tensor when the baseloss is computed

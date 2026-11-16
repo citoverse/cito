@@ -224,3 +224,14 @@ testthat::test_that("tuning works with a custom loss that is not defined globall
     }, NA)
   })
 })
+
+testthat::test_that("DNN weights work with the X/Y interface and stay with their rows", {
+  testthat::skip_on_cran()
+  skip_if_no_torch()
+  X <- as.matrix(df[, c("X1", "X2")])
+  m <- dnn(X = X, Y = df$Y, loss = weighted_mse, weights = w, epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(as.vector(m$data$weights), w)
+  rownames(X) <- paste0("r", seq_len(n))
+  m <- dnn(X = X, Y = df$Y, loss = weighted_mse, weights = w, epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(as.vector(m$data$weights), w)
+})
