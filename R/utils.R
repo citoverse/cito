@@ -166,7 +166,7 @@ cito_dataset = torch::dataset(
       st$pending = list(index = nxt, id = submit(nxt))
     }
     buf = cito_raster_fetch(st$reader, id)
-    torch::torch_tensor_from_buffer(buf, shape = c(length(index), x$info$bands, x$size[2], x$size[1]), dtype = "float")$clone()
+    preprocess_windows(x, torch::torch_tensor_from_buffer(buf, shape = c(length(index), x$info$bands, x$size[2], x$size[1]), dtype = "float")$clone())
   },
   # whole batch through the compiled decoder; NULL means "not applicable, use the R readers"
   decode_batch = function(paths) {

@@ -4,7 +4,18 @@
 \alias{raster_patches}
 \title{Image patches cut from one large raster}
 \usage{
-raster_patches(raster, coords, extent, center = NULL, scale = NULL, fill = 0)
+raster_patches(
+  raster,
+  coords,
+  extent,
+  center = NULL,
+  scale = NULL,
+  standardize = FALSE,
+  transform = NULL,
+  fill = 0,
+  na_channel = FALSE,
+  like = NULL
+)
 }
 \arguments{
 \item{raster}{Path to a GeoTIFF. Any number of bands; 8, 16 and 32 bit integer and 32 and
@@ -17,10 +28,29 @@ georeferencing, x and y are pixel units from the top-left corner.}
 \item{extent}{Side length of the window in map units, rounded to whole pixels at the
 resolution of \code{raster}.}
 
-\item{center, scale}{\code{NULL}, or one value per band (or a single value for all bands).
-Every band is transformed as \code{(value - center) / scale} while it is read.}
+\item{center, scale}{\code{NULL}, or one value per channel (or a single value for all channels).
+Every channel is transformed as \code{(value - center) / scale}, after \code{transform}.}
 
-\item{fill}{Value for pixels outside the raster, NoData and NaN.}
+\item{standardize}{Logical. \code{TRUE} estimates \code{center} and \code{scale} as the mean and
+standard deviation of every channel over all windows of \code{coords} (after \code{transform},
+without missing pixels). This reads every window once.}
+
+\item{transform}{\code{NULL} or a function applied to every batch before \code{center} and
+\code{scale}: it receives a float tensor \code{[windows, bands, height, width]} in the units of
+the raster, with \code{NaN} for missing pixels, and returns a tensor with the same first
+dimension, e.g. \code{function(x) torch::torch_log1p(x)} or a band ratio. Channels and spatial
+size may change.}
+
+\item{fill}{Value for missing pixels (outside the raster, NoData, \code{NaN}, and non-finite results of
+\code{transform}), in the units after \code{center} and \code{scale}: with \code{standardize = TRUE},
+the default 0 imputes the mean.}
+
+\item{na_channel}{Logical. \code{TRUE} appends one channel that is 1 where any band of the pixel is
+missing and 0 otherwise, so that the network can tell an imputed pixel from an observed one.}
+
+\item{like}{A \code{citoraster} whose raster, extent and preprocessing are reused for new
+\code{coords}, e.g. to predict at new sites with the \code{center} and \code{scale} estimated on
+the training windows. \code{raster}, \code{extent} and the preprocessing arguments are then ignored.}
 }
 \value{
 An object of class \code{citoraster}, which can be subset by observation with \code{[}.
@@ -40,8 +70,12 @@ magnitude slower for large rasters. Write rasters for training as tiled files, e
 \code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=ZSTD", "PREDICTOR=2"))}.
 The number of reader threads is \code{num_threads} of \code{\link{cnn}}.
 
-Unlike images read from a folder, values are not rescaled to the unit interval: rasters carry physical
-quantities, so normalization is left to \code{center} and \code{scale}.
+Every batch is preprocessed in this order: the raw values are read (missing pixels as \code{NaN}),
+\code{transform} is applied, then \code{(value - center) / scale}, then missing pixels are set to
+\code{fill} and the \code{na_channel} is appended. Unlike images read from a folder, values are not
+rescaled to the unit interval: rasters carry physical quantities, so normalization is left to these
+arguments. Preprocessing is part of the \code{citoraster}, so a model fitted on it predicts on the same
+scale; for new sites pass \code{like}.
 }
 \examples{
 \donttest{
@@ -51,13 +85,19 @@ library(cito)
 # a small georeferenced raster stands in for a large satellite scene
 f = system.file("extdata", "raster.tif", package = "cito")
 coords = cbind(x = runif(200, 600100, 600900), y = runif(200, 5300100, 5300700))
-X = raster_patches(f, coords, extent = 200)
+# log-transform, then standardize every band with the mean and sd over the windows;
+# missing pixels become 0 (the mean) and are flagged in an extra channel
+X = raster_patches(f, coords, extent = 200, transform = function(x) torch::torch_log1p(x),
+                   standardize = TRUE, na_channel = TRUE)
 X
 Y = matrix(rnorm(200), ncol = 1)
 
 nn.fit = cnn(X = X, Y = Y, loss = "mse", epochs = 2L, batchsize = 32L,
              architecture = create_architecture(conv(4), maxPool(), linear(10)))
-predict(nn.fit, newdata = X[1:5])
+
+# new sites, with the preprocessing of the training windows
+new_coords = cbind(x = runif(5, 600100, 600900), y = runif(5, 5300100, 5300700))
+predict(nn.fit, newdata = raster_patches(coords = new_coords, like = X))
 }
 }
 }
