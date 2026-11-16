@@ -22,7 +22,7 @@
 * input masking: dnn(masking = ~ x1 + x2) hides predictors at random during training (rate drawn per row from U(0,1)) so that NA predictors can be predicted from; response columns named in masking are given as inputs and scored only where hidden (the conditional MLP++ of masked community models), predict(..., Y = ) conditions on them. mmn(masking = ~ modality) hides whole modalities
 * summary() of a tnn() with tokens(Y) reports the conditional gain per rarity stratum and as a curve over the revealed fraction
 * butterflies dataset (55 species at 2609 sites)
-* raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch while the previous batch trains, instead of pre-extracted image files
+* raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch while the previous batch trains, instead of pre-extracted image files; preprocessing (transform, center/scale or standardize, fill and a missing-pixel channel) is part of the raster input, and like = reuses it for new sites
 
 ## Breaking changes
 

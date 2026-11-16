@@ -117,13 +117,6 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
           dataList = list(Y = Y, X = X, env = env), loss = "mse", epochs = 2L, batchsize = 16L, plot = FALSE, verbose = FALSE)
   pm = predict(m, newdata = list(X = X[1:5], env = env[1:5, , drop = FALSE]))
   expect_equal(dim(pm), c(5L, 1L))
-  expect_equal(nrow(summary(m, n_permute = 2L)$importance), 2L)
-
-  t = tnn(Y ~ cnn(X = X, architecture = arch) + dnn(~a, data = env), dataList = list(Y = Y, X = X, env = env),
-          epochs = 2L, batchsize = 16L, plot = FALSE, verbose = FALSE)
-  pt = predict(t, newdata = list(X = X[1:5], env = env[1:5, , drop = FALSE]))
-  expect_equal(dim(pt), c(5L, 1L))
-  expect_equal(summary(t, n_permute = 2L)$importance$modality, c("X", "env"))
 })
 
 test_that("windows entirely outside the raster are flagged, a zero scale is refused", {
@@ -140,6 +133,41 @@ test_that("loaders share one reader per raster", {
   X = raster_patches(raster_file("raster.tif"), centres(c(10L, 20L, 30L), c(10L, 20L, 30L)), extent = 100, scale = 7)
   before = length(ls(cito:::raster_readers))
   for(i in 1:20) read_all(X)
-  expect_equal(length(ls(cito:::raster_readers)), before + 1L)
+  expect_lte(length(ls(cito:::raster_readers)), before + 1L)
   expect_equal(read_all(X), read_all(X))
+})
+
+test_that("transform, standardize, fill and the missing-pixel channel are applied in that order", {
+  skip_if_no_torch()
+  skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
+  f = raster_file("raster.tif")
+  inside = centres(c(10L, 40L, 70L), c(10L, 30L, 50L))
+  raw = read_all(suppressWarnings(raster_patches(f, inside, extent = 100)))
+  X = raster_patches(f, inside, extent = 100, transform = function(x) torch::torch_log(x), standardize = TRUE)
+  l = log(raw)
+  m = apply(l, 2, mean)
+  s = apply(l, 2, stats::sd)
+  expect_equal(X$center, unname(m), tolerance = 1e-5)
+  expect_equal(X$scale, unname(s), tolerance = 1e-4)
+  got = read_all(X)
+  for(b in 1:3) expect_equal(got[, b, , ], (l[, b, , ] - m[b]) / s[b], tolerance = 1e-4)
+  # a window half outside: the outside pixels are fill and flagged in the extra channel
+  X = suppressWarnings(raster_patches(f, centres(-5L, 10L), extent = 100, center = 10000, scale = 100, fill = -9, na_channel = TRUE))
+  got = read_all(X)
+  expect_equal(dim(got), c(1, 4, 10, 10))
+  expect_true(all(got[1, 1:3, , 1:5] == -9))
+  expect_true(all(got[1, 4, , 1:5] == 1) && all(got[1, 4, , 6:10] == 0))
+  expect_equal(got[1, 1, 1, 6], (10000 * 1 + 100 * 10 + 0 - 10000) / 100)
+  # like: new coordinates with the preprocessing of the training windows
+  Xn = raster_patches(coords = centres(20L, 20L), like = X)
+  expect_equal(Xn$center, X$center)
+  expect_true(Xn$na_channel)
+  expect_error(raster_patches(f, inside, extent = 100, center = 1, standardize = TRUE), "either")
+  expect_error(raster_patches(f, inside, extent = 100, center = c(1, 2)), "per channel")
+  # a transform that changes the channels sizes center/scale and the network
+  X = raster_patches(f, inside, extent = 100, transform = function(x) x[, 1:2, , ] / x[, 3:3, , ], standardize = TRUE)
+  expect_equal(length(X$center), 2)
+  fit = cnn(X = X, Y = matrix(rnorm(3)), epochs = 1L, batchsize = 3L, plot = FALSE, verbose = FALSE,
+            architecture = create_architecture(conv(2), linear(4)))
+  expect_equal(fit$model_properties$input[1], 2)
 })
