@@ -682,24 +682,106 @@ continue_training.citotnn = function(model, epochs = 32, dataList = NULL, device
 #' values of the response: the increase in loss when every response cell is unknown, i.e. the
 #' conditional gain.
 #'
+#' With a tokenized response, the conditional gain is also reported in detail, as the loss of the
+#' unconditional prediction minus the loss of the conditional prediction on the same hidden cells:
+#' for random masks from the training scheme (overall and, for non-negative responses, for the 10, 20
+#' and 30 \% of columns with the lowest mean, i.e. the rarest species of a 0/1 community; absolute and
+#' relative to the unconditional loss, because the loss of rare columns is small), and as a curve over
+#' the fraction of observed cells that is revealed.
+#'
 #' @param object A model created by \code{\link{tnn}}.
 #' @param n_permute Number of permutations per stream.
+#' @param n_masks Number of random masks for the conditional gain; reported as mean and standard
+#'   deviation across masks.
+#' @param fractions Revealed fractions for the conditional-gain curve.
 #' @param device Device on which to evaluate. Defaults to the training device.
 #' @param ... Not used.
 #'
 #' @details
-#' Evaluated on the training data. Permutation breaks the dependence between correlated streams and
-#' evaluates the network away from the data it was trained on, and the standard deviation is across
-#' permutations of one fitted model, not across fits. The conditional gain is not a measure of
-#' interactions between the response columns: shared responses to unmeasured predictors produce it too.
+#' The importance is evaluated on the training data, the conditional gain on the validation rows (which
+#' were used for early stopping) or, without validation, on the training data. Permutation breaks the
+#' dependence between correlated streams and evaluates the network away from the data it was trained on,
+#' and the standard deviations are across permutations or masks of one fitted model, not across fits.
+#' The conditional gain is not a measure of interactions between the response columns: shared responses
+#' to unmeasured predictors and spatial autocorrelation produce it too.
 #'
-#' @return An object of class \code{"summary.citotnn"} with the importance table.
+#' @return An object of class \code{"summary.citotnn"} with the importance table and, with a tokenized
+#'   response, \code{gain} and \code{curve}.
 #' @export
-summary.citotnn = function(object, n_permute = 10L, device = NULL, ...) {
+summary.citotnn = function(object, n_permute = 10L, n_masks = 5L, fractions = c(0.1, 0.25, 0.5, 0.75, 0.9),
+                           device = NULL, ...) {
   out = list(call = object$call, importance = tnn_importance(object, n_permute, device),
              response_tokens = !is.null(object$model_properties$response))
+  if(out$response_tokens) out = c(out, tnn_conditional_gain(object, n_masks, fractions, device))
   class(out) = "summary.citotnn"
   out
+}
+
+tnn_conditional_gain = function(object, n_masks, fractions, device) {
+  checkmate::qassert(n_masks, "X1[2,)")
+  checkmate::qassert(fractions, "N+(0,1)")
+  props = object$model_properties
+  name = object$data$spec$response
+  Yall = token_matrix(object$data$dataList[[name]], name)
+  rows = object$data$validation
+  where = "validation rows (used for early stopping)"
+  if(is.null(rows)) {
+    rows = seq_len(nrow(Yall))
+    where = "training rows (in-sample)"
+  }
+  m = props$masking
+  n = nrow(Yall)
+  S = ncol(Yall)
+  ev = matrix(seq_len(n) %in% rows, n, S)
+  obs = !is.na(Yall) & ev
+  row_mat = function(v) matrix(v, n, S, byrow = TRUE)
+  hideable = obs & row_mat(m$always | m$random)
+  givable = obs & row_mat(m$random | m$never)
+  target = Yall
+  target[is.na(target)] = 0
+  cell_loss = function(Ycond) {
+    pred = predict(object, Y = Ycond, type = "link", device = device)
+    pred[is.na(pred)] = 0
+    as.matrix(object$loss$inner(torch::torch_tensor(pred, dtype = torch::torch_float32()),
+                                torch::torch_tensor(target, dtype = torch::torch_float32())))
+  }
+  given = function(shown) {
+    Yc = Yall
+    Yc[!shown] = NA
+    Yc
+  }
+  Lu = cell_loss(given(matrix(FALSE, n, S)))
+
+  strata = list(all = rep(TRUE, S))
+  mu = colMeans(Yall[-rows, , drop = FALSE], na.rm = TRUE)
+  if(length(rows) == n) mu = colMeans(Yall, na.rm = TRUE)
+  ok = is.finite(mu)
+  if(all(Yall >= 0, na.rm = TRUE) && sum(ok) >= 10)
+    for(q in c(0.1, 0.2, 0.3)) strata[[sprintf("rarest %d%%", 100 * q)]] = ok & rank(ifelse(ok, mu, Inf), ties.method = "first") <= ceiling(q * sum(ok))
+  per_mask = lapply(seq_len(n_masks), function(i) {
+    p = stats::runif(n)
+    hidden = hideable & (row_mat(m$always) | (matrix(stats::runif(n * S), n) < p))
+    Lc = cell_loss(given(givable & !hidden))
+    vapply(strata, function(st) {
+      cells = hidden & row_mat(st)
+      c(mean(Lu[cells]), mean(Lu[cells]) - mean(Lc[cells]), sum(cells))
+    }, numeric(3))
+  })
+  uncond = rowMeans(matrix(sapply(per_mask, function(z) z[1, ]), nrow = length(strata)))
+  gains = matrix(sapply(per_mask, function(z) z[2, ]), nrow = length(strata))
+  cells = rowMeans(matrix(sapply(per_mask, function(z) z[3, ]), nrow = length(strata)))
+  gain = data.frame(columns = names(strata), n_columns = vapply(strata, sum, numeric(1)), hidden_cells = round(cells), unconditional = uncond,
+                    gain = rowMeans(gains), sd = apply(gains, 1, stats::sd), relative = rowMeans(gains) / uncond,
+                    row.names = NULL)
+  curve = do.call(rbind, lapply(fractions, function(f) {
+    g = replicate(n_masks, {
+      shown = givable & (matrix(stats::runif(n * S), n) < f)
+      cells = hideable & !shown
+      mean(Lu[cells]) - mean(cell_loss(given(shown))[cells])
+    })
+    data.frame(revealed = f, gain = mean(g), sd = stats::sd(g))
+  }))
+  list(gain = gain, curve = curve, gain_rows = sprintf("%d %s", length(rows), where), n_masks = n_masks)
 }
 
 #' @rdname summary.citotnn
@@ -715,6 +797,15 @@ print.summary.citotnn = function(x, ...) {
   cat(sprintf("\nBaseline loss %.4f%s, %d permutations per stream. Compare an estimate against its SD before reading it.\n",
               x$importance$baseline_loss[1], if(x$response_tokens) " (hidden cells of one fixed mask)" else "",
               x$importance$n_permute[1]))
+  if(!is.null(x$gain)) {
+    cli::cli_h3(cli::style_bold("Conditional gain (unconditional minus conditional loss, same hidden cells)"))
+    cat(sprintf("On %s, %d random masks.\n", x$gain_rows, x$n_masks))
+    g = x$gain
+    print(data.frame(g[, c("columns", "n_columns", "hidden_cells")], round(g[, c("unconditional", "gain", "sd", "relative")], 4)), row.names = FALSE)
+    cat("SD across random masks of this one fit; it is not an uncertainty across fits or sites.\n")
+    cat("\nBy the fraction of observed cells revealed:\n")
+    print(round(x$curve, 4), row.names = FALSE)
+  }
   invisible(x)
 }
 

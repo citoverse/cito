@@ -5,7 +5,14 @@
 \alias{print.summary.citotnn}
 \title{Summarize a fitted TNN}
 \usage{
-\method{summary}{citotnn}(object, n_permute = 10L, device = NULL, ...)
+\method{summary}{citotnn}(
+  object,
+  n_permute = 10L,
+  n_masks = 5L,
+  fractions = c(0.1, 0.25, 0.5, 0.75, 0.9),
+  device = NULL,
+  ...
+)
 
 \method{print}{summary.citotnn}(x, ...)
 }
@@ -14,6 +21,11 @@
 
 \item{n_permute}{Number of permutations per stream.}
 
+\item{n_masks}{Number of random masks for the conditional gain; reported as mean and standard
+deviation across masks.}
+
+\item{fractions}{Revealed fractions for the conditional-gain curve.}
+
 \item{device}{Device on which to evaluate. Defaults to the training device.}
 
 \item{...}{Not used.}
@@ -21,7 +33,8 @@
 \item{x}{A summary of a fitted TNN.}
 }
 \value{
-An object of class \code{"summary.citotnn"} with the importance table.
+An object of class \code{"summary.citotnn"} with the importance table and, with a tokenized
+response, \code{gain} and \code{curve}.
 }
 \description{
 Permutation importance of every \code{dnn()}/\code{cnn()} token and every \code{tokens()} group:
@@ -32,8 +45,17 @@ values of the response: the increase in loss when every response cell is unknown
 conditional gain.
 }
 \details{
-Evaluated on the training data. Permutation breaks the dependence between correlated streams and
-evaluates the network away from the data it was trained on, and the standard deviation is across
-permutations of one fitted model, not across fits. The conditional gain is not a measure of
-interactions between the response columns: shared responses to unmeasured predictors produce it too.
+With a tokenized response, the conditional gain is also reported in detail, as the loss of the
+unconditional prediction minus the loss of the conditional prediction on the same hidden cells:
+for random masks from the training scheme (overall and, for non-negative responses, for the 10, 20
+and 30 \\% of columns with the lowest mean, i.e. the rarest species of a 0/1 community; absolute and
+relative to the unconditional loss, because the loss of rare columns is small), and as a curve over
+the fraction of observed cells that is revealed.
+
+The importance is evaluated on the training data, the conditional gain on the validation rows (which
+were used for early stopping) or, without validation, on the training data. Permutation breaks the
+dependence between correlated streams and evaluates the network away from the data it was trained on,
+and the standard deviations are across permutations or masks of one fitted model, not across fits.
+The conditional gain is not a measure of interactions between the response columns: shared responses
+to unmeasured predictors and spatial autocorrelation produce it too.
 }
