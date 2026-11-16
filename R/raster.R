@@ -244,7 +244,10 @@ raster_close = function(path = NULL, keep = 0L) {
   mine = vapply(entries, function(e) e$pid == Sys.getpid() && (is.null(path) || e$path == normalizePath(path)), logical(1))
   keys = names(entries)[mine][order(vapply(entries[mine], `[[`, numeric(1), "opened"))]
   drop = keys[seq_len(max(0L, length(keys) - keep))]
+  rm(entries)
   rm(list = drop, envir = raster_readers)
+  # the TIFF handle closes when the reader is collected; Windows cannot replace a file that is still open
+  if(length(drop)) gc(verbose = FALSE)
   invisible(length(drop))
 }
 
