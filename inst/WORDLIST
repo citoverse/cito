@@ -1,6 +1,7 @@
 ACEanalytical
 Amesoeder
 Angelov
+Arroita
 Bioclim
 Bischl
 CMD
@@ -22,6 +23,7 @@ GDAL's
 GPUs
 GeoTIFF
 GeoTIFFs
+Guillera
 Heumann
 JPG
 JSDM
@@ -56,6 +58,7 @@ SigmaPar
 Srivastava
 TIFFs
 TNN
+Tingley
 Transferability
 VRAM
 Warton
@@ -82,6 +85,7 @@ bioclimatic
 biotic
 bn
 boostrapped
+broadleaved
 burnin
 cbind
 ce
@@ -119,6 +123,8 @@ errored
 et
 eucalypts
 euqals
+fritillaries
+fritillary
 gelu
 georeferencing
 ggplot
@@ -152,6 +158,7 @@ mobilenet
 mps
 mse
 multilabel
+multilayer
 mvp
 na
 nbinom
@@ -166,6 +173,7 @@ overfit
 parallelization
 parallelize
 params
+perceptron
 plotly
 png
 poisson

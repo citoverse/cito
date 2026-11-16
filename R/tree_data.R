@@ -13,3 +13,21 @@
 #'   \item{dbh}{DBH in cm}
 #' }
 "tree_data"
+
+#' Butterfly community
+#'
+#' Presence-absence of 55 butterfly species at 2609 sites in Great Britain, with four environmental
+#' covariates and the site coordinates. One of the datasets of the comparison of joint species
+#' distribution models by Wilkinson et al. (2019), as distributed with the sjSDM package.
+#'
+#' @format A list with
+#' \describe{
+#'   \item{PA}{site x species 0/1 matrix}
+#'   \item{env}{data.frame with \code{climate}, \code{blwood} (broadleaved woodland), \code{conwood}
+#'     (coniferous woodland) and \code{chalk_limestone}}
+#'   \item{lat_lon}{data.frame with scaled coordinates}
+#' }
+#' @source Wilkinson, D. P., Golding, N., Guillera-Arroita, G., Tingley, R., & McCarthy, M. A. (2019).
+#'   A comparison of joint species distribution models for presence-absence data. Methods in Ecology and
+#'   Evolution, 10, 198-211. \doi{10.1111/2041-210X.13106}
+"butterflies"
