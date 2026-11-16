@@ -57,7 +57,8 @@ try_lib () {   # $1 pkg-config name, $2 macro, $3 fallback -l flag, $4 header, $
 
 try_lib libjpeg   HAVE_JPEG -ljpeg jpeglib.h "struct jpeg_error_mgr e; jpeg_std_error(&e)"
 try_lib libpng    HAVE_PNG  -lpng  png.h    "png_access_version_number()"
-try_lib libtiff-4 HAVE_TIFF -ltiff tiffio.h "TIFFGetVersion()"
+# TIFFOpen pulls in the codec table, so a static libtiff without its codec libraries fails here
+try_lib libtiff-4 HAVE_TIFF -ltiff tiffio.h 'TIFFOpen("x", "r")'
 
 esc () { printf '%s' "$1" | sed -e 's/[&|\\]/\\\\&/g'; }
 sed -e "s|@CITO_CPPFLAGS@|$(esc "$CPPFLAGS")|" -e "s|@CITO_LIBS@|$(esc "$LIBS")|" \
