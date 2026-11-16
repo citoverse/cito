@@ -120,6 +120,7 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
 })
 
 test_that("windows entirely outside the raster are flagged, a zero scale is refused", {
+  skip_if_no_torch()
   skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
   f = raster_file("raster.tif")
   expect_warning(raster_patches(f, cbind(c(11.5, 600500), c(48.9, 5300400)), extent = 100), "1 of 2 windows")
