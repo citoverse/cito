@@ -20,9 +20,12 @@ make_fixtures = function(dir) {
   set.seed(42)
   rgb = array(runif(24*20*3), dim = c(24, 20, 3))
   grey = matrix(runif(24*20), 24, 20)
+  # JPEG of noise at low quality amplifies the differences between libjpeg versions; photos are smooth
+  smooth = array(outer(seq(0, 1, length.out = 24), seq(0, 1, length.out = 20)), c(24, 20, 3))
+  smooth[, , 2] = t(apply(smooth[, , 2], 1, rev))
   writeables = list(
-    "rgb.jpg"       = function(f) jpeg::writeJPEG(rgb, f, quality = 1),
-    "grey.jpg"      = function(f) jpeg::writeJPEG(grey, f, quality = 1),
+    "rgb.jpg"       = function(f) jpeg::writeJPEG(smooth, f, quality = 0.9),
+    "grey.jpg"      = function(f) jpeg::writeJPEG(smooth[, , 1], f, quality = 0.9),
     "rgb.png"       = function(f) png::writePNG(rgb, f),
     "grey.png"      = function(f) png::writePNG(grey, f),
     "greyalpha.png" = function(f) png::writePNG(array(c(grey, matrix(1, 24, 20)), dim = c(24, 20, 2)), f),
@@ -52,8 +55,8 @@ reference = function(path) {
 # decoder and the jpeg package may link different ones (macOS); PNG and TIFF must agree exactly
 expect_same_pixels = function(a, b, f, tol) {
   d = torch::torch_abs(a - b)
-  if(grepl("\\.jpg$", f)) testthat::expect_lt(as.numeric(d$mean()), 0.02, label = paste("mean difference,", basename(f)))
-  else testthat::expect_lt(as.numeric(d$max()), tol, label = paste("max difference,", basename(f)))
+  if(grepl("\\.jpg$", f)) testthat::expect_lt(as.numeric(d$mean()), 0.02, label = sprintf("mean difference %.4f, %s", as.numeric(d$mean()), basename(f)))
+  else testthat::expect_lt(as.numeric(d$max()), tol, label = sprintf("max difference %.2g, %s", as.numeric(d$max()), basename(f)))
 }
 
 testthat::test_that("the compiled decoder matches the R readers", {
