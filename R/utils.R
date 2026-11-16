@@ -7,6 +7,8 @@ get_data_loader = function(...,
                            num_workers = 0L,
                            num_threads = 4L) {
 
+  # a raster reader is an external pointer that a worker process cannot use; the reader thread prefetches instead
+  if(any(vapply(list(...), inherits, logical(1), "citoraster"))) num_workers = 0L
   if(from_folder | !is.null(data_augmentation)) {
     ds = cito_dataset(..., data_augmentation = data_augmentation, worker_safe = num_workers > 0L,
                       num_threads = num_threads)

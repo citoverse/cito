@@ -64,9 +64,9 @@ cnn(
 
 \item{data_augmentation}{A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.}
 
-\item{num_workers}{(integer) Number of worker processes for the dataloader. Only effective for folder inputs. 0 decodes in the main process.}
+\item{num_workers}{(integer) Number of worker processes for the dataloader. Only effective for folder inputs; raster inputs from \code{\link{raster_patches}} always use 0 and prefetch in a reader thread instead. 0 decodes in the main process.}
 
-\item{num_threads}{(integer) Number of threads the compiled image decoder uses per batch. Only effective for folder inputs.}
+\item{num_threads}{(integer) Number of threads the compiled image decoder uses per batch for folder inputs, and the number of reader threads for raster inputs from \code{\link{raster_patches}}.}
 
 \item{epochs}{Number of epochs to train the model. Default is 100.}
 

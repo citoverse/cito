@@ -19,38 +19,45 @@ raster_patches(
 }
 \arguments{
 \item{raster}{Path to a GeoTIFF. Any number of bands; 8, 16 and 32 bit integer and 32 and
-64 bit float samples.}
+64 bit float samples. Values are read as stored and converted to 32 bit float: integers above
+2^24 are rounded, and 64 bit values beyond the float range become missing.}
 
 \item{coords}{Matrix or data.frame with two columns, x and y, giving the center of each
-window in the coordinate reference system of \code{raster}. For a TIFF without
-georeferencing, x and y are pixel units from the top-left corner.}
+window in the coordinate reference system of \code{raster} (which is not checked; a warning
+is given when windows lie entirely outside the raster). For a TIFF without georeferencing, x and
+y are pixel units from the top-left corner of the image, y pointing down, so that the center of
+the top-left pixel is (0.5, 0.5).}
 
 \item{extent}{Side length of the window in map units, rounded to whole pixels at the
-resolution of \code{raster}.}
+resolution of \code{raster} (halves round up). Window positions are rounded the same way.}
 
 \item{center, scale}{\code{NULL}, or one value per channel (or a single value for all channels).
 Every channel is transformed as \code{(value - center) / scale}, after \code{transform}.}
 
 \item{standardize}{Logical. \code{TRUE} estimates \code{center} and \code{scale} as the mean and
 standard deviation of every channel over all windows of \code{coords} (after \code{transform},
-without missing pixels). This reads every window once.}
+without missing pixels). This reads every window once. Build it on the training coordinates
+only and pass \code{like} for validation, test and prediction sites, so that their statistics
+do not enter the scaling.}
 
 \item{transform}{\code{NULL} or a function applied to every batch before \code{center} and
 \code{scale}: it receives a float tensor \code{[windows, bands, height, width]} in the units of
 the raster, with \code{NaN} for missing pixels, and returns a tensor with the same first
 dimension, e.g. \code{function(x) torch::torch_log1p(x)} or a band ratio. Channels and spatial
-size may change.}
+size may change. It must treat every window on its own: statistics over the batch would make
+predictions depend on the batch size.}
 
 \item{fill}{Value for missing pixels (outside the raster, NoData, \code{NaN}, and non-finite results of
 \code{transform}), in the units after \code{center} and \code{scale}: with \code{standardize = TRUE},
-the default 0 imputes the mean.}
+the default 0 imputes the mean; without it, 0 is a value in the units of the raster, and
+\code{na_channel = TRUE} lets the network tell it from an observed 0.}
 
-\item{na_channel}{Logical. \code{TRUE} appends one channel that is 1 where any band of the pixel is
+\item{na_channel}{Logical. \code{TRUE} appends one channel that is 1 where any channel of the pixel is
 missing and 0 otherwise, so that the network can tell an imputed pixel from an observed one.}
 
 \item{like}{A \code{citoraster} whose raster, extent and preprocessing are reused for new
 \code{coords}, e.g. to predict at new sites with the \code{center} and \code{scale} estimated on
-the training windows. \code{raster}, \code{extent} and the preprocessing arguments are then ignored.}
+the training windows. Only \code{coords} may be given together with \code{like}.}
 }
 \value{
 An object of class \code{citoraster}, which can be subset by observation with \code{[}.
@@ -60,26 +67,36 @@ Describes, for every observation, a square window of a large GeoTIFF centered on
 observation's coordinates. The result is passed as \code{X} to \code{\link{cnn}} (or to a
 \code{cnn()} term of \code{\link{mmn}}) in place of an array of images or a folder. The
 windows are never extracted to disk: each batch is read from the raster when it is needed,
-and the next batch is read in the background while the current one trains.
+and with libtiff 4.5 or newer the next batch is read in the background while the current one trains.
 }
 \details{
 Reading speed depends almost entirely on how the raster is stored. A tiled GeoTIFF reads
 a window from the few tiles it overlaps; a raster stored in strips (the GeoTIFF default)
-decompresses every full-width row the window touches, which is two to three orders of
-magnitude slower for large rasters. Write rasters for training as tiled files, e.g.
-\code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=ZSTD", "PREDICTOR=2"))}.
+decompresses whole strips of full-width rows, which was about 200 times slower for a
+20000 x 20000 pixel raster in our benchmark. Write rasters for training as tiled files, e.g.
+\code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=DEFLATE", "PREDICTOR=2"))},
+with \code{"PREDICTOR=3"} for floating point rasters. Only the first image of the file is read
+(no overviews).
 The number of reader threads is \code{num_threads} of \code{\link{cnn}}.
+
+Missing pixels are those outside the raster, \code{NaN}, and pixels equal to the NoData value of
+the GDAL_NODATA tag. Masks, alpha bands (read as an ordinary band), and scale and offset metadata
+are not applied; apply an offset or scale factor with \code{center} and \code{scale} or \code{transform}.
 
 Every batch is preprocessed in this order: the raw values are read (missing pixels as \code{NaN}),
 \code{transform} is applied, then \code{(value - center) / scale}, then missing pixels are set to
 \code{fill} and the \code{na_channel} is appended. Unlike images read from a folder, values are not
 rescaled to the unit interval: rasters carry physical quantities, so normalization is left to these
 arguments. Preprocessing is part of the \code{citoraster}, so a model fitted on it predicts on the same
-scale; for new sites pass \code{like}.
+scale; for new sites pass \code{like}. \code{predict()} refuses windows of another shape and warns
+when the preprocessing differs from that of the training windows.
+
+The raster is opened once per session and kept open. A file replaced by another one with the same
+modification time is not noticed; a file whose dimensions changed is refused.
 }
 \examples{
 \donttest{
-if(torch::torch_is_installed()){
+if(torch::torch_is_installed() && cito:::cito_decoder_available()[["tiff"]]){
 library(cito)
 
 # a small georeferenced raster stands in for a large satellite scene

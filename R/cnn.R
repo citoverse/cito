@@ -16,8 +16,8 @@
 #' @param validation Proportion of the data to be used for validation. Alternatively, a vector containing the indices of the validation samples can be provided. Default is 0.0.
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
-#' @param num_workers (integer) Number of worker processes for the dataloader. Only effective for folder inputs. 0 decodes in the main process.
-#' @param num_threads (integer) Number of threads the compiled image decoder uses per batch. Only effective for folder inputs.
+#' @param num_workers (integer) Number of worker processes for the dataloader. Only effective for folder inputs; raster inputs from \code{\link{raster_patches}} always use 0 and prefetch in a reader thread instead. 0 decodes in the main process.
+#' @param num_threads (integer) Number of threads the compiled image decoder uses per batch for folder inputs, and the number of reader threads for raster inputs from \code{\link{raster_patches}}.
 #' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
 #' @param epochs Number of epochs to train the model. Default is 100.
 #' @param weights weights or other values (can be also a matrix) that the likelihood has access to
@@ -210,6 +210,7 @@ cnn <- function(X,
   }
 
   Y <- loss_obj$format_Y(Y)
+  if(from_folder && dim(Y)[1] != length(X)) stop(paste0("Y (", dim(Y)[1], ") has to have an equal number of samples as X (", length(X), ")."), call. = FALSE)
   # a batchsize of 0 gives a dataloader of length Inf that yields empty batches forever
   if(is.null(batchsize)) batchsize = max(1L, round(0.1*dim(Y)[1]))
 
@@ -289,7 +290,7 @@ cnn <- function(X,
 #' This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 #'
 #' @param object a model created by \code{\link{cnn}}.
-#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0, or windows of a raster from \code{\link{raster_patches}}. If \code{NULL}, the function uses the data the model was trained on.
+#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. Windows of a raster are given with \code{\link{raster_patches}} (use its \code{like} argument, so that they carry the preprocessing of the training windows); they are not rescaled. If \code{NULL}, the function uses the data the model was trained on.
 #' @param type A character string specifying the type of prediction to be made. Options are:
 #' \itemize{
 #'   \item \code{"link"}: Scale of the linear predictor.
@@ -346,13 +347,15 @@ predict.citocnn <- function(object,
       newdata = torch::torch_tensor(object$data$X, dtype = torch::torch_float32())
     }
   } else if(lazy_input(newdata)) {
+    check_raster_newdata(newdata, object$data$X, object$model_properties$input)
+    if(inherits(newdata, "citoraster")) sample_names = rownames(newdata$coords)
     newdata = expand_input(newdata)
     from_folder = TRUE
-  } else if(all(dim(newdata)[-1] == object$model_properties$input)) {
+  } else if(length(dim(newdata)) == length(object$model_properties$input) + 1L && all(dim(newdata)[-1] == object$model_properties$input)) {
     sample_names <- dimnames(newdata)[[1]]
     newdata <- torch::torch_tensor(newdata, dtype = torch::torch_float32())
   } else {
-    stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", dim(object$data$X)[-1]), collapse = ", "), "]"))
+    stop(paste0("Wrong dimension of newdata: [", paste(dim(newdata), collapse = ", "), "]   Correct input dimension: [", paste(c("N", object$model_properties$input), collapse = ", "), "]"))
   }
 
   nt <- if(is.null(object$training_properties$num_threads)) 4L else object$training_properties$num_threads

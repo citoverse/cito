@@ -4,48 +4,65 @@
 #' observation's coordinates. The result is passed as \code{X} to \code{\link{cnn}} (or to a
 #' \code{cnn()} term of \code{\link{mmn}}) in place of an array of images or a folder. The
 #' windows are never extracted to disk: each batch is read from the raster when it is needed,
-#' and the next batch is read in the background while the current one trains.
+#' and with libtiff 4.5 or newer the next batch is read in the background while the current one trains.
 #'
 #' @param raster Path to a GeoTIFF. Any number of bands; 8, 16 and 32 bit integer and 32 and
-#'   64 bit float samples.
+#'   64 bit float samples. Values are read as stored and converted to 32 bit float: integers above
+#'   2^24 are rounded, and 64 bit values beyond the float range become missing.
 #' @param coords Matrix or data.frame with two columns, x and y, giving the center of each
-#'   window in the coordinate reference system of \code{raster}. For a TIFF without
-#'   georeferencing, x and y are pixel units from the top-left corner.
+#'   window in the coordinate reference system of \code{raster} (which is not checked; a warning
+#'   is given when windows lie entirely outside the raster). For a TIFF without georeferencing, x and
+#'   y are pixel units from the top-left corner of the image, y pointing down, so that the center of
+#'   the top-left pixel is (0.5, 0.5).
 #' @param extent Side length of the window in map units, rounded to whole pixels at the
-#'   resolution of \code{raster}.
+#'   resolution of \code{raster} (halves round up). Window positions are rounded the same way.
 #' @param center,scale \code{NULL}, or one value per channel (or a single value for all channels).
 #'   Every channel is transformed as \code{(value - center) / scale}, after \code{transform}.
 #' @param standardize Logical. \code{TRUE} estimates \code{center} and \code{scale} as the mean and
 #'   standard deviation of every channel over all windows of \code{coords} (after \code{transform},
-#'   without missing pixels). This reads every window once.
+#'   without missing pixels). This reads every window once. Build it on the training coordinates
+#'   only and pass \code{like} for validation, test and prediction sites, so that their statistics
+#'   do not enter the scaling.
 #' @param transform \code{NULL} or a function applied to every batch before \code{center} and
 #'   \code{scale}: it receives a float tensor \code{[windows, bands, height, width]} in the units of
 #'   the raster, with \code{NaN} for missing pixels, and returns a tensor with the same first
 #'   dimension, e.g. \code{function(x) torch::torch_log1p(x)} or a band ratio. Channels and spatial
-#'   size may change.
+#'   size may change. It must treat every window on its own: statistics over the batch would make
+#'   predictions depend on the batch size.
 #' @param fill Value for missing pixels (outside the raster, NoData, \code{NaN}, and non-finite results of
 #'   \code{transform}), in the units after \code{center} and \code{scale}: with \code{standardize = TRUE},
-#'   the default 0 imputes the mean.
-#' @param na_channel Logical. \code{TRUE} appends one channel that is 1 where any band of the pixel is
+#'   the default 0 imputes the mean; without it, 0 is a value in the units of the raster, and
+#'   \code{na_channel = TRUE} lets the network tell it from an observed 0.
+#' @param na_channel Logical. \code{TRUE} appends one channel that is 1 where any channel of the pixel is
 #'   missing and 0 otherwise, so that the network can tell an imputed pixel from an observed one.
 #' @param like A \code{citoraster} whose raster, extent and preprocessing are reused for new
 #'   \code{coords}, e.g. to predict at new sites with the \code{center} and \code{scale} estimated on
-#'   the training windows. \code{raster}, \code{extent} and the preprocessing arguments are then ignored.
+#'   the training windows. Only \code{coords} may be given together with \code{like}.
 #'
 #' @details
 #' Reading speed depends almost entirely on how the raster is stored. A tiled GeoTIFF reads
 #' a window from the few tiles it overlaps; a raster stored in strips (the GeoTIFF default)
-#' decompresses every full-width row the window touches, which is two to three orders of
-#' magnitude slower for large rasters. Write rasters for training as tiled files, e.g.
-#' \code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=ZSTD", "PREDICTOR=2"))}.
+#' decompresses whole strips of full-width rows, which was about 200 times slower for a
+#' 20000 x 20000 pixel raster in our benchmark. Write rasters for training as tiled files, e.g.
+#' \code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=DEFLATE", "PREDICTOR=2"))},
+#' with \code{"PREDICTOR=3"} for floating point rasters. Only the first image of the file is read
+#' (no overviews).
 #' The number of reader threads is \code{num_threads} of \code{\link{cnn}}.
+#'
+#' Missing pixels are those outside the raster, \code{NaN}, and pixels equal to the NoData value of
+#' the GDAL_NODATA tag. Masks, alpha bands (read as an ordinary band), and scale and offset metadata
+#' are not applied; apply an offset or scale factor with \code{center} and \code{scale} or \code{transform}.
 #'
 #' Every batch is preprocessed in this order: the raw values are read (missing pixels as \code{NaN}),
 #' \code{transform} is applied, then \code{(value - center) / scale}, then missing pixels are set to
 #' \code{fill} and the \code{na_channel} is appended. Unlike images read from a folder, values are not
 #' rescaled to the unit interval: rasters carry physical quantities, so normalization is left to these
 #' arguments. Preprocessing is part of the \code{citoraster}, so a model fitted on it predicts on the same
-#' scale; for new sites pass \code{like}.
+#' scale; for new sites pass \code{like}. \code{predict()} refuses windows of another shape and warns
+#' when the preprocessing differs from that of the training windows.
+#'
+#' The raster is opened once per session and kept open. A file replaced by another one with the same
+#' modification time is not noticed; a file whose dimensions changed is refused.
 #'
 #' @return An object of class \code{citoraster}, which can be subset by observation with \code{[}.
 #' @example /inst/examples/raster_patches-example.R
@@ -53,9 +70,13 @@
 raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, standardize = FALSE,
                           transform = NULL, fill = 0, na_channel = FALSE, like = NULL) {
   coords = as.matrix(coords)
-  if(ncol(coords) != 2L || !is.numeric(coords) || anyNA(coords)) stop("coords must have two numeric columns, x and y, without NA.", call. = FALSE)
+  if(ncol(coords) != 2L || !is.numeric(coords) || !all(is.finite(coords))) stop("coords must have two numeric columns, x and y, with finite values.", call. = FALSE)
+  if(nrow(coords) == 0L) stop("coords has no rows.", call. = FALSE)
   if(!is.null(like)) {
     checkmate::assert_class(like, "citoraster")
+    given = c(raster = !missing(raster), extent = !missing(extent), center = !missing(center), scale = !missing(scale),
+              standardize = !missing(standardize), transform = !missing(transform), fill = !missing(fill), na_channel = !missing(na_channel))
+    if(any(given)) stop("like = reuses the raster, extent and preprocessing of a citoraster; drop ", paste(names(given)[given], collapse = ", "), ".", call. = FALSE)
     like$coords = coords
     warn_outside(like)
     return(like)
@@ -63,9 +84,9 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, s
   checkmate::qassert(raster, "S1")
   checkmate::assert_file_exists(raster)
   checkmate::qassert(extent, "N1(0,)")
-  checkmate::qassert(fill, "n1")
-  checkmate::qassert(center, c("0", "n+()"))
-  checkmate::qassert(scale, c("0", "n+()"))
+  checkmate::qassert(fill, "N1()")
+  checkmate::qassert(center, c("0", "N+()"))
+  checkmate::qassert(scale, c("0", "N+()"))
   checkmate::qassert(standardize, "B1")
   checkmate::qassert(na_channel, "B1")
   checkmate::assert_function(transform, null.ok = TRUE)
@@ -75,16 +96,22 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, s
   info = cito_raster_info(normalizePath(raster))
   gt = info$geotransform
   if(gt[3] != 0 || gt[5] != 0) stop(raster, " is rotated; only north-up rasters are supported.", call. = FALSE)
-  size = round(extent / abs(gt[c(2, 6)]))
+  size = round_half_up(extent / abs(gt[c(2, 6)]))
   if(any(size < 1)) stop("extent is smaller than one pixel of ", raster, call. = FALSE)
+  if(prod(size) * info$bands > .Machine$integer.max)
+    stop("extent = ", extent, " gives windows of ", size[1], " x ", size[2], " pixels. Is extent in the map units of the raster (pixel size ",
+         signif(abs(gt[2]), 3), ")?", call. = FALSE)
   if(!info$tiled && as.numeric(info$width) * info$height > 4e6)
     warning(raster, " is stored in strips, so every window decompresses full-width rows. ",
-            "A tiled copy reads windows up to 1000x faster, see ?raster_patches.", call. = FALSE)
+            "A tiled copy reads windows about 200 times faster, see ?raster_patches.", call. = FALSE)
   out = structure(list(raster = normalizePath(raster), coords = coords, size = as.integer(size), center = NULL, scale = NULL,
                        transform = transform, fill = fill, na_channel = na_channel, info = info),
                   class = "citoraster")
   warn_outside(out)
-  channels = dim(raw_windows(out, 1L, transform = TRUE))[2]
+  probe = raw_windows(out, 1L, transform = TRUE)
+  if(!inherits(probe, "torch_tensor") || probe$dim() != 4L || probe$size(1) != 1L)
+    stop("transform must return a tensor [windows, channels, height, width] with one window per input window.", call. = FALSE)
+  channels = probe$size(2)
   per_channel = function(v, default) {
     if(is.null(v)) return(rep(default, channels))
     if(length(v) == 1L) return(rep(v, channels))
@@ -98,8 +125,13 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, s
   }
   out$center = per_channel(center, 0)
   out$scale = per_channel(scale, 1)
+  out$shape = dim(preprocess_windows(out, raw_windows(out, 1L)))[-1]
   out
 }
+
+# R's round() goes to the even neighbour on ties, so sites on pixel centres would alternate between
+# two window offsets and neighbouring sites would share a window
+round_half_up = function(v) floor(v + 0.5)
 
 # a coordinate system mismatch puts every window outside, and the model then trains on constants
 warn_outside = function(x) {
@@ -114,14 +146,16 @@ raw_windows = function(x, index, transform = FALSE, nthreads = 1L) {
   rd = raster_reader(x, nthreads)
   o = raster_offsets(x, index)
   buf = cito_raster_fetch(rd, cito_raster_submit(rd, o$x0, o$y0, x$size[1], x$size[2]))
-  t = torch::torch_tensor_from_buffer(buf, shape = c(length(index), x$info$bands, x$size[2], x$size[1]), dtype = "float")$clone()
+  t = torch::torch_tensor_from_buffer(buf, shape = c(length(o$x0), x$info$bands, x$size[2], x$size[1]), dtype = "float")$clone()
   if(transform && !is.null(x$transform)) t = x$transform(t)
   t
 }
 
 channel_stats = function(x, channels) {
   s = s2 = k = numeric(channels)
-  for(idx in split(seq_len(length(x)), ceiling(seq_len(length(x)) / 256))) {
+  # about 64 MB of raw windows per chunk, whatever the window size
+  per = max(1L, floor(2^24 / (prod(x$size) * x$info$bands)))
+  for(idx in split(seq_len(length(x)), ceiling(seq_len(length(x)) / per))) {
     t = raw_windows(x, idx, transform = TRUE)$transpose(1, 2)$reshape(c(channels, -1L))$to(dtype = torch::torch_float64())
     ok = torch::torch_isfinite(t)
     t = t$masked_fill(ok$logical_not(), 0)
@@ -141,7 +175,7 @@ channel_stats = function(x, channels) {
 
 # transform, center/scale, fill and the missing-pixel channel, for a batch read with NaN for missing
 preprocess_windows = function(x, t) {
-  if(!is.null(x$transform)) t = x$transform(t)
+  if(!is.null(x$transform)) t = x$transform(t)$to(dtype = torch::torch_float32())
   C = t$size(2)
   t = (t - torch::torch_tensor(x$center)$view(c(1L, C, 1L, 1L))) / torch::torch_tensor(x$scale)$view(c(1L, C, 1L, 1L))
   miss = torch::torch_isfinite(t)$logical_not()
@@ -150,41 +184,77 @@ preprocess_windows = function(x, t) {
   t
 }
 
+# newdata of a fitted model must give windows of the training shape, and should carry the training preprocessing
+check_raster_newdata = function(new, old, input = NULL) {
+  if(!inherits(new, "citoraster")) return(invisible(TRUE))
+  if(!is.null(input) && !is.null(new$shape) && !identical(as.integer(new$shape), as.integer(input)))
+    stop("newdata gives windows of ", paste(new$shape, collapse = " x "), " (channels x height x width), the model was fitted on ",
+         paste(input, collapse = " x "), ". Build newdata with raster_patches(coords = ..., like = <training windows>).", call. = FALSE)
+  if(inherits(old, "citoraster") &&
+     (!isTRUE(all.equal(unclass(old)[c("center", "scale", "fill", "na_channel")], unclass(new)[c("center", "scale", "fill", "na_channel")])) ||
+      !identical(deparse(old$transform), deparse(new$transform))))
+    warning("newdata is preprocessed differently from the training windows (center, scale, fill, transform or na_channel). ",
+            "For new sites use raster_patches(coords = ..., like = <training windows>).", call. = FALSE)
+  invisible(TRUE)
+}
+
 #' @export
 length.citoraster = function(x) nrow(x$coords)
 
 #' @export
 `[.citoraster` = function(x, i, ..., drop = TRUE) {
   x$coords = x$coords[i, , drop = FALSE]
+  if(anyNA(x$coords)) stop("NA in the index of a citoraster.", call. = FALSE)
   x
 }
 
 #' @export
 print.citoraster = function(x, ...) {
-  cat(sprintf("%d windows of %d x %d pixels x %d bands from %s\n", length(x), x$size[1], x$size[2],
-              x$info$bands, basename(x$raster)))
+  shape = if(is.null(x$shape)) c(x$info$bands, x$size[2], x$size[1]) else x$shape
+  cat(sprintf("%d windows of %d x %d pixels x %d channels from %s (%d bands)\n", length(x), shape[3], shape[2], shape[1],
+              basename(x$raster), x$info$bands))
   cat(sprintf("  preprocessing: %s(value - center) / scale, missing pixels = %g%s\n", if(is.null(x$transform)) "" else "transform, then ",
               x$fill, if(x$na_channel) ", plus a missing-pixel channel" else ""))
+  cat("  center:", format(signif(x$center, 4)), "\n  scale: ", format(signif(x$scale, 4)), "\n")
   invisible(x)
 }
 
 # One reader (a worker thread plus one TIFF handle per reader thread) per raster and setting, shared
 # by every loader: a reader per loader held them open until gc(), 125 descriptors after 150 predict() calls.
+# The process id is part of the key because a forked child inherits the pointer but not the worker thread.
 raster_readers = new.env()
 
 raster_reader = function(x, nthreads) {
-  key = paste(x$raster, file.mtime(x$raster), nthreads)
-  if(is.null(raster_readers[[key]]))
-    raster_readers[[key]] = cito_raster_open(x$raster, nthreads, rep(0, x$info$bands), rep(1, x$info$bands), NaN)
-  raster_readers[[key]]
+  key = paste(x$raster, format(as.numeric(file.mtime(x$raster)), digits = 17), nthreads, Sys.getpid())
+  if(is.null(raster_readers[[key]])) {
+    now = cito_raster_info(x$raster)
+    if(!identical(now[c("width", "height", "bands")], x$info[c("width", "height", "bands")]) || !isTRUE(all.equal(now$geotransform, x$info$geotransform)))
+      stop(basename(x$raster), " has changed since raster_patches() was called; call it again.", call. = FALSE)
+    raster_close(keep = 15L)
+    raster_readers[[key]] = list(reader = cito_raster_open(x$raster, nthreads, rep(0, x$info$bands), rep(1, x$info$bands), NaN),
+                                 path = x$raster, pid = Sys.getpid(), opened = as.numeric(Sys.time()))
+  }
+  raster_readers[[key]]$reader
 }
 
-# top-left pixel of every window
+# Drops all but the `keep` most recently opened cached readers of this process (of `path` only, if given).
+# A loader that still holds a reader keeps it alive until the loader is collected.
+raster_close = function(path = NULL, keep = 0L) {
+  entries = mget(ls(raster_readers), envir = raster_readers)
+  mine = vapply(entries, function(e) e$pid == Sys.getpid() && (is.null(path) || e$path == normalizePath(path)), logical(1))
+  keys = names(entries)[mine][order(vapply(entries[mine], `[[`, numeric(1), "opened"))]
+  drop = keys[seq_len(max(0L, length(keys) - keep))]
+  rm(list = drop, envir = raster_readers)
+  invisible(length(drop))
+}
+
+# top-left pixel of every window; clamped so that coordinates far outside stay outside instead of becoming NA
 raster_offsets = function(x, index) {
   gt = x$info$geotransform
   xy = x$coords[index, , drop = FALSE]
-  list(x0 = as.integer(round((xy[, 1] - gt[1]) / gt[2] - x$size[1] / 2)),
-       y0 = as.integer(round((xy[, 2] - gt[4]) / gt[6] - x$size[2] / 2)))
+  off = function(v) as.integer(pmin(pmax(round_half_up(v), -2^30), 2^30))
+  list(x0 = off((xy[, 1] - gt[1]) / gt[2] - x$size[1] / 2),
+       y0 = off((xy[, 2] - gt[4]) / gt[6] - x$size[2] / 2))
 }
 
 lazy_input = function(x) is.character(x) || inherits(x, "citoraster")

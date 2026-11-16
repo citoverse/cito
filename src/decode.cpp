@@ -641,7 +641,8 @@ static std::string raster_geometry(TIFF* t, Raster& r) {
     std::string s(nd.begin(), nd.end());
     char* end = NULL;
     const double v = std::strtod(s.c_str(), &end);
-    if(end != s.c_str()) { r.nodata = v; r.has_nodata = 1; }
+    // a float32 sample holds the tag value rounded to float, so compare against that (GDAL does the same)
+    if(end != s.c_str()) { r.nodata = (r.sformat == 2 && r.bits == 32) ? (double)(float)v : v; r.has_nodata = 1; }
   }
   return "";
 }
