@@ -26,5 +26,16 @@ mmn.fit <- mmn(Y ~
 
 ## If the loss is still decreasing you can continue training for additional epochs:
 mmn.fit <- continue_training(mmn.fit, epochs = 1)
+
+## Modality masking: the images are hidden at random in training, so the model also
+## predicts without them (NA images = unknown)
+mmn.fit <- mmn(Y ~
+                 dnn(~., data=X_dnn, hidden = c(100,100,100), activation = "relu") +
+                 cnn(X=X_cnn, architecture = architecture),
+               dataList = data, loss = "mse", masking = ~ X_cnn,
+               epochs = 1, lr = 0.05, device=device)
+no_images <- data
+no_images$X_cnn[] <- NA
+head(predict(mmn.fit, newdata = no_images))
 }
 }

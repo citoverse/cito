@@ -27,6 +27,8 @@
 #' @param device Device to be used for training. Options are "cpu", "cuda", and "mps". Default is "cpu".
 #' @param plot Whether to plot the training progress. Default is TRUE.
 #' @param verbose Whether to print detailed training progress. Default is TRUE.
+#' @param masking \code{NULL} or a one-sided formula naming the modalities that are hidden at random
+#'   during training, see the section on modality masking.
 #'
 #' @return An S3 object of class \code{"citommn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
@@ -76,6 +78,17 @@
 #'    \item The names of the data variables (in this example: Y, tabular_data1, tabular_data2, image_data) must be available in \code{dataList} (named list).
 #' }
 #'
+#' # Modality masking:
+#'
+#' \code{masking = ~ image_data + tabular_data2} hides the named modalities at random during training:
+#' per row and minibatch a rate \eqn{p \sim U(0,1)} is drawn and each masked modality is hidden with
+#' probability \eqn{p}. The output of a hidden modality is set to 0 and an indicator tells the fusion
+#' network that it is unknown, so one fitted model predicts from any subset of the masked modalities.
+#' Modalities are named by their data (\code{X =} or \code{data =}; a repeated name gets \code{.2}). A row
+#' of a masked modality that contains any \code{NA} is unknown, in training and in \code{predict()}: a
+#' single missing pixel switches the whole image off for that row, so fill nodata before. The validation
+#' rows get one mask drawn once from the same scheme (not applied to modalities loaded lazily from files).
+#'
 #' @import checkmate
 #' @example /inst/examples/mmn-example.R
 #' @author Armin Schenk
@@ -105,7 +118,8 @@ mmn <- function(formula,
                 baseloss = NULL,
                 device = c("cpu", "cuda", "mps"),
                 plot = TRUE,
-                verbose = TRUE) {
+                verbose = TRUE,
+                masking = NULL) {
 
   # symbols in the formula that are not in dataList (e.g. the architecture object) are
   # resolved where the formula was written, parent.frame() would be wrong whenever mmn()
@@ -164,7 +178,9 @@ mmn <- function(formula,
   assert_weights_supported(loss, weights)
   baseloss <- loss_obj$baseloss
 
-  X <- format_input_data(formula[[3]], dataList)
+  checkmate::assert(checkmate::checkNull(masking), checkmate::checkFormula(masking))
+  masking <- mmn_masking(masking, formula[[3]])
+  X <- format_input_data(formula[[3]], dataList, mmn_masked(masking))
 
   from_folder = any(vapply(X, lazy_input, logical(1)))
   X <- lapply(X, expand_input)
@@ -187,8 +203,9 @@ mmn <- function(formula,
     }
   }
 
+  val_hidden <- if(is.null(masking)) NULL else mmn_validation_mask(dim(Y)[1], valid, masking$masked)
   weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
-  dls <- build_loaders(X, Y, weights = weights_torch, valid = valid, batch_size = batchsize, shuffle = shuffle,
+  dls <- build_loaders(mmn_apply_mask(X, val_hidden), Y, weights = weights_torch, valid = valid, batch_size = batchsize, shuffle = shuffle,
                        from_folder = from_folder, data_augmentation = data_augmentation)
   train_dl <- dls$train_dl
   valid_dl <- dls$valid_dl
@@ -200,6 +217,7 @@ mmn <- function(formula,
                                   activation = fusion_activation,
                                   bias = fusion_bias,
                                   dropout = fusion_dropout)
+  model_properties$masking <- masking
   class(model_properties) <- "citommn_properties"
 
   net <- build_mmn(model_properties)
@@ -231,6 +249,7 @@ mmn <- function(formula,
   out$loss <- loss_obj
   out$data <- list(dataList=dataList)
   if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
+  out$data$val_hidden <- val_hidden
   out$model_properties <- model_properties
   out$training_properties <- training_properties
 
@@ -304,12 +323,12 @@ predict.citommn <- function(object,
   }
 
   if(is.null(newdata)){
-    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList)
+    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = object$data$dataList, mmn_masked(object))
   } else {
-    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata)
+    newdata <- format_input_data(formula = object$call$formula[[3]], dataList = newdata, mmn_masked(object))
     # the training data is routinely dropped from a fitted MMN to keep the saved object small,
     # so the per-stream shape check is skipped when it is gone rather than failing the predict
-    old <- try(format_input_data(object$call$formula[[3]], object$data$dataList), silent = TRUE)
+    old <- try(format_input_data(object$call$formula[[3]], object$data$dataList, mmn_masked(object)), silent = TRUE)
     check_newdata_shape(newdata, if(inherits(old, "try-error")) NULL else old)
   }
 
@@ -351,6 +370,7 @@ predict.citommn <- function(object,
 print.citommn <- function(x, ...){
   x <- check_model(x)
   print(x$call)
+  print_masking(x$model_properties$masking)
   print(x$net)
   return(invisible(x))
 }
@@ -411,7 +431,7 @@ modality_importance <- function(object, n_permute = 10L, device = NULL, batchsiz
   device <- check_device(device)
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-  inputs <- format_input_data(object$call$formula[[3]], object$data$dataList)
+  inputs <- format_input_data(object$call$formula[[3]], object$data$dataList, mmn_masked(object))
   Y <- object$loss$format_Y(eval(object$call$formula[[2]], envir = object$data$dataList))
   n <- dim(Y)[1]
   labels <- modality_labels(object$call$formula[[3]])
@@ -658,7 +678,30 @@ check_newdata_shape <- function(new, old) {
   invisible(TRUE)
 }
 
-format_input_data <- function(formula, dataList) {
+format_input_data <- function(formula, dataList, masked = NULL) {
+  k <- 0L
+  # rows with NA in a masked modality stay, as NaN, instead of being dropped by model.frame()
+  na_rows <- function(X, data, formula) {
+    if(!is.null(data)) {
+      v <- all.vars(formula)
+      d <- if("." %in% v) data else data[, intersect(v, names(data)), drop = FALSE]
+    } else {
+      d <- X
+    }
+    miss <- !stats::complete.cases(d)
+    if(!any(miss)) return(list(X = X, data = data, miss = miss))
+    if(is.null(X)) {
+      for(v in names(data)) {
+        if(!anyNA(data[[v]])) next
+        if(is.factor(data[[v]])) data[[v]][is.na(data[[v]])] <- levels(data[[v]])[1]
+        else if(is.numeric(data[[v]]) || is.logical(data[[v]])) data[[v]][is.na(data[[v]])] <- 0
+        else data[[v]][is.na(data[[v]])] <- data[[v]][!is.na(data[[v]])][1]
+      }
+    } else {
+      X[is.na(X)] <- 0
+    }
+    list(X = X, data = data, miss = miss)
+  }
 
   inner <- function(term, input_data) {
     if(term[[1]] == "+") {
@@ -680,10 +723,20 @@ format_input_data <- function(formula, dataList) {
         if(!as.character(call$data) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$data), "' in names of dataList."))
         data <- data.frame(eval(call$data, envir = dataList))
       }
+      k <<- k + 1L
+      miss <- NULL
+      if(isTRUE(masked[k])) {
+        f <- na_rows(X, data, formula)
+        X <- f$X
+        data <- f$data
+        miss <- f$miss
+      }
       temp <- get_X_Y(formula, X, NULL, data)
+      if(any(miss)) temp$X[miss, ] <- NaN
       input_data <- append(input_data, list(torch::torch_tensor(temp$X, dtype = torch::torch_float32())))
       if (!is.null(temp$Z)) input_data <- append(input_data, list(torch::torch_tensor(temp$Z, dtype = torch::torch_long())))
     } else if(term[[1]] == "cnn") {
+      k <<- k + 1L
       call <- match.call(cnn, term)
       if(!inherits(call$X, "name")) stop(paste0("In '", deparse1(term), "': X has to be assigned to a name that exists in dataList. E.g., mmn(Y ~ cnn(X=some_name, ...) + dnn(...), dataList=list(Y=Y, some_name=your_data, ...), ...)"))
       if(!as.character(call$X) %in% names(dataList)) stop(paste0("In '", deparse1(term), "': Couldn't find '", as.character(call$X), "' in names of dataList."))

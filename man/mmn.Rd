@@ -30,7 +30,8 @@ mmn(
   baseloss = NULL,
   device = c("cpu", "cuda", "mps"),
   plot = TRUE,
-  verbose = TRUE
+  verbose = TRUE,
+  masking = NULL
 )
 }
 \arguments{
@@ -83,6 +84,9 @@ mmn(
 \item{plot}{Whether to plot the training progress. Default is TRUE.}
 
 \item{verbose}{Whether to print detailed training progress. Default is TRUE.}
+
+\item{masking}{\code{NULL} or a one-sided formula naming the modalities that are hidden at random
+during training, see the section on modality masking.}
 }
 \value{
 An S3 object of class \code{"citommn"} is returned. It is a list containing everything there is to know about the model and its training process.
@@ -134,6 +138,17 @@ The specification works exactly as in \code{\link{dnn}} and \code{\link{cnn}} wi
 }
 }
 
+\section{Modality masking:}{
+\code{masking = ~ image_data + tabular_data2} hides the named modalities at random during training:
+per row and minibatch a rate \eqn{p \sim U(0,1)} is drawn and each masked modality is hidden with
+probability \eqn{p}. The output of a hidden modality is set to 0 and an indicator tells the fusion
+network that it is unknown, so one fitted model predicts from any subset of the masked modalities.
+Modalities are named by their data (\code{X =} or \code{data =}; a repeated name gets \code{.2}). A row
+of a masked modality that contains any \code{NA} is unknown, in training and in \code{predict()}: a
+single missing pixel switches the whole image off for that row, so fill nodata before. The validation
+rows get one mask drawn once from the same scheme (not applied to modalities loaded lazily from files).
+}
+
 \examples{
 \donttest{
 if(torch::torch_is_installed()){
@@ -163,6 +178,17 @@ mmn.fit <- mmn(Y ~
 
 ## If the loss is still decreasing you can continue training for additional epochs:
 mmn.fit <- continue_training(mmn.fit, epochs = 1)
+
+## Modality masking: the images are hidden at random in training, so the model also
+## predicts without them (NA images = unknown)
+mmn.fit <- mmn(Y ~
+                 dnn(~., data=X_dnn, hidden = c(100,100,100), activation = "relu") +
+                 cnn(X=X_cnn, architecture = architecture),
+               dataList = data, loss = "mse", masking = ~ X_cnn,
+               epochs = 1, lr = 0.05, device=device)
+no_images <- data
+no_images$X_cnn[] <- NA
+head(predict(mmn.fit, newdata = no_images))
 }
 }
 }

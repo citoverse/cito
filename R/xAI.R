@@ -61,7 +61,7 @@ PDP.citodnn <- function(model,
   model <- check_model(model)
 
   if(is.null(data)){
-    data <- model$data$data
+    data <- xai_data(model)
   }
 
   if(is.null(variable)) variable <- get_var_names(model$training_properties$formula, data[1,])
@@ -512,7 +512,7 @@ ALE.citodnnBootstrap <- function(model,
       model_indv = model$models[[b]]
       model_indv <- check_model(model_indv)
       if(is.null(data)){
-        data <- model$data$data
+        data <- xai_data(model)
       }
       if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
       if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
@@ -555,7 +555,7 @@ ALE.citodnnBootstrap <- function(model,
       model_indv = model$models[[b]]
       model_indv <- check_model(model_indv)
       if(is.null(data)){
-        data <- model$data$data
+        data <- xai_data(model)
       }
       if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
       if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
@@ -1023,7 +1023,7 @@ get_importance_ale_var <- function(model,
   ce <- get_ce_for(model, data = data)
   if (isFALSE(ce$any)) stop("No continuous variables, ALE importance is not available.")
 
-  if (is.null(data)) data <- model$data$data
+  if (is.null(data)) data <- xai_data(model)
 
   ce_scale <- ce[[type]]
   if (is.null(ce_scale)) stop(sprintf("No conditional effects stored for type = '%s'.", type))
@@ -1081,7 +1081,7 @@ ACE = function(object,
   device = match.arg(device)
   object = check_model(object)
 
-  if(is.null(data)) data = object$data$data
+  if(is.null(data)) data = xai_data(object)
 
   if(!is.data.frame(data)) data = data.frame(data)
 
@@ -1356,10 +1356,12 @@ ACEanalytical = function(object,
 
   if(is.null(data)){
 
+    # rows with an unknown (NaN) masked predictor have no gradient for it and would dilute the effects
+    rows = which(stats::complete.cases(object$data$X))
     if(is.logical(subsample)) {
-      indices_row = 1:nrow(object$data$X)
+      indices_row = rows
     } else {
-      indices_row = sample.int(nrow(object$data$X), ceiling(subsample*nrow(object$data$X)))
+      indices_row = rows[sample.int(length(rows), ceiling(subsample*length(rows)))]
     }
 
     sample_names <- rownames(object$data$X)[indices_row]

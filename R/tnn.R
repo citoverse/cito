@@ -356,11 +356,15 @@ tnn_masked_loss = torch::nn_module(
     self$y_dim = inner$y_dim
     self$responses = inner$responses
     self$baseloss = inner$baseloss
+    self$family = inner$family
     self$eval_scale = NULL
   },
+  format_Y = function(Y) self$inner$format_Y(Y),
   # unreduced: one value per hidden cell, so cito's $mean() is the pooled loss of a minibatch
   forward = function(output, target) {
-    hidden = output$hidden
+    # a NaN target (dnn() with NA in a response given as input) is unknown and never scored
+    hidden = output$hidden$logical_and(torch::torch_isnan(target)$logical_not())
+    target = target$nan_to_num(0)
     if(hidden$sum()$item() == 0) return((output$pred * 0)$sum()$view(1L))
     v = self$inner(output$pred, target)[hidden]
     # cito averages the means of the validation batches; scaled by (batches x cells in batch / all

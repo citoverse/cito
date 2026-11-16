@@ -65,7 +65,7 @@ continue_training.citodnn <- function(model,
   if(is.null(weights) && !new_validation_split) weights <- model$data$weights
   if(!is.null(weights) && is.vector(weights)) weights <- matrix(weights, ncol = 1L)
 
-  tmp_data = get_X_Y(model$old_formula, X, Y, data)
+  tmp_data = get_X_Y_masked(model$old_formula, X, Y, data, model$model_properties$masking$vars)
   X = tmp_data$X
   Y = tmp_data$Y
   Z = tmp_data$Z
@@ -75,7 +75,7 @@ continue_training.citodnn <- function(model,
   weights_r = weights
 
   X <- torch::torch_tensor(X, dtype = torch::torch_float32())
-  Y <- model$loss$format_Y(Y)
+  Y <- format_Y_na(model$loss, Y)
   if(!is.null(Z)) Z = torch::torch_tensor(Z, dtype=torch::torch_long())
 
   has_weights <- !is.null(weights)
@@ -105,6 +105,21 @@ continue_training.citodnn <- function(model,
     }
   }
 
+  m <- model$model_properties$masking
+  val_hidden <- NULL
+  if(!is.null(m)) {
+    if(!new_validation_split && !is.null(model$data$val_hidden)) {
+      val_hidden <- model$data$val_hidden
+    } else {
+      vm <- dnn_validation_mask(X_r, as.matrix(Y), valid, m)
+      valid <- vm$valid
+      val_hidden <- vm$mask
+    }
+    X <- torch::torch_tensor(masked_dnn_X(X_r, as.matrix(Y), m, val_hidden), dtype = torch::torch_float32())
+    model$data$validation <- valid
+    model$data$val_hidden <- val_hidden
+    if(length(m$resp) > 0) set_dnn_eval_scale(model)
+  }
   inputs <- if(is.null(Z)) list(X) else list(X, Z)
   dls <- build_loaders(inputs, Y, weights = weights, valid = valid, batch_size = bs, shuffle = sh)
   train_dl <- dls$train_dl
@@ -121,6 +136,7 @@ continue_training.citodnn <- function(model,
   model$data$Z = Z_r
   model$data$weights = weights_r
   model$data$validation = valid
+  model$data$val_hidden = val_hidden
 
   # the stored conditional effects refer to the weights before this call, summary(), plot()
   # and the analytical ALE would otherwise report the effects of the previous model
@@ -321,7 +337,7 @@ continue_training.citommn <- function(model,
   if(!as.character(model$call$formula[[2]]) %in% names(dataList)) stop(paste0("In '", deparse1(model$call$formula), "': Couldn't find '", as.character(model$call$formula[[2]]), "' in names of dataList."))
   Y <- eval(model$call$formula[[2]], envir = dataList)
 
-  X <- format_input_data(model$call$formula[[3]], dataList)
+  X <- format_input_data(model$call$formula[[3]], dataList, mmn_masked(model))
 
   from_folder = any(vapply(X, lazy_input, logical(1)))
 
@@ -349,6 +365,14 @@ continue_training.citommn <- function(model,
     }
   }
 
+  masked <- mmn_masked(model)
+  if(!is.null(masked)) {
+    vh <- model$data$val_hidden
+    if(new_validation_split || is.null(vh) || nrow(vh) != dim(Y)[1] || !identical(valid, model$data$validation))
+      vh <- mmn_validation_mask(dim(Y)[1], valid, masked)
+    X <- mmn_apply_mask(X, vh)
+    model$data$val_hidden <- vh
+  }
   nw <- if(is.null(model$training_properties$num_workers)) 0L else model$training_properties$num_workers
   nt <- if(is.null(model$training_properties$num_threads)) 4L else model$training_properties$num_threads
   dls <- build_loaders(X, Y, valid = valid, batch_size = model$training_properties$batchsize,

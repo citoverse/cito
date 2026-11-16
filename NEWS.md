@@ -19,6 +19,9 @@
 * blocked resampling: config_tuning(blocking = ) for the CV folds and dnn(bootstrap_blocking_variable = ) for the bootstrap
 * ce and ce_method arguments of dnn(): conditional effects are computed once at the end of the training and stored on the model, so summary() and ALE() do not have to recompute them. ce = <number> sets the number of observations used for them
 * predict(..., batchsize = ) and predict(..., return_embeddings = )
+* input masking: dnn(masking = ~ x1 + x2) hides predictors at random during training (rate drawn per row from U(0,1)) so that NA predictors can be predicted from; response columns named in masking are given as inputs and scored only where hidden (the conditional MLP++ of masked community models), predict(..., Y = ) conditions on them. mmn(masking = ~ modality) hides whole modalities
+* summary() of a tnn() with tokens(Y) reports the conditional gain per rarity stratum and as a curve over the revealed fraction
+* butterflies dataset (55 species at 2609 sites)
 * raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch while the previous batch trains, instead of pre-extracted image files
 
 ## Breaking changes

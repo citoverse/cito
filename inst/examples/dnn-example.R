@@ -141,5 +141,21 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
+
+# Input masking: predictors hidden at random in training, NA = unknown in predict()
+nn.fit <- dnn(Sepal.Length ~ ., data = datasets::iris, masking = ~ Petal.Length + Petal.Width,
+              verbose = FALSE, plot = FALSE)
+new_iris <- datasets::iris
+new_iris$Petal.Width <- NA
+head(predict(nn.fit, newdata = new_iris))
+
+# The response as masked input (a conditional multi-species model, MLP++)
+data(butterflies)
+nn.fit <- dnn(X = scale(butterflies$env), Y = butterflies$PA, loss = "bernoulli", masking = ~ .,
+              optimizer = "adam", lr = 0.001, epochs = 20L, verbose = FALSE, plot = FALSE)
+Ycond <- butterflies$PA
+Ycond[, 1:10] <- NA
+# the first ten species given the observed other 45
+head(predict(nn.fit, Y = Ycond, type = "response")[, 1:10])
 }
 }

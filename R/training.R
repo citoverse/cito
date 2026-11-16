@@ -55,14 +55,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
       target = b[[length(b)]]
 
-      if (inherits(model, c("citommn", "citotnn"))) {
-        output <- model$net(inputs)
-      } else {
-        if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
-          output <- model$net(inputs[[1]], inputs[[2]])
-        else
-          output <- model$net(inputs[[1]])
-      }
+      output <- forward_net(model, inputs)
 
       loss <- if (has_weights) {
         model$loss(output, target, weights = weights)$mean()
@@ -150,14 +143,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
         inputs  <- if (has_weights) b[-c(length(b) - 1, length(b))] else b[-length(b)]
         target  <- b[[length(b)]]
 
-        if (inherits(model, c("citommn", "citotnn"))) {
-          output <- model$net(inputs)
-        } else {
-          if (inherits(model, "citodnn") && isTRUE(model$net$has_embeddings))
-            output <- model$net(inputs[[1]], inputs[[2]])
-          else
-            output <- model$net(inputs[[1]])
-        }
+        output <- forward_net(model, inputs)
 
         loss <- if (has_weights) model$loss(output, target, weights = weights)$mean()
                 else model$loss(output, target)$mean()
@@ -591,4 +577,13 @@ get_lr_scheduler<- function(lr_scheduler, optimizer){
                       stop(paste0("lr_scheduler = ",lr_scheduler," is not supported")))
 
   return(scheduler)
+}
+
+# A masked dnn() scores only the hidden cells of a response given as input, so in training and
+# validation it returns them with the prediction.
+forward_net = function(model, inputs) {
+  if(inherits(model, c("citommn", "citotnn"))) return(model$net(inputs))
+  scored = if(is.null(model$model_properties$masking)) list() else list(scored = TRUE)
+  if(inherits(model, "citodnn") && isTRUE(model$net$has_embeddings)) do.call(model$net, c(list(inputs[[1]], inputs[[2]]), scored))
+  else do.call(model$net, c(list(inputs[[1]]), scored))
 }

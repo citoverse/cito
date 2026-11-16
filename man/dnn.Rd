@@ -39,7 +39,8 @@ dnn(
   ce = TRUE,
   ce_method = c("analytical", "finite"),
   X = NULL,
-  Y = NULL
+  Y = NULL,
+  masking = NULL
 )
 }
 \arguments{
@@ -110,6 +111,9 @@ dnn(
 \item{X}{Feature matrix or data.frame, alternative data interface}
 
 \item{Y}{Response vector, factor, matrix or data.frame, alternative data interface}
+
+\item{masking}{\code{NULL} or a one-sided formula naming the inputs that are hidden at random during
+training, see the section on input masking.}
 }
 \value{
 An S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
@@ -260,6 +264,28 @@ For detailed installation instructions and more information on utilizing GPUs fo
 Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 }
 
+\section{Input masking}{
+\code{masking = ~ temp + prec} hides the named predictors at random during training: per row and
+minibatch a rate \eqn{p \sim U(0,1)} is drawn and each masked input is hidden with probability \eqn{p}.
+A hidden input enters as 0 together with an indicator that it is unknown, so the network learns to
+predict from any subset of the masked inputs. \code{NA} in a masked predictor means unknown, in
+training and in \code{predict()}. Masked predictors must be numeric and enter the formula only as plain
+terms (not in factors, transformations or interactions). The validation rows get one mask drawn once
+from the same scheme, so training and validation loss measure the same quantity. Conditional effects
+and ALE are computed on the rows without unknown predictors.
+
+Response columns named in \code{masking} (\code{.} names all of them) are given to the network as
+inputs as well, hidden at random in the same way, and scored only where hidden: a model trained this
+way predicts each response from the predictors and any subset of the other responses. For a site x
+species matrix, \code{dnn(X = env, Y = Y, loss = "bernoulli", masking = ~ .)} is the conditional
+multilayer perceptron (MLP++) of the masked community models; \code{predict(fit, Y = Ycond)} conditions
+on observed responses and \code{predict(fit)} predicts from the predictors alone. Responses not named
+are scored always and are not inputs. \code{NA} in a response column given as input (a species not
+surveyed at a site) is unknown and never scored; NA in other columns drops the row as usual. With the
+response as input there must be several response columns, the loss must be elementwise and
+\code{weights} are not supported. Masking cannot be combined with bootstrap or tuning.
+}
+
 \examples{
 \donttest{
 
@@ -404,6 +430,22 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
+
+# Input masking: predictors hidden at random in training, NA = unknown in predict()
+nn.fit <- dnn(Sepal.Length ~ ., data = datasets::iris, masking = ~ Petal.Length + Petal.Width,
+              verbose = FALSE, plot = FALSE)
+new_iris <- datasets::iris
+new_iris$Petal.Width <- NA
+head(predict(nn.fit, newdata = new_iris))
+
+# The response as masked input (a conditional multi-species model, MLP++)
+data(butterflies)
+nn.fit <- dnn(X = scale(butterflies$env), Y = butterflies$PA, loss = "bernoulli", masking = ~ .,
+              optimizer = "adam", lr = 0.001, epochs = 20L, verbose = FALSE, plot = FALSE)
+Ycond <- butterflies$PA
+Ycond[, 1:10] <- NA
+# the first ten species given the observed other 45
+head(predict(nn.fit, Y = Ycond, type = "response")[, 1:10])
 }
 }
 }

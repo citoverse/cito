@@ -36,6 +36,8 @@
 #' @param ce_method analytical or finite method
 #' @param X Feature matrix or data.frame, alternative data interface
 #' @param Y Response vector, factor, matrix or data.frame, alternative data interface
+#' @param masking \code{NULL} or a one-sided formula naming the inputs that are hidden at random during
+#'   training, see the section on input masking.
 #'
 #' @section How neural networks work:
 #' In Multilayer Perceptron (MLP) networks, each neuron is connected to every neuron in the previous layer and every neuron in the subsequent layer. The value of each neuron is computed using a weighted sum of the outputs from the previous layer, followed by the application of an activation function. Specifically, the value of a neuron is calculated as the weighted sum of the outputs of the neurons in the previous layer, combined with a bias term. This sum is then passed through an activation function, which introduces non-linearity into the network. The calculated value of each neuron becomes the input for the neurons in the next layer, and the process continues until the output layer is reached. The choice of activation function and the specific weight values determine the network's ability to learn and approximate complex relationships between inputs and outputs.
@@ -169,6 +171,28 @@
 #'
 #' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
 #'
+#' # Input masking
+#'
+#' \code{masking = ~ temp + prec} hides the named predictors at random during training: per row and
+#' minibatch a rate \eqn{p \sim U(0,1)} is drawn and each masked input is hidden with probability \eqn{p}.
+#' A hidden input enters as 0 together with an indicator that it is unknown, so the network learns to
+#' predict from any subset of the masked inputs. \code{NA} in a masked predictor means unknown, in
+#' training and in \code{predict()}. Masked predictors must be numeric and enter the formula only as plain
+#' terms (not in factors, transformations or interactions). The validation rows get one mask drawn once
+#' from the same scheme, so training and validation loss measure the same quantity. Conditional effects
+#' and ALE are computed on the rows without unknown predictors.
+#'
+#' Response columns named in \code{masking} (\code{.} names all of them) are given to the network as
+#' inputs as well, hidden at random in the same way, and scored only where hidden: a model trained this
+#' way predicts each response from the predictors and any subset of the other responses. For a site x
+#' species matrix, \code{dnn(X = env, Y = Y, loss = "bernoulli", masking = ~ .)} is the conditional
+#' multilayer perceptron (MLP++) of the masked community models; \code{predict(fit, Y = Ycond)} conditions
+#' on observed responses and \code{predict(fit)} predicts from the predictors alone. Responses not named
+#' are scored always and are not inputs. \code{NA} in a response column given as input (a species not
+#' surveyed at a site) is unknown and never scored; NA in other columns drops the row as usual. With the
+#' response as input there must be several response columns, the loss must be elementwise and
+#' \code{weights} are not supported. Masking cannot be combined with bootstrap or tuning.
+#'
 #' @return An S3 object of class \code{"citodnn"} is returned. It is a list containing everything there is to know about the model and its training process.
 #' The list consists of the following attributes:
 #' \item{net}{An object of class "nn_module". Originates from the torch package and represents the core object of this workflow.}
@@ -223,7 +247,8 @@ dnn <- function(formula = NULL,
                 ce = TRUE,
                 ce_method = c("analytical", "finite"),
                 X = NULL,
-                Y = NULL) {
+                Y = NULL,
+                masking = NULL) {
 
   tuner = check_hyperparameters(hidden = hidden ,
                                 bias = bias,
@@ -285,7 +310,9 @@ dnn <- function(formula = NULL,
     }
   }
 
-  tmp_data = get_X_Y(formula, X, Y, data)
+  checkmate::assert(checkmate::checkNull(masking), checkmate::checkFormula(masking))
+  mask_vars = if(is.null(masking)) NULL else masked_vars(masking, response_names(formula, Y))
+  tmp_data = get_X_Y_masked(formula, X, Y, data, mask_vars)
   old_formula = tmp_data$old_formula
   X = tmp_data$X
   Y = tmp_data$Y
@@ -319,6 +346,7 @@ dnn <- function(formula = NULL,
 
   # Only return the model properties if no Y specified (Used in mmn())
   if(is.null(Y)) {
+    if(!is.null(masking)) stop("'masking' of a dnn() term is not available inside mmn() or tnn(); mmn(masking = ) hides whole modalities.", call. = FALSE)
     if(any(inherits(hidden, "tune"), inherits(activation, "tune"), inherits(bias, "tune"), inherits(dropout, "tune"))) stop("Tuning of hyperparameters is not supported within mmn().")
     model_properties <- list(input = ncol(X),
                              hidden = hidden,
@@ -332,14 +360,25 @@ dnn <- function(formula = NULL,
   }
 
   if(is.character(loss)) loss <- match.arg(loss)
-  loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
+  if(!is.null(masking)) {
+    if((!is.null(bootstrap) && !isFALSE(bootstrap) && bootstrap > 0) || length(tuner) != 0) stop("'masking' cannot be combined with bootstrap or tuning.", call. = FALSE)
+    masking = dnn_masking(mask_vars, masking, X, Y, formula)
+  }
+  if(!is.null(masking) && length(masking$resp) > 0) {
+    if(!is.null(weights)) stop("weights are not supported when the response is given as input.", call. = FALSE)
+    if(!(is.function(loss) || loss %in% c("mse", "mae", "gaussian", "bernoulli", "poisson", "nbinom")))
+      stop("With the response as input the loss must be elementwise: mse, mae, gaussian, bernoulli, poisson, nbinom or a function.", call. = FALSE)
+    loss_obj <- tnn_masked_loss(tnn_inner_loss(loss, as.matrix(Y), custom_parameters, baseloss))
+  } else {
+    loss_obj <- get_loss(loss, Y, custom_parameters, baseloss, weights)
+  }
   assert_weights_supported(loss, weights)
 
   response_column <- NULL
   if(inherits(loss_obj, "cross-entropy loss")) response_column = as.character(LHSForm(formula)) # add response_column to loss_obj instead of out
 
   X_torch <- torch::torch_tensor(X)
-  Y_torch <- loss_obj$format_Y(Y)
+  Y_torch <- format_Y_na(loss_obj, Y)
   if(!is.null(embeddings)) {
     Z_torch = torch::torch_tensor(Z, dtype = torch::torch_long())
   } else {
@@ -382,6 +421,13 @@ dnn <- function(formula = NULL,
       }
     }
 
+    val_hidden <- NULL
+    if(!is.null(masking)) {
+      vm <- dnn_validation_mask(X, as.matrix(Y_torch), valid, masking)
+      valid <- vm$valid
+      val_hidden <- vm$mask
+      X_torch <- torch::torch_tensor(masked_dnn_X(X, as.matrix(Y_torch), masking, val_hidden))
+    }
     inputs <- if(is.null(Z_torch)) list(X_torch) else list(X_torch, Z_torch)
     weights_torch <- if(is.null(weights)) NULL else torch::torch_tensor(weights)
     dls <- build_loaders(inputs, Y_torch, weights = weights_torch, valid = valid,
@@ -396,7 +442,8 @@ dnn <- function(formula = NULL,
                              bias = bias,
                              dropout = dropout,
                              embeddings = embeddings,
-                             custom = custom)
+                             custom = custom,
+                             masking = masking)
     class(model_properties) <- "citodnn_properties"
 
     net <- build_dnn(model_properties)
@@ -439,8 +486,10 @@ dnn <- function(formula = NULL,
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
     out$data$xlvls <- out$data$xlvls[!names(out$data$xlvls) %in% as.character(formula[[2]])]
     if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
+    out$data$val_hidden <- val_hidden
     out$model_properties <- model_properties
     out$training_properties <- training_properties
+    if(!is.null(masking) && length(masking$resp) > 0) set_dnn_eval_scale(out)
 
     out <- train_model(model = out, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl)
 
@@ -590,6 +639,7 @@ dnn <- function(formula = NULL,
 print.citodnn <- function(x,...){
   x <- check_model(x)
   print(x$call)
+  print_masking(x$model_properties$masking)
   print(x$net)
   return(invisible(x))
 }
@@ -936,6 +986,9 @@ coef.citodnnBootstrap <- function(object, ...) {
 #' @param batchsize number of samples that are predicted at the same time
 #' @param reduce predictions from bootstrapped model are by default reduced (mean, optional median or none)
 #' @param return_embeddings Return embeddings instead of predictions
+#' @param Y Only for a model whose \code{masking} gives the response as input: a matrix of the observed
+#'   response values to condition on, columns matched by name; \code{NA} cells are predicted, given cells
+#'   are returned as \code{NA}. \code{NULL} predicts every response from the predictors alone.
 #' @param ... additional arguments
 #' @return prediction matrix
 #'
@@ -947,6 +1000,7 @@ predict.citodnn <- function(object,
                             device = NULL,
                             batchsize = NULL,
                             return_embeddings = FALSE,
+                            Y = NULL,
                             ...) {
 
   checkmate::assert( checkmate::checkNull(newdata),
@@ -983,7 +1037,9 @@ predict.citodnn <- function(object,
   } else {
     had_rownames <- !is.null(rownames(newdata))
     if(!is.data.frame(newdata)) newdata <- data.frame(newdata)
-    mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE]
+    masked <- object$model_properties$masking$names
+    mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), to_sentinel(newdata, masked), xlev = object$data$xlvls)[,-1,drop=FALSE]
+    mm <- from_sentinel(mm, masked, NaN)
     # model.matrix drops rows containing NAs, so the names and the embedding codes have to
     # follow the rows it kept, otherwise predictions are misaligned or the naming errors
     sample_names <- if(had_rownames) rownames(mm) else NULL
@@ -998,6 +1054,14 @@ predict.citodnn <- function(object,
       }) )
       Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
     }
+  }
+
+  given <- NULL
+  if(!is.null(Y)) {
+    m <- object$model_properties$masking
+    if(is.null(m) || length(m$resp) == 0) stop("'Y' needs a model whose 'masking' gives the response as input.", call. = FALSE)
+    given <- response_input(Y, m$responses[m$resp], m$responses, X$size(1))
+    X <- torch::torch_cat(list(X, torch::torch_tensor(given)), 2L)
   }
 
   if(is.null(Z)) {
@@ -1020,6 +1084,7 @@ predict.citodnn <- function(object,
   if(!is.null(sample_names)) rownames(pred) <- sample_names
 
   if(!return_embeddings) {
+    if(!is.null(given)) pred[, object$model_properties$masking$resp][!is.na(given)] <- NA
 
     if(!is.null(object$loss$responses)) {
       colnames(pred) <- object$loss$responses

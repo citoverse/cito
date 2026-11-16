@@ -67,6 +67,12 @@ build_custom = function(model_properties, classname) {
 
 
 build_dnn = function(model_properties) {
+  m = model_properties$masking
+  if(!is.null(m)) {
+    model_properties$masking = NULL
+    model_properties$input = m$n_x - length(m$pred) + 2L * (length(m$pred) + length(m$resp))
+    return(MaskedDNN(build_dnn(model_properties), m))
+  }
   if(!is.null(model_properties$custom)) return(build_custom(model_properties, classname = "DNN"))
 
   input = model_properties$input
@@ -339,21 +345,39 @@ build_mmn <- function(model_properties) {
   self = NULL
   create_mmn <- torch::nn_module(
     classname = "MMN",
-    initialize = function(subModules, fusion) {
+    initialize = function(subModules, fusion, masked) {
       self$subModules <- torch::nn_module_list(subModules)
       self$fusion <- fusion
+      self$masked <- masked
     },
+    # a masked modality is unknown in a row with NaN input or, in training, hidden at the row's rate
+    # p ~ U(0,1); its output is then zeroed and an indicator tells the fusion network
     forward = function(input, return_embeddings = FALSE) {
       i <- 1
       fusion_input <- list()
+      B <- input[[1]]$size(1)
+      p <- if(self$training && any(self$masked)) torch::torch_rand(B, device = input[[1]]$device) else NULL
       for(j in 1:length(self$subModules)) {
+        x <- input[[i]]
+        if(isTRUE(self$masked[j])) {
+          unknown <- if(x$is_floating_point()) torch::torch_isnan(x)$view(c(B, -1L))$any(2L) else torch::torch_zeros(B, dtype = torch::torch_bool(), device = x$device)
+          if(!is.null(p)) unknown <- unknown$logical_or(torch::torch_rand(B, device = x$device) < p)
+          if(x$is_floating_point()) x <- x$nan_to_num(0)
+        }
         if(inherits(self$subModules[[j]], "DNN") && self$subModules[[j]]$has_embeddings) {
-          fusion_input <- append(fusion_input, list(self$subModules[[j]](input[[i]], input[[i+1]])))
+          out <- self$subModules[[j]](x, input[[i+1]])
           i <- i + 2
         } else {
-          fusion_input <- append(fusion_input, list(self$subModules[[j]](input[[i]])))
+          out <- self$subModules[[j]](x)
           i <- i + 1
         }
+        if(isTRUE(self$masked[j])) {
+          out <- out$masked_fill(unknown$unsqueeze(2L), 0)
+          out <- list(out, unknown$unsqueeze(2L)$to(dtype = out$dtype))
+        } else {
+          out <- list(out)
+        }
+        fusion_input <- append(fusion_input, out)
       }
       return(self$fusion(torch::torch_cat(fusion_input, dim = 2L), return_embeddings = return_embeddings))
     }
@@ -380,11 +404,13 @@ build_mmn <- function(model_properties) {
     }
   }
 
-  model_properties$fusion$input <- fusion_input
+  masked <- mmn_masked(model_properties$masking)
+  if(is.null(masked)) masked <- rep(FALSE, length(subModules))
+  model_properties$fusion$input <- fusion_input + sum(masked)
 
   fusion <- build_dnn(model_properties$fusion)
 
-  net <- create_mmn(subModules, fusion)
+  net <- create_mmn(subModules, fusion, masked)
 
   return(net)
 }

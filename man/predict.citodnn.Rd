@@ -12,6 +12,7 @@
   device = NULL,
   batchsize = NULL,
   return_embeddings = FALSE,
+  Y = NULL,
   ...
 )
 
@@ -37,6 +38,10 @@
 \item{batchsize}{number of samples that are predicted at the same time}
 
 \item{return_embeddings}{Return embeddings instead of predictions}
+
+\item{Y}{Only for a model whose \code{masking} gives the response as input: a matrix of the observed
+response values to condition on, columns matched by name; \code{NA} cells are predicted, given cells
+are returned as \code{NA}. \code{NULL} predicts every response from the predictors alone.}
 
 \item{...}{additional arguments}
 
