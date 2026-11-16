@@ -211,3 +211,15 @@ testthat::test_that("mmn() accepts weights and predict() checks the shape of new
   # a weighted loss called without its weights aborted R from summary() and plot()
   testthat::expect_error(summary(m), "weights")
 })
+
+testthat::test_that("mmn() refuses streams of different length, e.g. after NA rows were dropped", {
+  testthat::skip_on_cran()
+  skip_if_no_torch()
+  set.seed(1)
+  a = data.frame(x = rnorm(60))
+  b = data.frame(z = rnorm(60))
+  b$z[1:5] = NA
+  y = matrix(rnorm(60))
+  testthat::expect_error(mmn(y ~ dnn(~ x, data = a) + dnn(~ z, data = b), dataList = list(y = y, a = a, b = b),
+                             epochs = 1L, plot = FALSE, verbose = FALSE), "different numbers of samples")
+})

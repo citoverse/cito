@@ -165,6 +165,7 @@ mmn <- function(formula,
   baseloss <- loss_obj$baseloss
 
   X <- format_input_data(formula[[3]], dataList)
+  check_newdata_shape(c(X, list(Y)), NULL)
 
   from_folder = FALSE
   if(any(sapply(X, is.character))) from_folder = TRUE
@@ -648,7 +649,7 @@ check_newdata_shape <- function(new, old) {
                                if(is.null(dim(x))) length(x) else dim(x)[1], numeric(1))
   if(length(unique(n)) > 1L)
     stop(paste0("The data streams have different numbers of samples (", paste(n, collapse = ", "),
-                "). Every stream must describe the same samples, in the same order."), call. = FALSE)
+                "). Every stream must describe the same samples, in the same order. Rows with NA in the data of a dnn() term are dropped; remove or impute them in every stream."), call. = FALSE)
   if(is.null(old) || length(old) != length(new)) return(invisible(TRUE))
   for(i in seq_along(new)) {
     if(is.character(new[[i]]) || is.character(old[[i]])) next

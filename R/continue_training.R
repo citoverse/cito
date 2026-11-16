@@ -322,6 +322,7 @@ continue_training.citommn <- function(model,
   Y <- eval(model$call$formula[[2]], envir = dataList)
 
   X <- format_input_data(model$call$formula[[3]], dataList)
+  check_newdata_shape(c(X, list(Y)), NULL)
 
   from_folder = FALSE
   if(any(sapply(X, is.character))) from_folder = TRUE
