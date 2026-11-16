@@ -92,6 +92,11 @@ test_that("a TIFF without georeferencing is addressed in pixels", {
   got = read_all(X)
   expect_equal(got[1, 1, , ], img[4:7, 4:7])
   expect_equal(got[2, 1, , ], img[9:12, 14:17])
+  # a file that changed its dimensions since raster_patches() is refused, not read at stale offsets
+  cito:::raster_close(f)
+  tiff::writeTIFF(img[1:10, 1:10] / 65535, f, bits.per.sample = 16L)
+  expect_error(read_all(X), "has changed")
+  cito:::raster_close(f)
 })
 
 test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
@@ -111,6 +116,15 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
   f = tempfile(fileext = ".rds")
   saveRDS(fit, f)
   expect_equal(predict(readRDS(f), newdata = X[1:7]), p, tolerance = 1e-6)
+  named = raster_patches(coords = `rownames<-`(coords[1:3, ], c("a", "b", "c")), like = X)
+  expect_equal(rownames(predict(fit, newdata = named)), c("a", "b", "c"))
+  # new sites without like =: other preprocessing warns, another window shape is refused
+  expect_warning(predict(fit, newdata = raster_patches(raster_file("raster.tif"), coords[1:3, ], extent = 100)), "like")
+  expect_warning(predict(fit, newdata = raster_patches(coords = coords[1:3, ], like = X)), NA)
+  expect_error(predict(fit, newdata = raster_patches(raster_file("raster.tif"), coords[1:3, ], extent = 80, center = 20000, scale = 10000)), "windows of")
+  expect_error(continue_training(fit, X = X[1:30], Y = Y[1:30, , drop = FALSE], epochs = 1L, verbose = FALSE), NA)
+  expect_error(cnn(X = X[1:40], Y = Y, architecture = arch, epochs = 1L, plot = FALSE, verbose = FALSE), "equal number")
+  expect_error(cnn(X = X, Y = Y, architecture = arch, epochs = 1L, num_workers = 2L, plot = FALSE, verbose = FALSE), NA)
 
   env = data.frame(a = rnorm(n))
   m = mmn(Y ~ cnn(X = X, architecture = arch) + dnn(~a, data = env),
@@ -120,11 +134,40 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
 })
 
 test_that("windows entirely outside the raster are flagged, a zero scale is refused", {
+  skip_if_no_torch()
   skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
   f = raster_file("raster.tif")
   expect_warning(raster_patches(f, cbind(c(11.5, 600500), c(48.9, 5300400)), extent = 100), "1 of 2 windows")
   expect_warning(raster_patches(f, centres(c(-9L, 99L), c(-9L, 79L)), extent = 100), NA)
   expect_error(raster_patches(f, centres(10L, 10L), extent = 100, scale = 0), "scale")
+})
+
+test_that("raster_patches() refuses inputs that would put constants or non-finite values into the network", {
+  skip_if_no_torch()
+  skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
+  f = raster_file("raster.tif")
+  xy = centres(c(10L, 20L), c(10L, 20L))
+  expect_error(raster_patches(f, xy, extent = 100, center = NA_real_), "center")
+  expect_error(raster_patches(f, xy, extent = 100, fill = NaN), "fill")
+  expect_error(raster_patches(f, cbind(Inf, 5300400), extent = 100), "finite")
+  expect_error(raster_patches(f, xy, extent = 1e7), "map units")
+  expect_error(raster_patches(f, xy, extent = 100, transform = function(x) torch::torch_cat(list(x, x), 1L)), "transform")
+  X = raster_patches(f, xy, extent = 100)
+  expect_error(X[c(1, NA)], "NA")
+  expect_error(raster_patches(f, xy, extent = 50, like = X), "drop raster, extent")
+  # a UTM coordinate on a degree-like grid lies far outside: a warning, not an integer overflow
+  expect_warning(raster_patches(f, cbind(1e15, 5300400), extent = 100), "1 of 1 windows")
+})
+
+test_that("float32 NoData is matched at float precision, and window positions round half up", {
+  skip_if_no_torch()
+  skip_if_not(isTRUE(cito:::cito_decoder_available()[3]), "cito built without libtiff")
+  # written by GDAL with NoData -3.4e38, which float32 cannot hold exactly; the cell at column 1, row 0 is NoData
+  X = raster_patches(raster_file("nodata_float32.tif"), cbind(1.5, 2.5), extent = 1)
+  expect_true(is.nan(torch::as_array(cito:::raw_windows(X, 1L))[1, 1, 1, 1]))
+  # sites on consecutive pixel centres with an even window move the window by one pixel each
+  X = raster_patches(raster_file("raster.tif"), cbind(600405 + 10 * 0:15, 5300405), extent = 40)
+  expect_equal(diff(cito:::raster_offsets(X, 1:16)$x0), rep(1L, 15))
 })
 
 test_that("loaders share one reader per raster", {
@@ -135,6 +178,9 @@ test_that("loaders share one reader per raster", {
   for(i in 1:20) read_all(X)
   expect_lte(length(ls(cito:::raster_readers)), before + 1L)
   expect_equal(read_all(X), read_all(X))
+  # the cache keeps at most 16 readers per process
+  for(k in 1:20) cito:::raster_reader(X, k)
+  expect_lte(length(ls(cito:::raster_readers)), 16L)
 })
 
 test_that("transform, standardize, fill and the missing-pixel channel are applied in that order", {

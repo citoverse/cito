@@ -209,7 +209,7 @@ continue_training.citocnn <- function(model,
                                       init_optimizer = TRUE,
                                       ...) {
 
-  checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X), checkmate::checkNull(X))
+  checkmate::assert(checkmate::checkArray(X, mode = "numeric", min.d = 3, max.d = 5, any.missing = FALSE), checkmate::check_character(X), checkmate::check_class(X, "citoraster"), checkmate::checkNull(X))
   checkmate::qassert(epochs, "X1[1,)")
 
   if(is.null(device)) device <- model$training_properties$device

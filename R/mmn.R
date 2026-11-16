@@ -660,13 +660,15 @@ coef.citommn <- function(object,...){
 # Without this a wrong image size surfaces as a torch matmul error from several frames down, and
 # streams of differing length are silently truncated to the shortest.
 check_newdata_shape <- function(new, old) {
-  n <- vapply(new, function(x) if(is.character(x)) length(list.files(x)) else
+  n <- vapply(new, function(x) if(is.character(x) && length(x) == 1L && dir.exists(x)) length(list.files(x)) else
                                if(is.null(dim(x))) length(x) else dim(x)[1], numeric(1))
   if(length(unique(n)) > 1L)
     stop(paste0("The data streams have different numbers of samples (", paste(n, collapse = ", "),
                 "). Every stream must describe the same samples, in the same order. Rows with NA in the data of a dnn() term are dropped; remove or impute them in every stream."), call. = FALSE)
   if(is.null(old) || length(old) != length(new)) return(invisible(TRUE))
   for(i in seq_along(new)) {
+    if(inherits(new[[i]], "citoraster"))
+      check_raster_newdata(new[[i]], old[[i]], if(inherits(old[[i]], "citoraster")) old[[i]]$shape else if(!lazy_input(old[[i]])) dim(old[[i]])[-1])
     if(lazy_input(new[[i]]) || lazy_input(old[[i]])) next
     d_new <- dim(new[[i]])
     d_old <- dim(old[[i]])

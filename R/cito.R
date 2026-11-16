@@ -19,6 +19,8 @@
 #'
 #' @section cito functions and typical workflow:
 #' - \code{\link{dnn}}: train deep neural network
+#' - \code{\link{cnn}}, \code{\link{mmn}}: train convolutional and multi-modal neural networks
+#' - \code{\link{raster_patches}}: train \code{cnn()} and \code{mmn()} on windows read from one large GeoTIFF
 #' - \code{\link{analyze_training}}: check for convergence by comparing training loss with baseline loss
 #' - \code{\link{continue_training}}: continues training of an existing cito dnn model for additional epochs
 #' - \code{\link{summary.citodnn}}: extract xAI metrics/effects to understand how predictions are made

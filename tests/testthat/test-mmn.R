@@ -222,4 +222,8 @@ testthat::test_that("mmn() refuses streams of different length, e.g. after NA ro
   y = matrix(rnorm(60))
   testthat::expect_error(mmn(y ~ dnn(~ x, data = a) + dnn(~ z, data = b), dataList = list(y = y, a = a, b = b),
                              epochs = 1L, plot = FALSE, verbose = FALSE), "different numbers of samples")
+  # a character response holds class labels, not a folder
+  yc = sample(c("u", "v", "w"), 60, TRUE)
+  testthat::expect_error(mmn(yc ~ dnn(~ x, data = a) + dnn(~ x, data = a2), dataList = list(yc = yc, a = a, a2 = a),
+                             loss = "cross-entropy", epochs = 1L, plot = FALSE, verbose = FALSE), NA)
 })

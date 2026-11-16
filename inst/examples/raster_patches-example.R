@@ -1,5 +1,5 @@
 \donttest{
-if(torch::torch_is_installed()){
+if(torch::torch_is_installed() && cito:::cito_decoder_available()[["tiff"]]){
 library(cito)
 
 # a small georeferenced raster stands in for a large satellite scene
