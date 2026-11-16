@@ -2,7 +2,7 @@
 title: "Transformer neural networks"
 author: "Maximilian Pichler"
 date: "`r Sys.Date()`"
-abstract: "tnn() is the transformer counterpart of mmn(). Every data source becomes a token, the columns of a matrix can become one token each, and a transformer encoder fuses them. Which token reads which, which cells are hidden during training, and which conditional questions are asked at prediction are all written as formulas. This vignette shows the two uses: a transformer instead of the fusion network of mmn(), and a response that enters as tokens, so that one fitted model answers unconditional and conditional queries."
+abstract: "tnn() is the transformer counterpart of mmn(). Every data source becomes a token, the columns of a matrix can become one token each, and a transformer encoder fuses them. Which token reads which, which cells are hidden during training, and which conditional questions are asked at prediction are all written as formulas. This vignette shows the two uses: a transformer instead of the fusion network of mmn(), and a response that enters as tokens, so that one fitted model answers unconditional and conditional queries, shown as a joint species distribution model of a butterfly community and compared with the same masked objective in dnn()."
 output:
  rmarkdown::html_vignette:
     toc: true
@@ -75,53 +75,81 @@ fit2 = tnn(y ~ dnn(~ temp + prec, data = climate) + dnn(~ ph + sand, data = soil
 plot(fit2, plot_type = "attention")
 ```
 
-## The response as tokens
+## The response as tokens: a joint species distribution model
 
-When the response enters as `tokens(Y)`, its columns are tokens too. Training hides a random fraction of the observed cells of every row, draws it anew in every minibatch, and scores only the hidden cells. A single fitted model then answers the unconditional question (every column from the other tokens) and conditional ones (some columns from the observed values of others). For a site x species matrix this is a joint species distribution model that can be queried with a partial survey.
+When the response enters as `tokens(Y)`, its columns are tokens too. Training hides a random fraction of the observed cells of every row, with a rate drawn per row from U(0,1) and anew in every minibatch, and scores only the hidden cells. A single fitted model then answers the unconditional question (every column from the other tokens) and conditional ones (some columns from the observed values of others). For a site x species matrix this is a joint species distribution model that can be queried with a partial survey.
+
+`butterflies` is a classical community dataset: presence-absence of 55 butterfly species of one taxon at 2609 sites in Great Britain, with four environmental covariates (Wilkinson et al. 2019, doi:10.1111/2041-210X.13106). We hold out 500 sites for testing; 20% of the remaining sites are used for early stopping.
 
 ```{r}
 set.seed(2)
-S = 10
-env = data.frame(temp = rnorm(n), prec = rnorm(n))
-latent = rnorm(n)
-Y = sapply(1:S, function(j) rbinom(n, 1, plogis((j - 5) / 3 * env$temp + (if(j <= 5) 1.5 else -1.5) * latent)))
-colnames(Y) = paste0("sp", 1:S)
+data(butterflies)
+Y = butterflies$PA
+env = as.data.frame(scale(butterflies$env))
+test = sample.int(nrow(Y), 500)
+fritillaries = grep("fritillary", colnames(Y), value = TRUE)
 
-fit3 = tnn(Y ~ dnn(~ temp + prec, data = env) + tokens(Y), dataList = list(Y = Y, env = env),
-           loss = "bernoulli", groups = list(first = paste0("sp", 1:5), second = paste0("sp", 6:10)),
-           epochs = 100L, validation = 0.2, plot = FALSE, verbose = FALSE)
+fit3 = tnn(Y ~ dnn(~ ., data = env, activation = "relu", dropout = 0.1) + tokens(Y),
+           dataList = list(Y = Y[-test, ], env = env[-test, ]), loss = "bernoulli",
+           layers = 1L, groups = list(fritillaries = fritillaries),
+           epochs = 300L, validation = 0.2, early_stopping = 20L, plot = FALSE, verbose = FALSE)
+fit3
 ```
 
-The unconditional prediction uses the environment only:
+On the test sites we reveal a random half of the observed species and predict the other half, once from the environment alone and once from the environment and the revealed species:
 
 ```{r}
-p0 = predict(fit3, type = "response")
+reveal = matrix(runif(500 * ncol(Y)) < 0.5, 500)
+Ycond = Y[test, ]
+Ycond[!reveal] = NA
+p0 = predict(fit3, newdata = list(env = env[test, ]), type = "response")
+p1 = predict(fit3, newdata = list(env = env[test, ]), Y = Ycond, type = "response")
+loss = function(p, y) {
+  p = pmin(pmax(p, 1e-7), 1 - 1e-7)
+  -mean(y * log(p) + (1 - y) * log(1 - p))
+}
+c(unconditional = loss(p0[!reveal], Y[test, ][!reveal]), conditional = loss(p1[!reveal], Y[test, ][!reveal]))
 ```
 
-A query `targets ~ given` predicts the first five species from the observed second five:
+Queries are formulas `targets ~ given` over species and groups. The fritillaries given all other species:
 
 ```{r}
-p1 = predict(fit3, Y = Y, query = first ~ second, type = "response")
-loss = function(p, y) -mean(y * log(p) + (1 - y) * log(1 - p))
-c(unconditional = loss(p0[, 1:5], Y[, 1:5]), given_second = loss(p1[, 1:5], Y[, 1:5]))
+p2 = predict(fit3, newdata = list(env = env[test, ]), Y = Y[test, ], query = fritillaries ~ . - fritillaries, type = "response")
+round(head(p2[, fritillaries[1:4]]), 3)
 ```
 
-The second half carries the unmeasured `latent` driver, so knowing it improves the prediction of the first half. `loo = TRUE` predicts every species from all others, and `summary()` reports the same gain for the whole response as the row "(given values)". The gain is not a measure of interactions between species: shared responses to unmeasured predictors, as here, produce it as well.
+`summary()` reports the conditional gain on the validation sites, for random masks from the training scheme, for the rarest species separately (absolute, and relative to the unconditional loss, because the loss of a rare species is small), and as a curve over the fraction of species revealed:
 
 ```{r}
 summary(fit3, n_permute = 5L)
 ```
 
-## Choosing what is trained
+The gain is not a measure of biotic interactions: shared responses to unmeasured predictors and spatial autocorrelation produce it as well.
 
-`masking = hidden ~ given` sorts the response columns: columns only on the left are always hidden, columns only on the right are never hidden, columns on both sides are hidden at random, columns on neither side are never used. The default `. ~ .` trains every conditional query; `. ~ 0` trains the unconditional prediction only; `first ~ second` trains exactly the query above. `predict()` answers only what the masking trained.
+### The same objective without attention
+
+The masked objective does not need a transformer. `dnn()` with the response named in `masking` gives the species to a multilayer perceptron as inputs, hides them at random with the same scheme and scores only the hidden ones (the MLP++ baseline of the masked community models). It answers the same queries, but every species pair interacts through fixed weights rather than through attention:
 
 ```{r}
-fit4 = tnn(Y ~ dnn(~ temp + prec, data = env) + tokens(Y), dataList = list(Y = Y, env = env),
-           loss = "bernoulli", groups = list(first = paste0("sp", 1:5), second = paste0("sp", 6:10)),
-           masking = first ~ second, epochs = 100L, validation = 0.2, plot = FALSE, verbose = FALSE)
-p2 = predict(fit4, Y = Y, query = first ~ second, type = "response")
-loss(p2[, 1:5], Y[, 1:5])
+fit_mlp = dnn(X = env[-test, ], Y = Y[-test, ], loss = "bernoulli", masking = ~ ., hidden = c(100L, 100L),
+              activation = "relu", optimizer = "adam", lr = 0.001, epochs = 300L, validation = 0.2,
+              early_stopping = 20L, plot = FALSE, verbose = FALSE)
+q0 = predict(fit_mlp, newdata = env[test, ], type = "response")
+q1 = predict(fit_mlp, newdata = env[test, ], Y = Ycond, type = "response")
+c(unconditional = loss(q0[!reveal], Y[test, ][!reveal]), conditional = loss(q1[!reveal], Y[test, ][!reveal]))
 ```
 
-Note that the losses above are in-sample; for an honest comparison, predict held-out rows with `newdata` and `Y`.
+These are single fits on one split of one dataset; they show that both models answer the query, not which one is better.
+
+## Choosing what is trained
+
+`masking = hidden ~ given` sorts the response columns: columns only on the left are always hidden, columns only on the right are never hidden, columns on both sides are hidden at random, columns on neither side are never used. The default `. ~ .` trains every conditional query; `. ~ 0` trains the unconditional prediction only; `fritillaries ~ . - fritillaries` trains exactly the query above, and `predict()` then answers only that query.
+
+```{r}
+fit4 = tnn(Y ~ dnn(~ ., data = env, activation = "relu", dropout = 0.1) + tokens(Y),
+           dataList = list(Y = Y[-test, ], env = env[-test, ]), loss = "bernoulli",
+           layers = 1L, groups = list(fritillaries = fritillaries), masking = fritillaries ~ . - fritillaries,
+           epochs = 300L, validation = 0.2, early_stopping = 20L, plot = FALSE, verbose = FALSE)
+p3 = predict(fit4, newdata = list(env = env[test, ]), Y = Y[test, ], query = fritillaries ~ . - fritillaries, type = "response")
+c(all_queries = loss(p2[, fritillaries], Y[test, fritillaries]), this_query = loss(p3[, fritillaries], Y[test, fritillaries]))
+```
