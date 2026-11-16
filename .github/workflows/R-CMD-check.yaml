@@ -97,6 +97,8 @@ jobs:
   # R CMD check skips every test without a torch backend, so the compiled image and raster readers
   # would never execute on macOS and Windows; this job installs torch and runs their tests there
   compiled-readers:
+    # after the check, so that it does not wait for a second macOS runner and time out
+    needs: R-CMD-check
     runs-on: ${{ matrix.os }}
     name: compiled readers, ${{ matrix.os }}
     strategy:
