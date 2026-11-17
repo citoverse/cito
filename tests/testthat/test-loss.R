@@ -213,13 +213,25 @@ testthat::test_that("nbinom exposes the dispersion parameter and can simulate", 
 })
 
 
-testthat::test_that("loss = 'binomial' points 0/1 responses at bernoulli", {
-  testthat::skip_on_cran()
-  testthat::skip_on_ci()
+testthat::test_that("loss = 'binomial' accepts a 0/1 vector and matches bernoulli", {
   skip_if_no_torch()
 
   df <- data.frame(X = rnorm(60), Y = rbinom(60, 1, 0.5))
-  testthat::expect_error(dnn(Y ~ X, data = df, loss = "binomial", epochs = 1L, verbose = FALSE, plot = FALSE),
-                         "bernoulli")
-  testthat::expect_error(dnn(Y ~ X, data = df, loss = "bernoulli", epochs = 1L, verbose = FALSE, plot = FALSE), NA)
+  torch::torch_manual_seed(1)
+  mb <- dnn(Y ~ X, data = df, loss = "binomial", epochs = 2L, verbose = FALSE, plot = FALSE)
+  torch::torch_manual_seed(1)
+  mr <- dnn(Y ~ X, data = df, loss = "bernoulli", epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(as.vector(predict(mb, type = "response")), as.vector(predict(mr, type = "response")), tolerance = 1e-5)
+  testthat::expect_error(dnn(Y ~ X, data = transform(df, Y = 1), loss = "binomial", epochs = 1L, verbose = FALSE, plot = FALSE), NA)
+})
+
+
+testthat::test_that("an ordered response stays a factor, ordered predictors become integers", {
+  skip_if_no_torch()
+
+  df <- data.frame(X = rnorm(60), Z = factor(sample(c("a", "b", "c"), 60, TRUE), ordered = TRUE),
+                   Y = factor(sample(c("low", "mid", "high"), 60, TRUE), levels = c("low", "mid", "high"), ordered = TRUE))
+  m <- dnn(Y ~ X + Z, data = df, loss = "cross-entropy", epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(ncol(predict(m, type = "response")), 3L)
+  testthat::expect_true(all(predict(m, type = "class") %in% levels(df$Y)))
 })

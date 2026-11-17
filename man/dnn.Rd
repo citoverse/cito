@@ -160,7 +160,7 @@ We support loss functions and likelihoods for different tasks:\tabular{llll}{
    cross-entropy \tab categorical cross entropy \tab Multi-class, species classification \tab \code{factor} or \code{character} (vector, or 1-column matrix/data.frame) \cr
    softmax \tab categorical cross entropy (deprecated alias for \code{cross-entropy}) \tab Multi-class, species classification \tab \code{factor} or \code{character} (vector, or 1-column matrix/data.frame) \cr
    gaussian \tab Normal likelihood \tab Regression, residual error is also estimated (similar to \code{stats::lm()}) \tab \code{numeric} (vector, matrix, or data.frame) \cr
-   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \tab \code{factor}/\code{character} (vector or 1-column matrix/data.frame), or \code{integer} matrix/data.frame with exactly 2 columns (successes, failures) \cr
+   binomial \tab Binomial likelihood \tab Classification/Logistic regression, mortality \tab \code{factor}/\code{character} (vector or 1-column matrix/data.frame), a 0/1 vector, or \code{integer} matrix/data.frame with exactly 2 columns (successes, failures) \cr
    bernoulli \tab Bernoulli likelihood \tab Classification, binary (0/1) outcome per observation \tab \code{integer} (0/1 only), vector, matrix, or data.frame \cr
    poisson \tab Poisson likelihood \tab Regression, count data, e.g. species abundances \tab \code{numeric} (vector, matrix, or data.frame); not enforced as integer \cr
    nbinom \tab Negative binomial likelihood \tab Regression, count data with dispersion parameter \tab \code{numeric} (vector, matrix, or data.frame); not enforced as integer \cr

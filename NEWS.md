@@ -23,9 +23,6 @@
 ## Breaking changes
 
 * models fitted with cito <= 1.1 cannot be used with 1.2, because the stored model structure changed; they are rejected with an informative message (refit them, or use the cito version they were fitted with)
-* loss = "binomial" no longer accepts a 0/1 vector. It now expects a factor/character response, or an
-  integer matrix/data.frame with two columns (successes, failures). Use loss = "bernoulli" for 0/1
-  presence-absence data, including multi-column 0/1 matrices.
 
 ## Changes in default behavior
 
@@ -40,6 +37,7 @@
 
 * predict(..., return_embeddings = TRUE, type = "response") no longer applies the inverse link to the embeddings
 * continue_training() refuses raster windows of another shape, and warns about other preprocessing, as predict() does
+* an ordered factor response is kept as a factor for the classification losses; only ordered predictors are converted to integers
 * dnn(X = , Y = , weights = ) with a weighted custom loss no longer fails with "no 'dimnames' attribute"
 * mmn() stops with an informative error when its data streams have different numbers of rows (e.g. after rows with NA were dropped from a dnn() term) instead of a torch indexing error
 * summary() and plot() of an mmn() fitted with weights stop with an error instead of crashing the R session; the weights are not stored with the model, and a weighted loss called without them aborted in torch

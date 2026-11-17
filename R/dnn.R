@@ -68,7 +68,7 @@
 #' | cross-entropy | categorical cross entropy |Multi-class, species classification| `factor` or `character` (vector, or 1-column matrix/data.frame) |
 #' | softmax | categorical cross entropy (deprecated alias for `cross-entropy`) | Multi-class, species classification | `factor` or `character` (vector, or 1-column matrix/data.frame) |
 #' | gaussian | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`)	| `numeric` (vector, matrix, or data.frame) |
-#' | binomial | Binomial likelihood | Classification/Logistic regression, mortality| `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with exactly 2 columns (successes, failures) |
+#' | binomial | Binomial likelihood | Classification/Logistic regression, mortality| `factor`/`character` (vector or 1-column matrix/data.frame), a 0/1 vector, or `integer` matrix/data.frame with exactly 2 columns (successes, failures) |
 #' | bernoulli | Bernoulli likelihood | Classification, binary (0/1) outcome per observation | `integer` (0/1 only), vector, matrix, or data.frame |
 #' | poisson | Poisson likelihood |Regression, count data, e.g. species abundances| `numeric` (vector, matrix, or data.frame); not enforced as integer |
 #' | nbinom | Negative binomial likelihood | Regression, count data with dispersion parameter | `numeric` (vector, matrix, or data.frame); not enforced as integer |

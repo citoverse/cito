@@ -291,11 +291,9 @@ assert_Y_classification <- function(Y) {
 }
 
 assert_Y_binomial <- function(Y) {
-  # 0/1 data was accepted by loss = "binomial" up to cito 1.1 and is now handled by "bernoulli"
-  if(is.numeric(Y) && is.null(dim(Y)) && all(stats::na.omit(Y) %in% c(0, 1))) {
-    stop("loss = 'binomial' expects a factor/character response or an integer matrix/data.frame with two columns (successes, failures). For a 0/1 response use loss = 'bernoulli'.")
-  }
-  checkmate::assert(checkmate::checkCharacter(Y, any.missing = TRUE, all.missing = FALSE),
+  # a 0/1 vector is one trial per observation, as in cito <= 1.1; biomod2 relies on it
+  checkmate::assert(checkmate::checkIntegerish(Y, lower = 0, upper = 1, any.missing = TRUE, all.missing = FALSE),
+                    checkmate::checkCharacter(Y, any.missing = TRUE, all.missing = FALSE),
                     checkmate::checkFactor(Y, any.missing = TRUE, all.missing = FALSE),
                     checkmate::checkMatrix(Y, mode = "character", any.missing = TRUE, all.missing = FALSE, ncols = 1),
                     checkmate::checkDataFrame(Y, types = "character", any.missing = TRUE, all.missing = FALSE, ncols = 1),
@@ -499,6 +497,8 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
 
           if(is.factor(Y)) {
             self$control_level <- levels(Y)[1]
+          } else if(is.numeric(Y)) {
+            self$control_level <- "0"
           } else if(is.vector(Y)) {
             self$control_level <- levels(factor(Y))[1]
           } else if(is.matrix(Y)) {
@@ -1357,9 +1357,11 @@ get_X_Y = function(formula, X, Y, data) {
     char_cols <- sapply(data, is.character)
     data[,char_cols] <- lapply(data[,char_cols,drop=F], as.factor)
 
-    if(any(sapply(data, is.ordered))) {
+    # only predictors: an ordered response stays a factor for the classification losses
+    ordered_cols = sapply(data, is.ordered) & !(names(data) %in% if(length(formula) == 3) all.vars(formula[[2]]))
+    if(any(ordered_cols)) {
       message("Ordered factors are transformed into integers.")
-      data[, sapply(data, is.ordered)] = sapply(data[, sapply(data, is.ordered)], as.integer)
+      data[, ordered_cols] = sapply(data[, ordered_cols, drop = FALSE], as.integer)
     }
 
   }

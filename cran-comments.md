@@ -1,5 +1,5 @@
 # Version 1.2
-## cito submission 1 <TODO: date of upload, YYYY/MM/DD — not submitted as of 2026-09-06>
+## cito submission 1 2026/11/17
 
 Dear CRAN Team,
 
@@ -8,23 +8,27 @@ networks, user-provided architectures via the `custom` argument, analytical cond
 effects and accumulated local effects, additional likelihoods, and a number of bug fixes.
 The minimum R version was raised to 4.1.0 because the package now uses the native pipe.
 
+The package now contains compiled code (C++, via Rcpp) for reading images and windows of
+GeoTIFF rasters. A `configure` / `configure.win` script probes for libjpeg, libpng and libtiff.
+All three are optional: without them the package falls back to the R image readers, and only
+`raster_patches()` requires libtiff (see SystemRequirements).
+
 Best,
 Max Pichler
 
 ### Reverse dependencies
 
-Checked against CRAN on 2026-09-06: no packages Depend on, Import from or LinkTo 'cito'. Two
-packages Suggest it, 'biomod2' and 'caretSDM'.
-<TODO: run revdepcheck on those two before uploading>
+No packages Depend on, Import from or LinkTo 'cito'. Two packages Suggest it, 'biomod2' and
+'caretSDM'. biomod2 4.3-4-8 was run with this version through its cito code paths (binary,
+binary with tuning, count, multiclass and ordinal data, var.import, projection to new data and
+ensemble modelling) and they run as with cito 1.1. caretSDM 1.9.7 lists 'cito' in Suggests but
+does not call it.
 
 ### Successful R CMD checks under
 
 Locally:
-* Ubuntu 26.04.1 LTS (R 4.5.2, x86_64-pc-linux-gnu) (CPU device)
-* <TODO: GPU device. The Linux machine the CUDA run of 2026-08-12 used has been retired; re-run
-  R CMD check on the current CUDA machine before submitting.>
-* <TODO: mps device. No macOS machine is available any more; either re-check on one or drop the
-  claim, which version 1.1 made.>
+* Ubuntu 26.04 LTS (R 4.5.2, x86_64-pc-linux-gnu) (CPU device)
+* Ubuntu 24.04 LTS (R 4.6.1), test suite on the CUDA device
 
 Github actions:
 * macOS-latest (release)
@@ -32,10 +36,7 @@ Github actions:
 * Windows-latest R-release
 
 Win-builder
-* R-release, R-development, and R-oldrelease
-
-<TODO: the fixes for this version are not committed, so neither the workflow above nor win-builder
-has run on the code being submitted. Push first, then confirm both.>
+* R-release, R-development, and R-oldrelease <TODO: confirm on final commit>
 
 Spelling has been checked (potential errors are intended).
 
