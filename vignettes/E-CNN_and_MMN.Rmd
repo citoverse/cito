@@ -123,12 +123,27 @@ predict(fit, newdata = raster_patches(coords = new_coords, like = X))
 - `as.array(X[i])` returns windows exactly as the network receives them, which is the quickest way to check the preprocessing.
 - In `mmn()`, every raster is its own `cnn()` term, so rasters of different resolution and coordinate system (e.g. 10 m imagery and 1 km climate) can be combined; each needs its own `raster_patches()` with coordinates in its own coordinate system.
 
-The limitations: one GeoTIFF per input (a mosaic of several tiles has to be merged into one file first), windows at the native resolution of the raster, and no time series. **How the raster is stored matters more than anything else**: a tiled GeoTIFF reads each window from the few tiles it overlaps, while a raster stored in strips (the GDAL default) decompresses full-width rows for every window. Write rasters for training as tiled files:
+- **Windows are placed on the pixel grid**: a coordinate rarely falls on a pixel corner, so the window is the block of whole pixels whose center is nearest to it, at most half a pixel away (5 m for 10 m imagery). Pixels are never interpolated, which would smooth the imagery and is meaningless for categorical rasters such as land cover; the half pixel is usually below the positional error of the observations.
+
+The limitations: one GeoTIFF per input (a mosaic of several tiles has to be merged into one file first), windows at the native resolution of the raster, and no time series.
+
+**How the raster is stored matters more than anything else.** A GeoTIFF is compressed in blocks, and every read decompresses whole blocks. Most rasters are delivered *in strips*, the GDAL default: every block is one or a few full-width rows. A window of 1 x 1 km from a Bavaria-wide 10 m raster (37800 pixels wide) then needs 100 strips and decompresses 3.8 million pixels to use 10000. A *tiled* raster is cut into square blocks instead, and the same window decompresses only the two to four tiles it overlaps. The values are identical, only their arrangement in the file differs, and converting a raster is a single step, done once before training:
 
 
 ``` r
-terra::writeRaster(r, "train.tif", gdal = c("TILED=YES", "COMPRESS=DEFLATE", "PREDICTOR=2"))  # PREDICTOR=3 for floating point
+# in R; PREDICTOR=3 for floating point rasters
+terra::writeRaster(terra::rast("s2_bavaria.tif"), "s2_bavaria_tiled.tif",
+                   gdal = c("TILED=YES", "BLOCKXSIZE=128", "BLOCKYSIZE=128", "COMPRESS=DEFLATE", "PREDICTOR=2"))
 ```
+
+or, for very large files, outside R with GDAL, which needs little memory:
+
+```
+gdal_translate -co TILED=YES -co BLOCKXSIZE=128 -co BLOCKYSIZE=128 \
+               -co COMPRESS=DEFLATE -co PREDICTOR=2 -co BIGTIFF=IF_SAFER s2_bavaria.tif s2_bavaria_tiled.tif
+```
+
+`X$info$tiled` and `X$info$block` show how a raster is stored, and `raster_patches()` warns about a large raster in strips. Tiles of about the window size work best: in a benchmark with 100 x 100 pixel windows from a 37800 x 39000 pixel raster with 10 bands, one reader thread delivered 3 windows per second from the raster in strips, 169 from 256 x 256 tiles and 401 from 128 x 128 tiles (DEFLATE compression in all three).
 
 #### Speed comparison
 
@@ -341,10 +356,10 @@ summary(model, n_permute = 5L)
 #> 
 #> ── Permutation importance of the data streams
 #>                                        Loss increase     SD  Share
-#> cnn(X = images, architecture = arch)          4.1081 0.3781 0.9954
-#> dnn(~Temp + Precip, data = covariates)        0.0189 0.0023 0.0046
+#> cnn(X = images, architecture = arch)          4.1680 0.3796 0.9949
+#> dnn(~Temp + Precip, data = covariates)        0.0214 0.0031 0.0051
 #> 
-#> Baseline loss 0.0387, 5 permutations per stream. A stream that contributes little
+#> Baseline loss 0.0396, 5 permutations per stream. A stream that contributes little
 #> can come out negative by chance; compare the estimate against its SD before reading it.
 ```
 
@@ -373,11 +388,11 @@ newdata <- list(images = shapes$data[1:5, , , , drop = FALSE],
                 covariates = covariates[1:5, ])
 predict(model, newdata = newdata)
 #>        [,1]
-#> 1 3.2085457
-#> 2 3.2149839
-#> 3 0.3263950
-#> 4 0.1721699
-#> 5 0.3189309
+#> 1 3.2868071
+#> 2 3.3000576
+#> 3 0.3898338
+#> 4 0.1815639
+#> 5 0.2808653
 ```
 
 Note:

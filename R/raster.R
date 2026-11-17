@@ -15,7 +15,9 @@
 #'   y are pixel units from the top-left corner of the image, y pointing down, so that the center of
 #'   the top-left pixel is (0.5, 0.5).
 #' @param extent Side length of the window in map units, rounded to whole pixels at the
-#'   resolution of \code{raster} (halves round up). Window positions are rounded the same way.
+#'   resolution of \code{raster} (halves round up). The window is placed on the pixel grid of the
+#'   raster: its center lies at most half a pixel from \code{coords}, and pixel values are never
+#'   interpolated.
 #' @param center,scale \code{NULL}, or one value per channel (or a single value for all channels).
 #'   Every channel is transformed as \code{(value - center) / scale}, after \code{transform}.
 #' @param standardize Logical. \code{TRUE} estimates \code{center} and \code{scale} as the mean and
@@ -40,13 +42,21 @@
 #'   the training windows. Only \code{coords} may be given together with \code{like}.
 #'
 #' @details
-#' Reading speed depends almost entirely on how the raster is stored. A tiled GeoTIFF reads
-#' a window from the few tiles it overlaps; a raster stored in strips (the GeoTIFF default)
-#' decompresses whole strips of full-width rows, which was about 200 times slower for a
-#' 20000 x 20000 pixel raster in our benchmark. Write rasters for training as tiled files, e.g.
-#' \code{terra::writeRaster(r, "x.tif", gdal = c("TILED=YES", "COMPRESS=DEFLATE", "PREDICTOR=2"))},
-#' with \code{"PREDICTOR=3"} for floating point rasters. Only the first image of the file is read
-#' (no overviews).
+#' Reading speed depends almost entirely on how the raster is stored. Every read decompresses whole
+#' storage blocks. A raster stored in strips (the GeoTIFF default) has blocks of full-width rows, so a
+#' window of 100 x 100 pixels from a 37800 pixel wide raster decompresses 100 rows of 37800 pixels; a tiled
+#' raster has square blocks, and a window decompresses only the few tiles it overlaps. The gain grows with
+#' the width of the raster: in our benchmarks a tiled copy was 6 to 7 times faster for rasters 10000 to
+#' 12000 pixels wide and 50 to 500 times faster for one 37800 pixels wide, and tiles of about the window size were
+#' best (128 x 128 pixel tiles about twice as fast as 256 x 256 for windows of 100 pixels). Whether a file
+#' is tiled is shown by \code{X$info$tiled} and \code{X$info$block}, and a large raster in strips gives a
+#' warning. Converting it is a single step, done once before training:
+#' \code{terra::writeRaster(terra::rast("x.tif"), "x_tiled.tif", gdal = c("TILED=YES", "BLOCKXSIZE=128",
+#' "BLOCKYSIZE=128", "COMPRESS=DEFLATE", "PREDICTOR=2"))}, with \code{"PREDICTOR=3"} for floating point
+#' rasters, or outside R, with less memory, \code{gdal_translate -co TILED=YES -co BLOCKXSIZE=128
+#' -co BLOCKYSIZE=128 -co COMPRESS=DEFLATE -co PREDICTOR=2 -co BIGTIFF=IF_SAFER x.tif x_tiled.tif}.
+#' The values are unchanged; only their arrangement in the file differs. Only the first image of the file
+#' is read (no overviews).
 #' The number of reader threads is \code{num_threads} of \code{\link{cnn}}.
 #'
 #' Missing pixels are those outside the raster, \code{NaN}, and pixels equal to the NoData value of
@@ -103,7 +113,8 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, s
          signif(abs(gt[2]), 3), ")?", call. = FALSE)
   if(!info$tiled && as.numeric(info$width) * info$height > 4e6)
     warning(raster, " is stored in strips, so every window decompresses full-width rows. ",
-            "A tiled copy reads windows about 200 times faster, see ?raster_patches.", call. = FALSE)
+            "A tiled copy reads windows much faster (6 to 500 times in our benchmarks, more for wider rasters) and is made in one step, ",
+            "e.g. gdal_translate -co TILED=YES -co BLOCKXSIZE=128 -co BLOCKYSIZE=128 -co COMPRESS=DEFLATE in.tif out.tif; see ?raster_patches.", call. = FALSE)
   out = structure(list(raster = normalizePath(raster), coords = coords, size = as.integer(size), center = NULL, scale = NULL,
                        transform = transform, fill = fill, na_channel = na_channel, info = info),
                   class = "citoraster")
