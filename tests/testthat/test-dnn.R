@@ -197,3 +197,12 @@ testthat::test_that("DNN hyperparameter tuning",{
 
   })
 
+
+testthat::test_that("embeddings are returned without the inverse link", {
+  testthat::skip_on_cran()
+  skip_if_no_torch()
+  set.seed(1)
+  d = data.frame(y = rbinom(50, 1, 0.5), a = rnorm(50), b = rnorm(50))
+  m = dnn(y ~ ., data = d, loss = "bernoulli", hidden = 5L, epochs = 2L, plot = FALSE, verbose = FALSE)
+  testthat::expect_equal(predict(m, return_embeddings = TRUE, type = "response"), predict(m, return_embeddings = TRUE, type = "link"))
+})

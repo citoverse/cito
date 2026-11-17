@@ -233,6 +233,8 @@ continue_training.citocnn <- function(model,
   weights_r = weights
   Y <- model$loss$format_Y(Y)
 
+  if(new_validation_split) check_raster_newdata(X, model$data$X, model$model_properties$input)
+
   if(lazy_input(X)) {
     X <- expand_input(X)
     from_folder = TRUE

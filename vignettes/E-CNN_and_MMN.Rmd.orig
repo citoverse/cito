@@ -126,11 +126,11 @@ predict(fit, newdata = raster_patches(coords = new_coords, like = X))
 - `as.array(X[i])` returns windows exactly as the network receives them, which is the quickest way to check the preprocessing.
 - In `mmn()`, every raster is its own `cnn()` term, so rasters of different resolution and coordinate system (e.g. 10 m imagery and 1 km climate) can be combined; each needs its own `raster_patches()` with coordinates in its own coordinate system.
 
-- **Windows are placed on the pixel grid**: a coordinate rarely falls on a pixel corner, so the window is the block of whole pixels whose center is nearest to it, at most half a pixel away (5 m for 10 m imagery). Pixels are never interpolated, which would smooth the imagery and is meaningless for categorical rasters such as land cover; the half pixel is usually below the positional error of the observations.
+- **Windows are placed on the pixel grid**: a coordinate rarely falls on a pixel corner, so the window is the block of whole pixels whose center is nearest to it, at most half a pixel away (5 m for 10 m imagery). Pixels are never interpolated, which would smooth the imagery and is meaningless for categorical rasters such as land cover; for fine imagery, the half pixel is usually below the positional error of the observations. With an even number of pixels per window, a site on a pixel center is always half a pixel off in the same direction; an odd number avoids that.
 
 The limitations: one GeoTIFF per input (a mosaic of several tiles has to be merged into one file first), windows at the native resolution of the raster, and no time series.
 
-**How the raster is stored matters more than anything else.** A GeoTIFF is compressed in blocks, and every read decompresses whole blocks. Most rasters are delivered *in strips*, the GDAL default: every block is one or a few full-width rows. A window of 1 x 1 km from a Bavaria-wide 10 m raster (37800 pixels wide) then needs 100 strips and decompresses 3.8 million pixels to use 10000. A *tiled* raster is cut into square blocks instead, and the same window decompresses only the two to four tiles it overlaps. The values are identical, only their arrangement in the file differs, and converting a raster is a single step, done once before training:
+**How the raster is stored matters more than anything else.** A GeoTIFF is compressed in blocks, and every read decompresses whole blocks. Most rasters are delivered *in strips*, the GDAL default: every block is one or a few full-width rows. A window of 1 x 1 km from a Bavaria-wide 10 m raster (37800 pixels wide) then needs 100 strips and decompresses 3.8 million pixels to use 10000. A *tiled* raster is cut into square blocks instead, and the same window decompresses only the one to four tiles it overlaps. The values are identical, only their arrangement in the file differs, and converting a raster is a single step, done once before training:
 
 ```{r, eval=FALSE}
 # in R; PREDICTOR=3 for floating point rasters
@@ -145,7 +145,7 @@ gdal_translate -co TILED=YES -co BLOCKXSIZE=128 -co BLOCKYSIZE=128 \
                -co COMPRESS=DEFLATE -co PREDICTOR=2 -co BIGTIFF=IF_SAFER s2_bavaria.tif s2_bavaria_tiled.tif
 ```
 
-`X$info$tiled` and `X$info$block` show how a raster is stored, and `raster_patches()` warns about a large raster in strips. Tiles of about the window size work best: in a benchmark with 100 x 100 pixel windows from a 37800 x 39000 pixel raster with 10 bands, one reader thread delivered 3 windows per second from the raster in strips, 169 from 256 x 256 tiles and 401 from 128 x 128 tiles (DEFLATE compression in all three).
+`X$info$tiled` and `X$info$block` show how a raster is stored, and `raster_patches()` warns about a large raster in strips. Tiles of about the window size work best: in a benchmark with 100 x 100 pixel windows from a 37800 x 39000 pixel raster with 10 bands, one reader thread delivered 3 windows per second from the raster in strips, 169 from 256 x 256 tiles and 401 from 128 x 128 tiles (LZW-compressed strips, DEFLATE-compressed tiles; measured with a prototype of the reader).
 
 #### Speed comparison
 
@@ -166,18 +166,18 @@ We measured how many images per second each route delivers, once for the data lo
 
 | Route | Loader, 1 thread | Loader, 8 threads | `cnn()`, 8 threads |
 |---|---|---|---|
-| A. Array in memory | 28183 | – | 1895 |
+| A. Array in memory | 28183 | – | 1895\* |
 | B. Folder, TIFF | 784 | 1915 | 1101 |
 | C. Raster, tiled | 159 | 1030 | 948 |
 | C. Raster, stripped | 23 | 155 | – |
 
-\*Includes converting the 2.4 GB array to a tensor at the start of the fit.
+\*Includes converting the array to a tensor at the start of the fit. Every cell is a single run on a shared machine, so differences below a factor of about 1.5 between the `cnn()` rates are not resolved.
 
 Three things follow:
 
-1. With a few threads, every route on disk delivers batches about as fast as a small CNN on one GPU consumes them for RGB images, and within a factor of two for the 10-band images. The network, not the loader, sets the pace, and a larger network shifts this further towards the network.
-2. Reading from a tiled raster is 2-5 times slower than reading pre-extracted TIFF files at the same thread count, and a raster stored in strips is another 4-7 times slower than the tiled one. Use tiled rasters.
-3. `num_threads` (default 4) matters for routes B and C: one thread leaves most of the speed unused. Do not set it higher than the number of physical cores.
+1. For the RGB images, every route on disk delivers batches with a few threads about as fast as a small CNN on one GPU consumes them, so the network sets the pace. For the 10-band images, the fit from disk or raster runs at about half the rate of the fit from memory: there the loader sets the pace. A larger network shifts this towards the network.
+2. Reading from a tiled raster is 2-5 times slower than reading pre-extracted TIFF files at the same thread count, and a raster stored in strips is another 2-7 times slower than the tiled one, more for wider rasters. Use tiled rasters.
+3. `num_threads` of `cnn()` (default 4) matters for routes B and C: one thread leaves most of the speed unused. Do not set it higher than the number of physical cores. `mmn()` uses 4 threads.
 
 The numbers are for files in the operating system's cache. When a large raster is read from a hard disk for the first time, every window costs a disk seek, and the loader drops to a few dozen windows per second; reading the file once beforehand (or keeping it on an SSD) avoids this.
 
@@ -185,7 +185,7 @@ The numbers are for files in the operating system's cache. When a large raster i
 
 - The data fit comfortably into memory, or they are not images (time series, voxels): **A**.
 - Images exist as files anyway (photographs, camera traps, spectrograms), or the dataset is larger than memory: **B**.
-- Observations are points and the predictors are rasters, or you want to predict a map: **C**. It also avoids that windows of validation sites are standardized with their own statistics.
+- Observations are points and the predictors are rasters, or you want to predict a map: **C**. With `like =` for validation and test sites built outside `cnn()`, their windows are scaled with the statistics of the training windows only.
 
 ### Preparing an array
 

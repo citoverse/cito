@@ -2,7 +2,7 @@
 #'
 #' This function trains a Convolutional Neural Network (CNN) on the provided input data `X` and the target data `Y` using the specified architecture, loss function, and optimizer.
 #'
-#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. Windows of one large raster are given with \code{\link{raster_patches}}.
+#' @param X An array of input data with a minimum of 3 and a maximum of 5 dimensions. The first dimension represents the samples, the second dimension represents the channels, and the third to fifth dimensions represent the input dimensions. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, unsigned integer images are divided by their maximum value (255 for 8 bit, 65535 for 16 bit), and floating point and signed integer TIFFs are passed unchanged. Windows of one large raster are given with \code{\link{raster_patches}}.
 #' @param Y The target data. The allowed formats of the target data differ between loss functions. See \code{\link{dnn}} for more information.
 #' @param architecture An object of class 'citoarchitecture'. See \code{\link{create_architecture}} for more information. Ignored if custom is provided.
 #' @param custom custom network architecture, replaces the architecture argument. Either an \code{\link[torch]{nn_module}} generator, an instantiated nn_module, or a list(module = generator, args = list(...), output_dim = integer). If the initialize method has arguments named input or output, they are filled in automatically (input = input shape, e.g. c(channels, height, width), output = output dimension expected by the loss). The forward method receives a float tensor of shape (batch, input_shape) and must return a tensor of shape (batch, output). See \code{\link{dnn}} for details
@@ -290,7 +290,7 @@ cnn <- function(X,
 #' This function generates predictions from a Convolutional Neural Network (CNN) model that was created using the \code{\link{cnn}} function.
 #'
 #' @param object a model created by \code{\link{cnn}}.
-#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, the images will be normalized by dividing them by 255.0. Windows of a raster are given with \code{\link{raster_patches}} (use its \code{like} argument, so that they carry the preprocessing of the training windows); they are not rescaled. If \code{NULL}, the function uses the data the model was trained on.
+#' @param newdata A multidimensional array representing the new data for which predictions are to be made. The dimensions of \code{newdata} should match those of the training data, except for the first dimension which represents the number of samples. As an alternative, you can provide the relative or absolute path to the folder containing the images. In this case, unsigned integer images are divided by their maximum value (255 for 8 bit, 65535 for 16 bit), and floating point and signed integer TIFFs are passed unchanged. Windows of a raster are given with \code{\link{raster_patches}} (use its \code{like} argument, so that they carry the preprocessing of the training windows); they are not rescaled. If \code{NULL}, the function uses the data the model was trained on.
 #' @param type A character string specifying the type of prediction to be made. Options are:
 #' \itemize{
 #'   \item \code{"link"}: Scale of the linear predictor.
@@ -328,7 +328,8 @@ predict.citocnn <- function(object,
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-  if(type %in% c("response", "class")) {
+  # embeddings are hidden-layer activations, to which no inverse link applies
+  if(type %in% c("response", "class") && !return_embeddings) {
     link <- object$loss$invlink
   }else{
     link = function(a) a

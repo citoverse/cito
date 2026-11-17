@@ -18,10 +18,11 @@
 * blocked resampling: config_tuning(blocking = ) for the CV folds and dnn(bootstrap_blocking_variable = ) for the bootstrap
 * ce and ce_method arguments of dnn(): conditional effects are computed once at the end of the training and stored on the model, so summary() and ALE() do not have to recompute them. ce = <number> sets the number of observations used for them
 * predict(..., batchsize = ) and predict(..., return_embeddings = )
-* raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch while the previous batch trains, instead of pre-extracted image files; preprocessing (transform, center/scale or standardize, fill and a missing-pixel channel) is part of the raster input, and like = reuses it for new sites; predict() refuses raster windows of another shape and warns when their preprocessing differs from the training windows. as.array() returns the preprocessed windows. Requires libtiff
+* raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch (with libtiff 4.5 or newer while the previous batch trains), instead of pre-extracted image files; preprocessing (transform, center/scale or standardize, fill and a missing-pixel channel) is part of the raster input, and like = reuses it for new sites; predict() refuses raster windows of another shape and warns when their preprocessing differs from the training windows. as.array() returns the preprocessed windows. num_threads of cnn() sets the number of threads of the compiled image decoder and the raster reader. Requires libtiff
 
 ## Breaking changes
 
+* models fitted with cito <= 1.1 cannot be used with 1.2, because the stored model structure changed; they are rejected with an informative message (refit them, or use the cito version they were fitted with)
 * loss = "binomial" no longer accepts a 0/1 vector. It now expects a factor/character response, or an
   integer matrix/data.frame with two columns (successes, failures). Use loss = "bernoulli" for 0/1
   presence-absence data, including multi-column 0/1 matrices.
@@ -37,6 +38,8 @@
 
 ## Bug fixes
 
+* predict(..., return_embeddings = TRUE, type = "response") no longer applies the inverse link to the embeddings
+* continue_training() refuses raster windows of another shape, and warns about other preprocessing, as predict() does
 * dnn(X = , Y = , weights = ) with a weighted custom loss no longer fails with "no 'dimnames' attribute"
 * mmn() stops with an informative error when its data streams have different numbers of rows (e.g. after rows with NA were dropped from a dnn() term) instead of a torch indexing error
 * summary() and plot() of an mmn() fitted with weights stop with an error instead of crashing the R session; the weights are not stored with the model, and a weighted loss called without them aborted in torch
@@ -88,7 +91,6 @@
 * cnn() gains num_workers for folder inputs. The dataset no longer stores tensors, which previously made torch's parallel dataloader fail with "external pointer is not valid"
 * weighted cross-validation in the hyperparameter tuning subsets matrix weights by row
 * print() of a citoarchitecture without an input_shape no longer errors
-* models fitted with cito <= 1.1 are rejected with an informative message instead of an internal error
 * cito no longer registers head() methods for formulas, calls and names
 
 

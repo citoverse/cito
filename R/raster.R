@@ -46,8 +46,8 @@
 #' storage blocks. A raster stored in strips (the GeoTIFF default) has blocks of full-width rows, so a
 #' window of 100 x 100 pixels from a 37800 pixel wide raster decompresses 100 rows of 37800 pixels; a tiled
 #' raster has square blocks, and a window decompresses only the few tiles it overlaps. The gain grows with
-#' the width of the raster: in our benchmarks a tiled copy was 6 to 7 times faster for rasters 10000 to
-#' 12000 pixels wide and 50 to 500 times faster for one 37800 pixels wide, and tiles of about the window size were
+#' the width of the raster: in our benchmarks a tiled copy was about 2 to 7 times faster for rasters 10000
+#' to 12000 pixels wide and roughly 35 to 125 times faster for one 37800 pixels wide, and tiles of about the window size were
 #' best (128 x 128 pixel tiles about twice as fast as 256 x 256 for windows of 100 pixels). Whether a file
 #' is tiled is shown by \code{X$info$tiled} and \code{X$info$block}, and a large raster in strips gives a
 #' warning. Converting it is a single step, done once before training:
@@ -57,7 +57,7 @@
 #' -co BLOCKYSIZE=128 -co COMPRESS=DEFLATE -co PREDICTOR=2 -co BIGTIFF=IF_SAFER x.tif x_tiled.tif}.
 #' The values are unchanged; only their arrangement in the file differs. Only the first image of the file
 #' is read (no overviews).
-#' The number of reader threads is \code{num_threads} of \code{\link{cnn}}.
+#' The number of reader threads is \code{num_threads} of \code{\link{cnn}}; \code{\link{mmn}} uses 4.
 #'
 #' Missing pixels are those outside the raster, \code{NaN}, and pixels equal to the NoData value of
 #' the GDAL_NODATA tag. Masks, alpha bands (read as an ordinary band), and scale and offset metadata
@@ -113,7 +113,7 @@ raster_patches = function(raster, coords, extent, center = NULL, scale = NULL, s
          signif(abs(gt[2]), 3), ")?", call. = FALSE)
   if(!info$tiled && as.numeric(info$width) * info$height > 4e6)
     warning(raster, " is stored in strips, so every window decompresses full-width rows. ",
-            "A tiled copy reads windows much faster (6 to 500 times in our benchmarks, more for wider rasters) and is made in one step, ",
+            "A tiled copy reads windows much faster (2 to 125 times in our benchmarks, more for wider rasters) and is made in one step, ",
             "e.g. gdal_translate -co TILED=YES -co BLOCKXSIZE=128 -co BLOCKYSIZE=128 -co COMPRESS=DEFLATE in.tif out.tif; see ?raster_patches.", call. = FALSE)
   out = structure(list(raster = normalizePath(raster), coords = coords, size = as.integer(size), center = NULL, scale = NULL,
                        transform = transform, fill = fill, na_channel = na_channel, info = info),

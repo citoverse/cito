@@ -969,7 +969,8 @@ predict.citodnn <- function(object,
 
   if(is.null(batchsize)) batchsize <- object$training_properties$batchsize
 
-  if(type %in% c("response", "class")) {
+  # embeddings are hidden-layer activations, to which no inverse link applies
+  if(type %in% c("response", "class") && !return_embeddings) {
     link <- object$loss$invlink
   }else{
     link = function(a) a

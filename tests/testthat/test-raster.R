@@ -123,6 +123,8 @@ test_that("cnn and mmn train, predict and survive saveRDS on raster inputs", {
   expect_warning(predict(fit, newdata = raster_patches(coords = coords[1:3, ], like = X)), NA)
   expect_error(predict(fit, newdata = raster_patches(raster_file("raster.tif"), coords[1:3, ], extent = 80, center = 20000, scale = 10000)), "windows of")
   expect_error(continue_training(fit, X = X[1:30], Y = Y[1:30, , drop = FALSE], epochs = 1L, verbose = FALSE), NA)
+  expect_error(continue_training(fit, X = raster_patches(raster_file("raster.tif"), coords[1:30, ], extent = 80, center = 20000, scale = 10000),
+                                 Y = Y[1:30, , drop = FALSE], epochs = 1L, verbose = FALSE), "windows of")
   expect_error(cnn(X = X[1:40], Y = Y, architecture = arch, epochs = 1L, plot = FALSE, verbose = FALSE), "equal number")
   expect_error(cnn(X = X, Y = Y, architecture = arch, epochs = 1L, num_workers = 2L, plot = FALSE, verbose = FALSE), NA)
 
