@@ -198,6 +198,15 @@ check_raster_newdata = function(new, old, input = NULL) {
   invisible(TRUE)
 }
 
+#' @param x A \code{citoraster}.
+#' @param ... Not used.
+#' @return \code{as.array()}: the windows as the network receives them, an array
+#'   \code{[windows, channels, height, width]} with all preprocessing applied. It reads every window
+#'   of \code{x}, so subset first, e.g. \code{as.array(X[1:16])}.
+#' @rdname raster_patches
+#' @export
+as.array.citoraster = function(x, ...) torch::as_array(preprocess_windows(x, raw_windows(x, seq_len(length(x)))))
+
 #' @export
 length.citoraster = function(x) nrow(x$coords)
 

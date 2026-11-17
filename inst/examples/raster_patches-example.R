@@ -10,6 +10,8 @@ coords = cbind(x = runif(200, 600100, 600900), y = runif(200, 5300100, 5300700))
 X = raster_patches(f, coords, extent = 200, transform = function(x) torch::torch_log1p(x),
                    standardize = TRUE, na_channel = TRUE)
 X
+# the first four windows as the network sees them: [windows, channels, height, width]
+dim(as.array(X[1:4]))
 Y = matrix(rnorm(200), ncol = 1)
 
 nn.fit = cnn(X = X, Y = Y, loss = "mse", epochs = 2L, batchsize = 32L,

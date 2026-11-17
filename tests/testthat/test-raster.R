@@ -200,6 +200,7 @@ test_that("transform, standardize, fill and the missing-pixel channel are applie
   # a window half outside: the outside pixels are fill and flagged in the extra channel
   X = suppressWarnings(raster_patches(f, centres(-5L, 10L), extent = 100, center = 10000, scale = 100, fill = -9, na_channel = TRUE))
   got = read_all(X)
+  expect_equal(as.array(X), got)
   expect_equal(dim(got), c(1, 4, 10, 10))
   expect_true(all(got[1, 1:3, , 1:5] == -9))
   expect_true(all(got[1, 4, , 1:5] == 1) && all(got[1, 4, , 6:10] == 0))

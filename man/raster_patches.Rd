@@ -2,6 +2,7 @@
 % Please edit documentation in R/raster.R
 \name{raster_patches}
 \alias{raster_patches}
+\alias{as.array.citoraster}
 \title{Image patches cut from one large raster}
 \usage{
 raster_patches(
@@ -16,6 +17,8 @@ raster_patches(
   na_channel = FALSE,
   like = NULL
 )
+
+\method{as.array}{citoraster}(x, ...)
 }
 \arguments{
 \item{raster}{Path to a GeoTIFF. Any number of bands; 8, 16 and 32 bit integer and 32 and
@@ -58,9 +61,17 @@ missing and 0 otherwise, so that the network can tell an imputed pixel from an o
 \item{like}{A \code{citoraster} whose raster, extent and preprocessing are reused for new
 \code{coords}, e.g. to predict at new sites with the \code{center} and \code{scale} estimated on
 the training windows. Only \code{coords} may be given together with \code{like}.}
+
+\item{x}{A \code{citoraster}.}
+
+\item{...}{Not used.}
 }
 \value{
 An object of class \code{citoraster}, which can be subset by observation with \code{[}.
+
+\code{as.array()}: the windows as the network receives them, an array
+\code{[windows, channels, height, width]} with all preprocessing applied. It reads every window
+of \code{x}, so subset first, e.g. \code{as.array(X[1:16])}.
 }
 \description{
 Describes, for every observation, a square window of a large GeoTIFF centered on the
@@ -107,6 +118,8 @@ coords = cbind(x = runif(200, 600100, 600900), y = runif(200, 5300100, 5300700))
 X = raster_patches(f, coords, extent = 200, transform = function(x) torch::torch_log1p(x),
                    standardize = TRUE, na_channel = TRUE)
 X
+# the first four windows as the network sees them: [windows, channels, height, width]
+dim(as.array(X[1:4]))
 Y = matrix(rnorm(200), ncol = 1)
 
 nn.fit = cnn(X = X, Y = Y, loss = "mse", epochs = 2L, batchsize = 32L,
