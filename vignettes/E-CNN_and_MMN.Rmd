@@ -1,7 +1,7 @@
 ---
 title: "Convolutional neural networks and multi-modal neural networks"
 author: "Maximilian Pichler"
-date: "2026-10-17"
+date: "2026-11-17"
 abstract: "This vignette demonstrates the use of CITO for complex data (CNN) and a mixture of complex and tabular data (MMN). CNN can be used for various tasks, such as image classification ('Is this image a dog or a cat?') and ecological tasks, such as multi-deep species distribution models (deepSDM), where the input could be an environmental time series or remote sensing data and the goal is to predict species occurrences. MMN extends CNN by combining complex data, such as satellite images, and tabular data, such as environmental or spatial information. Furthermore, MMN can combine complex data of different dimensions and scales (e.g. LiDAR 3D inputs and coloured 2D optical satellite images). This vignette explains how to prepare the data and suggests an example project structure."
 output:
  rmarkdown::html_vignette:
@@ -35,7 +35,7 @@ Note: Cito currently supports up to three-dimensional inputs (excluding the samp
 
 ### The format of the inputs we expect in cito
 
-The `cnn()` and `mmn()` functions both expect their X argument to be a single array, with the first dimension indexing samples. The subsequent dimensions then correspond to the data structure of each sample. Specifically:
+Whichever way the images reach cito (see the next section), the network receives them as one array per mini-batch, with the first dimension indexing samples. The subsequent dimensions then correspond to the data structure of each sample. Specifically:
 
 - Grayscale images: $[\text{n_samples}, height, width]$
 - RGB images: $[\text{n_samples}, 3, height, width]$
@@ -44,10 +44,138 @@ The `cnn()` and `mmn()` functions both expect their X argument to be a single ar
 
 It is crucial that the order of samples in X matches the order of observations in your response (target) vector (or matrix for multiple response) y.
 
-Ultimately, the only requirement for cito is that it has these multidimensional arrays as inputs. Please note that there are several ways in which we can build them; the following workflow is just one example.
+The rows of X, whatever form it takes, must be in the same order as the rows of the response Y.
+
+### Three ways to provide images
+
+`cnn()` and `mmn()` accept complex data in three forms. They differ in where the images live, in who does the preprocessing, and in how fast batches arrive at the network:
+
+| | **A. Array in memory** | **B. Folder of image files** | **C. Windows of one large raster** |
+|---|---|---|---|
+| `X =` | `array [n, channels, height, width]` | `"path/to/folder"` | `raster_patches(...)` |
+| Where the data live | in the R session | one file per observation on disk | one GeoTIFF on disk |
+| Memory needed | the whole dataset | one batch | one batch |
+| Preprocessing | yours, in R, before the fit | fixed: unsigned integers scaled to $[0, 1]$ | arguments of `raster_patches()`, stored with the model |
+| Missing values | not allowed | not handled | handled (`fill`, `na_channel`) |
+| Input dimensions | 1D, 2D or 3D | 2D images | 2D windows |
+| Typical use | small and medium datasets, non-image data such as time series or voxels | photographs, camera traps, spectrograms, pre-extracted patches | remote sensing around observation sites, prediction maps |
+
+#### A. An array in memory
+
+The array is converted to a torch tensor once, and every batch is a slice of it. This is the fastest way to deliver batches, it accepts any input that fits the shapes above (time series, spectrograms, LiDAR voxels), and you have full control over normalization because you do it yourself. The cost is memory: the whole dataset sits in the R session, in double precision while you build it and in single precision inside the fit (see *Computational Considerations* below). The steps for building such an array from image files are described in [Preparing an array](#preparing-an-array) below.
 
 
-### 1. Preparing your data on disk
+``` r
+X = array(runif(500 * 3 * 64 * 64), dim = c(500, 3, 64, 64))
+Y = rnorm(500)
+fit = cnn(X = X, Y = Y, architecture = create_architecture(conv(16), maxPool(), linear(32)))
+```
+
+#### B. A folder of image files
+
+Pass the path of a folder instead of an array. cito reads only the images of the current batch, so the dataset is bounded by disk space, not by memory.
+
+
+``` r
+fit = cnn(X = "data/RGBimages/", Y = Y, architecture = create_architecture(conv(16), maxPool(), linear(32)),
+          num_threads = 8L)
+predict(fit, newdata = "data/RGBimages_test/")
+```
+
+- **Formats**: JPEG, PNG and TIFF, recognized by their content rather than by the file extension. TIFF files may have any number of bands, and 8, 16 or 32 bit integer or floating point samples, so multispectral patches can be stored as one TIFF per observation. All images must have the same size and number of channels.
+- **Order**: the files are used in the order of `list.files()`, i.e. sorted by name. Give them zero-padded names (`0001.jpg`, `0002.jpg`, ...) and make sure that the rows of Y follow the same order.
+- **Values**: unsigned integer images are divided by their maximum ($255$ for 8 bit, $65535$ for 16 bit) and arrive in $[0, 1]$. Floating point and signed integer TIFFs are passed unchanged, because they usually carry physical quantities; normalize them before writing the files.
+- **Decoding** happens in compiled code (libjpeg, libpng, libtiff), in parallel over the images of a batch with `num_threads` threads. If cito was installed without these libraries, it falls back to R readers, which are correct but much slower. `cito:::cito_decoder_available()` shows which decoders are present.
+
+The drawbacks: every observation needs its own file, prepared beforehand. Overlapping windows around nearby sites are stored several times, and JPEG is lossy and limited to three channels. Missing values cannot be represented except as an ordinary number.
+
+#### C. Windows of one large raster
+
+For remote sensing data around observation sites, extracting one file per site is often wasteful, and for a prediction map with one window per cell it is impossible: the patches would take far more space than the raster they are cut from. `raster_patches()` instead describes, for every observation, a square window of a large GeoTIFF centered on the observation's coordinates. The windows are read batch by batch while the network trains; nothing is extracted to disk, and the raster is never loaded into memory.
+
+
+``` r
+library(cito)
+f = system.file("extdata", "raster.tif", package = "cito")
+set.seed(1)
+coords = cbind(x = runif(100, 600100, 600900), y = runif(100, 5300100, 5300700))
+X = raster_patches(f, coords, extent = 200, standardize = TRUE, na_channel = TRUE)
+X
+#> 100 windows of 20 x 20 pixels x 4 channels from raster.tif (3 bands)
+#>   preprocessing: (value - center) / scale, missing pixels = 0, plus a missing-pixel channel
+#>   center: 13900 23900 33900 
+#>   scale:  1724 1724 1724
+dim(as.array(X[1:4]))
+#> [1]  4  4 20 20
+```
+
+- `coords` are in the coordinate reference system of the raster, `extent` is the side length of the window in map units (here 200 m, i.e. 20 x 20 pixels of 10 m).
+- **Preprocessing** is part of the input: `transform` (a function applied to each batch, e.g. a log transform or a band ratio), then `(value - center) / scale` per channel, or `standardize = TRUE` to estimate both from the training windows.
+- **Missing pixels** (outside the raster, NoData, `NaN`) are set to `fill`, and `na_channel = TRUE` adds a channel that tells the network which pixels were imputed.
+- **New sites** reuse the raster, window size and the training statistics with `like =`, so validation and prediction windows are scaled exactly like the training windows:
+
+
+``` r
+fit = cnn(X = X, Y = Y, architecture = create_architecture(conv(16), maxPool(), linear(32)))
+predict(fit, newdata = raster_patches(coords = new_coords, like = X))
+```
+
+- `as.array(X[i])` returns windows exactly as the network receives them, which is the quickest way to check the preprocessing.
+- In `mmn()`, every raster is its own `cnn()` term, so rasters of different resolution and coordinate system (e.g. 10 m imagery and 1 km climate) can be combined; each needs its own `raster_patches()` with coordinates in its own coordinate system.
+
+The limitations: one GeoTIFF per input (a mosaic of several tiles has to be merged into one file first), windows at the native resolution of the raster, and no time series. **How the raster is stored matters more than anything else**: a tiled GeoTIFF reads each window from the few tiles it overlaps, while a raster stored in strips (the GDAL default) decompresses full-width rows for every window. Write rasters for training as tiled files:
+
+
+``` r
+terra::writeRaster(r, "train.tif", gdal = c("TILED=YES", "COMPRESS=DEFLATE", "PREDICTOR=2"))  # PREDICTOR=3 for floating point
+```
+
+#### Speed comparison
+
+We measured how many images per second each route delivers, once for the data loader alone and once for a complete `cnn()` fit (a small CNN with two convolutional layers, batch size 64, three epochs, one 24 GB GPU, a multi-core server under moderate load from other jobs). All routes read the same windows, scaled to $[0, 1]$, with the files in the operating system's cache.
+
+*RGB, 8 bit, 224 x 224 pixels, 2000 images:*
+
+| Route | Loader, 1 thread | Loader, 8 threads | `cnn()`, 8 threads |
+|---|---|---|---|
+| A. Array in memory | 14160 | – | 548\* |
+| B. Folder, JPEG | 1540 | 3867 | 783 |
+| B. Folder, PNG | 863 | 3044 | 664 |
+| B. Folder, TIFF | 979 | 2283 | 663 |
+| C. Raster, tiled | 311 | 1196 | 686 |
+| C. Raster, stripped | 51 | 330 | – |
+
+*Multispectral, 10 bands, 16 bit, 100 x 100 pixels, 4000 images:*
+
+| Route | Loader, 1 thread | Loader, 8 threads | `cnn()`, 8 threads |
+|---|---|---|---|
+| A. Array in memory | 28183 | – | 1895 |
+| B. Folder, TIFF | 784 | 1915 | 1101 |
+| C. Raster, tiled | 159 | 1030 | 948 |
+| C. Raster, stripped | 23 | 155 | – |
+
+\*Includes converting the 2.4 GB array to a tensor at the start of the fit.
+
+Three things follow:
+
+1. With a few threads, every route on disk delivers batches about as fast as a small CNN on one GPU consumes them for RGB images, and within a factor of two for the 10-band images. The network, not the loader, sets the pace, and a larger network shifts this further towards the network.
+2. Reading from a tiled raster is 2-5 times slower than reading pre-extracted TIFF files at the same thread count, and a raster stored in strips is another 4-7 times slower than the tiled one. Use tiled rasters.
+3. `num_threads` (default 4) matters for routes B and C: one thread leaves most of the speed unused. Do not set it higher than the number of physical cores.
+
+The numbers are for files in the operating system's cache. When a large raster is read from a hard disk for the first time, every window costs a disk seek, and the loader drops to a few dozen windows per second; reading the file once beforehand (or keeping it on an SSD) avoids this.
+
+#### Which one to choose
+
+- The data fit comfortably into memory, or they are not images (time series, voxels): **A**.
+- Images exist as files anyway (photographs, camera traps, spectrograms), or the dataset is larger than memory: **B**.
+- Observations are points and the predictors are rasters, or you want to predict a map: **C**. It also avoids that windows of validation sites are standardized with their own statistics.
+
+### Preparing an array
+
+The following workflow builds an array (route A) from image files on disk; it is one example among several possible ones.
+
+
+#### 1. Preparing your data on disk
 Although images can be saved in different formats, we recommend using formats for which an R function or R package is available to allow you to load the images into R.
 
 Grayscale and RGB images should be saved as `.png` or `.jpeg`. Time series data can technically be interpreted as grayscale images and should therefore also be saved as `.png` or `.jpeg`.
@@ -79,7 +207,7 @@ project/
 ```
 
 
-### 2. Load images into R
+#### 2. Load images into R
 
 Before we can run/train cito, we must load the images into R, transform them into arrays, and concatenate the individual images of one input type into one array.
 
@@ -122,7 +250,7 @@ RGBimages = abind::abind(RGBimages, along = -1)
 LiDAR = abind::abind(LiDAR, along = -1)
 ```
 
-### 3. Normalize and check channel dimension
+#### 3. Normalize and check channel dimension
 Deep Neural Networks converge better when the inputs are normalized/standardized, for complex data, we can divide them by their max value to bring the values into the range of $[0, 1]$
 
 
@@ -140,7 +268,7 @@ LiDAR = aperm(LiDAR, c(1, 4, 2, 3))  # change order of dimensions
 ```
 
 
-### 4. Prepare tabular data (response and other tabular data such as altitude and spatial coordinates)
+#### 4. Prepare tabular data (response and other tabular data such as altitude and spatial coordinates)
 Read tabular data into R using the `read.csv` function. Predictors (e.g. spatial coordinates, altitude and climatic variables such as bioclim variables) should be standardized using the `scale` function.
 
 **Note:** there should be no missing values in the data! If you have 1,000 images and 1,000 response values with NAs, Cito/R will drop the NA observations in the response, meaning the number of observations will no longer match up. Of course, there should also be no NAs in the images!
@@ -213,10 +341,10 @@ summary(model, n_permute = 5L)
 #> 
 #> ── Permutation importance of the data streams
 #>                                        Loss increase     SD  Share
-#> cnn(X = images, architecture = arch)          4.1266 0.3839 0.9952
-#> dnn(~Temp + Precip, data = covariates)        0.0200 0.0027 0.0048
+#> cnn(X = images, architecture = arch)          4.1081 0.3781 0.9954
+#> dnn(~Temp + Precip, data = covariates)        0.0189 0.0023 0.0046
 #> 
-#> Baseline loss 0.0385, 5 permutations per stream. A stream that contributes little
+#> Baseline loss 0.0387, 5 permutations per stream. A stream that contributes little
 #> can come out negative by chance; compare the estimate against its SD before reading it.
 ```
 
@@ -225,7 +353,7 @@ summary(model, n_permute = 5L)
 plot(model, n_permute = 5L)
 ```
 
-<img src="E/E-unnamed-chunk-12-1.png" alt="" style="display: block; margin: auto;" />
+<img src="E/E-unnamed-chunk-17-1.png" alt="" style="display: block; margin: auto;" />
 
 `plot_type = "arch"` draws the model itself: one row per data stream, its submodel, the width each
 stream contributes to the concatenated representation, and the fusion network on top.
@@ -235,7 +363,7 @@ stream contributes to the concatenated representation, and the fusion network on
 plot(model, plot_type = "arch")
 ```
 
-<img src="E/E-unnamed-chunk-13-1.png" alt="" style="display: block; margin: auto;" />
+<img src="E/E-unnamed-chunk-18-1.png" alt="" style="display: block; margin: auto;" />
 
 Predicting on new data takes a named list with the same names:
 
@@ -245,11 +373,11 @@ newdata <- list(images = shapes$data[1:5, , , , drop = FALSE],
                 covariates = covariates[1:5, ])
 predict(model, newdata = newdata)
 #>        [,1]
-#> 1 3.3417935
-#> 2 3.2674866
-#> 3 0.3928080
-#> 4 0.2327462
-#> 5 0.2617482
+#> 1 3.2085457
+#> 2 3.2149839
+#> 3 0.3263950
+#> 4 0.1721699
+#> 5 0.3189309
 ```
 
 Note:
@@ -395,6 +523,8 @@ How much memory you need depends on how the images reach cito:
 - Passing a **folder path** to `cnn(X = )` reads only the images of the current mini-batch, so the
   dataset size is bounded by disk rather than by RAM. The table below then does not apply, and the
   requirement is one batch at a time.
+- Passing **`raster_patches()`** reads only the windows of the current mini-batch (and the next one,
+  in the background) from the raster, so the raster can be far larger than RAM.
 
 #### Example calculation when the images are held in memory (500 observations)
 

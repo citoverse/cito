@@ -33,6 +33,7 @@ MMNs
 MSDM
 MacOS
 Multilayer
+Multispectral
 NCPU
 NGPU
 NN
@@ -42,7 +43,6 @@ PDP
 PDPs
 Parallelization
 Perceptron
-prefetch
 README
 RGBA
 RMSprop
@@ -50,6 +50,7 @@ Rudin
 SDCE
 SDM
 SGD
+SSD
 Scholbeck
 SeLU
 SigmaDiag
@@ -138,6 +139,7 @@ libjpeg
 libpng
 libtiff
 linearities
+lossy
 lr
 mae
 matmul
@@ -151,6 +153,7 @@ mobilenet
 mps
 mse
 multilabel
+multispectral
 mvp
 na
 nbinom
@@ -171,6 +174,7 @@ poisson
 positionally
 pre
 pred
+prefetch
 prelu
 preprint
 pretrained
@@ -193,6 +197,7 @@ softmax
 softplus
 softshrink
 softsign
+spectrograms
 submodel's
 submodules
 tabulardata
