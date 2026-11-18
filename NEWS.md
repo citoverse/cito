@@ -4,10 +4,6 @@
 
 * fe() adds linear effects to dnn() on the link scale, e.g. dnn(Y ~ X1 + fe(Temp + I(Temp^2)) + e(Site)); the variables in fe() are excluded from the network and from ".", the fixed effects have their own lambda and alpha and are not regularized by the global ones, and coef() returns them as fixed_effects
 
-## Bug fixes
-
-* "." in a formula with e() no longer also passes the embedded variable to the network (#77)
-
 # cito 1.2
 
 ## New features

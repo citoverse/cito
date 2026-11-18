@@ -924,6 +924,7 @@ coef.citodnn <- function(object, ...) {
   if(!is.null(object$model_properties$fe)) {
     out$fixed_effects <- t(out$net_parameters$fe.weight)
     rownames(out$fixed_effects) <- object$model_properties$fe$names
+    if(ncol(out$fixed_effects) == length(object$loss$responses)) colnames(out$fixed_effects) <- object$loss$responses
   }
   if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
   return(out)

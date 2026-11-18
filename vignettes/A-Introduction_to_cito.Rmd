@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "2026-07-31"
+date: "2026-11-18"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -27,7 +27,7 @@ Before using 'cito' make sure that the current version of 'torch' is installed a
 
 ``` r
 if(!require(torch)) install.packages("torch")
-#> Loading required package: torch
+#> Lade nötiges Paket: torch
 library(torch)
 if(!torch_is_installed()) install_torch()
 
@@ -190,6 +190,38 @@ coef(nn.fit)
 print(nn.fit)
 ```
 
+### Linear effects and embeddings in the formula
+
+Two special terms extend the formula. `fe()` adds predictors with linear effects, which are added to the output of the network on the link scale, so that the model is
+$$\eta = f(X) + \beta^T x_{fe}$$
+with $f$ the neural network. $\beta$ is estimated together with the network, like a parametric term in a GAM. `fe()` takes the right-hand side of a formula, so terms such as `I(Temp^2)`, interactions and factors work as in `lm()`. The variables in `fe()` are not passed to the network, and `.` expands to all other variables. The fixed effects have no intercept (the network has one), and they are not affected by the `lambda` and `alpha` of `dnn()`; they can be regularized with their own `fe(..., lambda = , alpha = )`.
+
+$\beta$ is close to the GLM coefficient only if the training converged and the fixed-effect variables are not functions of the network inputs. If they are correlated with the network inputs, a strongly regularized network can bias $\beta$. `coef()` gives no standard errors; fit with `bootstrap =` to see their spread.
+
+`e()` adds an embedding of a categorical variable (e.g. a site or individual), which is learned as part of the input of the network.
+
+
+``` r
+set.seed(42)
+n = 1000
+sim = data.frame(X1 = runif(n, -2, 2), Temp = rnorm(n), Precp = rnorm(n),
+                 Site = factor(sample(paste0("site", 1:10), n, replace = TRUE)))
+site_effect = rnorm(10, sd = 0.5)
+sim$Y = sin(2 * sim$X1) + 1.0 * sim$Temp - 0.5 * sim$Temp^2 + 0.5 * sim$Precp +
+  site_effect[sim$Site] + rnorm(n, sd = 0.3)
+
+fit_fe = dnn(Y ~ X1 + Precp + fe(Temp + I(Temp^2)) + e(Site, dim = 2),
+             data = sim, loss = "mse", epochs = 100, verbose = FALSE, plot = FALSE)
+
+# the linear effects, simulated as 1.0 and -0.5
+coef(fit_fe)$fixed_effects
+#>                 [,1]
+#> Temp       0.9970902
+#> I(Temp^2) -0.5176629
+```
+
+Here `Precp` enters the network although its true effect is linear; a variable can enter either the network or `fe()`, not both. In `mmn()` and with `custom` networks `fe()` is not available yet.
+
 ## Explainable AI - Understanding your model
 
 xAI can produce outputs that are similar to known outputs from statistical models:
@@ -212,15 +244,15 @@ summary(nn.fit)
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width  0.117488970
-#> 2 Petal.Length  0.717494957
-#> 3  Petal.Width  0.004385866
+#> 1  Sepal.Width  0.117958915
+#> 2 Petal.Length  1.055670200
+#> 3  Petal.Width  0.003582032
 #> 
 #> Average Conditional Effects:
-#>                     [,1]
-#> Sepal.Width   0.33762090
-#> Petal.Length  0.89232879
-#> Petal.Width  -0.08970718
+#>                    [,1]
+#> Sepal.Width  0.33593520
+#> Petal.Length 0.99904002
+#> Petal.Width  0.02797409
 ```
 
 
@@ -250,19 +282,19 @@ nn.fit <- dnn(Sepal.Length~., data = df,
 summary(nn.fit)
 #> Summary of Deep Neural Network Model
 #> 
-#> -- Feature Importance
+#> ── Feature Importance
 #>                  Importance Std.Err Z value Pr(>|z|)    
-#> Sepal.Width ->       0.1042  0.0282    3.69  0.00022 ***
-#> Petal.Length ->      2.6498  0.5554    4.77  1.8e-06 ***
-#> Petal.Width ->       0.2078  0.1257    1.65  0.09819 .  
+#> Sepal.Width ->       0.1085  0.0224    4.84  1.3e-06 ***
+#> Petal.Length ->      2.4559  0.3793    6.47  9.5e-11 ***
+#> Petal.Width ->       0.1643  0.1002    1.64      0.1    
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
-#> -- Average Conditional Effects
+#> ── Average Conditional Effects
 #>                      ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width ->    0.2971  0.0463    6.42  1.4e-10 ***
-#> Petal.Length ->   1.5920  0.1635    9.74  < 2e-16 ***
-#> Petal.Width ->   -0.4240  0.1489   -2.85   0.0044 ** 
+#> Sepal.Width ->    0.3123  0.0362    8.63   <2e-16 ***
+#> Petal.Length ->   1.5445  0.1149   13.44   <2e-16 ***
+#> Petal.Width ->   -0.3724  0.1341   -2.78   0.0055 ** 
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -301,7 +333,7 @@ PDP(nn.fit)
 
 ``` r
 library(effects)
-#> Loading required package: carData
+#> Lade nötiges Paket: carData
 #> lattice theme set by effectsTheme()
 #> See ?effectsTheme for details.
 plot(allEffects(lm(Sepal.Length~., data = df)))
@@ -523,12 +555,12 @@ You can continue the training process of an existing model with continue_trainin
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>         [,1]
-#> 1 -0.9610903
-#> 2 -1.4014419
-#> 3 -1.2810825
-#> 4 -1.2268130
-#> 5 -0.8737405
-#> 6 -0.5242712
+#> 1 -0.9818215
+#> 2 -1.3898047
+#> 3 -1.3340323
+#> 4 -1.2629429
+#> 5 -0.9124794
+#> 6 -0.5285937
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().
@@ -596,7 +628,7 @@ testOverdispersion(res)
 #> 	simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 21.321, p-value < 2.2e-16
+#> dispersion = 23.228, p-value < 2.2e-16
 #> alternative hypothesis: two.sided
 ```
 
@@ -612,7 +644,7 @@ m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = F
 ``` r
 # Dispersion parameter:
 m2$loss$parameter_link()
-#> [1] 0.564668
+#> [1] 0.54437
 ```
 
 We have a custom implementation of the negative binomial distribution (which is similar to the "nbinom1" of glmmTMB (the nbinom converges to a poisson as the dispersion parameters approaches infinity)) which is why we provide a simulate function:
@@ -641,7 +673,7 @@ testOverdispersion(res)
 #> 	simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 1.8316, p-value = 0.1
+#> dispersion = 2.531, p-value < 2.2e-16
 #> alternative hypothesis: two.sided
 ```
 

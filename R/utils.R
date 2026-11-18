@@ -1350,12 +1350,16 @@ get_X_Y = function(formula, X, Y, data) {
     parsed_formula = splitForm(formula)
     formula = parsed_formula$fixedFormula
     Specials = list(terms = parsed_formula$reTrmFormulas, types = parsed_formula$reTrmClasses, args = parsed_formula$reTrmAddArgs)
-    # "." expands to the variables that are neither fixed effects nor embedded
-    special_vars = c(fe$vars, unlist(lapply(Specials$terms, all.vars)))
-    if(!is.null(data)) formula <- formula(stats::terms.formula(formula, data = data[, setdiff(names(data), special_vars), drop = FALSE]))
-    else formula <- formula(stats::terms.formula(formula))
+    if(!is.null(fe$expr) && !is.null(data)) {
+      # "." expands to the variables that are not fixed effects; with none left it is dropped
+      data_dot = data[, setdiff(names(data), fe$vars), drop = FALSE]
+      if(length(setdiff(names(data_dot), if(length(formula) == 3) all.vars(formula[[2]]))) == 0) formula = drop_dot(formula)
+      formula <- formula(stats::terms.formula(formula, data = data_dot))
+    } else {
+      formula <- formula(stats::terms.formula(formula, data = data))
+    }
     if(!is.null(fe$expr)) {
-      both = intersect(all.vars(formula[[length(formula)]]), fe$vars)
+      both = intersect(c(all.vars(formula[[length(formula)]]), unlist(lapply(Specials$terms, all.vars))), fe$vars)
       if(length(both)) stop(paste0("Variables must enter either the DNN or fe(), not both: ", paste(both, collapse = ", ")))
       if(length(attr(stats::terms(formula), "term.labels")) == 0 && is.null(Specials$terms)) stop("fe() needs at least one other predictor or e() term; for a purely linear model use glm().")
       formula <- stats::update.formula(formula, stats::as.formula(paste("~ . +", deparse1(fe$expr))))
@@ -1395,9 +1399,12 @@ get_X_Y = function(formula, X, Y, data) {
 
   fixed_effects = NULL
   if(!is.null(fe$expr)) {
+    # a term belongs to fe() iff all its variables do; labels can differ in order (Precp:Temp vs Temp:Precp)
     labels = attr(stats::terms(formula), "term.labels")
-    fe_labels = attr(stats::terms(stats::as.formula(paste("~", deparse1(fe$expr)))), "term.labels")
-    cols = which(labels[attr(X, "assign")] %in% fe_labels)
+    is_fe = sapply(labels, function(l) all(all.vars(str2lang(l)) %in% fe$vars))
+    n_fe = length(attr(stats::terms(stats::as.formula(paste("~", deparse1(fe$expr)))), "term.labels"))
+    if(sum(is_fe) != n_fe) stop("Could not match the terms of fe() to the model matrix.")
+    cols = which(is_fe[attr(X, "assign")])
     fixed_effects = c(list(cols = cols, names = colnames(X)[cols]), fe$args)
   }
 
@@ -1424,17 +1431,33 @@ get_X_Y = function(formula, X, Y, data) {
   return(out)
 }
 
+drop_dot = function(formula) {
+  replace = function(e) {
+    if(identical(e, as.name("."))) return(1)
+    if(is.call(e)) for(i in seq_along(e)[-1]) e[[i]] = replace(e[[i]])
+    return(e)
+  }
+  formula[[length(formula)]] = replace(formula[[length(formula)]])
+  return(formula)
+}
+
 # Pulls the one fe(...) term out of the right-hand side: the remaining formula, the fixed-effects expression,
 # its variables and the evaluated fe() settings
 split_fe = function(formula) {
   walk = function(e) {
+    if(is.call(e) && identical(e[[1]], as.name("(")) && length(e) == 2) return(walk(e[[2]]))
+    if(is.call(e) && identical(e[[1]], as.name("-")) && length(e) == 3) {
+      if(length(walk(e[[3]])$fe)) stop("fe() cannot be subtracted.")
+      l = walk(e[[2]])
+      return(list(rest = if(is.null(l$rest)) call("-", e[[3]]) else call("-", l$rest, e[[3]]), fe = l$fe))
+    }
     if(is.call(e) && identical(e[[1]], as.name("+")) && length(e) == 3) {
       l = walk(e[[2]])
       r = walk(e[[3]])
       rest = if(is.null(l$rest)) r$rest else if(is.null(r$rest)) l$rest else call("+", l$rest, r$rest)
       return(list(rest = rest, fe = c(l$fe, r$fe)))
     }
-    if(is.call(e) && identical(e[[1]], as.name("fe"))) return(list(rest = NULL, fe = list(e)))
+    if(is.call(e) && (identical(e[[1]], as.name("fe")) || identical(e[[1]], quote(cito::fe)))) return(list(rest = NULL, fe = list(e)))
     return(list(rest = e, fe = NULL))
   }
   w = walk(formula[[length(formula)]])

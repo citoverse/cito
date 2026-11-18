@@ -29,6 +29,27 @@ testthat::test_that("fe() formula handling: '.', I(), lambda/alpha and errors", 
   testthat::expect_error(dnn(Y ~ Temp + fe(Temp), data = d, epochs = 1L, verbose = FALSE, plot = FALSE), "either the DNN or fe")
   testthat::expect_error(dnn(Y ~ X1 + fe(Temp) + fe(X2), data = d, epochs = 1L, verbose = FALSE, plot = FALSE), "one fe")
   testthat::expect_error(dnn(Y ~ fe(Temp), data = d, epochs = 1L, verbose = FALSE, plot = FALSE), "glm")
+  testthat::expect_error(dnn(Y ~ . + fe(Temp), data = d[, c("Y", "Temp")], epochs = 1L, verbose = FALSE, plot = FALSE), "glm")
+  testthat::expect_error(dnn(Y ~ X1 - fe(Temp), data = d, epochs = 1L, verbose = FALSE, plot = FALSE), "subtracted")
+  m = dnn(Y ~ . + fe(Temp) - X2, data = d, epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(dim(m$net$l_1$weight)[2], 1L)
+  m = dnn(Y ~ (X1 + fe(Temp)) - 1, data = d, epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(rownames(coef(m)$fixed_effects), "Temp")
+  m = dnn(Y ~ X1 + cito::fe(X2:Temp + Temp), data = d, epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(sort(rownames(coef(m)$fixed_effects)), sort(c("Temp", "Temp:X2")))
+  testthat::expect_equal(dim(m$net$l_1$weight)[2], 1L)
+  testthat::expect_error(dnn(Y ~ X1 + fe(Temp, lambda = tune()), data = d, epochs = 1L, verbose = FALSE, plot = FALSE))
+})
+
+testthat::test_that("fe() with factors, multi-output losses, and a variable shared with e()", {
+  skip_if_no_torch()
+
+  d = data.frame(X1 = rnorm(90), f = factor(rep(c("a", "b", "c"), 30)), Y = factor(sample(c("u", "v", "w"), 90, TRUE)))
+  m = dnn(Y ~ X1 + fe(f), data = d, loss = "cross-entropy", epochs = 1L, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(dim(coef(m)$fixed_effects), c(2L, 3L))
+  testthat::expect_equal(rownames(coef(m)$fixed_effects), c("fb", "fc"))
+  testthat::expect_equal(colnames(coef(m)$fixed_effects), c("u", "v", "w"))
+  testthat::expect_error(dnn(Y ~ X1 + fe(f) + e(f), data = d, loss = "cross-entropy", epochs = 1L, verbose = FALSE, plot = FALSE), "either the DNN or fe")
 })
 
 testthat::test_that("the global lambda does not regularize the fixed effects", {
@@ -38,6 +59,9 @@ testthat::test_that("the global lambda does not regularize the fixed effects", {
   d = data.frame(X1 = rnorm(500), Temp = rnorm(500))
   d$Y = 3 * d$Temp + rnorm(500, sd = 0.1)
   m = dnn(Y ~ X1 + fe(Temp), data = d, loss = "mse", lambda = 1, alpha = 0, epochs = 40L, lr = 0.05, verbose = FALSE, plot = FALSE)
+  torch::torch_manual_seed(3)
+  m0 = dnn(Y ~ X1 + fe(Temp), data = d, loss = "mse", epochs = 40L, lr = 0.05, verbose = FALSE, plot = FALSE)
+  testthat::expect_equal(as.vector(coef(m)$fixed_effects), as.vector(coef(m0)$fixed_effects), tolerance = 0.05)
   testthat::expect_equal(as.vector(coef(m)$fixed_effects), 3, tolerance = 0.1)
   m2 = dnn(Y ~ X1 + fe(Temp, lambda = 1, alpha = 0), data = d, loss = "mse", epochs = 40L, lr = 0.05, verbose = FALSE, plot = FALSE)
   testthat::expect_lt(abs(as.vector(coef(m2)$fixed_effects)), 2.5)
@@ -47,7 +71,7 @@ testthat::test_that("fe() combines with e(), and survives saveRDS, continue_trai
   skip_if_no_torch()
 
   d = data.frame(X1 = rnorm(120), Temp = rnorm(120), g = factor(sample(letters[1:5], 120, TRUE)), Y = rnorm(120))
-  m = dnn(Y ~ . + fe(Temp) + e(g, dim = 2), data = d, epochs = 2L, verbose = FALSE, plot = FALSE)
+  m = dnn(Y ~ X1 + fe(Temp) + e(g, dim = 2), data = d, epochs = 2L, verbose = FALSE, plot = FALSE)
   testthat::expect_equal(dim(m$net$l_1$weight)[2], 1L + 2L)
   testthat::expect_equal(rownames(coef(m)$fixed_effects), "Temp")
   f = tempfile(fileext = ".rds")

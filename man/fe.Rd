@@ -7,22 +7,37 @@
 fe(lambda = 0, alpha = 1)
 }
 \arguments{
-\item{lambda}{regularization strength on the fixed effects}
+\item{lambda}{regularization strength on the fixed effects (not tunable with \code{tune()})}
 
-\item{alpha}{mix between L1 and L2 regularization}
+\item{alpha}{mix between L1 (\code{alpha = 0}) and L2 (\code{alpha = 1}) regularization}
 }
 \description{
 Adds predictors with linear effects to the DNN in the formula interface: \code{dnn(Y ~ X1 + fe(Temp + I(Temp^2)))}.
 }
 \details{
 The first argument of \code{fe()}, not part of its signature, is the right-hand side of a formula, so
-\code{I()}, \code{poly()} and interactions work as in \code{lm()}. Its terms enter the linear predictor (the link
-scale) as \eqn{\eta = f(X) + \beta^T x_{fe}}, without an intercept, since the DNN \eqn{f} has one. The variables in
-\code{fe()} are not passed to the DNN, and \code{.} in the formula expands to all other variables. The global
-\code{lambda} and \code{alpha} of \code{dnn()} do not apply to the fixed effects; they are regularized only by the
-\code{lambda} and \code{alpha} given to \code{fe()} (default: not at all). \eqn{\beta} is returned by \code{coef()}
-as \code{fixed_effects} (one row per column of the model matrix). \code{fe()} can be combined with \code{e()}, but is not supported in \code{mmn()} or with
-\code{custom}.
+\code{I()}, interactions and factors work as in \code{lm()} (factors with treatment contrasts; \code{0 +} or
+\code{- 1} inside \code{fe()} are ignored). Its terms enter the linear predictor (the link scale) as
+\eqn{\eta = f(X) + \beta^T x_{fe}}, without an intercept, which the output layer of the DNN \eqn{f} provides
+(so do not combine \code{fe()} with \code{bias = FALSE}). The variables in \code{fe()} are not passed to the DNN,
+and \code{.} in the formula expands to all other variables; a variable in \code{fe()} and in the DNN or in
+\code{e()} is an error. Use one \code{fe()} term. Transformations that depend on the data, such as \code{poly()}
+or \code{scale()}, are re-evaluated on \code{newdata} in \code{predict()}; compute them beforehand.
+
+The global \code{lambda} and \code{alpha} of \code{dnn()} do not apply to the fixed effects; they are regularized only
+by the \code{lambda} and \code{alpha} given to \code{fe()} (default: not at all), on the scale of the model matrix,
+so center and scale the fixed-effect variables when regularizing them.
+
+\eqn{\beta} is returned by \code{coef()} as \code{fixed_effects}, one row per model-matrix column and one column per
+output of the network. It is estimated like a parametric term in a GAM, and is close to the GLM coefficient only if
+the training converged and the fixed-effect variables are not functions of the DNN inputs. If they are correlated
+with the DNN inputs, regularization of the DNN (\code{lambda}, dropout, early stopping) can bias \eqn{\beta}. For
+losses with a softmax (\code{"cross-entropy"}, \code{"multinomial"}, \code{"clogit"}) only the differences
+between the columns of \code{fixed_effects} are identified. \code{coef()} gives no standard errors; fit with
+\code{bootstrap =} for their spread. In \code{summary()} and \code{conditionalEffects()}, the effect of a fixed
+effect is the effect of its model-matrix column, e.g. separate rows for \code{Temp} and \code{I(Temp^2)}.
+
+\code{fe()} can be combined with \code{e()}, but is not supported in \code{mmn()} or with \code{custom}.
 }
 \examples{
 \donttest{
@@ -35,13 +50,13 @@ n = 1000
 dat = data.frame(X1 = runif(n, -2, 2), Temp = rnorm(n), Precp = rnorm(n))
 dat$Y = sin(2 * dat$X1) + 1.0 * dat$Temp - 0.5 * dat$Temp^2 + rnorm(n, sd = 0.3)
 
-m = dnn(Y ~ X1 + fe(Temp + I(Temp^2)), data = dat, loss = "gaussian", epochs = 50L, verbose = FALSE)
+m = dnn(Y ~ X1 + fe(Temp + I(Temp^2)), data = dat, loss = "mse", epochs = 50L, verbose = FALSE)
 
 # the fixed effects, close to 1.0 and -0.5
 coef(m)$fixed_effects
 
 # "." uses every variable that is not in fe(); here X1 and Precp
-m2 = dnn(Y ~ . + fe(Temp + I(Temp^2), lambda = 0.001), data = dat, loss = "gaussian", epochs = 50L, verbose = FALSE)
+m2 = dnn(Y ~ . + fe(Temp + I(Temp^2), lambda = 0.001), data = dat, loss = "mse", epochs = 50L, verbose = FALSE)
 }
 }
 }
