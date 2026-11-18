@@ -38,6 +38,7 @@
 * predict(..., return_embeddings = TRUE, type = "response") no longer applies the inverse link to the embeddings
 * continue_training() refuses raster windows of another shape, and warns about other preprocessing, as predict() does
 * an ordered factor response is kept as a factor for the classification losses; only ordered predictors are converted to integers
+* loss = "gaussian": the standard deviation is softplus(parameter), initialized at the SD of the response, instead of a clamped parameter; the parameter could leave the clamp range, where its gradient is zero, and fits went NaN (8 of 10 seeds for a linear network); m$loss$parameter_link() returns the SD
 * dnn(X = , Y = , weights = ) with a weighted custom loss no longer fails with "no 'dimnames' attribute"
 * mmn() stops with an informative error when its data streams have different numbers of rows (e.g. after rows with NA were dropped from a dnn() term) instead of a torch indexing error
 * summary() and plot() of an mmn() fitted with weights stop with an error instead of crashing the R session; the weights are not stored with the model, and a weighted loss called without them aborted in torch

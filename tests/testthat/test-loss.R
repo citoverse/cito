@@ -235,3 +235,18 @@ testthat::test_that("an ordered response stays a factor, ordered predictors beco
   testthat::expect_equal(ncol(predict(m, type = "response")), 3L)
   testthat::expect_true(all(predict(m, type = "class") %in% levels(df$Y)))
 })
+
+
+testthat::test_that("gaussian: the sd stays positive and is estimated, also when the mean fits fast", {
+  skip_if_no_torch()
+
+  set.seed(2)
+  d <- data.frame(X1 = rnorm(500), Temp = rnorm(500))
+  d$Y <- 3 * d$Temp + rnorm(500, sd = 0.1)
+  for(seed in 1:3) {
+    torch::torch_manual_seed(seed)
+    m <- dnn(Y ~ X1 + Temp, data = d, loss = "gaussian", hidden = NULL, epochs = 40L, lr = 0.05, verbose = FALSE, plot = FALSE)
+    testthat::expect_false(anyNA(m$losses$train_l))
+    testthat::expect_true(m$loss$parameter_link() > 0 && m$loss$parameter_link() < 0.3)
+  }
+})
