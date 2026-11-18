@@ -3,6 +3,7 @@
 ## New features
 
 * fe() adds linear effects to dnn() on the link scale, e.g. dnn(Y ~ X1 + fe(Temp + I(Temp^2)) + e(Site)); the variables in fe() are excluded from the network and from ".", the fixed effects have their own lambda and alpha and are not regularized by the global ones, and coef() returns them as fixed_effects
+* plot(plot_type = "arch") draws embeddings (a factor node feeding its embedding dimensions) and fixed effects (inputs wired to the output), and labels inputs and outputs
 
 # cito 1.2
 

@@ -90,10 +90,16 @@ testthat::test_that("architecture plot", {
   m <- dnn(Y ~ X1 + X2, data = df, hidden = c(5L, 5L), epochs = 2L, verbose = FALSE, plot = FALSE)
   testthat::expect_error({.n <- plot(m, plot_type = "arch")}, NA)
 
-  # embeddings and custom modules cannot be drawn, but must not fail
   df2 <- df
   df2$Cat <- as.factor(rep(1:3, length.out = nrow(df2)))
-  m <- dnn(Y ~ X1 + e(Cat), data = df2, epochs = 2L, verbose = FALSE, plot = FALSE)
+  m <- dnn(Y ~ X1 + e(Cat, dim = 2), data = df2, epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_error({.n <- plot(m, plot_type = "arch")}, NA)
+  testthat::expect_equal(sum(.n$data$label == "Cat"), 1L)
+
+  m <- dnn(Y ~ X1 + fe(X2) + e(Cat), data = df2, hidden = c(4L, 3L), epochs = 2L, verbose = FALSE, plot = FALSE)
+  testthat::expect_error({.n <- plot(m, plot_type = "arch")}, NA)
+  testthat::expect_true("X2" %in% .n$data$label)
+  m <- dnn(Cat ~ X1 + fe(X2), data = df2, loss = "cross-entropy", hidden = NULL, epochs = 2L, verbose = FALSE, plot = FALSE)
   testthat::expect_error({.n <- plot(m, plot_type = "arch")}, NA)
 })
 

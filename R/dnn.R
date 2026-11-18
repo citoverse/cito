@@ -1103,11 +1103,6 @@ plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_ed
       return(invisible(NULL))
     }
 
-    if(x$net$has_embeddings) {
-      cat("Models with embeddings layers detected. Embedding layers can be currently not visualized.")
-      return(invisible(NULL))
-    }
-
     sapply(c("igraph","ggraph","ggplot2"),function(x)
       if (!requireNamespace(x, quietly = TRUE)) {
         stop(
@@ -1117,39 +1112,7 @@ plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_ed
       })
     checkmate::qassert(node_size, "R+[0,)")
     checkmate::qassert(scale_edges, "B1")
-
-    weights <- coef.citodnn(x)
-    input <- ncol(weights[[1]][1][[1]])
-    structure <- data.frame(expand.grid(from=paste0("1;",c(1:input)),
-                                        to = paste0("2;",c(1:(nrow(weights[[1]][1][[1]]))))),
-                            value = scale(c(t(weights[[1]][1][[1]][1:input])), center=scale_edges,scale= scale_edges))
-    x_pos<- c(rep(1,input))
-    y_pos<- c(0,rep(1:input,each=2) *c(1,-1))[1:input]
-    num_layer <-  2
-
-    if(length(weights[[1]])>1){
-      for (i in 2:length(weights[[1]])){
-        if (grepl("weight",names(weights[[1]][i]))){
-          structure <- rbind(structure, data.frame(expand.grid(from=paste0(num_layer,";",c(1:(ncol(weights[[1]][i][[1]])))),
-                                                               to = paste0(num_layer + 1,";",c(1:(nrow(weights[[1]][i][[1]]))))),
-                                                   value= scale(c(t(weights[[1]][i][[1]])), center=scale_edges,scale= scale_edges)))
-          x_pos <- c(x_pos, rep(num_layer, x$model_properties$hidden[num_layer-1]))
-          y_pos <- c(y_pos, c(0,rep(1:x$model_properties$hidden[num_layer-1],each=2) *c(1,-1))[1:x$model_properties$hidden[num_layer-1]])
-          num_layer <- num_layer + 1
-
-        }
-      }
-    }
-    x_pos <- c(x_pos, rep(num_layer,x$model_properties$output))
-    y_pos <- c(y_pos, c(0,rep(1:input,each=2) *c(1,-1))[1:x$model_properties$output])
-
-
-    graph<- igraph::graph_from_data_frame(structure)
-    layout <- ggraph::create_layout(graph, layout= "manual", x = x_pos, y = y_pos)
-
-    p<- ggraph::ggraph(layout)+
-      ggraph::geom_edge_link( ggplot2::aes(width = abs(structure$value))) +
-      ggraph::geom_node_point(size = node_size)
+    p = plot_architecture(x, node_size, scale_edges)
     print(p)
   } else {
     p = ALE(x)
@@ -1157,6 +1120,62 @@ plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_ed
   return(invisible(p))
 }
 
+
+# Nodes and edges are read from the named parameters (l_k layers, e_k embeddings, fe fixed effects), so embeddings
+# are drawn as a factor node feeding its dimensions and fixed effects as inputs wired straight to the output
+plot_architecture = function(x, node_size, scale_edges) {
+  x = check_model(x)
+  p = coef.citodnn(x)$net_parameters
+  layers = grep("^l_[0-9]+\\.weight$", names(p), value = TRUE)
+  W = p[layers[order(as.integer(sub("^l_([0-9]+)\\..*", "\\1", layers)))]]
+  emb_dims = if(is.null(x$model_properties$embeddings)) integer(0) else sapply(x$model_properties$embeddings$args, function(a) a$dim)
+  fe = x$model_properties$fe
+  dnn_names = if(is.null(fe)) colnames(x$data$X) else colnames(x$data$X)[-fe$cols]
+  sizes = c(ncol(W[[1]]), sapply(W, nrow))
+  n = length(sizes)
+
+  nodes = do.call(rbind, lapply(seq_len(n), function(l) data.frame(name = paste0(l, ";", seq_len(sizes[l])), x = l, label = "")))
+  nodes$label[nodes$x == 1] = c(unlist(lapply(seq_along(emb_dims), function(k) paste0(x$Z_formula[k], "[", seq_len(emb_dims[k]), "]"))), dnn_names)
+  if(length(x$loss$responses) == sizes[n]) nodes$label[nodes$x == n] = x$loss$responses
+  edges = do.call(rbind, lapply(seq_along(W), function(l) data.frame(
+    from = paste0(l, ";", rep(seq_len(ncol(W[[l]])), each = nrow(W[[l]]))),
+    to = paste0(l + 1, ";", rep(seq_len(nrow(W[[l]])), ncol(W[[l]]))),
+    value = c(W[[l]]), type = "network")))
+
+  if(length(emb_dims)) {
+    first = cumsum(c(0, emb_dims))
+    nodes = rbind(nodes, data.frame(name = paste0("e;", seq_along(emb_dims)), x = 0, label = x$Z_formula))
+    edges = rbind(edges, do.call(rbind, lapply(seq_along(emb_dims), function(k) data.frame(
+      from = paste0("e;", k), to = paste0("1;", first[k] + seq_len(emb_dims[k])),
+      value = apply(p[[paste0("e_", k, ".weight")]], 2, stats::sd), type = "embedding"))))
+  }
+  if(!is.null(fe)) {
+    w = p$fe.weight
+    nodes = rbind(nodes, data.frame(name = paste0("fe;", seq_along(fe$cols)), x = 1, label = fe$names))
+    edges = rbind(edges, data.frame(from = paste0("fe;", rep(seq_along(fe$cols), each = nrow(w))),
+                                    to = paste0(n, ";", rep(seq_len(nrow(w)), ncol(w))),
+                                    value = c(w), type = "fixed effect"))
+  }
+  edges$value[!is.finite(edges$value)] = 0
+  if(scale_edges) edges$value = stats::ave(edges$value, edges$type, FUN = function(v) if(length(v) > 1) as.vector(scale(v)) else v)
+  # every column spans the full height, so a few inputs are not squeezed between wide hidden layers
+  height = max(table(nodes$x)) - 1
+  nodes$y = stats::ave(seq_len(nrow(nodes)), nodes$x, FUN = function(i) if(length(i) == 1) 0 else height / 2 - (seq_along(i) - 1) * height / (length(i) - 1))
+  nodes$hjust = ifelse(nodes$x <= 1, 1.15, -0.15)
+
+  graph = igraph::graph_from_data_frame(edges, vertices = nodes)
+  layout = ggraph::create_layout(graph, layout = "manual", x = nodes$x, y = nodes$y)
+  ggraph::ggraph(layout) +
+    ggraph::geom_edge_link(ggplot2::aes(edge_width = abs(value), edge_colour = type), edge_alpha = 0.6) +
+    ggraph::geom_node_point(size = node_size) +
+    ggraph::geom_node_text(ggplot2::aes(label = label, hjust = hjust), size = 3) +
+    ggraph::scale_edge_width(range = c(0.1, 2), guide = "none") +
+    ggraph::scale_edge_colour_manual(values = c(network = "grey30", embedding = "#1b9e77", `fixed effect` = "#d95f02"), name = NULL) +
+    ggplot2::scale_x_continuous(expand = ggplot2::expansion(add = 1)) +
+    ggplot2::theme_void()
+}
+
+utils::globalVariables(c("value", "type", "label", "hjust"))
 
 #' @rdname plot.citodnn
 #' @param plot_type plot ALE or architecture

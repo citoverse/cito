@@ -129,6 +129,7 @@ testthat::test_that("MMN accepts custom submodules", {
 testthat::test_that("modality importance recovers which data stream carries the signal", {
   skip_if_no_torch()
   set.seed(42)
+  torch::torch_manual_seed(42)
   n <- 160
   shapes <- cito:::simulate_shapes(n = n, size = 16, channels = 3)
   X_dnn <- matrix(runif(n*3), n, 3)
