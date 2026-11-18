@@ -1319,6 +1319,7 @@ cast_to_r_keep_dim = function(x) {
 }
 
 get_X_Y = function(formula, X, Y, data) {
+  fe = NULL
 
   if(!is.null(X)) {
     if(!is.null(Y)) {
@@ -1344,10 +1345,21 @@ get_X_Y = function(formula, X, Y, data) {
       data <- data.frame(data)
     }
     old_formula = formula
+    fe = split_fe(formula)
+    formula = fe$formula
     parsed_formula = splitForm(formula)
     formula = parsed_formula$fixedFormula
     Specials = list(terms = parsed_formula$reTrmFormulas, types = parsed_formula$reTrmClasses, args = parsed_formula$reTrmAddArgs)
-    formula <- formula(stats::terms.formula(formula, data = data))
+    # "." expands to the variables that are neither fixed effects nor embedded
+    special_vars = c(fe$vars, unlist(lapply(Specials$terms, all.vars)))
+    if(!is.null(data)) formula <- formula(stats::terms.formula(formula, data = data[, setdiff(names(data), special_vars), drop = FALSE]))
+    else formula <- formula(stats::terms.formula(formula))
+    if(!is.null(fe$expr)) {
+      both = intersect(all.vars(formula[[length(formula)]]), fe$vars)
+      if(length(both)) stop(paste0("Variables must enter either the DNN or fe(), not both: ", paste(both, collapse = ", ")))
+      if(length(attr(stats::terms(formula), "term.labels")) == 0 && is.null(Specials$terms)) stop("fe() needs at least one other predictor or e() term; for a purely linear model use glm().")
+      formula <- stats::update.formula(formula, stats::as.formula(paste("~ . +", deparse1(fe$expr))))
+    }
     formula <- stats::update.formula(formula, ~ . + 1)
   } else {
     stop("Either formula (and data) or X (and Y) have to be specified.")
@@ -1381,6 +1393,14 @@ get_X_Y = function(formula, X, Y, data) {
     data <- data[rownames(X), , drop = FALSE]
   }
 
+  fixed_effects = NULL
+  if(!is.null(fe$expr)) {
+    labels = attr(stats::terms(formula), "term.labels")
+    fe_labels = attr(stats::terms(stats::as.formula(paste("~", deparse1(fe$expr)))), "term.labels")
+    cols = which(labels[attr(X, "assign")] %in% fe_labels)
+    fixed_effects = c(list(cols = cols, names = colnames(X)[cols]), fe$args)
+  }
+
   if(is.null(Specials$terms)) {
     out = list(X = X, Y = Y, formula = formula, data = data, Z = NULL, Z_terms = NULL)
   } else {
@@ -1400,5 +1420,30 @@ get_X_Y = function(formula, X, Y, data) {
     out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args, Zlvls = Zlvls)
   }
   out$old_formula = old_formula
+  out$fe = fixed_effects
   return(out)
+}
+
+# Pulls the one fe(...) term out of the right-hand side: the remaining formula, the fixed-effects expression,
+# its variables and the evaluated fe() settings
+split_fe = function(formula) {
+  walk = function(e) {
+    if(is.call(e) && identical(e[[1]], as.name("+")) && length(e) == 3) {
+      l = walk(e[[2]])
+      r = walk(e[[3]])
+      rest = if(is.null(l$rest)) r$rest else if(is.null(r$rest)) l$rest else call("+", l$rest, r$rest)
+      return(list(rest = rest, fe = c(l$fe, r$fe)))
+    }
+    if(is.call(e) && identical(e[[1]], as.name("fe"))) return(list(rest = NULL, fe = list(e)))
+    return(list(rest = e, fe = NULL))
+  }
+  w = walk(formula[[length(formula)]])
+  if(length(w$fe) == 0) return(list(formula = formula))
+  if(length(w$fe) > 1) stop("Use one fe() term with all fixed effects in it, e.g. fe(Temp + Precp).")
+  args = as.list(w$fe[[1]])[-1]
+  unnamed = if(is.null(names(args))) rep(TRUE, length(args)) else names(args) == ""
+  if(sum(unnamed) != 1) stop("fe() takes the fixed effects as its first argument, e.g. fe(Temp + Precp, lambda = 0.01).")
+  formula[[length(formula)]] = if(is.null(w$rest)) 1 else w$rest
+  return(list(formula = formula, expr = args[unnamed][[1]], vars = all.vars(args[unnamed][[1]]),
+              args = do.call(fe, lapply(args[!unnamed], eval, envir = environment(formula)))))
 }

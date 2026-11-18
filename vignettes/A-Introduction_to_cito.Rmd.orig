@@ -178,6 +178,32 @@ coef(nn.fit)
 print(nn.fit)
 ```
 
+### Linear effects and embeddings in the formula
+
+Two special terms extend the formula. `fe()` adds predictors with linear effects, which are added to the output of the network on the link scale, so that the model is
+$$\eta = f(X) + \beta^T x_{fe}$$
+with $f$ the neural network. $\beta$ is estimated together with the network and can be read like a coefficient of a GLM. `fe()` takes the right-hand side of a formula, so transformations such as `I(Temp^2)` or `poly()` work as in `lm()`. The variables in `fe()` are not passed to the network, and `.` expands to all other variables. The fixed effects have no intercept (the network has one), and they are not affected by the `lambda` and `alpha` of `dnn()`; they can be regularized with their own `fe(..., lambda = , alpha = )`.
+
+`e()` adds an embedding of a categorical variable (e.g. a site or individual), which is learned as part of the input of the network.
+
+```{r fe_example, eval=TRUE}
+set.seed(42)
+n = 1000
+sim = data.frame(X1 = runif(n, -2, 2), Temp = rnorm(n), Precp = rnorm(n),
+                 Site = factor(sample(paste0("site", 1:10), n, replace = TRUE)))
+site_effect = rnorm(10, sd = 0.5)
+sim$Y = sin(2 * sim$X1) + 1.0 * sim$Temp - 0.5 * sim$Temp^2 + 0.5 * sim$Precp +
+  site_effect[sim$Site] + rnorm(n, sd = 0.3)
+
+fit_fe = dnn(Y ~ X1 + Precp + fe(Temp + I(Temp^2)) + e(Site, dim = 2),
+             data = sim, loss = "mse", epochs = 100, verbose = FALSE, plot = FALSE)
+
+# the linear effects, simulated as 1.0 and -0.5
+coef(fit_fe)$fixed_effects
+```
+
+Here `Precp` enters the network although its true effect is linear; a variable can enter either the network or `fe()`, not both. In `mmn()` and with `custom` networks `fe()` is not available yet.
+
 ## Explainable AI - Understanding your model
 
 xAI can produce outputs that are similar to known outputs from statistical models:

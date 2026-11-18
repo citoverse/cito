@@ -72,6 +72,16 @@ build_dnn = function(model_properties) {
   bias = model_properties$bias
   dropout = model_properties$dropout
   embeddings = model_properties$embeddings
+  fe = model_properties$fe
+  # the fixed-effect columns of X bypass the DNN and are added on the link scale
+  if(!is.null(fe)) {
+    dnn_cols = setdiff(seq_len(input), fe$cols)
+    input = length(dnn_cols)
+  }
+  split_input = function(x) {
+    index = function(cols) torch::torch_tensor(cols, dtype = torch::torch_long(), device = x$device)
+    list(x$index_select(2L, index(dnn_cols)), x$index_select(2L, index(fe$cols)))
+  }
 
   layers = list()
   if(is.null(hidden)) {
@@ -116,8 +126,13 @@ build_dnn = function(model_properties) {
           self[[paste0("l_",i)]] = layers[[i]]
         }
         self$has_embeddings = TRUE
+        if(!is.null(fe)) self$fe = torch::nn_linear(length(fe$cols), output, bias = FALSE)
       },
       forward = function(input_hidden, input_embeddings, return_embeddings = FALSE) {
+        if(!is.null(fe)) {
+          parts = split_input(input_hidden)
+          input_hidden = parts[[1]]
+        }
         n_em = length(embeddings$dims)
         embeds =
           lapply(1:n_em, function(j) {
@@ -133,6 +148,7 @@ build_dnn = function(model_properties) {
             }
           }
         }
+        if(!is.null(fe)) x = x + self$fe(parts[[2]])
         return(x)
       }
     )
@@ -158,8 +174,13 @@ build_dnn = function(model_properties) {
           self[[paste0("l_",i)]] = layers[[i]]
         }
         self$has_embeddings = FALSE
+        if(!is.null(fe)) self$fe = torch::nn_linear(length(fe$cols), output, bias = FALSE)
       },
       forward = function(x, return_embeddings = FALSE) {
+        if(!is.null(fe)) {
+          parts = split_input(x)
+          x = parts[[1]]
+        }
         for(i in 1:length(layers)) {
           x = self[[paste0("l_",i)]](x)
           if(return_embeddings) {
@@ -168,6 +189,7 @@ build_dnn = function(model_properties) {
             }
           }
         }
+        if(!is.null(fe)) x = x + self$fe(parts[[2]])
         return(x)
       }
     )
