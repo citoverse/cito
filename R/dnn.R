@@ -318,6 +318,7 @@ dnn <- function(formula = NULL,
     embeddings = NULL
   }
 
+  if(!is.null(tmp_data$fe) && (!is.null(custom) || is.null(Y))) stop("fe() is not supported with custom or inside mmn().")
   if(!is.null(custom)) custom = check_custom(custom, Z_args = embeddings$args, in_mmn = is.null(Y))
 
   # Only return the model properties if no Y specified (Used in mmn())
@@ -399,7 +400,8 @@ dnn <- function(formula = NULL,
                              bias = bias,
                              dropout = dropout,
                              embeddings = embeddings,
-                             custom = custom)
+                             custom = custom,
+                             fe = tmp_data$fe)
     class(model_properties) <- "citodnn_properties"
 
     net <- build_dnn(model_properties)
@@ -919,6 +921,11 @@ coef.citodnn <- function(object, ...) {
   object <- check_model(object)
   out <- list()
   out$net_parameters <- lapply(object$net$parameters, function(x) torch::as_array(x$to(device = "cpu")))
+  if(!is.null(object$model_properties$fe)) {
+    out$fixed_effects <- t(out$net_parameters$fe.weight)
+    rownames(out$fixed_effects) <- object$model_properties$fe$names
+    if(ncol(out$fixed_effects) == length(object$loss$responses)) colnames(out$fixed_effects) <- object$loss$responses
+  }
   if(!is.null(object$loss$parameters)) out$loss_parameters <- lapply(object$loss$parameters, function(x) torch::as_array(x$to(device = "cpu")))
   return(out)
 }

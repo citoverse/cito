@@ -71,7 +71,8 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
       }
 
       if(regularize){
-        regularization_loss <- regularize_weights(parameters = model$net$parameters,
+        # the fixed effects have their own lambda and alpha, see fe()
+        regularization_loss <- regularize_weights(parameters = model$net$parameters[!startsWith(names(model$net$parameters), "fe.")],
                                    alpha = model$training_properties$alpha,
                                    lambda = model$training_properties$lambda)
         total_loss = torch::torch_add(loss, regularization_loss)
@@ -91,6 +92,9 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
           }
         }
       }
+
+      fe = model$model_properties$fe
+      if(!is.null(fe) && fe$lambda > 0) total_loss = torch::torch_add(total_loss, regularize_weights(model$net$fe$parameters, lambda = fe$lambda, alpha = fe$alpha))
 
       total_loss$backward()
 
