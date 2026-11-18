@@ -432,7 +432,10 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
           self$y_dim <- ncol(Y)
           self$responses <- colnames(Y)
 
-          self$parameter <- torch::nn_parameter(torch::torch_ones(1, self$y_dim, requires_grad = TRUE)) # might want to rename self$parameter
+          # sd = softplus(parameter): a clamp has zero gradient outside its range, the parameter escaped it and fits went NaN
+          sd_Y = apply(Y, 2, stats::sd, na.rm = TRUE)
+          sd_Y[!is.finite(sd_Y) | sd_Y <= 0] = 1
+          self$parameter <- torch::nn_parameter(torch::torch_tensor(matrix(ifelse(sd_Y > 20, sd_Y, log(expm1(sd_Y))), nrow = 1), dtype = torch::torch_float32()))
 
           if(loss$link != "identity") warning(paste0("Link '", loss$link, "' is not implemented for gaussian loss, yet. Using 'identity' link instead."))
           self$link = function(x) {x}
@@ -443,7 +446,10 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
           else self$baseloss = baseloss
         },
         forward = function(pred, true) {
-          return(torch::distr_normal(self$invlink(pred), torch::torch_clamp(self$parameter, 0.0001, 20))$log_prob(true)$negative())
+          return(torch::distr_normal(self$invlink(pred), torch::nnf_softplus(self$parameter) + 0.0001)$log_prob(true)$negative())
+        },
+        parameter_link = function() {
+          as.numeric((torch::nnf_softplus(self$parameter) + 0.0001)$cpu())
         },
         format_Y = function(Y) {
           assert_Y_numeric(Y)
