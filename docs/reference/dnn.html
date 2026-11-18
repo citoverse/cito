@@ -292,6 +292,32 @@ The list consists of the following attributes:</p>
     <h2 id="loss-functions-likelihoods">Loss functions / Likelihoods<a class="anchor" aria-label="anchor" href="#loss-functions-likelihoods"></a></h2>
     <p>We support loss functions and likelihoods for different tasks:</p><table class="table table"><tr><td>Name</td><td>Explanation</td><td>Example / Task</td><td>Data Type</td></tr><tr><td>mse</td><td>mean squared error</td><td>Regression, predicting continuous values</td><td><code>numeric</code> (vector, matrix, or data.frame)</td></tr><tr><td>mae</td><td>mean absolute error</td><td>Regression, predicting continuous values</td><td><code>numeric</code> (vector, matrix, or data.frame)</td></tr><tr><td>cross-entropy</td><td>categorical cross entropy</td><td>Multi-class, species classification</td><td><code>factor</code> or <code>character</code> (vector, or 1-column matrix/data.frame)</td></tr><tr><td>softmax</td><td>categorical cross entropy (deprecated alias for <code>cross-entropy</code>)</td><td>Multi-class, species classification</td><td><code>factor</code> or <code>character</code> (vector, or 1-column matrix/data.frame)</td></tr><tr><td>gaussian</td><td>Normal likelihood</td><td>Regression, residual error is also estimated (similar to <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::lm()</a></code>)</td><td><code>numeric</code> (vector, matrix, or data.frame)</td></tr><tr><td>binomial</td><td>Binomial likelihood</td><td>Classification/Logistic regression, mortality</td><td><code>factor</code>/<code>character</code> (vector or 1-column matrix/data.frame), a 0/1 vector, or <code>integer</code> matrix/data.frame with exactly 2 columns (successes, failures)</td></tr><tr><td>bernoulli</td><td>Bernoulli likelihood</td><td>Classification, binary (0/1) outcome per observation</td><td><code>integer</code> (0/1 only), vector, matrix, or data.frame</td></tr><tr><td>poisson</td><td>Poisson likelihood</td><td>Regression, count data, e.g. species abundances</td><td><code>numeric</code> (vector, matrix, or data.frame); not enforced as integer</td></tr><tr><td>nbinom</td><td>Negative binomial likelihood</td><td>Regression, count data with dispersion parameter</td><td><code>numeric</code> (vector, matrix, or data.frame); not enforced as integer</td></tr><tr><td>mvp</td><td>multivariate probit model</td><td>joint species distribution model, multi species (presence absence)</td><td><code>integer</code> (0/1 only) matrix/data.frame with \(\ge\)2 columns; vectors/factors not accepted</td></tr><tr><td>multinomial</td><td>Multinomial likelihood</td><td>step selection in animal movement models</td><td><code>factor</code>/<code>character</code> (vector or 1-column matrix/data.frame), or <code>integer</code> matrix/data.frame with \(\ge\)2 columns</td></tr><tr><td>clogit</td><td>conditional binomial</td><td>step selection in animal movement models</td><td><code>factor</code>/<code>character</code> (vector or 1-column matrix/data.frame), or <code>integer</code> matrix/data.frame with \(\ge\)2 columns</td></tr></table></div>
     <div class="section level2">
+    <h2 id="additional-structures-in-the-formula">Additional structures in the formula<a class="anchor" aria-label="anchor" href="#additional-structures-in-the-formula"></a></h2>
+    <p>Two special terms change how predictors enter the model:</p><table class="table table"><tr><td>Structure</td><td>Syntax</td><td>What it does</td><td>Typical use</td></tr><tr><td>Embedding, <code><a href="e.html">e</a></code></td><td><code>Y ~ X1 + X2 + e(Site, dim = 2)</code></td><td>every level of a factor gets a learned vector of <code>dim</code> numbers that enters the network as additional input</td><td>grouping variables with many levels: sites, plots, individuals, species, years</td></tr><tr><td>Fixed effect, <code><a href="fe.html">fe</a></code></td><td><code>Y ~ X1 + X2 + fe(Temp + I(Temp^2))</code></td><td>the terms bypass the network and are added linearly on the link scale, \(\eta = f(X) + \beta^T x_{fe}\)</td><td>effects that should be reported as coefficients, or that are known to be linear</td></tr></table><p>Both can be combined, e.g. <code>dnn(Y ~ . + fe(Temp) + e(Site))</code>. A variable in <code><a href="fe.html">fe()</a></code> enters only the linear part.</p>
+<p><strong>Why embeddings.</strong> One-hot coding (or contrasts) treats every level of a factor as equally distinct: no level is
+closer to any other. An embedding represents each level by a vector of <code>dim</code> coordinates that is estimated together
+with the network (Guo and Berkhahn, 2016, <a href="https://doi.org/10.48550/arXiv.1604.06737" class="external-link">doi:10.48550/arXiv.1604.06737</a>
+), so the model can discover which levels
+behave similarly and place them close together. The coordinates are passed to the first hidden layer together with
+the other predictors, and because the network learns the interactions itself, they modulate all effects jointly and
+non-linearly. This is like a joint, non-linear random effect on everything: a random intercept or slope lets a group
+deviate in one effect, and similarity learned for one predictor does not carry over to another, whereas an
+embedding maps all differences between the groups into a <code>dim</code>-dimensional space. The network learns how similar
+the groups are in their response and whether they differ at all. Similar to an ordination, groups with similar
+responses lie close together in the embedding space, so the fitted embeddings can be inspected afterwards
+(<code>coef(model)[[1]]$e_1.weight</code>, one row per level; see <code><a href="e.html">e</a></code> for a biplot of the effects).</p>
+<p><code>dim</code> controls how much structure the embedding can capture and can be tuned. <code>e(lambda = , alpha = )</code> regularizes
+the embeddings separately from the network. Embeddings are identified only up to rotation, reflection and scale:
+two fits of the same data give the same configuration in different coordinates, so align them (e.g. Procrustes)
+before comparing, and inspect them across several refits. Embeddings can also be fixed, e.g. to trait or
+phylogenetic coordinates, with <code>e(weights = , train = FALSE)</code>.</p>
+<p><strong>Why fixed effects.</strong> A DNN learns every effect flexibly, which makes single effects hard to report. <code><a href="fe.html">fe()</a></code> adds
+selected terms as in a GLM, while the network models the rest: \(\beta\) is returned by <code>coef(model)$fixed_effects</code>
+and is estimated like a parametric term in a GAM. The intercept comes from the network. The fixed effects are not
+regularized by the global <code>lambda</code>, only by <code>fe(lambda = )</code>. If the fixed-effect variables are correlated with the
+network inputs, a strongly regularized network can bias \(\beta\); see <code><a href="fe.html">fe</a></code> for details.</p>
+    </div>
+    <div class="section level2">
     <h2 id="finding-the-right-architecture">Finding the right architecture<a class="anchor" aria-label="anchor" href="#finding-the-right-architecture"></a></h2>
     <p>As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in <a href="https://arxiv.org/abs/2306.10551" class="external-link">Pichler &amp; Hartig, 2023</a>, we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the <code>selu</code> activation function outperforms <code>relu</code> for small data sizes (&lt;100 observations).</p>
 <p>We recommend starting with moderate sizes (like the defaults), and if the model doesn't generalize/converge, try larger networks along with a regularization that helps minimize the risk of overfitting (see <code><a href="../articles/B-Training_neural_networks.html">vignette("B-Training_neural_networks")</a></code> ).</p>
@@ -504,159 +530,177 @@ For detailed installation instructions and more information on utilizing GPUs fo
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">create_cov</span><span class="op">(</span><span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameters</span><span class="op">$</span><span class="va">SigmaPar</span>,</span></span>
 <span class="r-in"><span>                     <span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameters</span><span class="op">$</span><span class="va">SigmaDiag</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Embeddings and fixed effects</span></span></span>
+<span class="r-in"><span><span class="co">## Species enters as an embedding: each species gets two learned coordinates,</span></span></span>
+<span class="r-in"><span><span class="co">## from which the network learns how the species differ in their response to</span></span></span>
+<span class="r-in"><span><span class="co">## all predictors. Petal.Width enters as a fixed (linear) effect.</span></span></span>
+<span class="r-in"><span><span class="va">nn.fit</span> <span class="op">=</span> <span class="fu">dnn</span><span class="op">(</span><span class="va">Sepal.Length</span> <span class="op">~</span> <span class="va">Sepal.Width</span> <span class="op">+</span> <span class="va">Petal.Length</span> <span class="op">+</span> <span class="fu"><a href="fe.html">fe</a></span><span class="op">(</span><span class="va">Petal.Width</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="e.html">e</a></span><span class="op">(</span><span class="va">Species</span>, dim <span class="op">=</span> <span class="fl">2</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>             data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>, loss <span class="op">=</span> <span class="st">"mse"</span>, epochs <span class="op">=</span> <span class="fl">50L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## the linear effect of Petal.Width</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">$</span><span class="va">fixed_effects</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## the embeddings, one row per species</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">$</span><span class="va">net_parameters</span><span class="op">$</span><span class="va">e_1.weight</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## architecture: Species feeds its two embedding dimensions, Petal.Width goes</span></span></span>
+<span class="r-in"><span><span class="co">## straight to the output</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span>, plot_type <span class="op">=</span> <span class="st">"arch"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 1.047610, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 1.056465, lr: 0.01000</span>
 <span class="r-plt img"><img src="dnn-1.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.892782, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.788463, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.692052, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.644701, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.589922, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.557884, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.515625, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.479033, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.458168, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.441431, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.408867, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.399429, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.387338, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.377321, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.359182, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.336992, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.314337, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.312227, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.293291, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.283489, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.272252, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.271839, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.250646, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.246924, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.235966, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.241137, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.219607, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.212032, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.218194, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.212571, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.200118, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.187104, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.182861, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.175508, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.174161, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.166152, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.170598, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.182429, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.152212, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.180620, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.148277, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.143725, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.142058, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.145207, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.132275, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.124470, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.126993, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.125357, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.126574, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.120332, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.123630, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.129695, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.120108, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.130742, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.113400, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.109455, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.113352, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.107271, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.103485, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.108765, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.110835, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.107924, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.117210, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.104804, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.106462, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.126777, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.097991, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.105106, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.107571, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.084662, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.101372, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.099413, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.088655, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.090058, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.105790, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.098646, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.100589, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.094730, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.097224, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.088540, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.088708, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.101753, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.085440, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.089618, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.081203, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.083068, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.091987, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.087156, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.118454, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.104999, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.087815, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.083065, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.084915, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.100002, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.078273, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.098475, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.083712, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.083797, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.081820, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 101: 0.082601, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.858716, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.747638, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.665622, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.605385, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.558022, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.520823, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.503592, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.473897, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.449391, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.429713, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.413252, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.396374, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.379175, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.368182, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.354345, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.352530, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.326339, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.311223, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.303140, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.296860, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.284739, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.272219, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.268026, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.250919, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.240251, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.232882, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.227974, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.224538, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.229027, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.206004, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.198441, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.195808, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.183131, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.187885, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.173423, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.179929, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.166257, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.158565, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.164999, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.155505, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.160536, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.152560, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.148680, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.159059, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.157092, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.140515, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.150384, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.134574, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.123850, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.131167, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.130760, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.128335, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.132143, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.126185, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.118053, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.116121, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.122477, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.119728, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.117050, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.109793, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.118328, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.107234, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.112446, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.106632, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.114667, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.108552, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.104918, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.101051, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.107541, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.099718, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.134784, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.101054, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.091565, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.094120, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.091234, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.091313, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.094158, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.089775, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.097809, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.094033, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.101532, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.092188, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.094651, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.095263, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.089346, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.091728, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.093749, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.085121, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.089772, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.105943, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.090392, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.091393, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.089033, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.083558, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.106201, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.086875, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.079708, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.094837, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.083283, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 101: 0.084982, lr: 0.01000</span>
 <span class="r-plt img"><img src="dnn-2.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 102: 0.076694, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 103: 0.091089, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 104: 0.077123, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 105: 0.091445, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 106: 0.091220, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 107: 0.118371, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 108: 0.106468, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 109: 0.069542, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 110: 0.096720, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 111: 0.074798, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 112: 0.075740, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 113: 0.068093, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 114: 0.078388, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 115: 0.065940, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 116: 0.066176, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 117: 0.079676, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 118: 0.080898, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 119: 0.088275, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 120: 0.068800, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 121: 0.085497, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 122: 0.071093, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 123: 0.079509, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 124: 0.079955, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 125: 0.087661, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 126: 0.080534, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 127: 0.082294, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 128: 0.067994, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 129: 0.096183, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 130: 0.074553, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 131: 0.076242, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 132: 0.066735, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 133: 0.065233, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 134: 0.073242, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 135: 0.067636, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 136: 0.076862, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 137: 0.083534, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 138: 0.075017, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 139: 0.064435, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 140: 0.081610, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 141: 0.064009, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 142: 0.066052, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 143: 0.062426, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 144: 0.063256, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 145: 0.067600, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 146: 0.073859, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 147: 0.073222, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 148: 0.084544, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 149: 0.089969, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 150: 0.074522, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 102: 0.074988, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 103: 0.086289, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 104: 0.075726, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 105: 0.096405, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 106: 0.083768, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 107: 0.074664, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 108: 0.085083, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 109: 0.084017, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 110: 0.086144, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 111: 0.085506, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 112: 0.090942, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 113: 0.078791, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 114: 0.087946, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 115: 0.083227, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 116: 0.083194, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 117: 0.080417, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 118: 0.075475, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 119: 0.069624, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 120: 0.081996, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 121: 0.082523, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 122: 0.072685, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 123: 0.068988, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 124: 0.069915, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 125: 0.085560, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 126: 0.070735, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 127: 0.081848, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 128: 0.073318, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 129: 0.081117, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 130: 0.074906, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 131: 0.074449, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 132: 0.094513, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 133: 0.076325, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 134: 0.069672, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 135: 0.069891, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 136: 0.069955, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 137: 0.061634, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 138: 0.078751, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 139: 0.101157, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 140: 0.088528, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 141: 0.089341, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 142: 0.065373, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 143: 0.068828, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 144: 0.084923, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 145: 0.070786, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 146: 0.064272, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 147: 0.083008, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 148: 0.068262, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 149: 0.057585, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 150: 0.072355, lr: 0.01000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> dnn(formula = Species ~ Sepal.Length + Sepal.Width + Petal.Length + </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Petal.Width, data = datasets::iris, loss = "cross-entropy")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> An `nn_module` containing 2,953 parameters.</span>
@@ -670,309 +714,309 @@ For detailed installation instructions and more information on utilizing GPUs fo
 <span class="r-plt img"><img src="dnn-3.png" alt="" width="700" height="433"></span>
 <span class="r-plt img"><img src="dnn-4.png" alt="" width="700" height="433"></span>
 <span class="r-plt img"><img src="dnn-5.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 0.673099, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 0.610366, lr: 0.01000</span>
 <span class="r-plt img"><img src="dnn-6.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.586612, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.551332, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.521364, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.495815, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.471680, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.452111, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.431466, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.418337, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.402363, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.384449, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.372305, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.360876, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.349842, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.341812, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.327649, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.319970, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.315298, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.305130, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.297186, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.292309, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.283399, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.275238, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.271337, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.263307, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.256266, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.262010, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.243615, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.240985, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.237142, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.237555, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.225110, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.224458, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.215281, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.211877, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.208955, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.206568, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.195595, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.194365, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.189517, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.193385, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.180241, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.180931, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.172148, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.168916, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.161902, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.165100, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.156666, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.154791, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.151878, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.150796, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.150205, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.144378, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.138802, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.142683, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.134676, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.132630, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.133897, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.125627, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.124523, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.120150, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.121673, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.114689, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.114484, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.114619, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.113901, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.108983, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.109720, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.105502, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.098955, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.104303, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.104899, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.105508, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.097000, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.097277, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.092530, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.095517, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.091596, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.095261, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.091921, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.088120, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.088884, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.091654, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.087390, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.093177, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.084196, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.081539, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.087324, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.081075, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.087649, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.077732, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.081827, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.089344, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.082772, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.071802, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.076497, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.080083, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.078343, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.080494, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.076998, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 1.131531, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.531566, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.483696, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.448254, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.412883, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.387466, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.366742, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.349352, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.330477, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.319332, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.305724, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.291175, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.279544, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.275126, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.264653, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.253534, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.245737, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.240977, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.231559, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.224940, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.217356, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.214323, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.205741, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.201989, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.195735, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.189148, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.184809, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.179604, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.171162, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.167546, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.164126, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.162517, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.159040, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.151025, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.146141, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.146579, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.142278, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.136358, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.133566, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.137054, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.127039, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.124669, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.120527, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.123864, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.120288, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.114232, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.111809, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.112513, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.107550, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.106273, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.103420, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.105802, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.102642, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.108933, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.095883, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.099279, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.096284, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.096675, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.090855, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.089781, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.088538, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.085908, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.084608, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.088578, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.084608, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.087977, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.084873, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.079253, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.081142, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.080375, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.074626, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.083445, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.076475, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.074841, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.072843, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.073609, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.077635, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.069727, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.074167, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.068933, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.070567, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.067839, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.068587, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.072344, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.068407, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.064465, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.068279, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.061301, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.069283, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.061808, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.065475, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.059676, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.063715, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.064308, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.061842, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.064217, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.061459, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.058331, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.059562, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.061706, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 1.098361, lr: 0.01000</span>
 <span class="r-plt img"><img src="dnn-7.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.919546, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.832303, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.738153, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.675164, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.617698, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.596311, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.531553, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.499873, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.472194, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.472169, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.435488, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.405205, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.397699, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.373819, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.344326, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.362608, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.327755, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.311631, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.296480, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.287739, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.280704, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.272791, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.250329, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.244502, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.242433, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.226342, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.227408, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.239694, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.210975, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.206775, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.197558, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.192611, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.183896, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.183691, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.187726, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.179555, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.164799, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.161865, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.206064, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.162717, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.160399, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.151961, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.142115, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.144716, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.134994, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.136796, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.139099, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.128870, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.127726, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.137342, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.142199, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.120015, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.136557, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.129173, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.122449, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.119311, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.112996, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.119444, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.106306, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.103052, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.111367, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.105712, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.098682, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.105603, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.096138, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.095587, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.096322, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.094421, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.113112, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.098762, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.098612, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.089817, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.087835, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.106064, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.096136, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.080880, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.094191, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.089933, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.093061, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.106057, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.082139, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.083490, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.097702, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.083351, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.077428, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.096786, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.077784, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.092930, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.077674, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.087673, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.101678, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.077219, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.079223, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.085558, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.073956, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.084609, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.104687, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.084520, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.096416, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 3.682381, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.928232, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 0.802920, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 0.706465, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 0.645880, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 0.592126, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 0.547569, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 0.527241, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 0.499529, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 0.464662, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 0.445031, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 0.441080, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 0.404780, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 0.388418, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 0.375013, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 0.365507, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 0.351032, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 0.342690, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 0.337752, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 0.312704, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 0.291146, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 0.308068, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 0.285420, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 0.265330, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 0.264026, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 0.250357, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 0.236356, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 0.234477, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 0.224223, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 0.219570, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 0.210314, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 0.197944, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 0.217295, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 0.190098, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 0.193854, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 0.179669, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 0.173088, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 0.173474, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 0.155800, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 0.154924, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 0.151473, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 0.151214, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 0.149586, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 0.137840, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 0.148444, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 0.153194, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 0.139416, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 0.138750, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 0.147716, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 0.127523, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 0.119128, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 0.129569, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 0.120174, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 0.117029, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 0.120215, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 0.117853, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 0.109265, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 0.107549, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 0.104830, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 0.112188, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 0.102278, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 0.103254, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 0.111133, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 0.093295, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 0.105903, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 0.112570, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 0.107647, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 0.100163, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 0.104560, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 0.091115, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 0.101134, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 0.094966, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 0.112099, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 0.088648, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 0.101421, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 0.100859, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 0.093425, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 0.096636, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 0.088350, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 0.093346, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 0.089218, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 0.095540, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 0.089132, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 0.084029, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 0.075434, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 0.102084, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 0.081991, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 0.086357, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 0.088807, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 0.128003, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 0.076740, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 0.091500, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 0.088666, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 0.088290, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 0.087884, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 0.085878, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 0.096647, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 0.077705, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 0.087120, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 0.076572, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 3.865915, lr: 0.01000</span>
 <span class="r-plt img"><img src="dnn-8.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 3.294621, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 3.256830, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 3.241283, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 3.236913, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 3.228450, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 3.228770, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 3.222266, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 3.220139, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 3.211467, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 3.208660, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 3.200411, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 3.199195, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 3.191670, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 3.187047, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 3.177722, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 3.170024, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 3.163408, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 3.154720, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 3.147918, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 3.137136, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 3.130076, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 3.123847, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 3.111760, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 3.097186, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 3.086954, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 3.075425, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 3.066186, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 3.053875, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 3.037676, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 3.017720, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 3.004156, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 2.988850, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 2.972227, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 2.953804, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 2.941721, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 2.914810, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 2.891287, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 2.867359, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 2.853650, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 2.830839, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 2.797697, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 2.781916, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 2.745592, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 2.725676, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 2.695169, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 2.675290, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 2.646004, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 2.619965, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 2.597354, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 2.568193, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 2.549519, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 2.523628, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 2.504871, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 2.489016, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 2.463736, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 2.444420, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 2.429753, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 2.418805, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 2.402865, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 2.390542, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 2.380021, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 2.369290, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 2.358917, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 2.350258, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 2.340402, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 2.333662, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 2.330305, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 2.322404, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 2.316494, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 2.310920, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 2.310121, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 2.302551, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 2.297861, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 2.294823, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 2.290777, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 2.287246, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 2.284240, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 2.281092, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 2.278792, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 2.276934, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 2.273517, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 2.273334, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 2.270286, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 2.268805, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 2.266817, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 2.264881, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 2.262718, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 2.261000, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 2.259238, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 2.257553, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 2.256529, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 2.254707, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 2.254000, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 2.252978, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 2.251548, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 2.250273, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 2.249917, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 2.247842, lr: 0.01000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 2.246752, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 3.272502, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: 3.248018, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: 3.229654, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: 3.229975, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: 3.217005, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: 3.213181, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 8: 3.209842, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 9: 3.196979, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 10: 3.187892, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 11: 3.185758, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 12: 3.170570, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 13: 3.165532, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 14: 3.160380, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 15: 3.143634, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 16: 3.142208, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 17: 3.124663, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 18: 3.111250, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 19: 3.104770, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 20: 3.088522, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 21: 3.079242, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 22: 3.061012, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 23: 3.044644, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 24: 3.036138, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 25: 3.012236, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 26: 2.993185, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 27: 2.986789, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 28: 2.959308, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 29: 2.935869, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 30: 2.915302, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 31: 2.892062, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 32: 2.875626, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 33: 2.845773, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 34: 2.828870, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 35: 2.814513, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 36: 2.789817, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 37: 2.766813, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 38: 2.747019, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 39: 2.734718, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 40: 2.711229, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 41: 2.692443, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 42: 2.671040, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 43: 2.662829, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 44: 2.648885, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 45: 2.636256, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 46: 2.621844, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 47: 2.611791, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 48: 2.600374, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 49: 2.590719, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 50: 2.581901, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 51: 2.569283, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 52: 2.558563, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 53: 2.550566, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 54: 2.542212, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 55: 2.525987, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 56: 2.517153, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 57: 2.512906, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 58: 2.503710, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 59: 2.490507, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 60: 2.478919, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 61: 2.472593, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 62: 2.458820, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 63: 2.450727, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 64: 2.442242, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 65: 2.432864, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 66: 2.421003, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 67: 2.408592, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 68: 2.400814, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 69: 2.389146, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 70: 2.380362, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 71: 2.369027, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 72: 2.357359, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 73: 2.349726, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 74: 2.337655, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 75: 2.332001, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 76: 2.322016, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 77: 2.311975, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 78: 2.306014, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 79: 2.297171, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 80: 2.290151, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 81: 2.287857, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 82: 2.276965, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 83: 2.269543, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 84: 2.266313, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 85: 2.259313, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 86: 2.252496, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 87: 2.250003, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 88: 2.243255, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 89: 2.240864, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 90: 2.236885, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 91: 2.230913, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 92: 2.229275, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 93: 2.223295, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 94: 2.221474, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 95: 2.218823, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 96: 2.213402, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 97: 2.214228, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 98: 2.210849, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 99: 2.207922, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 100: 2.204797, lr: 0.01000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      [,1] [,2]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1,]    5    2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [2,]    4    2</span>
@@ -981,24 +1025,22 @@ For detailed installation instructions and more information on utilizing GPUs fo
 <span class="r-out co"><span class="r-pr">#&gt;</span> Starting hyperparameter tuning...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Fitting final model...</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #949494;"># A tibble: 10 × 6</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    steps  test train models hidden          lr</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>       <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>     1  56.3     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.076<span style="text-decoration: underline;">9</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>     2  38.0     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.064<span style="text-decoration: underline;">7</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>     3  20.7     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.040<span style="text-decoration: underline;">9</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     4 134.      0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.000<span style="text-decoration: underline;">946</span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>     5  46.2     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.019<span style="text-decoration: underline;">4</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>     6  33.3     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.095<span style="text-decoration: underline;">9</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>     7  47.8     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.070<span style="text-decoration: underline;">6</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>     8  48.6     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.044<span style="text-decoration: underline;">4</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>     9  40.2     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.020<span style="text-decoration: underline;">1</span>  </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>    10  28.4     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.079<span style="text-decoration: underline;">4</span>  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    steps  test train models hidden         lr</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;int&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;lgl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;list&gt;</span>      <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 1</span>     1  31.7     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.021<span style="text-decoration: underline;">4</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 2</span>     2  25.5     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.078<span style="text-decoration: underline;">7</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 3</span>     3 147.      0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.001<span style="text-decoration: underline;">58</span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 4</span>     4 142.      0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.070<span style="text-decoration: underline;">6</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 5</span>     5  47.4     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.016<span style="text-decoration: underline;">8</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 6</span>     6  42.1     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.022<span style="text-decoration: underline;">5</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 7</span>     7 105.      0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.062<span style="text-decoration: underline;">7</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 8</span>     8  66.6     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.096<span style="text-decoration: underline;">6</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;"> 9</span>     9  52.7     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.066<span style="text-decoration: underline;">2</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> <span style="color: #BCBCBC;">10</span>    10  41.5     0 <span style="color: #BB0000;">NA</span>     <span style="color: #949494;">&lt;dbl [2]&gt;</span> 0.057<span style="text-decoration: underline;">3</span> </span>
 <span class="r-plt img"><img src="dnn-9.png" alt="" width="700" height="433"></span>
 <span class="r-plt img"><img src="dnn-10.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            [,1]       [,2]       [,3]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] 0.33127803 0.04741610 0.07248808</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] 0.04741610 0.17655137 0.03152749</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [3,] 0.07248808 0.03152749 0.21995127</span>
+<span class="r-plt img"><img src="dnn-11.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="dnn-12.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

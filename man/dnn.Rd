@@ -170,6 +170,41 @@ We support loss functions and likelihoods for different tasks:\tabular{llll}{
 }
 }
 
+\section{Additional structures in the formula}{
+Two special terms change how predictors enter the model:\tabular{llll}{
+   Structure \tab Syntax \tab What it does \tab Typical use \cr
+   Embedding, \code{\link{e}} \tab \code{Y ~ X1 + X2 + e(Site, dim = 2)} \tab every level of a factor gets a learned vector of \code{dim} numbers that enters the network as additional input \tab grouping variables with many levels: sites, plots, individuals, species, years \cr
+   Fixed effect, \code{\link{fe}} \tab \code{Y ~ X1 + X2 + fe(Temp + I(Temp^2))} \tab the terms bypass the network and are added linearly on the link scale, \eqn{\eta = f(X) + \beta^T x_{fe}} \tab effects that should be reported as coefficients, or that are known to be linear \cr
+}
+
+
+Both can be combined, e.g. \code{dnn(Y ~ . + fe(Temp) + e(Site))}. A variable in \code{fe()} enters only the linear part.
+
+\strong{Why embeddings.} One-hot coding (or contrasts) treats every level of a factor as equally distinct: no level is
+closer to any other. An embedding represents each level by a vector of \code{dim} coordinates that is estimated together
+with the network (Guo and Berkhahn, 2016, \doi{10.48550/arXiv.1604.06737}), so the model can discover which levels
+behave similarly and place them close together. The coordinates are passed to the first hidden layer together with
+the other predictors, and because the network learns the interactions itself, they modulate all effects jointly and
+non-linearly. This is like a joint, non-linear random effect on everything: a random intercept or slope lets a group
+deviate in one effect, and similarity learned for one predictor does not carry over to another, whereas an
+embedding maps all differences between the groups into a \code{dim}-dimensional space. The network learns how similar
+the groups are in their response and whether they differ at all. Similar to an ordination, groups with similar
+responses lie close together in the embedding space, so the fitted embeddings can be inspected afterwards
+(\code{coef(model)[[1]]$e_1.weight}, one row per level; see \code{\link{e}} for a biplot of the effects).
+
+\code{dim} controls how much structure the embedding can capture and can be tuned. \code{e(lambda = , alpha = )} regularizes
+the embeddings separately from the network. Embeddings are identified only up to rotation, reflection and scale:
+two fits of the same data give the same configuration in different coordinates, so align them (e.g. Procrustes)
+before comparing, and inspect them across several refits. Embeddings can also be fixed, e.g. to trait or
+phylogenetic coordinates, with \code{e(weights = , train = FALSE)}.
+
+\strong{Why fixed effects.} A DNN learns every effect flexibly, which makes single effects hard to report. \code{fe()} adds
+selected terms as in a GLM, while the network models the rest: \eqn{\beta} is returned by \code{coef(model)$fixed_effects}
+and is estimated like a parametric term in a GAM. The intercept comes from the network. The fixed effects are not
+regularized by the global \code{lambda}, only by \code{fe(lambda = )}. If the fixed-effect variables are correlated with the
+network inputs, a strongly regularized network can bias \eqn{\beta}; see \code{\link{fe}} for details.
+}
+
 \section{Finding the right architecture}{
 As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in \href{https://arxiv.org/abs/2306.10551}{Pichler & Hartig, 2023}, we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the \code{selu} activation function outperforms \code{relu} for small data sizes (<100 observations).
 
@@ -404,6 +439,24 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
+
+
+# Embeddings and fixed effects
+## Species enters as an embedding: each species gets two learned coordinates,
+## from which the network learns how the species differ in their response to
+## all predictors. Petal.Width enters as a fixed (linear) effect.
+nn.fit = dnn(Sepal.Length ~ Sepal.Width + Petal.Length + fe(Petal.Width) + e(Species, dim = 2),
+             data = datasets::iris, loss = "mse", epochs = 50L, verbose = FALSE)
+
+## the linear effect of Petal.Width
+coef(nn.fit)$fixed_effects
+
+## the embeddings, one row per species
+coef(nn.fit)$net_parameters$e_1.weight
+
+## architecture: Species feeds its two embedding dimensions, Petal.Width goes
+## straight to the output
+plot(nn.fit, plot_type = "arch")
 }
 }
 }

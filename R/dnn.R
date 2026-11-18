@@ -76,6 +76,41 @@
 #' | multinomial | Multinomial likelihood | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \eqn{\ge}2 columns |
 #' | clogit | conditional binomial | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \eqn{\ge}2 columns |
 #'
+#' # Additional structures in the formula
+#'
+#' Two special terms change how predictors enter the model:
+#'
+#' | Structure | Syntax | What it does | Typical use |
+#' | :--- | :--- | :--- | :--- |
+#' | Embedding, \code{\link{e}} | `Y ~ X1 + X2 + e(Site, dim = 2)` | every level of a factor gets a learned vector of `dim` numbers that enters the network as additional input | grouping variables with many levels: sites, plots, individuals, species, years |
+#' | Fixed effect, \code{\link{fe}} | `Y ~ X1 + X2 + fe(Temp + I(Temp^2))` | the terms bypass the network and are added linearly on the link scale, \eqn{\eta = f(X) + \beta^T x_{fe}} | effects that should be reported as coefficients, or that are known to be linear |
+#'
+#' Both can be combined, e.g. `dnn(Y ~ . + fe(Temp) + e(Site))`. A variable in `fe()` enters only the linear part.
+#'
+#' **Why embeddings.** One-hot coding (or contrasts) treats every level of a factor as equally distinct: no level is
+#' closer to any other. An embedding represents each level by a vector of `dim` coordinates that is estimated together
+#' with the network (Guo and Berkhahn, 2016, \doi{10.48550/arXiv.1604.06737}), so the model can discover which levels
+#' behave similarly and place them close together. The coordinates are passed to the first hidden layer together with
+#' the other predictors, and because the network learns the interactions itself, they modulate all effects jointly and
+#' non-linearly. This is like a joint, non-linear random effect on everything: a random intercept or slope lets a group
+#' deviate in one effect, and similarity learned for one predictor does not carry over to another, whereas an
+#' embedding maps all differences between the groups into a `dim`-dimensional space. The network learns how similar
+#' the groups are in their response and whether they differ at all. Similar to an ordination, groups with similar
+#' responses lie close together in the embedding space, so the fitted embeddings can be inspected afterwards
+#' (`coef(model)[[1]]$e_1.weight`, one row per level; see \code{\link{e}} for a biplot of the effects).
+#'
+#' `dim` controls how much structure the embedding can capture and can be tuned. `e(lambda = , alpha = )` regularizes
+#' the embeddings separately from the network. Embeddings are identified only up to rotation, reflection and scale:
+#' two fits of the same data give the same configuration in different coordinates, so align them (e.g. Procrustes)
+#' before comparing, and inspect them across several refits. Embeddings can also be fixed, e.g. to trait or
+#' phylogenetic coordinates, with `e(weights = , train = FALSE)`.
+#'
+#' **Why fixed effects.** A DNN learns every effect flexibly, which makes single effects hard to report. `fe()` adds
+#' selected terms as in a GLM, while the network models the rest: \eqn{\beta} is returned by `coef(model)$fixed_effects`
+#' and is estimated like a parametric term in a GAM. The intercept comes from the network. The fixed effects are not
+#' regularized by the global `lambda`, only by `fe(lambda = )`. If the fixed-effect variables are correlated with the
+#' network inputs, a strongly regularized network can bias \eqn{\beta}; see \code{\link{fe}} for details.
+#'
 #' # Finding the right architecture
 #'
 #' As with the learning rate, there is no definitive guide to choosing the right architecture for the right task. However, there are some general rules/recommendations: In general, wider, and deeper neural networks can improve generalization - but this is a double-edged sword because it also increases the risk of overfitting. So, if you increase the width and depth of the network, you should also add regularization (e.g., by increasing the lambda parameter, which corresponds to the regularization strength). Furthermore, in [Pichler & Hartig, 2023](https://arxiv.org/abs/2306.10551), we investigated the effects of the hyperparameters on the prediction performance as a function of the data size. For example, we found that the `selu` activation function outperforms `relu` for small data sizes (<100 observations).

@@ -185,6 +185,24 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
+
+
+# Embeddings and fixed effects
+## Species enters as an embedding: each species gets two learned coordinates,
+## from which the network learns how the species differ in their response to
+## all predictors. Petal.Width enters as a fixed (linear) effect.
+nn.fit = dnn(Sepal.Length ~ Sepal.Width + Petal.Length + fe(Petal.Width) + e(Species, dim = 2),
+             data = datasets::iris, loss = "mse", epochs = 50L, verbose = FALSE)
+
+## the linear effect of Petal.Width
+coef(nn.fit)$fixed_effects
+
+## the embeddings, one row per species
+coef(nn.fit)$net_parameters$e_1.weight
+
+## architecture: Species feeds its two embedding dimensions, Petal.Width goes
+## straight to the output
+plot(nn.fit, plot_type = "arch")
 }
 }
 }
