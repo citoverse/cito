@@ -1,10 +1,3 @@
-# cito (development version)
-
-## New features
-
-* fe() adds linear effects to dnn() on the link scale, e.g. dnn(Y ~ X1 + fe(Temp + I(Temp^2)) + e(Site)); the variables in fe() are excluded from the network and from ".", the fixed effects have their own lambda and alpha and are not regularized by the global ones, and coef() returns them as fixed_effects
-* plot(plot_type = "arch") draws embeddings (a factor node feeding its embedding dimensions) and fixed effects (inputs wired to the output), and labels inputs and outputs
-
 # cito 1.2
 
 ## New features
@@ -26,6 +19,8 @@
 * ce and ce_method arguments of dnn(): conditional effects are computed once at the end of the training and stored on the model, so summary() and ALE() do not have to recompute them. ce = <number> sets the number of observations used for them
 * predict(..., batchsize = ) and predict(..., return_embeddings = )
 * raster_patches(): cnn() and mmn() train on windows cut from one large GeoTIFF around each observation's coordinates, read batch by batch (with libtiff 4.5 or newer while the previous batch trains), instead of pre-extracted image files; preprocessing (transform, center/scale or standardize, fill and a missing-pixel channel) is part of the raster input, and like = reuses it for new sites; predict() refuses raster windows of another shape and warns when their preprocessing differs from the training windows. as.array() returns the preprocessed windows. num_threads of cnn() sets the number of threads of the compiled image decoder and the raster reader. Requires libtiff
+* fe() adds linear effects to dnn() on the link scale, e.g. dnn(Y ~ X1 + fe(Temp + I(Temp^2)) + e(Site)); the variables in fe() are excluded from the network and from ".", the fixed effects have their own lambda and alpha and are not regularized by the global ones, and coef() returns them as fixed_effects
+* plot(plot_type = "arch") draws embeddings (a factor node feeding its embedding dimensions) and fixed effects (inputs wired to the output), and labels inputs and outputs
 
 ## Breaking changes
 

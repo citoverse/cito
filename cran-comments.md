@@ -4,14 +4,17 @@
 Dear CRAN Team,
 
 this is a major update. It adds convolutional (`cnn()`) and multi-modal (`mmn()`) neural
-networks, user-provided architectures via the `custom` argument, analytical conditional
-effects and accumulated local effects, additional likelihoods, and a number of bug fixes.
+networks, training on windows read from large GeoTIFF rasters (`raster_patches()`), linear
+effects next to the network in the formula (`fe()`), user-provided architectures via the
+`custom` argument, analytical conditional effects and accumulated local effects, additional
+likelihoods, and a number of bug fixes.
 The minimum R version was raised to 4.1.0 because the package now uses the native pipe.
 
 The package now contains compiled code (C++, via Rcpp) for reading images and windows of
-GeoTIFF rasters. A `configure` / `configure.win` script probes for libjpeg, libpng and libtiff.
-All three are optional: without them the package falls back to the R image readers, and only
-`raster_patches()` requires libtiff (see SystemRequirements).
+GeoTIFF rasters. On Unix, a `configure` script probes for libjpeg, libpng and libtiff; all three
+are optional, without them the package falls back to the R image readers, and only
+`raster_patches()` requires libtiff (see SystemRequirements). On Windows, `src/Makevars.win`
+links the libraries shipped with Rtools.
 
 Best,
 Max Pichler
