@@ -1,5 +1,5 @@
-pandoc: '3.2'
-pkgdown: 2.1.1
+pandoc: 3.8.3
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
   A-Introduction_to_cito: A-Introduction_to_cito.html
@@ -7,4 +7,4 @@ articles:
   C-Example_Species_distribution_modeling: C-Example_Species_distribution_modeling.html
   D-Advanced_custom_loss_functions: D-Advanced_custom_loss_functions.html
   E-CNN_and_MMN: E-CNN_and_MMN.html
-last_built: 2025-05-27T14:38Z
+last_built: 2026-11-18T14:44Z

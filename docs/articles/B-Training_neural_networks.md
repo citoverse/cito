@@ -1,0 +1,340 @@
+# Training neural networks
+
+Abstract
+
+This vignette helps to address certain problems that occur when training
+neural networks (NN) and gives hints on how to increase the likelihood
+of their convergence.
+
+## Possible issues
+
+- Convergence issues, (often because of the learning rate), **training
+  loss above baseline loss**:
+
+  ![](B/B-unnamed-chunk-2-1.png)
+
+  If it looks like that, go to the [adjusting the learning rate
+  section](#lr)
+
+- Overfitting, difference between training and testing/holdout/new data
+  error is too high, or validation loss first decreases but then
+  increases again:
+
+  ![](B/B-unnamed-chunk-3-1.png)
+
+  if it loos like that, go to the [overfitting section](#overfitting)
+
+## Convergence issues
+
+Ensuring convergence can be tricky when training neural networks. Their
+training is sensitive to a combination of the learning rate (how much
+the weights are updated in each optimization step), the batch size (a
+random subset of the data is used in each optimization step), and the
+number of epochs (number of optimization steps).
+
+### Epochs
+
+Give the neural network enough time to learn. The epochs should be high
+enough so that the training loss “stabilizes”:
+
+``` r
+
+m = dnn(Species~., data = iris, epochs = 10L, loss = "softmax", verbose=FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+```
+
+![](B/B-unnamed-chunk-4-1.png)
+
+After 10 epochs the loss was still decreasing, we should train the model
+longer (increase epochs):
+
+``` r
+
+m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", verbose=FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+```
+
+![](B/B-unnamed-chunk-5-1.png)
+
+Here, it takes around 190-200 epochs until the loss doesn’t decrease
+anymore. The “speed” of the learning depends also on the learning rate.
+Higher rates means larger steps into direction of local minima in the
+loss function:
+
+``` r
+
+m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", lr = 0.05, verbose=FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+```
+
+![](B/B-unnamed-chunk-6-1.png)
+
+Now it only takes about 100 epochs, but we also see that the training
+loss becomes wobbly. Larger learning rates increase the probability that
+local minima are skipped and the optimizer has problems to hit a minima.
+
+Note: But if the learning rate is high, or too high, the loss will get
+“jumpy”, the risk of the optimizer jumping over local minima increases
+(see next section).
+
+### Learning rate
+
+Typically, the learning rate should be decreased with the size of the
+neural networks (depth of the network and width of the hidden layers).
+We provide a baseline loss (intercept only model) that can give hints
+about an appropriate learning rate.
+
+``` r
+
+nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+
+par(mfrow = c(1, 3), mar = c(4, 3, 2, 2))
+cito:::visualize.training(nn.fit_good$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$training_properties$baseloss)
+cito:::visualize.training(nn.fit_high$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$training_properties$baseloss)
+cito:::visualize.training(nn.fit_low$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$training_properties$baseloss)
+```
+
+![](B/B-unnamed-chunk-7-1.png)
+
+If the training loss of the model doesn’t fall below the baseline loss,
+the learning rate is either too high or too low. If this happens, try
+higher and lower learning rates.
+
+A common strategy is to try (manually) a few different learning rates to
+see if the learning rate is on the right scale.
+
+### Solution: learning rate scheduler
+
+A common strategy to deal with the learning rate problem is to start
+with a high learning rate, and if the loss does not decrease, the
+learning rate is reduced according to a specific plan.
+
+I favor the “reduce learning rate on plateau” scheduler. If a loss
+plateau isn’t resolved for a certain number of epochs (patience), the
+learning rate will be reduced ($`lr_{new} = factor * lr_{old}`$):
+
+``` r
+
+nn.fit_high<- dnn(Species~., data = datasets::iris,
+                  lr = 0.2,
+                  epochs = 60L,
+                  loss = "softmax",
+                  lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
+                  verbose = TRUE,
+                  plot = TRUE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+#> Loss at epoch 1: 2.648951, lr: 0.20000
+```
+
+![](B/B-unnamed-chunk-8-1.png)
+
+    #> Loss at epoch 2: 1.518779, lr: 0.20000
+    #> Loss at epoch 3: 0.586927, lr: 0.20000
+    #> Loss at epoch 4: 0.355951, lr: 0.20000
+    #> Loss at epoch 5: 0.630309, lr: 0.20000
+    #> Loss at epoch 6: 0.584476, lr: 0.20000
+    #> Loss at epoch 7: 0.464149, lr: 0.20000
+    #> Loss at epoch 8: 0.387403, lr: 0.20000
+    #> Loss at epoch 9: 0.424483, lr: 0.20000
+    #> Loss at epoch 10: 0.422678, lr: 0.10000
+    #> Loss at epoch 11: 0.242681, lr: 0.10000
+    #> Loss at epoch 12: 0.144736, lr: 0.10000
+    #> Loss at epoch 13: 0.202260, lr: 0.10000
+    #> Loss at epoch 14: 0.143053, lr: 0.10000
+    #> Loss at epoch 15: 0.480157, lr: 0.10000
+    #> Loss at epoch 16: 0.152589, lr: 0.10000
+    #> Loss at epoch 17: 0.148275, lr: 0.10000
+    #> Loss at epoch 18: 0.382294, lr: 0.10000
+    #> Loss at epoch 19: 0.118278, lr: 0.10000
+    #> Loss at epoch 20: 0.214956, lr: 0.10000
+    #> Loss at epoch 21: 0.135351, lr: 0.10000
+    #> Loss at epoch 22: 0.208953, lr: 0.10000
+    #> Loss at epoch 23: 0.089335, lr: 0.10000
+    #> Loss at epoch 24: 0.103705, lr: 0.10000
+    #> Loss at epoch 25: 0.096560, lr: 0.10000
+    #> Loss at epoch 26: 0.369736, lr: 0.10000
+    #> Loss at epoch 27: 0.102449, lr: 0.10000
+    #> Loss at epoch 28: 0.261960, lr: 0.10000
+    #> Loss at epoch 29: 0.133107, lr: 0.05000
+    #> Loss at epoch 30: 0.099216, lr: 0.05000
+    #> Loss at epoch 31: 0.090298, lr: 0.05000
+    #> Loss at epoch 32: 0.087918, lr: 0.05000
+    #> Loss at epoch 33: 0.103592, lr: 0.05000
+    #> Loss at epoch 34: 0.074389, lr: 0.05000
+    #> Loss at epoch 35: 0.074355, lr: 0.05000
+    #> Loss at epoch 36: 0.080308, lr: 0.05000
+    #> Loss at epoch 37: 0.131851, lr: 0.05000
+    #> Loss at epoch 38: 0.076501, lr: 0.05000
+    #> Loss at epoch 39: 0.097103, lr: 0.05000
+    #> Loss at epoch 40: 0.085715, lr: 0.05000
+    #> Loss at epoch 41: 0.089401, lr: 0.02500
+    #> Loss at epoch 42: 0.125704, lr: 0.02500
+    #> Loss at epoch 43: 0.093757, lr: 0.02500
+    #> Loss at epoch 44: 0.066557, lr: 0.02500
+    #> Loss at epoch 45: 0.067066, lr: 0.02500
+    #> Loss at epoch 46: 0.061988, lr: 0.02500
+    #> Loss at epoch 47: 0.068591, lr: 0.02500
+    #> Loss at epoch 48: 0.061602, lr: 0.02500
+    #> Loss at epoch 49: 0.063583, lr: 0.02500
+    #> Loss at epoch 50: 0.063625, lr: 0.02500
+    #> Loss at epoch 51: 0.061642, lr: 0.02500
+    #> Loss at epoch 52: 0.065824, lr: 0.02500
+    #> Loss at epoch 53: 0.061596, lr: 0.02500
+    #> Loss at epoch 54: 0.064252, lr: 0.01250
+    #> Loss at epoch 55: 0.066606, lr: 0.01250
+    #> Loss at epoch 56: 0.061957, lr: 0.01250
+    #> Loss at epoch 57: 0.059284, lr: 0.01250
+    #> Loss at epoch 58: 0.058292, lr: 0.01250
+    #> Loss at epoch 59: 0.061281, lr: 0.01250
+    #> Loss at epoch 60: 0.064097, lr: 0.01250
+
+At the end of the training, the learning rate is 0.025
+
+Note: The learning rate scheduler is a powerful approach to improve the
+likeliness of convergence, BUT it cannot help with much too high
+learning rates!
+
+``` r
+
+nn.fit_high<- dnn(Species~., data = datasets::iris,
+                  lr = 2,
+                  epochs = 60L,
+                  loss = "softmax",
+                  lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
+                  verbose = TRUE,
+                  plot = TRUE)
+#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
+#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
+#> Please use loss = 'cross-entropy' instead.
+#> Loss at epoch 1: 82421978904679869135087206400.000000, lr: 2.00000
+```
+
+![](B/B-unnamed-chunk-9-1.png)
+
+    #> Loss at epoch 2: 1993580742705152.000000, lr: 2.00000
+    #> Loss at epoch 3: 1993580729283379.250000, lr: 2.00000
+    #> Loss at epoch 4: 1993580695728947.250000, lr: 2.00000
+    #> Loss at epoch 5: 1993580749416038.500000, lr: 2.00000
+    #> Loss at epoch 6: 1993580756126924.750000, lr: 2.00000
+    #> Loss at epoch 7: 1993580675596288.000000, lr: 2.00000
+    #> Loss at epoch 8: 1993580722572492.750000, lr: 1.00000
+    #> Loss at epoch 9: 1993580742705152.000000, lr: 1.00000
+    #> Loss at epoch 10: 1993580722572492.750000, lr: 1.00000
+    #> Loss at epoch 11: 1993580729283379.250000, lr: 1.00000
+    #> Loss at epoch 12: 1993580742705152.000000, lr: 1.00000
+    #> Loss at epoch 13: 1993580715861606.500000, lr: 1.00000
+    #> Loss at epoch 14: 1993580702439833.500000, lr: 0.50000
+    #> Loss at epoch 15: 1993580715861606.500000, lr: 0.50000
+    #> Loss at epoch 16: 1993580695728947.250000, lr: 0.50000
+    #> Loss at epoch 17: 1993580709150720.000000, lr: 0.50000
+    #> Loss at epoch 18: 1993580742705152.000000, lr: 0.50000
+    #> Loss at epoch 19: 1993580735994265.500000, lr: 0.50000
+    #> Loss at epoch 20: 1993580729283379.250000, lr: 0.25000
+    #> Loss at epoch 21: 1993580729283379.250000, lr: 0.25000
+    #> Loss at epoch 22: 1993580722572492.750000, lr: 0.25000
+    #> Loss at epoch 23: 1993580648752742.500000, lr: 0.25000
+    #> Loss at epoch 24: 1993580715861606.500000, lr: 0.25000
+    #> Loss at epoch 25: 1993580702439833.500000, lr: 0.25000
+    #> Loss at epoch 26: 1993580702439833.500000, lr: 0.12500
+    #> Loss at epoch 27: 1993580682307174.500000, lr: 0.12500
+    #> Loss at epoch 28: 1993580668885401.500000, lr: 0.12500
+    #> Loss at epoch 29: 1993580729283379.250000, lr: 0.12500
+    #> Loss at epoch 30: 1993580689018060.750000, lr: 0.12500
+    #> Loss at epoch 31: 1993580756126924.750000, lr: 0.12500
+    #> Loss at epoch 32: 1993580756126924.750000, lr: 0.06250
+    #> Loss at epoch 33: 1993580662174515.250000, lr: 0.06250
+    #> Loss at epoch 34: 1993580762837811.250000, lr: 0.06250
+    #> Loss at epoch 35: 1993580702439833.500000, lr: 0.06250
+    #> Loss at epoch 36: 1993580668885401.500000, lr: 0.06250
+    #> Loss at epoch 37: 1993580668885401.500000, lr: 0.06250
+    #> Loss at epoch 38: 1993580689018060.750000, lr: 0.03125
+    #> Loss at epoch 39: 1993580762837811.250000, lr: 0.03125
+    #> Loss at epoch 40: 1993580682307174.500000, lr: 0.03125
+    #> Loss at epoch 41: 1993580729283379.250000, lr: 0.03125
+    #> Loss at epoch 42: 1993580729283379.250000, lr: 0.03125
+    #> Loss at epoch 43: 1993580715861606.500000, lr: 0.03125
+    #> Loss at epoch 44: 1993580729283379.250000, lr: 0.01562
+    #> Loss at epoch 45: 1993580729283379.250000, lr: 0.01562
+    #> Loss at epoch 46: 1993580702439833.500000, lr: 0.01562
+    #> Loss at epoch 47: 1993580735994265.500000, lr: 0.01562
+    #> Loss at epoch 48: 1993580722572492.750000, lr: 0.01562
+    #> Loss at epoch 49: 1993580729283379.250000, lr: 0.01562
+    #> Loss at epoch 50: 1993580675596288.000000, lr: 0.00781
+    #> Loss at epoch 51: 1993580742705152.000000, lr: 0.00781
+    #> Loss at epoch 52: 1993580689018060.750000, lr: 0.00781
+    #> Loss at epoch 53: 1993580776259584.000000, lr: 0.00781
+    #> Loss at epoch 54: 1993580702439833.500000, lr: 0.00781
+    #> Loss at epoch 55: 1993580776259584.000000, lr: 0.00781
+    #> Loss at epoch 56: 1993580742705152.000000, lr: 0.00391
+    #> Loss at epoch 57: 1993580695728947.250000, lr: 0.00391
+    #> Loss at epoch 58: 1993580689018060.750000, lr: 0.00391
+    #> Loss at epoch 59: 1993580722572492.750000, lr: 0.00391
+    #> Loss at epoch 60: 1993580722572492.750000, lr: 0.00391
+
+Although the learning rate ended up being 0.01562, the loss never
+outperformed the baseline loss. The optimizer jumped right at the
+beginning into a completely unrealistic solution space for the
+parameters of the NN, from which we could not recover.
+
+## Overfitting
+
+Overfitting means that the model fits the training data well, but
+generalizes poorly to new observations. We can use the validation
+argument to detect overfitting. If the validation loss starts to
+increase again at a certain point, it often means that the models are
+starting to overfit your training data:
+
+``` r
+
+library(EcoData) # can be install from github using devtools::install_github(repo = "TheoreticalEcology/EcoData", dependencies = FALSE, build_vignettes = FALSE)
+df = elephant$occurenceData
+m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "bernoulli", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = TRUE)
+```
+
+![](B/B-unnamed-chunk-10-1.png)
+
+**Solutions**:
+
+- Re-train with epochs = point where model started to overfit
+
+- Early stopping, stop training when model starts to overfit, can be
+  specified using the `⁠early_stopping=…⁠` argument
+
+- Use regularization (dropout or elastic-net, see next section)
+
+### Early stopping and regularization
+
+Early stopping = stop training when validation loss cannot be improved
+for x epochs (if there is no validation split, the training loss is
+used).
+
+lambda = 0.001 is the regularization strength and alpha = 0.2 means that
+20% L1 and 80% L2 weighting.
+
+``` r
+
+m = dnn(Presence~., data = df, lr = 0.03, epochs = 600L, loss = "bernoulli", validation = 0.2,  hidden = c(350L, 350L, 350L), activation = "relu", batchsize = 150L, verbose = FALSE, plot = TRUE, early_stopping = 10, lambda = 0.001, alpha = 0.2)
+```
+
+![](B/B-unnamed-chunk-11-1.png)
+
+The training is aborted!

@@ -19,6 +19,7 @@
 <url><loc>/reference/cnn.html</loc></url>
 <url><loc>/reference/coef.citocnn.html</loc></url>
 <url><loc>/reference/coef.citodnn.html</loc></url>
+<url><loc>/reference/coef.citommn.html</loc></url>
 <url><loc>/reference/conditionalEffects.html</loc></url>
 <url><loc>/reference/config_lr_scheduler.html</loc></url>
 <url><loc>/reference/config_optimizer.html</loc></url>
@@ -28,6 +29,7 @@
 <url><loc>/reference/create_architecture.html</loc></url>
 <url><loc>/reference/dnn.html</loc></url>
 <url><loc>/reference/e.html</loc></url>
+<url><loc>/reference/fe.html</loc></url>
 <url><loc>/reference/findReTrmClasses.html</loc></url>
 <url><loc>/reference/index.html</loc></url>
 <url><loc>/reference/linear.html</loc></url>
@@ -37,6 +39,7 @@
 <url><loc>/reference/plot.citoarchitecture.html</loc></url>
 <url><loc>/reference/plot.citocnn.html</loc></url>
 <url><loc>/reference/plot.citodnn.html</loc></url>
+<url><loc>/reference/plot.citommn.html</loc></url>
 <url><loc>/reference/predict.citocnn.html</loc></url>
 <url><loc>/reference/predict.citodnn.html</loc></url>
 <url><loc>/reference/predict.citommn.html</loc></url>
@@ -46,6 +49,7 @@
 <url><loc>/reference/print.citommn.html</loc></url>
 <url><loc>/reference/print.conditionalEffects.html</loc></url>
 <url><loc>/reference/print.summary.citodnn.html</loc></url>
+<url><loc>/reference/raster_patches.html</loc></url>
 <url><loc>/reference/residuals.citodnn.html</loc></url>
 <url><loc>/reference/simulate_shapes.html</loc></url>
 <url><loc>/reference/sumTerms.html</loc></url>
@@ -53,6 +57,7 @@
 <url><loc>/reference/summary.citodnn.html</loc></url>
 <url><loc>/reference/summary.citommn.html</loc></url>
 <url><loc>/reference/transfer.html</loc></url>
+<url><loc>/reference/tree_data.html</loc></url>
 <url><loc>/reference/tune.html</loc></url>
 </urlset>
 

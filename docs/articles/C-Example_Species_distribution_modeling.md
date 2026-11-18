@@ -1,0 +1,763 @@
+# Example: (Multi-) Species distribution models with cito
+
+Abstract
+
+This vignette shows working examples of how to fit (multi-) species
+distribution models with cito. Training neural networks is tricky
+compared to other ML algorithms that converge more easily (due to
+various reasons). The purpose of this vignette is to provide an example
+workflow and to point out common caveats when training a neural network
+
+## Species distribution model - African elephant
+
+The goal is to build a SDM for the African elephant. A pre-processed
+dataset from [Angelov, 2020](https://zenodo.org/record/4048271) can be
+found in the EcoData package which is only available on github:
+
+``` r
+
+set.seed(1337)
+if(!require(EcoData)) devtools::install_github(repo = "TheoreticalEcology/EcoData",
+                         dependencies = FALSE, build_vignettes = FALSE)
+
+library(EcoData)
+df = EcoData::elephant$occurenceData
+head(df)
+#>       Presence       bio1       bio2       bio3       bio4        bio5
+#> 3364         0 -0.4981747 -0.2738045  0.5368968 -0.5409999 -0.36843571
+#> 6268         0  0.6085908 -0.5568352  1.0340686 -1.2492050 -0.11835651
+#> 10285        0 -0.7973005  1.4648130 -1.0540532  2.0759423  0.07614953
+#> 2247         0  0.6385034  1.3435141 -0.1591439 -0.5107148  1.10425291
+#> 9821         0  0.6684160 -0.6781341  0.6363311 -0.9906170  0.15950927
+#> 1351         0  0.9675418 -0.6781341 -0.3580126 -0.3748202  0.77081398
+#>             bio6       bio7       bio8       bio9       bio10       bio11
+#> 3364   0.2947850 -0.5260099 -1.2253960  0.2494100 -0.64527314 -0.06267842
+#> 6268   0.8221087 -0.8938475  0.4233787  0.7746249  0.09168503  0.94419518
+#> 10285 -1.5860029  1.6284678  0.2768209 -1.5153122 -0.03648161 -1.44165748
+#> 2247  -0.1622288  0.8577603  0.4600181  0.5855475  0.54026827  0.68153250
+#> 9821   0.9099960 -0.8062671  0.3867393  0.8586593  0.31597665  0.94419518
+#> 1351   0.8748411 -0.3858812  0.3134604  1.0477367  0.98885151  0.94419518
+#>            bio12      bio13       bio14        bio15      bio16      bio17
+#> 3364   0.6285371  0.6807958 -0.29703736 -0.008455252  0.7124535 -0.2949994
+#> 6268   1.1121516  0.5918442  0.01619202 -0.884507980  0.5607328  0.3506918
+#> 10285 -1.2351482 -1.3396742 -0.50585695  0.201797403 -1.3499999 -0.5616980
+#> 2247   0.5951165  0.8714061 -0.55806185  0.236839512  1.1012378 -0.5616980
+#> 9821   1.1003561  0.5537222  0.59044589 -1.024676416  0.6413344  0.7437213
+#> 1351   0.7287986  1.1255533 -0.50585695  0.236839512  1.2956300 -0.4494038
+#>             bio18       bio19
+#> 3364  -1.06812752  1.96201807
+#> 6268   1.22589281 -0.36205814
+#> 10285 -0.42763181 -0.62895735
+#> 2247  -0.20541902 -0.58378979
+#> 9821   0.06254347 -0.05409751
+#> 1351  -0.90473576  2.47939193
+```
+
+Presence is our response variable and we have the 19 bioclim variables
+as features/predictors.
+
+Let’s split part of the data away so that we can use it at the end to
+evaluate our model:
+
+``` r
+
+indices = sample.int(nrow(df), 300)
+test = df[indices,]
+df = df[-indices,]
+```
+
+### Adjusting optimization parameters - Convergence
+
+We will first try a simple DNN with default values and the Bernoulli
+likelihood (the response is a 0/1 presence-absence vector). We use 30%
+of the data as validation holdout to check for overfitting:
+
+``` r
+
+library(cito)
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
+            validation = 0.3, loss = "bernoulli",
+            verbose = FALSE)
+```
+
+![](C/C-unnamed-chunk-4-1.png)
+
+We see that the training and test losses were still decreasing which
+means we didn’t train the model long enough. We could now either
+increase the number of epochs or increase the learning rate so that the
+model trains faster:
+
+``` r
+
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
+            lr = 0.05,
+            validation = 0.3, loss = "bernoulli",
+            verbose = FALSE)
+```
+
+![](C/C-unnamed-chunk-5-1.png)
+
+Much better! But still now enough epochs. Also, let’s see if we can
+further decrease the loss by using a wider and deeper neural network:
+
+``` r
+
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            validation = 0.3, loss = "bernoulli",
+            verbose = FALSE)
+```
+
+![](C/C-unnamed-chunk-6-1.png)
+
+At the end of the training, the losses start to get jumpy, which can be
+a sign of potential overfitting. We can control that by adding a weak
+regularization (as we want a L2 regularization, we set alpha to 1.0):
+
+``` r
+
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
+            epochs = 150L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            lambda = 0.001,
+            alpha = 1.0,
+            validation = 0.3, loss = "bernoulli",
+            verbose = FALSE)
+```
+
+![](C/C-unnamed-chunk-7-1.png)
+
+We will turn on now advanced features that help with the convergence and
+to reduce overfitting:
+
+- learning rate scheduler - reduces learning rate during training
+
+- early stopping - stop training when validation loss starts to increase
+
+``` r
+
+model = dnn(Presence~., data = df,
+            batchsize = 100L,
+            epochs = 150L,
+            hidden = c(100L, 100L, 100L),
+            lr = 0.05,
+            lambda = 0.001,
+            alpha = 1.0,
+            validation = 0.3, loss = "bernoulli",
+            verbose = FALSE,
+            lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+            early_stopping = 14 # stop training when validation loss didn't decrease for 10 epochs
+            )
+```
+
+![](C/C-unnamed-chunk-8-1.png)
+
+Great! We found now a model architecture and training procedure that
+fits and trains well. Let’s proceed to our final model
+
+### Train final model with bootstrapping to obtain uncertainties
+
+We haven’t directly started with bootstrapping because it complicates
+the adjustment of the training procedure.
+
+Uncertainties can be obtained by using bootstrapping. Be aware that this
+can be computational expensive:
+
+``` r
+
+model_boot = dnn(Presence~., data = df,
+                 batchsize = 100L,
+                 epochs = 150L,
+                 hidden = c(100L, 100L, 100L),
+                 lr = 0.05,
+                 lambda = 0.001,
+                 alpha = 1.0,
+                 validation = 0.3, loss = "bernoulli",
+                 verbose = FALSE,
+                 lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+                 early_stopping = 14, # stop training when validation loss didn't decrease for 10 epochs
+                 bootstrap = 20L,
+                 bootstrap_parallel = 5L
+            )
+```
+
+### Predictions
+
+We can use the model now for predictions:
+
+``` r
+
+predictions = predict(model_boot, newdata = test, reduce = "none")
+dim(predictions)
+#> [1]  20 300   1
+```
+
+The predictions are 2/3 dimensional because of the bootstrapping.
+Calculate the AUC interval:
+
+``` r
+
+hist(sapply(1:20, function(i) Metrics::auc(test$Presence, predictions[i,,])),
+     xlim = c(0, 1), main = "AUC of ensemble model", xlab = "AUC")
+```
+
+![](C/C-unnamed-chunk-11-1.png)
+
+We can now predict the habitat suitability of the elephant (Note that
+spatial dependencies are required):
+
+``` r
+
+library(raster)
+#> Loading required package: sp
+#> There appears to be a problem with the PROJ installation
+#> 
+#> Attaching package: 'raster'
+#> The following object is masked from 'package:DHARMa':
+#> 
+#>     getData
+library(sp)
+library(ggplot2)
+#> 
+#> Attaching package: 'ggplot2'
+#> The following object is masked from 'package:cito':
+#> 
+#>     check_device
+customPredictFun = function(model, data) {
+  return(apply(predict(model, data, reduce = "none"), 2:3, mean)[,1])
+}
+
+normalized_raster = EcoData::elephant$predictionData
+
+predictions =
+  raster::predict(normalized_raster,
+                  model_boot,
+                  fun = customPredictFun)
+
+habitat_plot =
+  spplot(predictions, colorkey = list(space = "left") )
+habitat_plot
+```
+
+![](C/C-unnamed-chunk-12-1.png)
+
+Moreover, we can visualize the uncertainty of our model, instead of
+calculating the average occurrence probability, we calculate for each
+prediction the standard deviation and visualize it:
+
+``` r
+
+customPredictFun_sd = function(model, data) {
+  return(apply(predict(model, data, reduce="none"), 2:3, sd)[,1])
+}
+predictions =
+  raster::predict(normalized_raster,
+                  model_boot,
+                  fun = customPredictFun_sd)
+
+uncertain_plot =
+  spplot(predictions, colorkey = list(space = "left") )
+uncertain_plot
+```
+
+![](C/C-unnamed-chunk-13-1.png)
+
+### Inference
+
+Neural networks are often called black-box models but the tools of
+explainable AI (xAI) allows us to understand them - and actually infer
+properties similar to what a linear regression model can provide (the
+calculation can take some time…):
+
+``` r
+
+results = summary(model_boot)
+results
+#> Summary of Deep Neural Network Model
+#> 
+#> -- Feature Importance
+#>           Importance  Std.Err Z value Pr(>|z|)  
+#> bio1 ->     0.032671 0.024610    1.33    0.184  
+#> bio2 ->     0.016594 0.012330    1.35    0.178  
+#> bio3 ->     0.004645 0.005247    0.89    0.376  
+#> bio4 ->     0.008239 0.005733    1.44    0.151  
+#> bio5 ->     0.038702 0.040912    0.95    0.344  
+#> bio6 ->     0.013576 0.010886    1.25    0.212  
+#> bio7 ->     0.005301 0.004800    1.10    0.269  
+#> bio8 ->     0.015442 0.011084    1.39    0.164  
+#> bio9 ->     0.064581 0.028939    2.23    0.026 *
+#> bio10 ->    0.010275 0.007529    1.36    0.172  
+#> bio11 ->    0.009538 0.008300    1.15    0.251  
+#> bio12 ->    0.085398 0.036749    2.32    0.020 *
+#> bio13 ->    0.018279 0.011320    1.61    0.106  
+#> bio14 ->    0.031124 0.014621    2.13    0.033 *
+#> bio15 ->    0.021914 0.011065    1.98    0.048 *
+#> bio16 ->    0.015504 0.012852    1.21    0.228  
+#> bio17 ->    0.006285 0.005707    1.10    0.271  
+#> bio18 ->    0.011704 0.004553    2.57    0.010 *
+#> bio19 ->    0.001592 0.000973    1.64    0.102  
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> 
+#> -- Average Conditional Effects
+#>                ACE  Std.Err Z value Pr(>|z|)    
+#> bio1 ->    0.10632  0.05674    1.87  0.06095 .  
+#> bio2 ->   -0.07647  0.03876   -1.97  0.04854 *  
+#> bio3 ->    0.00444  0.03560    0.12  0.90085    
+#> bio4 ->    0.03280  0.03174    1.03  0.30137    
+#> bio5 ->    0.12374  0.05800    2.13  0.03291 *  
+#> bio6 ->    0.06442  0.04357    1.48  0.13924    
+#> bio7 ->    0.01681  0.04164    0.40  0.68643    
+#> bio8 ->   -0.05327  0.03550   -1.50  0.13346    
+#> bio9 ->   -0.16992  0.04698   -3.62  0.00030 ***
+#> bio10 ->  -0.04085  0.04416   -0.93  0.35495    
+#> bio11 ->   0.03196  0.04077    0.78  0.43305    
+#> bio12 ->  -0.20159  0.04989   -4.04  5.3e-05 ***
+#> bio13 ->   0.08708  0.03171    2.75  0.00603 ** 
+#> bio14 ->   0.11718  0.03061    3.83  0.00013 ***
+#> bio15 ->  -0.08992  0.02560   -3.51  0.00044 ***
+#> bio16 ->  -0.06690  0.04602   -1.45  0.14603    
+#> bio17 ->   0.01170  0.04649    0.25  0.80124    
+#> bio18 ->   0.03726  0.01700    2.19  0.02837 *  
+#> bio19 ->   0.00539  0.02172    0.25  0.80415    
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+Bioclim9, 12, 14, and 16 have large significant average conditional
+effects (\$\approx\$ linear effects). We can visualize them using
+accumulated local effect plots:
+
+``` r
+
+par(mfrow = c(1, 4))
+ALE(model_boot, variable = "bio9")
+```
+
+![](C/C-unnamed-chunk-15-1.png)
+
+``` r
+
+ALE(model_boot, variable = "bio12")
+```
+
+![](C/C-unnamed-chunk-15-2.png)
+
+``` r
+
+ALE(model_boot, variable = "bio14")
+```
+
+![](C/C-unnamed-chunk-15-3.png)
+
+``` r
+
+ALE(model_boot, variable = "bio16")
+```
+
+![](C/C-unnamed-chunk-15-4.png)
+
+## Multi-species distribution model
+
+Cito supports many different loss functions which we can use to build
+multi-species distribution models (MSDM). MSDM are multi-label,
+i.e. they model and predict simultaneously many responses. We will use
+eucalypts data from [Pollock et al.,
+2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180).
+The dataset has occurrence of 12 species over 458 sites.
+
+``` r
+
+load(url("https://github.com/TheoreticalEcology/s-jSDM/raw/master/sjSDM/data/eucalypts.rda"))
+# Environment
+head(eucalypts$env)
+#>   Rockiness Sandiness VallyBotFlat PPTann Loaminess cvTemp      T0
+#> 1        60         1            0    785         0    142 6124.01
+#> 2        75         1            0    785         0    142 6124.01
+#> 3        70         1            0    780         0    142 3252.96
+#> 4        40         1            0    778         0    142 1636.63
+#> 5        15         1            0    772         0    142 1352.08
+#> 6        80         1            0    841         0    142 5018.48
+
+# PA
+head(eucalypts$PA)
+#>      ALA ARE BAX CAM GON MEL OBL OVA WIL ALP VIM ARO.SAB
+#> [1,]   0   0   0   0   0   0   0   0   1   1   0       0
+#> [2,]   0   0   0   0   0   0   1   0   1   1   0       0
+#> [3,]   0   0   1   0   0   0   0   0   1   1   0       0
+#> [4,]   0   0   1   0   0   0   0   0   1   0   0       0
+#> [5,]   0   0   1   0   0   0   1   0   0   0   0       0
+#> [6,]   0   0   0   0   0   0   0   0   1   1   0       0
+```
+
+Bring data into a format that is usable by cito:
+
+``` r
+
+df = cbind(eucalypts$PA, scale(eucalypts$env))
+head(df)
+#>      ALA ARE BAX CAM GON MEL OBL OVA WIL ALP VIM ARO.SAB  Rockiness Sandiness
+#> [1,]   0   0   0   0   0   0   0   0   1   1   0       0  1.0315338 0.5716827
+#> [2,]   0   0   0   0   0   0   1   0   1   1   0       0  1.4558834 0.5716827
+#> [3,]   0   0   1   0   0   0   0   0   1   1   0       0  1.3144335 0.5716827
+#> [4,]   0   0   1   0   0   0   0   0   1   0   0       0  0.4657344 0.5716827
+#> [5,]   0   0   1   0   0   0   1   0   0   0   0       0 -0.2415148 0.5716827
+#> [6,]   0   0   0   0   0   0   0   0   1   1   0       0  1.5973333 0.5716827
+#>      VallyBotFlat       PPTann  Loaminess    cvTemp         T0
+#> [1,]   -0.5939667 -0.005981517 -0.2134535 -1.056073  0.5378148
+#> [2,]   -0.5939667 -0.005981517 -0.2134535 -1.056073  0.5378148
+#> [3,]   -0.5939667 -0.045456081 -0.2134535 -1.056073 -0.3404551
+#> [4,]   -0.5939667 -0.061245907 -0.2134535 -1.056073 -0.8348993
+#> [5,]   -0.5939667 -0.108615385 -0.2134535 -1.056073 -0.9219447
+#> [6,]   -0.5939667  0.436133605 -0.2134535 -1.056073  0.1996271
+```
+
+We will use the Bernoulli likelihood - each species occurrence will be
+modeled by a Bernoulli likelihood. Build simple model:
+
+``` r
+
+model = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+            data = df,
+            lr = 0.1,
+            verbose = FALSE,
+            loss = "bernoulli")
+```
+
+![](C/C-unnamed-chunk-18-1.png)
+
+Plot model:
+
+``` r
+
+plot(model)
+```
+
+![](C/C-unnamed-chunk-19-1.png)
+
+Our NN has now 12 output nodes, one for each species.
+
+``` r
+
+head(predict(model))
+#>         ALA       ARE         BAX       CAM       GON       MEL          OBL
+#> 1 -1.940716 -4.938090  0.28155935 -5.536148 -4.944629 -4.058302 -1.035644054
+#> 2 -1.807193 -4.866472 -0.02132661 -5.665227 -4.561171 -4.454143 -1.332927823
+#> 3 -2.315477 -5.125849  0.05913050 -5.642780 -4.776118 -4.601677 -1.230957150
+#> 4 -2.841120 -5.387775  0.60353190 -5.266387 -5.549325 -3.899414 -0.589948356
+#> 5 -3.183533 -5.380225  1.08367944 -4.774338 -6.161204 -2.991308 -0.007525251
+#> 6 -1.895577 -4.906133 -0.13530611 -5.845544 -4.560763 -4.841619 -1.539765596
+#>         OVA        WIL        ALP       VIM   ARO.SAB
+#> 1 -5.089768 -0.5850572 -1.1340824 -4.163057 -3.199008
+#> 2 -5.390965 -0.7500268 -0.4641477 -4.499537 -3.728647
+#> 3 -5.454573 -0.6217508 -0.7768839 -4.549470 -3.556659
+#> 4 -4.824164 -0.1978705 -2.2222574 -3.815960 -2.363836
+#> 5 -4.092215  0.1027541 -3.4844301 -3.051479 -1.186828
+#> 6 -5.662290 -0.9458593  0.2154406 -4.880032 -4.099782
+```
+
+### Train model with bootstrapping
+
+``` r
+
+model_boot = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+                 data = df,
+                 loss = "bernoulli",
+                                  epochs = 200L,
+                 hidden = c(50L, 50L),
+                 batchsize = 50L,
+                 lr = 0.1,
+                 lambda = 0.001,
+                 alpha = 1.0,
+                 validation = 0.2,
+                 verbose = FALSE,
+                 lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 7), # reduce learning rate each 7 epochs if the validation loss didn't decrease,
+                 early_stopping = 14, # stop training when validation loss didn't decrease for 10 epochs
+                 bootstrap = 20L,
+                 bootstrap_parallel = 5L)
+```
+
+We haven’t really adjusted the training procedure, so let’s check the
+convergence first:
+
+``` r
+
+analyze_training(model_boot)
+```
+
+### Inference
+
+``` r
+
+results = summary(model_boot)
+results
+#> Summary of Deep Neural Network Model
+#> 
+#> -- Feature Importance
+#>                         Importance  Std.Err Z value Pr(>|z|)    
+#> Rockiness -> ALA          0.000795 0.000598    1.33  0.18390    
+#> Sandiness -> ALA          0.000436 0.000499    0.87  0.38187    
+#> VallyBotFlat -> ALA       0.005201 0.004178    1.24  0.21318    
+#> PPTann -> ALA             0.000483 0.000409    1.18  0.23805    
+#> Loaminess -> ALA          0.001872 0.001454    1.29  0.19810    
+#> cvTemp -> ALA             0.001519 0.001657    0.92  0.35939    
+#> T0 -> ALA                 0.002358 0.001936    1.22  0.22324    
+#>                                                                 
+#> Rockiness -> ARE          0.000311 0.000253    1.23  0.22045    
+#> Sandiness -> ARE          0.000662 0.000501    1.32  0.18576    
+#> VallyBotFlat -> ARE       0.003183 0.002636    1.21  0.22720    
+#> PPTann -> ARE             0.000373 0.000350    1.06  0.28689    
+#> Loaminess -> ARE          0.003530 0.002699    1.31  0.19097    
+#> cvTemp -> ARE             0.022450 0.008392    2.68  0.00747 ** 
+#> T0 -> ARE                 0.000427 0.000515    0.83  0.40653    
+#>                                                                 
+#> Rockiness -> BAX          0.010483 0.005634    1.86  0.06281 .  
+#> Sandiness -> BAX          0.006149 0.003450    1.78  0.07468 .  
+#> VallyBotFlat -> BAX       0.020549 0.007493    2.74  0.00610 ** 
+#> PPTann -> BAX             0.000813 0.000809    1.00  0.31500    
+#> Loaminess -> BAX          0.001818 0.001778    1.02  0.30655    
+#> cvTemp -> BAX             0.019219 0.005887    3.26  0.00110 ** 
+#> T0 -> BAX                 0.000554 0.000578    0.96  0.33814    
+#>                                                                 
+#> Rockiness -> CAM          0.003095 0.001487    2.08  0.03738 *  
+#> Sandiness -> CAM          0.003783 0.001923    1.97  0.04916 *  
+#> VallyBotFlat -> CAM       0.004662 0.002383    1.96  0.05042 .  
+#> PPTann -> CAM             0.001003 0.000724    1.39  0.16558    
+#> Loaminess -> CAM          0.001193 0.001032    1.16  0.24778    
+#> cvTemp -> CAM             0.000299 0.000296    1.01  0.31253    
+#> T0 -> CAM                 0.000218 0.000195    1.12  0.26355    
+#>                                                                 
+#> Rockiness -> GON          0.001947 0.000918    2.12  0.03402 *  
+#> Sandiness -> GON          0.000243 0.000192    1.27  0.20529    
+#> VallyBotFlat -> GON       0.002494 0.002194    1.14  0.25564    
+#> PPTann -> GON             0.000759 0.000735    1.03  0.30150    
+#> Loaminess -> GON          0.002884 0.002294    1.26  0.20869    
+#> cvTemp -> GON             0.019337 0.006460    2.99  0.00276 ** 
+#> T0 -> GON                 0.000169 0.000135    1.25  0.21067    
+#>                                                                 
+#> Rockiness -> MEL          0.011529 0.005625    2.05  0.04041 *  
+#> Sandiness -> MEL          0.000754 0.000802    0.94  0.34697    
+#> VallyBotFlat -> MEL       0.000353 0.000575    0.61  0.53971    
+#> PPTann -> MEL             0.002466 0.002099    1.17  0.24022    
+#> Loaminess -> MEL          0.002364 0.001474    1.60  0.10876    
+#> cvTemp -> MEL             0.001123 0.000915    1.23  0.21979    
+#> T0 -> MEL                 0.001424 0.001661    0.86  0.39132    
+#>                                                                 
+#> Rockiness -> OBL          0.015324 0.007713    1.99  0.04695 *  
+#> Sandiness -> OBL          0.001199 0.001640    0.73  0.46478    
+#> VallyBotFlat -> OBL       0.006651 0.003719    1.79  0.07374 .  
+#> PPTann -> OBL             0.001061 0.000719    1.48  0.14018    
+#> Loaminess -> OBL          0.003784 0.002996    1.26  0.20655    
+#> cvTemp -> OBL             0.020086 0.008305    2.42  0.01558 *  
+#> T0 -> OBL                 0.000464 0.000400    1.16  0.24599    
+#>                                                                 
+#> Rockiness -> OVA          0.004871 0.003330    1.46  0.14359    
+#> Sandiness -> OVA          0.002186 0.001626    1.34  0.17896    
+#> VallyBotFlat -> OVA       0.001317 0.001254    1.05  0.29377    
+#> PPTann -> OVA             0.000758 0.000644    1.18  0.23892    
+#> Loaminess -> OVA          0.001301 0.001040    1.25  0.21076    
+#> cvTemp -> OVA             0.000290 0.000333    0.87  0.38484    
+#> T0 -> OVA                 0.000134 0.000158    0.85  0.39764    
+#>                                                                 
+#> Rockiness -> WIL          0.003243 0.002395    1.35  0.17569    
+#> Sandiness -> WIL          0.001272 0.000885    1.44  0.15092    
+#> VallyBotFlat -> WIL       0.003147 0.002950    1.07  0.28600    
+#> PPTann -> WIL             0.001124 0.001222    0.92  0.35769    
+#> Loaminess -> WIL          0.001050 0.001146    0.92  0.35920    
+#> cvTemp -> WIL             0.036748 0.010369    3.54  0.00039 ***
+#> T0 -> WIL                 0.000550 0.000550    1.00  0.31755    
+#>                                                                 
+#> Rockiness -> ALP          0.013284 0.004234    3.14  0.00170 ** 
+#> Sandiness -> ALP          0.001127 0.000848    1.33  0.18384    
+#> VallyBotFlat -> ALP       0.003544 0.003428    1.03  0.30113    
+#> PPTann -> ALP             0.008506 0.002934    2.90  0.00374 ** 
+#> Loaminess -> ALP          0.001146 0.001426    0.80  0.42148    
+#> cvTemp -> ALP             0.001537 0.000928    1.66  0.09750 .  
+#> T0 -> ALP                 0.000429 0.000520    0.82  0.40947    
+#>                                                                 
+#> Rockiness -> VIM          0.006932 0.003762    1.84  0.06543 .  
+#> Sandiness -> VIM          0.002034 0.001800    1.13  0.25855    
+#> VallyBotFlat -> VIM       0.000656 0.000717    0.91  0.36023    
+#> PPTann -> VIM             0.000938 0.000880    1.07  0.28657    
+#> Loaminess -> VIM          0.002118 0.001520    1.39  0.16339    
+#> cvTemp -> VIM             0.000673 0.000560    1.20  0.22946    
+#> T0 -> VIM                 0.000380 0.000422    0.90  0.36753    
+#>                                                                 
+#> Rockiness -> ARO.SAB      0.035871 0.013851    2.59  0.00960 ** 
+#> Sandiness -> ARO.SAB      0.000890 0.000865    1.03  0.30323    
+#> VallyBotFlat -> ARO.SAB   0.009333 0.003358    2.78  0.00544 ** 
+#> PPTann -> ARO.SAB         0.007822 0.005384    1.45  0.14628    
+#> Loaminess -> ARO.SAB      0.000924 0.001103    0.84  0.40220    
+#> cvTemp -> ARO.SAB         0.018599 0.008054    2.31  0.02092 *  
+#> T0 -> ARO.SAB             0.000488 0.000570    0.86  0.39241    
+#>                                                                 
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> 
+#> -- Average Conditional Effects
+#>                               ACE   Std.Err Z value Pr(>|z|)    
+#> Rockiness -> ALA         1.82e-02  1.12e-02    1.63  0.10235    
+#> Sandiness -> ALA         2.34e-03  1.62e-02    0.14  0.88513    
+#> VallyBotFlat -> ALA     -5.45e-02  1.86e-02   -2.93  0.00335 ** 
+#> PPTann -> ALA            1.59e-02  8.03e-03    1.98  0.04789 *  
+#> Loaminess -> ALA        -3.10e-02  1.25e-02   -2.49  0.01276 *  
+#> cvTemp -> ALA            2.54e-02  1.66e-02    1.53  0.12561    
+#> T0 -> ALA                3.48e-02  1.47e-02    2.37  0.01790 *  
+#>                                                                 
+#> Rockiness -> ARE        -1.60e-03  8.40e-03   -0.19  0.84916    
+#> Sandiness -> ARE         1.30e-02  7.26e-03    1.79  0.07278 .  
+#> VallyBotFlat -> ARE     -3.34e-02  1.37e-02   -2.45  0.01439 *  
+#> PPTann -> ARE           -6.93e-03  9.29e-03   -0.75  0.45564    
+#> Loaminess -> ARE        -3.30e-02  1.49e-02   -2.21  0.02681 *  
+#> cvTemp -> ARE            9.29e-02  1.70e-02    5.48  4.2e-08 ***
+#> T0 -> ARE                9.53e-03  7.29e-03    1.31  0.19109    
+#>                                                                 
+#> Rockiness -> BAX        -8.99e-02  2.53e-02   -3.55  0.00039 ***
+#> Sandiness -> BAX         6.81e-02  2.07e-02    3.29  0.00100 ** 
+#> VallyBotFlat -> BAX     -1.31e-01  1.91e-02   -6.85  7.4e-12 ***
+#> PPTann -> BAX           -8.38e-03  2.31e-02   -0.36  0.71627    
+#> Loaminess -> BAX        -3.03e-02  2.14e-02   -1.41  0.15792    
+#> cvTemp -> BAX           -1.26e-01  1.96e-02   -6.41  1.5e-10 ***
+#> T0 -> BAX                1.20e-02  1.58e-02    0.76  0.44877    
+#>                                                                 
+#> Rockiness -> CAM        -3.59e-02  9.82e-03   -3.65  0.00026 ***
+#> Sandiness -> CAM        -3.83e-02  9.44e-03   -4.06  5.0e-05 ***
+#> VallyBotFlat -> CAM      4.37e-02  1.14e-02    3.83  0.00013 ***
+#> PPTann -> CAM           -1.74e-02  1.26e-02   -1.38  0.16639    
+#> Loaminess -> CAM        -1.90e-02  9.11e-03   -2.08  0.03720 *  
+#> cvTemp -> CAM            4.35e-03  7.47e-03    0.58  0.56004    
+#> T0 -> CAM               -4.62e-03  7.24e-03   -0.64  0.52278    
+#>                                                                 
+#> Rockiness -> GON         2.36e-02  7.18e-03    3.29  0.00100 ** 
+#> Sandiness -> GON         4.45e-03  5.68e-03    0.78  0.43333    
+#> VallyBotFlat -> GON     -2.71e-02  1.22e-02   -2.22  0.02615 *  
+#> PPTann -> GON           -1.28e-02  8.16e-03   -1.57  0.11597    
+#> Loaminess -> GON        -2.74e-02  1.30e-02   -2.10  0.03551 *  
+#> cvTemp -> GON            8.00e-02  1.54e-02    5.18  2.2e-07 ***
+#> T0 -> GON                7.29e-05  6.06e-03    0.01  0.99040    
+#>                                                                 
+#> Rockiness -> MEL        -8.63e-02  2.25e-02   -3.83  0.00013 ***
+#> Sandiness -> MEL         1.64e-02  1.42e-02    1.16  0.24678    
+#> VallyBotFlat -> MEL      9.61e-04  1.45e-02    0.07  0.94719    
+#> PPTann -> MEL           -3.88e-02  1.56e-02   -2.49  0.01263 *  
+#> Loaminess -> MEL        -3.71e-02  1.19e-02   -3.12  0.00182 ** 
+#> cvTemp -> MEL            2.29e-02  1.28e-02    1.80  0.07254 .  
+#> T0 -> MEL                2.47e-02  1.53e-02    1.61  0.10704    
+#>                                                                 
+#> Rockiness -> OBL        -1.07e-01  2.48e-02   -4.32  1.6e-05 ***
+#> Sandiness -> OBL        -1.58e-02  2.45e-02   -0.64  0.51933    
+#> VallyBotFlat -> OBL     -7.09e-02  1.77e-02   -4.01  6.0e-05 ***
+#> PPTann -> OBL           -2.17e-02  1.89e-02   -1.15  0.25066    
+#> Loaminess -> OBL         4.92e-02  1.94e-02    2.54  0.01124 *  
+#> cvTemp -> OBL           -1.24e-01  2.50e-02   -4.95  7.3e-07 ***
+#> T0 -> OBL                8.07e-04  1.72e-02    0.05  0.96263    
+#>                                                                 
+#> Rockiness -> OVA        -4.85e-02  1.62e-02   -3.00  0.00272 ** 
+#> Sandiness -> OVA        -3.05e-02  1.06e-02   -2.89  0.00381 ** 
+#> VallyBotFlat -> OVA      2.27e-02  1.15e-02    1.98  0.04767 *  
+#> PPTann -> OVA           -1.72e-02  1.15e-02   -1.50  0.13315    
+#> Loaminess -> OVA        -2.21e-02  9.49e-03   -2.32  0.02021 *  
+#> cvTemp -> OVA            5.78e-03  8.82e-03    0.66  0.51232    
+#> T0 -> OVA                2.32e-03  6.36e-03    0.36  0.71531    
+#>                                                                 
+#> Rockiness -> WIL        -4.16e-02  1.87e-02   -2.23  0.02567 *  
+#> Sandiness -> WIL         2.55e-02  1.07e-02    2.39  0.01695 *  
+#> VallyBotFlat -> WIL     -4.03e-02  1.76e-02   -2.28  0.02233 *  
+#> PPTann -> WIL           -2.20e-02  1.52e-02   -1.45  0.14740    
+#> Loaminess -> WIL         1.77e-02  1.88e-02    0.94  0.34566    
+#> cvTemp -> WIL           -1.54e-01  2.05e-02   -7.52  5.3e-14 ***
+#> T0 -> WIL               -7.94e-03  1.53e-02   -0.52  0.60441    
+#>                                                                 
+#> Rockiness -> ALP         6.79e-02  8.07e-03    8.42  < 2e-16 ***
+#> Sandiness -> ALP         1.62e-02  1.14e-02    1.42  0.15524    
+#> VallyBotFlat -> ALP     -3.24e-02  1.64e-02   -1.97  0.04844 *  
+#> PPTann -> ALP            5.63e-02  9.51e-03    5.92  3.2e-09 ***
+#> Loaminess -> ALP        -1.22e-02  1.47e-02   -0.83  0.40654    
+#> cvTemp -> ALP           -2.09e-02  7.97e-03   -2.63  0.00863 ** 
+#> T0 -> ALP                6.77e-04  1.11e-02    0.06  0.95124    
+#>                                                                 
+#> Rockiness -> VIM        -6.34e-02  1.84e-02   -3.44  0.00057 ***
+#> Sandiness -> VIM        -2.95e-02  1.60e-02   -1.85  0.06416 .  
+#> VallyBotFlat -> VIM      8.44e-03  1.68e-02    0.50  0.61515    
+#> PPTann -> VIM           -2.07e-02  1.26e-02   -1.64  0.09999 .  
+#> Loaminess -> VIM        -3.16e-02  1.20e-02   -2.64  0.00832 ** 
+#> cvTemp -> VIM           -1.70e-02  9.61e-03   -1.76  0.07776 .  
+#> T0 -> VIM                6.46e-03  1.29e-02    0.50  0.61560    
+#>                                                                 
+#> Rockiness -> ARO.SAB    -1.51e-01  2.66e-02   -5.70  1.2e-08 ***
+#> Sandiness -> ARO.SAB     9.84e-03  1.91e-02    0.51  0.60725    
+#> VallyBotFlat -> ARO.SAB  7.61e-02  1.19e-02    6.41  1.4e-10 ***
+#> PPTann -> ARO.SAB       -6.82e-02  2.52e-02   -2.71  0.00675 ** 
+#> Loaminess -> ARO.SAB    -1.51e-02  1.48e-02   -1.02  0.30700    
+#> cvTemp -> ARO.SAB       -1.08e-01  2.12e-02   -5.06  4.1e-07 ***
+#> T0 -> ARO.SAB           -4.98e-03  1.49e-02   -0.33  0.73779    
+#> ---
+#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+```
+
+cvTemp is significant for many species. Visualization of the effect:
+
+``` r
+
+ale_plots = ALE(model_boot, variable = "cvTemp", plot = FALSE)
+do.call(gridExtra::grid.arrange, ale_plots)
+```
+
+![](C/C-unnamed-chunk-24-1.png)
+
+## Advanced: Joint species distribution model
+
+In recent years, joint species distribution models (JSDM) have emerged
+as a new class of models capable of jointly modeling species. JSDM
+account for co-occurrences between species that cannot be explained by
+the environment alone with biotic associations [Pollock et al.,
+2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180).
+Technically, biotic associations are coded by a covariance matrix that
+absorbs the species co-occurrences “left over” in the residuals. Two
+common models for JSDMs are the latent variable model [Warton et al.,
+2015](https://doi.org/10.1016/j.tree.2015.09.007) and the multivariate
+probit model (MVP) ([Pollock et al.,
+2014](https://besjournals.onlinelibrary.wiley.com/doi/10.1111/2041-210X.12180)).
+
+In ‘cito’ we provide an experimental likelihood for the multivariate
+probit model which is based on a Monte-Carlo approximation ([Chen et
+al., 2018](https://proceedings.mlr.press/v80/chen18o.html)). However,
+‘cito’ is not a JSDM-focused package which means that many interesting
+features of JSDMs such as community assembly analyses are not available
+in ‘cito’. If you want to perform an in-depth analysis with JSDM such as
+to reveal the internal metacommunity structure we recommend, for
+example, the [sjSDM package](https://cran.r-project.org/package=sjSDM):
+
+``` r
+
+jsdm = dnn(cbind(ALA, ARE, BAX, CAM, GON, MEL, OBL, OVA, WIL, ALP, VIM, ARO.SAB)~.,
+            data = df,
+            lr = 0.1,
+            epochs = 200L,
+            verbose = FALSE,
+            loss = "mvp")
+```
+
+![](C/C-unnamed-chunk-25-1.png)
+
+Building the covariance matrix which corresponds to the biotic
+associations:
+
+``` r
+
+L = as.matrix(jsdm$loss$parameter)
+biotic_association = cov2cor(L%*%t(L) + diag(1, 12))
+fields::image.plot(biotic_association)
+```
+
+![](C/C-unnamed-chunk-26-1.png)
+
+For more information about community analyses with JSDMs see the
+[vignette of the sjSDM
+package](https://cran.r-project.org/package=sjSDM)
