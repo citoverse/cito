@@ -296,12 +296,12 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-in"><span><span class="va">architecture</span> <span class="op">&lt;-</span> <span class="fu"><a href="create_architecture.html">create_architecture</a></span><span class="op">(</span><span class="fu"><a href="conv.html">conv</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="maxPool.html">maxPool</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="conv.html">conv</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="maxPool.html">maxPool</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="linear.html">linear</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Build and train network</span></span></span>
-<span class="r-in"><span><span class="co">### softmax is used for classification</span></span></span>
+<span class="r-in"><span><span class="co">### cross-entropy (softmax link) for classification</span></span></span>
 <span class="r-in"><span><span class="va">cnn.fit</span> <span class="op">&lt;-</span> <span class="fu">cnn</span><span class="op">(</span><span class="va">X</span>, <span class="va">Y</span>, <span class="va">architecture</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span>,</span></span>
 <span class="r-in"><span>               epochs <span class="op">=</span> <span class="fl">2</span>, validation <span class="op">=</span> <span class="fl">0.1</span>, lr <span class="op">=</span> <span class="fl">0.05</span>, device<span class="op">=</span><span class="va">device</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## The training loss is below the baseline loss but at the end of the</span></span></span>
-<span class="r-in"><span><span class="co">## training the loss was still decreasing, so continue training for another 50</span></span></span>
+<span class="r-in"><span><span class="co">## training the loss was still decreasing, so continue training for another 5</span></span></span>
 <span class="r-in"><span><span class="co">## epochs</span></span></span>
 <span class="r-in"><span><span class="va">cnn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">cnn.fit</span>, epochs <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
@@ -322,15 +322,15 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">resnet</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">resnet</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 0.687, validation: 0.724, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 0.693, validation: 0.699, lr: 0.05000</span>
 <span class="r-plt img"><img src="cnn-1.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 0.684, validation: 0.718, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: training: 0.680, validation: 0.730, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 0.690, validation: 0.704, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: training: 0.689, validation: 0.708, lr: 0.05000</span>
 <span class="r-plt img"><img src="cnn-2.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: training: 0.677, validation: 0.716, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: training: 0.676, validation: 0.720, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: training: 0.667, validation: 0.717, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: training: 0.668, validation: 0.713, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: training: 0.688, validation: 0.711, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: training: 0.687, validation: 0.715, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: training: 0.686, validation: 0.717, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: training: 0.685, validation: 0.722, lr: 0.05000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cnn(X = X, Y = Y, architecture = architecture, loss = "cross-entropy", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     lr = 0.05, validation = 0.1, epochs = 2, device = device)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------------------------------------</span>
@@ -367,7 +367,7 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-plt img"><img src="cnn-3.png" alt="" width="700" height="433"></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Model weights for <span style="color: #0000BB;">&lt;resnet18&gt;</span> (<span style="font-style: italic;">~45 MB</span>) will be downloaded and processed if not</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> already available.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.307, validation: 0.025, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.810, validation: 0.078, lr: 0.05000</span>
 <span class="r-plt img"><img src="cnn-4.png" alt="" width="700" height="433"></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cnn(X = X, Y = Y, architecture = transfer_architecture, loss = "cross-entropy", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     lr = 0.05, validation = 0.1, epochs = 1, device = device)</span>

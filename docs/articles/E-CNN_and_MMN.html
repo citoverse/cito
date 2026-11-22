@@ -125,7 +125,7 @@ dimension indexing samples. The subsequent dimensions then correspond to
 the data structure of each sample. Specifically:</p>
 <ul>
 <li>Grayscale images:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><mi>h</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mo>,</mo><mi>w</mi><mi>i</mi><mi>d</mi><mi>t</mi><mi>h</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, height, width]</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><mn>1</mn><mo>,</mo><mi>h</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mo>,</mo><mi>w</mi><mi>i</mi><mi>d</mi><mi>t</mi><mi>h</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, 1, height, width]</annotation></semantics></math>
 </li>
 <li>RGB images:
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><mn>3</mn><mo>,</mo><mi>h</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mo>,</mo><mi>w</mi><mi>i</mi><mi>d</mi><mi>t</mi><mi>h</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, 3, height, width]</annotation></semantics></math>
@@ -134,7 +134,7 @@ the data structure of each sample. Specifically:</p>
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><mi>x</mi><mo>,</mo><mi>y</mi><mo>,</mo><mi>z</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, x, y, z]</annotation></semantics></math>
 </li>
 <li>Time series data:
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><mi>t</mi><mi>i</mi><mi>m</mi><msub><mi>e</mi><mi>s</mi></msub><mi>t</mi><mi>e</mi><mi>p</mi><mi>s</mi><mo>,</mo><msub><mi>n</mi><mi>c</mi></msub><mi>o</mi><mi>v</mi><mi>a</mi><mi>r</mi><mi>i</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>s</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, time_steps, n_covariates]</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mtext mathvariant="normal">n_samples</mtext><mo>,</mo><msub><mi>n</mi><mi>c</mi></msub><mi>o</mi><mi>v</mi><mi>a</mi><mi>r</mi><mi>i</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>s</mi><mo>,</mo><mi>t</mi><mi>i</mi><mi>m</mi><msub><mi>e</mi><mi>s</mi></msub><mi>t</mi><mi>e</mi><mi>p</mi><mi>s</mi><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[\text{n_samples}, n_covariates, time_steps]</annotation></semantics></math>
 </li>
 </ul>
 <p>It is crucial that the order of samples in X matches the order of

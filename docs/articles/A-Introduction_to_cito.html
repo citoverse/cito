@@ -63,7 +63,7 @@
                         <h4 data-toc-skip class="author">Christian
 Amesoeder &amp; Maximilian Pichler</h4>
             
-            <h4 data-toc-skip class="date">2026-11-18</h4>
+            <h4 data-toc-skip class="date">2026-11-22</h4>
       
       <small class="dont-index">Source: <a href="https://github.com/citoverse/cito/blob/HEAD/vignettes/A-Introduction_to_cito.Rmd" class="external-link"><code>vignettes/A-Introduction_to_cito.Rmd</code></a></small>
       <div class="d-none name"><code>A-Introduction_to_cito.Rmd</code></div>
@@ -84,7 +84,7 @@ Amesoeder &amp; Maximilian Pichler</h4>
 installed and running.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">require</a></span><span class="op">(</span><span class="va"><a href="https://torch.mlverse.org/docs" class="external-link">torch</a></span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"torch"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Lade nötiges Paket: torch</span></span>
+<span><span class="co">#&gt; Loading required package: torch</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://torch.mlverse.org/docs" class="external-link">torch</a></span><span class="op">)</span></span>
 <span><span class="kw">if</span><span class="op">(</span><span class="op">!</span><span class="fu"><a href="https://torch.mlverse.org/docs/reference/torch_is_installed.html" class="external-link">torch_is_installed</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="fu"><a href="https://torch.mlverse.org/docs/reference/install_torch.html" class="external-link">install_torch</a></span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
@@ -190,19 +190,19 @@ from ML but also likelihoods for statistical models are supported:</p>
 <td align="left"><code>mae</code></td>
 <td align="left">mean absolute error</td>
 <td align="left">Regression, predicting continuous values</td>
-<td><code>dnn(Sepal.Length~., ..., loss = "msa")</code></td>
+<td><code>dnn(Sepal.Length~., ..., loss = "mae")</code></td>
 </tr>
 <tr class="even">
-<td align="left"><code>softmax</code></td>
-<td align="left">categorical cross entropy</td>
-<td align="left">Multi-class, species classification</td>
-<td><code>dnn(Species~., ..., loss = "softmax")</code></td>
-</tr>
-<tr class="odd">
 <td align="left"><code>cross-entropy</code></td>
 <td align="left">categorical cross entropy</td>
 <td align="left">Multi-class, species classification</td>
 <td><code>dnn(Species~., ..., loss = "cross-entropy")</code></td>
+</tr>
+<tr class="odd">
+<td align="left"><code>bernoulli</code></td>
+<td align="left">Bernoulli likelihood</td>
+<td align="left">Binary classification, presence/absence (0/1 data)</td>
+<td><code>dnn(Presence~., ..., loss = "bernoulli")</code></td>
 </tr>
 <tr class="even">
 <td align="left"><code>gaussian</code></td>
@@ -214,15 +214,15 @@ to <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">stats::
 <tr class="odd">
 <td align="left"><code>binomial</code></td>
 <td align="left">Binomial likelihood</td>
-<td align="left">Classification/Logistic regression, mortality (0/1
-data)</td>
-<td><code>dnn(Presence~., ..., loss = "Binomial")</code></td>
+<td align="left">Logistic regression, successes out of trials (or 0/1
+data), e.g. mortality</td>
+<td><code>dnn(cbind(Dead, Alive)~., ..., loss = "binomial")</code></td>
 </tr>
 <tr class="even">
 <td align="left"><code>poisson</code></td>
 <td align="left">Poisson likelihood</td>
 <td align="left">Regression, count data, e.g. species abundances</td>
-<td><code>dnn(Abundance~., ..., loss = "Poisson")</code></td>
+<td><code>dnn(Abundance~., ..., loss = "poisson")</code></td>
 </tr>
 <tr class="odd">
 <td align="left"><code>nbinom</code></td>
@@ -237,14 +237,31 @@ variable dispersion</td>
 <td align="left">Joint Species Distribution model</td>
 <td><code>dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")</code></td>
 </tr>
+<tr class="odd">
+<td align="left"><code>multinomial</code></td>
+<td align="left">Multinomial likelihood</td>
+<td align="left">Counts in several classes, e.g. step selection in
+animal movement models</td>
+<td><code>dnn(cbind(Species1, Species2, Species3)~., ..., loss = "multinomial")</code></td>
+</tr>
+<tr class="even">
+<td align="left"><code>clogit</code></td>
+<td align="left">Conditional binomial</td>
+<td align="left">Choice among several options, e.g. step selection in
+animal movement models</td>
+<td><code>dnn(Species~., ..., loss = "clogit")</code></td>
+</tr>
 </tbody>
 </table>
-<p>Moreover, all non multilabel losses (all except for softmax or
-cross-entropy) can be modeled as multilabel using the cbind syntax</p>
+<p><code>softmax</code> is an older name of <code>cross-entropy</code>
+and is deprecated.</p>
+<p>Moreover, all losses except <code>cross-entropy</code>,
+<code>multinomial</code> and <code>clogit</code> can be modeled as
+multilabel using the cbind syntax</p>
 <p><code>dnn(cbind(Sepal.Length, Sepal.Width)~., …, loss = "mse")</code></p>
 <p>The likelihoods (Gaussian, Binomial, and Poisson) can be also passed
 as their stats equivalents:</p>
-<p><code>dnn(Sepal.Length~., ..., loss = stats::gaussian)</code></p>
+<p><code>dnn(Sepal.Length~., ..., loss = stats::gaussian())</code></p>
 </div>
 <div class="section level3">
 <h3 id="data">Data<a class="anchor" aria-label="anchor" href="#data"></a>
@@ -298,7 +315,9 @@ intercept only model. It allows us to control the training because the
 goal is to beat the baseline loss. If we don’t, we need to adjust the
 optimization parameters (epochs and lr (learning rate)):</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.6</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span> <span class="co"># lr too high</span></span>
+<span><span class="co">#&gt; Warning: Loss is NA, training stopped. Please adjust hyperparameters. See</span></span>
+<span><span class="co">#&gt; vignette('B-Training_neural_networks') for help.</span></span></code></pre></div>
 <p>vs</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span> , data <span class="op">=</span> <span class="va">data</span>, epochs <span class="op">=</span> <span class="fl">50</span>, lr <span class="op">=</span> <span class="fl">0.01</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
@@ -388,8 +407,8 @@ network.</p>
 <span><span class="co"># the linear effects, simulated as 1.0 and -0.5</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">fit_fe</span><span class="op">)</span><span class="op">$</span><span class="va">fixed_effects</span></span>
 <span><span class="co">#&gt;                 [,1]</span></span>
-<span><span class="co">#&gt; Temp       0.9970902</span></span>
-<span><span class="co">#&gt; I(Temp^2) -0.5176629</span></span></code></pre></div>
+<span><span class="co">#&gt; Temp       1.0243872</span></span>
+<span><span class="co">#&gt; I(Temp^2) -0.5239018</span></span></code></pre></div>
 <p>Here <code>Precp</code> enters the network although its true effect
 is linear; a variable can enter either the network or <code><a href="../reference/fe.html">fe()</a></code>,
 not both. In <code><a href="../reference/mmn.html">mmn()</a></code> and with <code>custom</code> networks
@@ -454,19 +473,20 @@ SDCE:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Calculate and return feature importance</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Categorical features are not covered by importance = 'ale': Species. Use importance = 'permutation' to include them.</span></span>
 <span><span class="co">#&gt; Summary of Deep Neural Network Model</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Feature Importance:</span></span>
 <span><span class="co">#&gt;       variable importance_1</span></span>
-<span><span class="co">#&gt; 1  Sepal.Width  0.117958915</span></span>
-<span><span class="co">#&gt; 2 Petal.Length  1.055670200</span></span>
-<span><span class="co">#&gt; 3  Petal.Width  0.003582032</span></span>
+<span><span class="co">#&gt; 1  Sepal.Width   0.11112189</span></span>
+<span><span class="co">#&gt; 2 Petal.Length   1.26439386</span></span>
+<span><span class="co">#&gt; 3  Petal.Width   0.01322485</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Average Conditional Effects:</span></span>
 <span><span class="co">#&gt;                    [,1]</span></span>
-<span><span class="co">#&gt; Sepal.Width  0.33593520</span></span>
-<span><span class="co">#&gt; Petal.Length 0.99904002</span></span>
-<span><span class="co">#&gt; Petal.Width  0.02797409</span></span></code></pre></div>
+<span><span class="co">#&gt; Sepal.Width   0.3321385</span></span>
+<span><span class="co">#&gt; Petal.Length  1.1088957</span></span>
+<span><span class="co">#&gt; Petal.Width  -0.1206920</span></span></code></pre></div>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#returns weights of neural network</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -491,17 +511,17 @@ with enabled bootstrapping:</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Feature Importance</span></span>
 <span><span class="co">#&gt;                  Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width -&gt;       0.1085  0.0224    4.84  1.3e-06 ***</span></span>
-<span><span class="co">#&gt; Petal.Length -&gt;      2.4559  0.3793    6.47  9.5e-11 ***</span></span>
-<span><span class="co">#&gt; Petal.Width -&gt;       0.1643  0.1002    1.64      0.1    </span></span>
+<span><span class="co">#&gt; Sepal.Width -&gt;       0.1076  0.0240    4.48  7.3e-06 ***</span></span>
+<span><span class="co">#&gt; Petal.Length -&gt;      2.4498  0.3899    6.28  3.3e-10 ***</span></span>
+<span><span class="co">#&gt; Petal.Width -&gt;       0.1675  0.0914    1.83    0.067 .  </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Average Conditional Effects</span></span>
 <span><span class="co">#&gt;                      ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">#&gt; Sepal.Width -&gt;    0.3123  0.0362    8.63   &lt;2e-16 ***</span></span>
-<span><span class="co">#&gt; Petal.Length -&gt;   1.5445  0.1149   13.44   &lt;2e-16 ***</span></span>
-<span><span class="co">#&gt; Petal.Width -&gt;   -0.3724  0.1341   -2.78   0.0055 ** </span></span>
+<span><span class="co">#&gt; Sepal.Width -&gt;    0.3105  0.0412    7.53  5.1e-14 ***</span></span>
+<span><span class="co">#&gt; Petal.Length -&gt;   1.5437  0.1212   12.73  &lt; 2e-16 ***</span></span>
+<span><span class="co">#&gt; Petal.Width -&gt;   -0.3799  0.1194   -3.18   0.0015 ** </span></span>
 <span><span class="co">#&gt; ---</span></span>
 <span><span class="co">#&gt; Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <p>We find that Petal.Length and Sepal.Width are significant
@@ -529,7 +549,7 @@ important feature.</p>
 <p><img src="A/A-unnamed-chunk-9-1.png" alt="" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://cran.r-project.org/package=effects" class="external-link">effects</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; Lade nötiges Paket: carData</span></span>
+<span><span class="co">#&gt; Loading required package: carData</span></span>
 <span><span class="co">#&gt; lattice theme set by effectsTheme()</span></span>
 <span><span class="co">#&gt; See ?effectsTheme for details.</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/pkg/effects/man/effect.html" class="external-link">allEffects</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm</a></span><span class="op">(</span><span class="va">Sepal.Length</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">df</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
@@ -609,15 +629,12 @@ tasks. We don’t recommend tuning it.</p>
 <p>If elastic net is used, ‘cito’ will produce a sparse, generalized
 neural network. The L1/L2 loss can be controlled with the arguments
 alpha and lambda.</p>
-<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>=</mo><mi>λ</mi><mo>*</mo><mo stretchy="false" form="prefix">[</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false" form="postfix">)</mo><mo>*</mo><mo stretchy="false" form="prefix">|</mo><mi>w</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mi>+</mi><mi>α</mi><mo stretchy="false" form="prefix">|</mo><mi>w</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mi>s</mi><msup><mo stretchy="false" form="prefix">|</mo><mn>2</mn></msup><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">
- loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>l</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>=</mo><mi>λ</mi><mo>*</mo><mo stretchy="false" form="prefix">[</mo><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false" form="postfix">)</mo><mo>*</mo><mo stretchy="false" form="prefix">|</mo><mi>w</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mi>s</mi><mo stretchy="false" form="prefix">|</mo><mi>+</mi><mi>α</mi><mo stretchy="false" form="prefix">|</mo><mo stretchy="false" form="prefix">|</mo><mi>w</mi><mi>e</mi><mi>i</mi><mi>g</mi><mi>h</mi><mi>t</mi><mi>s</mi><mo stretchy="false" form="prefix">|</mo><msub><mo stretchy="false" form="prefix">|</mo><mn>2</mn></msub><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">
+ loss = \lambda * [ (1 - \alpha) * |weights| + \alpha ||weights||_2 ]
 </annotation></semantics></math></p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#elastic net penalty in all layers:</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, lambda <span class="op">=</span> <span class="fl">0.01</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"softmax"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span></code></pre></div>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, lambda <span class="op">=</span> <span class="fl">0.01</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="dropout-regularization">Dropout Regularization<a class="anchor" aria-label="anchor" href="#dropout-regularization"></a>
@@ -628,10 +645,7 @@ this approach, a percentage of different nodes gets left during each
 epoch.</p>
 <div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co">#dropout of 35% on all layers:</span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"softmax"</span>, dropout <span class="op">=</span> <span class="fl">0.35</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span></code></pre></div>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span>, dropout <span class="op">=</span> <span class="fl">0.35</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level3">
@@ -670,10 +684,7 @@ See <code>?config_optimizer()</code> for more information.</p>
 <span><span class="va">opt</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/config_optimizer.html">config_optimizer</a></span><span class="op">(</span></span>
 <span>  type <span class="op">=</span> <span class="st">"sgd"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,  optimizer <span class="op">=</span> <span class="va">opt</span>, lr<span class="op">=</span><span class="fl">0.002</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"softmax"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span></code></pre></div>
+<span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">data</span>,  optimizer <span class="op">=</span> <span class="va">opt</span>, lr<span class="op">=</span><span class="fl">0.002</span>, verbose<span class="op">=</span><span class="cn">FALSE</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-optim-1.png" alt="" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
@@ -738,7 +749,7 @@ layers</td>
 </tr>
 <tr class="even">
 <td align="left">alpha</td>
-<td align="left"><code>dnn(…, lambda = tune(0.2, 0.4))</code></td>
+<td align="left"><code>dnn(…, alpha = tune(0.2, 0.4))</code></td>
 <td align="left">alpha will be tuned within the range (0.2, 0.4)</td>
 </tr>
 <tr class="odd">
@@ -789,43 +800,10 @@ hyperparameters:</p>
 <code class="sourceCode R"><span><span class="va">nn.fit_tuned</span> <span class="op">=</span> <span class="fu"><a href="../reference/dnn.html">dnn</a></span><span class="op">(</span><span class="va">Species</span><span class="op">~</span><span class="va">.</span>,</span>
 <span>                   data <span class="op">=</span> <span class="va">iris</span>,</span>
 <span>                   lr <span class="op">=</span> <span class="fu"><a href="../reference/tune.html">tune</a></span><span class="op">(</span><span class="fl">0.0001</span>, <span class="fl">0.1</span><span class="op">)</span>,</span>
-<span>                   loss <span class="op">=</span> <span class="st">"softmax"</span>,</span>
+<span>                   loss <span class="op">=</span> <span class="st">"cross-entropy"</span>,</span>
 <span>                   tuning <span class="op">=</span> <span class="fu"><a href="../reference/config_tuning.html">config_tuning</a></span><span class="op">(</span>steps <span class="op">=</span> <span class="fl">3L</span>, CV <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
 <span><span class="co">#&gt; Starting hyperparameter tuning...</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span>
-<span><span class="co">#&gt; Fitting final model...</span></span>
-<span><span class="co">#&gt; Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =</span></span>
-<span><span class="co">#&gt; 'softmax' is deprecated and will be removed in a future version of 'cito'.</span></span>
-<span><span class="co">#&gt; Please use loss = 'cross-entropy' instead.</span></span></code></pre></div>
+<span><span class="co">#&gt; Fitting final model...</span></span></code></pre></div>
 <p>After tuning, the final model is trained with the best set of
 hyperparameters and returned.</p>
 </div>
@@ -839,12 +817,12 @@ continue_training().</p>
 <span><span class="va">nn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">nn.fit</span>, epochs <span class="op">=</span> <span class="fl">12</span>, verbose<span class="op">=</span><span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;         [,1]</span></span>
-<span><span class="co">#&gt; 1 -0.9818215</span></span>
-<span><span class="co">#&gt; 2 -1.3898047</span></span>
-<span><span class="co">#&gt; 3 -1.3340323</span></span>
-<span><span class="co">#&gt; 4 -1.2629429</span></span>
-<span><span class="co">#&gt; 5 -0.9124794</span></span>
-<span><span class="co">#&gt; 6 -0.5285937</span></span></code></pre></div>
+<span><span class="co">#&gt; 1 -1.0022138</span></span>
+<span><span class="co">#&gt; 2 -1.3900149</span></span>
+<span><span class="co">#&gt; 3 -1.3049076</span></span>
+<span><span class="co">#&gt; 4 -1.2474602</span></span>
+<span><span class="co">#&gt; 5 -0.9278000</span></span>
+<span><span class="co">#&gt; 6 -0.5760441</span></span></code></pre></div>
 <p>It also allows you to change any training parameters, for example the
 learning rate. You can analyze the training process with
 analyze_training().</p>
@@ -893,15 +871,14 @@ checks. But first we need to simulate from our model:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-15-1.png" alt="" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testOverdispersion.html" class="external-link">testOverdispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
-<span><span class="co">#&gt; testOverdispersion is deprecated, switch your code to using the testDispersion function</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testDispersion.html" class="external-link">testDispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-15-2.png" alt="" style="display: block; margin: auto;"></p>
 <pre><code><span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs.</span></span>
 <span><span class="co">#&gt;  simulated</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; data:  simulationOutput</span></span>
-<span><span class="co">#&gt; dispersion = 23.228, p-value &lt; 2.2e-16</span></span>
+<span><span class="co">#&gt; dispersion = 25.662, p-value &lt; 2.2e-16</span></span>
 <span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
 <p>Overdispersion (biased effect estimates and inflated error rates
 could be a consequence of overdispersion) ! One solution (the only one
@@ -913,7 +890,7 @@ fits a variable dispersion parameter:</p>
 <div class="sourceCode" id="cb36"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Dispersion parameter:</span></span>
 <span><span class="va">m2</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="fu">parameter_link</span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.54437</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.5420804</span></span></code></pre></div>
 <p>We have a custom implementation of the negative binomial distribution
 (which is similar to the “nbinom1” of glmmTMB (the nbinom converges to a
 poisson as the dispersion parameters approaches infinity)) which is why
@@ -926,15 +903,14 @@ we provide a simulate function:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">res</span>, rank <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-17-1.png" alt="" style="display: block; margin: auto;"></p>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testOverdispersion.html" class="external-link">testOverdispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
-<span><span class="co">#&gt; testOverdispersion is deprecated, switch your code to using the testDispersion function</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/pkg/DHARMa/man/testDispersion.html" class="external-link">testDispersion</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
 <p><img src="A/A-unnamed-chunk-17-2.png" alt="" style="display: block; margin: auto;"></p>
 <pre><code><span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;  DHARMa nonparametric dispersion test via sd of residuals fitted vs.</span></span>
 <span><span class="co">#&gt;  simulated</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; data:  simulationOutput</span></span>
-<span><span class="co">#&gt; dispersion = 2.531, p-value &lt; 2.2e-16</span></span>
+<span><span class="co">#&gt; dispersion = 2.411, p-value &lt; 2.2e-16</span></span>
 <span><span class="co">#&gt; alternative hypothesis: two.sided</span></span></code></pre>
 <p>Better! But still not perfect, a challenge with maximum likelihood
 estimation and the negative binomial distribution is to get the theta

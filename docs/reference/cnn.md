@@ -395,12 +395,12 @@ Y <- shapes$labels
 architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
-### softmax is used for classification
+### cross-entropy (softmax link) for classification
 cnn.fit <- cnn(X, Y, architecture, loss = "cross-entropy",
                epochs = 2, validation = 0.1, lr = 0.05, device=device)
 
 ## The training loss is below the baseline loss but at the end of the
-## training the loss was still decreasing, so continue training for another 50
+## training the loss was still decreasing, so continue training for another 5
 ## epochs
 cnn.fit <- continue_training(cnn.fit, epochs = 5)
 
@@ -421,15 +421,15 @@ resnet <- cnn(X, Y, transfer_architecture, loss = "cross-entropy",
 print(resnet)
 plot(resnet)
 }
-#> Loss at epoch 1: training: 0.687, validation: 0.724, lr: 0.05000
+#> Loss at epoch 1: training: 0.693, validation: 0.699, lr: 0.05000
 
-#> Loss at epoch 2: training: 0.684, validation: 0.718, lr: 0.05000
-#> Loss at epoch 3: training: 0.680, validation: 0.730, lr: 0.05000
+#> Loss at epoch 2: training: 0.690, validation: 0.704, lr: 0.05000
+#> Loss at epoch 3: training: 0.689, validation: 0.708, lr: 0.05000
 
-#> Loss at epoch 4: training: 0.677, validation: 0.716, lr: 0.05000
-#> Loss at epoch 5: training: 0.676, validation: 0.720, lr: 0.05000
-#> Loss at epoch 6: training: 0.667, validation: 0.717, lr: 0.05000
-#> Loss at epoch 7: training: 0.668, validation: 0.713, lr: 0.05000
+#> Loss at epoch 4: training: 0.688, validation: 0.711, lr: 0.05000
+#> Loss at epoch 5: training: 0.687, validation: 0.715, lr: 0.05000
+#> Loss at epoch 6: training: 0.686, validation: 0.717, lr: 0.05000
+#> Loss at epoch 7: training: 0.685, validation: 0.722, lr: 0.05000
 #> cnn(X = X, Y = Y, architecture = architecture, loss = "cross-entropy", 
 #>     lr = 0.05, validation = 0.1, epochs = 2, device = device)
 #> -------------------------------------------------------------------------------
@@ -466,7 +466,7 @@ plot(resnet)
 
 #> Model weights for <resnet18> (~45 MB) will be downloaded and processed if not
 #> already available.
-#> Loss at epoch 1: training: 1.307, validation: 0.025, lr: 0.05000
+#> Loss at epoch 1: training: 1.810, validation: 0.078, lr: 0.05000
 
 #> cnn(X = X, Y = Y, architecture = transfer_architecture, loss = "cross-entropy", 
 #>     lr = 0.05, validation = 0.1, epochs = 1, device = device)

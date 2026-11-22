@@ -39,3 +39,8 @@ tune(
   custom values from which hyperparameters are sampled, must be a matrix
   for hidden layers (first column == nodes, second column == number of
   layers)
+
+## Value
+
+An object of class `"tune"` that marks a hyperparameter of
+[`dnn`](dnn.md) for tuning.

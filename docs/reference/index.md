@@ -9,12 +9,8 @@
 - [`analyze_training()`](analyze_training.md) : Visualize training of
   Neural Network
 
-- [`avgPool()`](avgPool.md) :
-
-  This function creates an `avgPool` layer object of class `citolayer`
-  for use in constructing a Convolutional Neural Network (CNN)
-  architecture. The resulting layer object can be passed to the
-  `create_architecture` function to define the structure of the network.
+- [`avgPool()`](avgPool.md) : Create an Average Pooling Layer for a CNN
+  Architecture
 
 - [`cito`](cito.md) [`cito-package`](cito.md) : 'cito': Building and
   training neural networks
@@ -75,8 +71,8 @@
 - [`plot(`*`<citocnn>`*`)`](plot.citocnn.md) : Plot a fitted CNN model
 
 - [`plot(`*`<citodnn>`*`)`](plot.citodnn.md)
-  [`plot(`*`<citodnnBootstrap>`*`)`](plot.citodnn.md) : Creates graph
-  plot which gives an overview of the network architecture.
+  [`plot(`*`<citodnnBootstrap>`*`)`](plot.citodnn.md) : Plot the effects
+  or the architecture of a DNN
 
 - [`plot(`*`<citommn>`*`)`](plot.citommn.md) : Plot a fitted MMN model
 

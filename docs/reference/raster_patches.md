@@ -189,14 +189,14 @@ nn.fit = cnn(X = X, Y = Y, loss = "mse", epochs = 2L, batchsize = 32L,
 new_coords = cbind(x = runif(5, 600100, 600900), y = runif(5, 5300100, 5300700))
 predict(nn.fit, newdata = raster_patches(coords = new_coords, like = X))
 }
-#> Loss at epoch 1: 1.123666, lr: 0.01000
+#> Loss at epoch 1: 1.049537, lr: 0.01000
 
-#> Loss at epoch 2: 0.930152, lr: 0.01000
+#> Loss at epoch 2: 1.041751, lr: 0.01000
 #>             [,1]
-#> [1,]  0.02612771
-#> [2,]  0.08583976
-#> [3,]  0.10546654
-#> [4,]  0.09035979
-#> [5,] -0.03211653
+#> [1,] -0.02080041
+#> [2,] -0.01961719
+#> [3,] -0.01359830
+#> [4,] -0.01831388
+#> [5,] -0.01849026
 # }
 ```

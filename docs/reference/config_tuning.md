@@ -60,6 +60,11 @@ config_tuning(
 
   return individual models
 
+## Value
+
+A list with the tuning settings, passed to the `tuning` argument of
+[`dnn`](dnn.md).
+
 ## Details
 
 Note that hyperparameter tuning can be expensive. We have implemented an

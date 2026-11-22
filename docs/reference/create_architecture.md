@@ -81,7 +81,7 @@ create_architecture(
   "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu",
   "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh",
   "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is
-  `list(conv = "selu", linear = "selu")`.
+  `list(conv = "relu", linear = "relu")`.
 
 - default_normalization:
 

@@ -39,10 +39,7 @@ enough so that the training loss “stabilizes”:
 
 ``` r
 
-m = dnn(Species~., data = iris, epochs = 10L, loss = "softmax", verbose=FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+m = dnn(Species~., data = iris, epochs = 10L, loss = "cross-entropy", verbose=FALSE)
 ```
 
 ![](B/B-unnamed-chunk-4-1.png)
@@ -52,10 +49,7 @@ longer (increase epochs):
 
 ``` r
 
-m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", verbose=FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+m = dnn(Species~., data = iris, epochs = 200L, loss = "cross-entropy", verbose=FALSE)
 ```
 
 ![](B/B-unnamed-chunk-5-1.png)
@@ -67,10 +61,7 @@ loss function:
 
 ``` r
 
-m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", lr = 0.05, verbose=FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+m = dnn(Species~., data = iris, epochs = 200L, loss = "cross-entropy", lr = 0.05, verbose=FALSE)
 ```
 
 ![](B/B-unnamed-chunk-6-1.png)
@@ -92,18 +83,9 @@ about an appropriate learning rate.
 
 ``` r
 
-nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
+nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
+nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
 
 par(mfrow = c(1, 3), mar = c(4, 3, 2, 2))
 cito:::visualize.training(nn.fit_good$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$training_properties$baseloss)
@@ -135,77 +117,74 @@ learning rate will be reduced ($`lr_{new} = factor * lr_{old}`$):
 nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr = 0.2,
                   epochs = 60L,
-                  loss = "softmax",
+                  loss = "cross-entropy",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Loss at epoch 1: 2.648951, lr: 0.20000
+#> Loss at epoch 1: 3.558815, lr: 0.20000
 ```
 
 ![](B/B-unnamed-chunk-8-1.png)
 
-    #> Loss at epoch 2: 1.518779, lr: 0.20000
-    #> Loss at epoch 3: 0.586927, lr: 0.20000
-    #> Loss at epoch 4: 0.355951, lr: 0.20000
-    #> Loss at epoch 5: 0.630309, lr: 0.20000
-    #> Loss at epoch 6: 0.584476, lr: 0.20000
-    #> Loss at epoch 7: 0.464149, lr: 0.20000
-    #> Loss at epoch 8: 0.387403, lr: 0.20000
-    #> Loss at epoch 9: 0.424483, lr: 0.20000
-    #> Loss at epoch 10: 0.422678, lr: 0.10000
-    #> Loss at epoch 11: 0.242681, lr: 0.10000
-    #> Loss at epoch 12: 0.144736, lr: 0.10000
-    #> Loss at epoch 13: 0.202260, lr: 0.10000
-    #> Loss at epoch 14: 0.143053, lr: 0.10000
-    #> Loss at epoch 15: 0.480157, lr: 0.10000
-    #> Loss at epoch 16: 0.152589, lr: 0.10000
-    #> Loss at epoch 17: 0.148275, lr: 0.10000
-    #> Loss at epoch 18: 0.382294, lr: 0.10000
-    #> Loss at epoch 19: 0.118278, lr: 0.10000
-    #> Loss at epoch 20: 0.214956, lr: 0.10000
-    #> Loss at epoch 21: 0.135351, lr: 0.10000
-    #> Loss at epoch 22: 0.208953, lr: 0.10000
-    #> Loss at epoch 23: 0.089335, lr: 0.10000
-    #> Loss at epoch 24: 0.103705, lr: 0.10000
-    #> Loss at epoch 25: 0.096560, lr: 0.10000
-    #> Loss at epoch 26: 0.369736, lr: 0.10000
-    #> Loss at epoch 27: 0.102449, lr: 0.10000
-    #> Loss at epoch 28: 0.261960, lr: 0.10000
-    #> Loss at epoch 29: 0.133107, lr: 0.05000
-    #> Loss at epoch 30: 0.099216, lr: 0.05000
-    #> Loss at epoch 31: 0.090298, lr: 0.05000
-    #> Loss at epoch 32: 0.087918, lr: 0.05000
-    #> Loss at epoch 33: 0.103592, lr: 0.05000
-    #> Loss at epoch 34: 0.074389, lr: 0.05000
-    #> Loss at epoch 35: 0.074355, lr: 0.05000
-    #> Loss at epoch 36: 0.080308, lr: 0.05000
-    #> Loss at epoch 37: 0.131851, lr: 0.05000
-    #> Loss at epoch 38: 0.076501, lr: 0.05000
-    #> Loss at epoch 39: 0.097103, lr: 0.05000
-    #> Loss at epoch 40: 0.085715, lr: 0.05000
-    #> Loss at epoch 41: 0.089401, lr: 0.02500
-    #> Loss at epoch 42: 0.125704, lr: 0.02500
-    #> Loss at epoch 43: 0.093757, lr: 0.02500
-    #> Loss at epoch 44: 0.066557, lr: 0.02500
-    #> Loss at epoch 45: 0.067066, lr: 0.02500
-    #> Loss at epoch 46: 0.061988, lr: 0.02500
-    #> Loss at epoch 47: 0.068591, lr: 0.02500
-    #> Loss at epoch 48: 0.061602, lr: 0.02500
-    #> Loss at epoch 49: 0.063583, lr: 0.02500
-    #> Loss at epoch 50: 0.063625, lr: 0.02500
-    #> Loss at epoch 51: 0.061642, lr: 0.02500
-    #> Loss at epoch 52: 0.065824, lr: 0.02500
-    #> Loss at epoch 53: 0.061596, lr: 0.02500
-    #> Loss at epoch 54: 0.064252, lr: 0.01250
-    #> Loss at epoch 55: 0.066606, lr: 0.01250
-    #> Loss at epoch 56: 0.061957, lr: 0.01250
-    #> Loss at epoch 57: 0.059284, lr: 0.01250
-    #> Loss at epoch 58: 0.058292, lr: 0.01250
-    #> Loss at epoch 59: 0.061281, lr: 0.01250
-    #> Loss at epoch 60: 0.064097, lr: 0.01250
+    #> Loss at epoch 2: 5.144162, lr: 0.20000
+    #> Loss at epoch 3: 422.132483, lr: 0.20000
+    #> Loss at epoch 4: 720999.545703, lr: 0.20000
+    #> Loss at epoch 5: 23696.948828, lr: 0.20000
+    #> Loss at epoch 6: 21873.115527, lr: 0.20000
+    #> Loss at epoch 7: 21665.598926, lr: 0.10000
+    #> Loss at epoch 8: 21504.415430, lr: 0.10000
+    #> Loss at epoch 9: 21401.195215, lr: 0.10000
+    #> Loss at epoch 10: 21297.098242, lr: 0.10000
+    #> Loss at epoch 11: 21193.415039, lr: 0.10000
+    #> Loss at epoch 12: 21089.637891, lr: 0.10000
+    #> Loss at epoch 13: 20986.128418, lr: 0.05000
+    #> Loss at epoch 14: 20905.495898, lr: 0.05000
+    #> Loss at epoch 15: 20853.724023, lr: 0.05000
+    #> Loss at epoch 16: 20801.814453, lr: 0.05000
+    #> Loss at epoch 17: 20750.151465, lr: 0.05000
+    #> Loss at epoch 18: 20698.168555, lr: 0.05000
+    #> Loss at epoch 19: 20646.287207, lr: 0.02500
+    #> Loss at epoch 20: 20606.095996, lr: 0.02500
+    #> Loss at epoch 21: 20580.158984, lr: 0.02500
+    #> Loss at epoch 22: 20554.224414, lr: 0.02500
+    #> Loss at epoch 23: 20528.315625, lr: 0.02500
+    #> Loss at epoch 24: 20502.381543, lr: 0.02500
+    #> Loss at epoch 25: 20476.416699, lr: 0.01250
+    #> Loss at epoch 26: 20456.307520, lr: 0.01250
+    #> Loss at epoch 27: 20443.356348, lr: 0.01250
+    #> Loss at epoch 28: 20430.422461, lr: 0.01250
+    #> Loss at epoch 29: 20417.417969, lr: 0.01250
+    #> Loss at epoch 30: 20404.484473, lr: 0.01250
+    #> Loss at epoch 31: 20391.491992, lr: 0.00625
+    #> Loss at epoch 32: 20381.436914, lr: 0.00625
+    #> Loss at epoch 33: 20374.951855, lr: 0.00625
+    #> Loss at epoch 34: 20368.477246, lr: 0.00625
+    #> Loss at epoch 35: 20361.986914, lr: 0.00625
+    #> Loss at epoch 36: 20355.507324, lr: 0.00625
+    #> Loss at epoch 37: 20349.023145, lr: 0.00313
+    #> Loss at epoch 38: 20343.990137, lr: 0.00313
+    #> Loss at epoch 39: 20340.747949, lr: 0.00313
+    #> Loss at epoch 40: 20337.502832, lr: 0.00313
+    #> Loss at epoch 41: 20334.258789, lr: 0.00313
+    #> Loss at epoch 42: 20331.019043, lr: 0.00313
+    #> Loss at epoch 43: 20327.779297, lr: 0.00156
+    #> Loss at epoch 44: 20325.262402, lr: 0.00156
+    #> Loss at epoch 45: 20323.640430, lr: 0.00156
+    #> Loss at epoch 46: 20322.018945, lr: 0.00156
+    #> Loss at epoch 47: 20320.396875, lr: 0.00156
+    #> Loss at epoch 48: 20318.775391, lr: 0.00156
+    #> Loss at epoch 49: 20317.154883, lr: 0.00078
+    #> Loss at epoch 50: 20315.895410, lr: 0.00078
+    #> Loss at epoch 51: 20315.084180, lr: 0.00078
+    #> Loss at epoch 52: 20314.272168, lr: 0.00078
+    #> Loss at epoch 53: 20313.461816, lr: 0.00078
+    #> Loss at epoch 54: 20312.649414, lr: 0.00078
+    #> Loss at epoch 55: 20311.839355, lr: 0.00039
+    #> Loss at epoch 56: 20311.206250, lr: 0.00039
+    #> Loss at epoch 57: 20310.802051, lr: 0.00039
+    #> Loss at epoch 58: 20310.397168, lr: 0.00039
+    #> Loss at epoch 59: 20309.990820, lr: 0.00039
+    #> Loss at epoch 60: 20309.583594, lr: 0.00039
 
 At the end of the training, the learning rate is 0.025
 
@@ -218,77 +197,13 @@ learning rates!
 nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr = 2,
                   epochs = 60L,
-                  loss = "softmax",
+                  loss = "cross-entropy",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Loss at epoch 1: 82421978904679869135087206400.000000, lr: 2.00000
+#> Warning: Loss is NA, training stopped. Please adjust hyperparameters. See
+#> vignette('B-Training_neural_networks') for help.
 ```
-
-![](B/B-unnamed-chunk-9-1.png)
-
-    #> Loss at epoch 2: 1993580742705152.000000, lr: 2.00000
-    #> Loss at epoch 3: 1993580729283379.250000, lr: 2.00000
-    #> Loss at epoch 4: 1993580695728947.250000, lr: 2.00000
-    #> Loss at epoch 5: 1993580749416038.500000, lr: 2.00000
-    #> Loss at epoch 6: 1993580756126924.750000, lr: 2.00000
-    #> Loss at epoch 7: 1993580675596288.000000, lr: 2.00000
-    #> Loss at epoch 8: 1993580722572492.750000, lr: 1.00000
-    #> Loss at epoch 9: 1993580742705152.000000, lr: 1.00000
-    #> Loss at epoch 10: 1993580722572492.750000, lr: 1.00000
-    #> Loss at epoch 11: 1993580729283379.250000, lr: 1.00000
-    #> Loss at epoch 12: 1993580742705152.000000, lr: 1.00000
-    #> Loss at epoch 13: 1993580715861606.500000, lr: 1.00000
-    #> Loss at epoch 14: 1993580702439833.500000, lr: 0.50000
-    #> Loss at epoch 15: 1993580715861606.500000, lr: 0.50000
-    #> Loss at epoch 16: 1993580695728947.250000, lr: 0.50000
-    #> Loss at epoch 17: 1993580709150720.000000, lr: 0.50000
-    #> Loss at epoch 18: 1993580742705152.000000, lr: 0.50000
-    #> Loss at epoch 19: 1993580735994265.500000, lr: 0.50000
-    #> Loss at epoch 20: 1993580729283379.250000, lr: 0.25000
-    #> Loss at epoch 21: 1993580729283379.250000, lr: 0.25000
-    #> Loss at epoch 22: 1993580722572492.750000, lr: 0.25000
-    #> Loss at epoch 23: 1993580648752742.500000, lr: 0.25000
-    #> Loss at epoch 24: 1993580715861606.500000, lr: 0.25000
-    #> Loss at epoch 25: 1993580702439833.500000, lr: 0.25000
-    #> Loss at epoch 26: 1993580702439833.500000, lr: 0.12500
-    #> Loss at epoch 27: 1993580682307174.500000, lr: 0.12500
-    #> Loss at epoch 28: 1993580668885401.500000, lr: 0.12500
-    #> Loss at epoch 29: 1993580729283379.250000, lr: 0.12500
-    #> Loss at epoch 30: 1993580689018060.750000, lr: 0.12500
-    #> Loss at epoch 31: 1993580756126924.750000, lr: 0.12500
-    #> Loss at epoch 32: 1993580756126924.750000, lr: 0.06250
-    #> Loss at epoch 33: 1993580662174515.250000, lr: 0.06250
-    #> Loss at epoch 34: 1993580762837811.250000, lr: 0.06250
-    #> Loss at epoch 35: 1993580702439833.500000, lr: 0.06250
-    #> Loss at epoch 36: 1993580668885401.500000, lr: 0.06250
-    #> Loss at epoch 37: 1993580668885401.500000, lr: 0.06250
-    #> Loss at epoch 38: 1993580689018060.750000, lr: 0.03125
-    #> Loss at epoch 39: 1993580762837811.250000, lr: 0.03125
-    #> Loss at epoch 40: 1993580682307174.500000, lr: 0.03125
-    #> Loss at epoch 41: 1993580729283379.250000, lr: 0.03125
-    #> Loss at epoch 42: 1993580729283379.250000, lr: 0.03125
-    #> Loss at epoch 43: 1993580715861606.500000, lr: 0.03125
-    #> Loss at epoch 44: 1993580729283379.250000, lr: 0.01562
-    #> Loss at epoch 45: 1993580729283379.250000, lr: 0.01562
-    #> Loss at epoch 46: 1993580702439833.500000, lr: 0.01562
-    #> Loss at epoch 47: 1993580735994265.500000, lr: 0.01562
-    #> Loss at epoch 48: 1993580722572492.750000, lr: 0.01562
-    #> Loss at epoch 49: 1993580729283379.250000, lr: 0.01562
-    #> Loss at epoch 50: 1993580675596288.000000, lr: 0.00781
-    #> Loss at epoch 51: 1993580742705152.000000, lr: 0.00781
-    #> Loss at epoch 52: 1993580689018060.750000, lr: 0.00781
-    #> Loss at epoch 53: 1993580776259584.000000, lr: 0.00781
-    #> Loss at epoch 54: 1993580702439833.500000, lr: 0.00781
-    #> Loss at epoch 55: 1993580776259584.000000, lr: 0.00781
-    #> Loss at epoch 56: 1993580742705152.000000, lr: 0.00391
-    #> Loss at epoch 57: 1993580695728947.250000, lr: 0.00391
-    #> Loss at epoch 58: 1993580689018060.750000, lr: 0.00391
-    #> Loss at epoch 59: 1993580722572492.750000, lr: 0.00391
-    #> Loss at epoch 60: 1993580722572492.750000, lr: 0.00391
 
 Although the learning rate ended up being 0.01562, the loss never
 outperformed the baseline loss. The optimizer jumped right at the

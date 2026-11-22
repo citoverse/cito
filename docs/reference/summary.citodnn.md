@@ -36,9 +36,10 @@ summary(
 
 - importance:
 
-  method used to compute feature importance: "ale" or "ce" (both derived
-  from the conditional effects), or "permutation" (computationally
-  expensive)
+  method used to compute feature importance: "ale" (default) or "ce"
+  (both derived from the conditional effects, numerical features only),
+  or "permutation" (all features, computationally expensive). For
+  bootstrapped models "ce" (default) or "permutation".
 
 - n_permute:
 
@@ -87,7 +88,13 @@ coefficients in a linear regression model.
 The standard deviation of the ACE quantifies the non-linearity of a
 feature effect: higher values indicate stronger non-linearities.
 
-For the permutation importance, the predictive mean squared error is
-evaluated on the original and on the permuted feature (\\e\_{perm}\\ and
-\\e\_{orig}\\), and the importance of feature j is reported as \\FI_j =
-e\_{perm}/e\_{orig}\\.
+For the permutation importance, the loss of the model is evaluated on
+the original and on the permuted feature (\\e\_{perm}\\ and
+\\e\_{orig}\\), and the importance of feature j is reported as the
+relative increase \\FI_j = e\_{perm}/e\_{orig} - 1\\.
+
+The "ale" and "ce" importances are derived from the conditional effects
+and are therefore only defined for numerical features; categorical
+features are left out of the importance table (a message says which).
+Use `importance = "permutation"` to include them. For bootstrapped
+models, only "ce" and "permutation" are available.

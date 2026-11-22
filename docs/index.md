@@ -5,7 +5,7 @@ state and is being actively
 developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito)
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito)
 [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
 [![Publication](https://img.shields.io/badge/Publication-10.1111/ecog.07143-green.svg)](https://doi.org/10.1111/ecog.07143)
 
@@ -233,8 +233,8 @@ Estimated covariance matrix:
 
 ``` r
 
-as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
-                     nn.fit$loss$parameter$SigmaDiag))
+as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
+                     nn.fit$loss$parameters$SigmaDiag))
 ##            [,1]       [,2]       [,3]
 ## [1,] 0.26974857 0.06961995 0.11768616
 ## [2,] 0.06961995 0.12192857 0.04327871

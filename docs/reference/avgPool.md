@@ -1,4 +1,4 @@
-# This function creates an `avgPool` layer object of class `citolayer` for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the [`create_architecture`](create_architecture.md) function to define the structure of the network.
+# Create an Average Pooling Layer for a CNN Architecture
 
 This function creates an `avgPool` layer object of class `citolayer` for
 use in constructing a Convolutional Neural Network (CNN) architecture.

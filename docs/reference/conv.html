@@ -73,7 +73,7 @@
 
 
 <dt id="arg-stride">stride<a class="anchor" aria-label="anchor" href="#arg-stride"></a></dt>
-<dd><p>(integer or tuple) The stride of the kernels in this layer. If <code>NULL</code>, the stride is set to the kernel size. Use a tuple if the stride is different in each dimension.</p></dd>
+<dd><p>(integer or tuple) The stride of the kernels in this layer. If <code>NULL</code>, the <code>default_stride</code> of <code><a href="create_architecture.html">create_architecture</a></code> is used (1 for convolutional layers). Use a tuple if the stride is different in each dimension.</p></dd>
 
 
 <dt id="arg-padding">padding<a class="anchor" aria-label="anchor" href="#arg-padding"></a></dt>

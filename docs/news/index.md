@@ -95,10 +95,10 @@
 - mmn() stops with an informative error when its data streams have
   different numbers of rows (e.g. after rows with NA were dropped from a
   dnn() term) instead of a torch indexing error
-- summary() and plot() of an mmn() fitted with weights stop with an
-  error instead of crashing the R session; the weights are not stored
-  with the model, and a weighted loss called without them aborted in
-  torch
+- mmn() stores its weights, so continue_training() (which gains a
+  weights argument for mmn()), summary() and plot() pass them to a
+  weighted loss; before, a weighted loss called without them aborted in
+  torch or crashed the R session
 - models saved with saveRDS are now rebuilt via build_model() when
   reloaded (invalid pointer state)
 - baseloss and burnin are now forwarded to bootstrap replicates, and
@@ -197,6 +197,23 @@
   stream with its submodel, the width each stream contributes to the
   concatenated representation, and the fusion network on top
 - mmn() gains weights, which dnn() and cnn() already had
+- loss = “binomial” computes the likelihood on the logit scale.
+  log(1 - p) underflowed once the predicted logit reached 17, so
+  well-separated 0/1 data turned the loss NaN and stopped the training
+- a NA loss stops the training with a warning, also with verbose =
+  FALSE; before, the model was returned silently and predicted NA
+- predict(newdata = ), conditionalEffects(data = ) and
+  continue_training(data = ) code e() variables on the levels of the
+  training data. They used the levels of the new data, so a subset with
+  dropped levels was given the embedding of another level; unknown
+  levels are an error, and character columns are accepted as at fit
+- ordered predictors in new data (predict(), conditionalEffects(),
+  ALE(), PDP(), continue_training()) are converted to the integer codes
+  of the training levels, as at fit; before, they entered as polynomial
+  contrasts, which gave wrong predictions for two levels and an error
+  for more
+- summary() names the categorical features that the “ale” and “ce”
+  importances leave out, and points to importance = “permutation”
 - predict() on an mmn() model checks newdata against the fitted model: a
   wrong image size used to surface as a torch matmul error several
   frames down, and data streams of differing length were silently

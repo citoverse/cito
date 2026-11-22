@@ -63,6 +63,10 @@
 
 </dl></div>
     <div class="section level2">
+    <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
+    <p>A list with <code>lambda</code> and <code>alpha</code>; it is only meaningful inside the formula of <code><a href="dnn.html">dnn</a></code>.</p>
+    </div>
+    <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>The first argument of <code>fe()</code>, not part of its signature, is the right-hand side of a formula, so
 <code><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I()</a></code>, interactions and factors work as in <code><a href="https://rdrr.io/r/stats/lm.html" class="external-link">lm()</a></code> (factors with treatment contrasts; <code>0 +</code> or
@@ -104,7 +108,8 @@ effect is the effect of its model-matrix column, e.g. separate rows for <code>Te
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">$</span><span class="va">fixed_effects</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># "." uses every variable that is not in fe(); here X1 and Precp</span></span></span>
-<span class="r-in"><span><span class="va">m2</span> <span class="op">=</span> <span class="fu"><a href="dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span> <span class="op">~</span> <span class="va">.</span> <span class="op">+</span> <span class="fu">fe</span><span class="op">(</span><span class="va">Temp</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="va">Temp</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>, lambda <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dat</span>, loss <span class="op">=</span> <span class="st">"mse"</span>, epochs <span class="op">=</span> <span class="fl">50L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">m2</span> <span class="op">=</span> <span class="fu"><a href="dnn.html">dnn</a></span><span class="op">(</span><span class="va">Y</span> <span class="op">~</span> <span class="va">.</span> <span class="op">+</span> <span class="fu">fe</span><span class="op">(</span><span class="va">Temp</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="va">Temp</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span>, lambda <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dat</span>, loss <span class="op">=</span> <span class="st">"mse"</span>,</span></span>
+<span class="r-in"><span>         epochs <span class="op">=</span> <span class="fl">50L</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-plt img"><img src="fe-1.png" alt="" width="700" height="433"></span>
 <span class="r-plt img"><img src="fe-2.png" alt="" width="700" height="433"></span>

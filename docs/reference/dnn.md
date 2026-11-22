@@ -115,8 +115,8 @@ dnn(
 - alpha:
 
   add L1/L2 regularization to training \\(1 - \alpha) \* \|weights\| +
-  \alpha \|\|weights\|\|^2\\ will get added for each layer. Must be
-  between 0 and 1
+  \alpha \|\|weights\|\|\_2\\ will get added for each layer (the L2 part
+  is the Euclidean norm, not its square). Must be between 0 and 1
 
 - lambda:
 
@@ -145,7 +145,8 @@ dnn(
 - weights:
 
   weights or other values (can be also a matrix) that the likelihood has
-  access to
+  access to. Only custom loss functions with a `weights` argument accept
+  them.
 
 - early_stopping:
 
@@ -353,6 +354,58 @@ We support loss functions and likelihoods for different tasks:
 | multinomial | Multinomial likelihood | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \\\ge\\2 columns |
 | clogit | conditional binomial | step selection in animal movement models | `factor`/`character` (vector or 1-column matrix/data.frame), or `integer` matrix/data.frame with \\\ge\\2 columns |
 
+## Additional structures in the formula
+
+Two special terms change how predictors enter the model:
+
+|  |  |  |  |
+|----|----|----|----|
+| Structure | Syntax | What it does | Typical use |
+| Embedding, [`e`](e.md) | `Y ~ X1 + X2 + e(Site, dim = 2)` | every level of a factor gets a learned vector of `dim` numbers that enters the network as additional input | grouping variables with many levels: sites, plots, individuals, species, years |
+| Fixed effect, [`fe`](fe.md) | `Y ~ X1 + X2 + fe(Temp + I(Temp^2))` | the terms bypass the network and are added linearly on the link scale, \\\eta = f(X) + \beta^T x\_{fe}\\ | effects that should be reported as coefficients, or that are known to be linear |
+
+Both can be combined, e.g. `dnn(Y ~ . + fe(Temp) + e(Site))`. A variable
+in [`fe()`](fe.md) enters only the linear part.
+
+**Why embeddings.** One-hot coding (or contrasts) treats every level of
+a factor as equally distinct: no level is closer to any other. An
+embedding represents each level by a vector of `dim` coordinates that is
+estimated together with the network (Guo and Berkhahn, 2016,
+[doi:10.48550/arXiv.1604.06737](https://doi.org/10.48550/arXiv.1604.06737)
+), so the model can discover which levels behave similarly and place
+them close together. The coordinates are passed to the first hidden
+layer together with the other predictors, and because the network learns
+the interactions itself, they modulate all effects jointly and
+non-linearly. This is like a joint, non-linear random effect on
+everything: a random intercept or slope lets a group deviate in one
+effect, and similarity learned for one predictor does not carry over to
+another, whereas an embedding maps all differences between the groups
+into a `dim`-dimensional space. The network learns how similar the
+groups are in their response and whether they differ at all. Similar to
+an ordination, groups with similar responses lie close together in the
+embedding space, so the fitted embeddings can be inspected afterwards
+(`coef(model)[[1]]$e_1.weight`, one row per level; see [`e`](e.md) for a
+biplot of the effects).
+
+`dim` controls how much structure the embedding can capture and can be
+tuned. `e(lambda = , alpha = )` regularizes the embeddings separately
+from the network. Embeddings are identified only up to rotation,
+reflection and scale: two fits of the same data give the same
+configuration in different coordinates, so align them (e.g. Procrustes)
+before comparing, and inspect them across several refits. Embeddings can
+also be fixed, e.g. to trait or phylogenetic coordinates, with
+`e(weights = , train = FALSE)`.
+
+**Why fixed effects.** A DNN learns every effect flexibly, which makes
+single effects hard to report. [`fe()`](fe.md) adds selected terms as in
+a GLM, while the network models the rest: \\\beta\\ is returned by
+`coef(model)$fixed_effects` and is estimated like a parametric term in a
+GAM. The intercept comes from the network. The fixed effects are not
+regularized by the global `lambda`, only by `fe(lambda = )`. If the
+fixed-effect variables are correlated with the network inputs, a
+strongly regularized network can bias \\\beta\\; see [`fe`](fe.md) for
+details.
+
 ## Finding the right architecture
 
 As with the learning rate, there is no definitive guide to choosing the
@@ -467,7 +520,7 @@ hyperparameters that can currently be tuned:
 | hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
 | lambda | `dnn(…, lambda = tune(0.0001, 0.1))` | lambda will be tuned within the range (0.0001, 0.1) |
-| alpha | `dnn(…, lambda = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
+| alpha | `dnn(…, alpha = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
 | activation | `dnn(…, activation = tune())` | activation functions of the hidden layers will be tuned |
 | dropout | `dnn(…, dropout = tune())` | Dropout rate will be tuned (globally for all layers) |
 | lr | `dnn(…, lr = tune())` | Learning rate will be tuned |
@@ -558,12 +611,12 @@ Supported activation functions: "relu", "leaky_relu", "tanh", "elu",
 
 ## Training on graphic cards
 
-If you have an NVIDIA CUDA-enabled device and have installed the CUDA
-toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU
-acceleration for training your neural networks. It is crucial to have
-these specific versions installed, as other versions may not be
-compatible. For detailed installation instructions and more information
-on utilizing GPUs for training, please refer to the [mlverse: 'torch'
+If you have an NVIDIA CUDA-enabled device and a CUDA build of 'torch',
+you can take advantage of GPU acceleration for training your neural
+networks (`device = "cuda"`). The supported CUDA versions depend on the
+installed 'torch' version. For detailed installation instructions and
+more information on utilizing GPUs for training, please refer to the
+[mlverse: 'torch'
 documentation](https://torch.mlverse.org/docs/articles/installation.html).
 
 Note: GPU training is optional, and the package can still be used for
@@ -594,7 +647,7 @@ library(cito)
 # Example workflow in cito
 
 ## Build and train  Network
-### softmax is used for multi-class responses (e.g., Species)
+### cross-entropy (softmax link) for multi-class responses (e.g., Species)
 nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 
 ## The training loss is below the baseline loss but at the end of the
@@ -602,11 +655,11 @@ nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 ## epochs
 nn.fit <- continue_training(nn.fit, epochs = 50L)
 
-# Sturcture of Neural Network
+# Structure of Neural Network
 print(nn.fit)
 
 # Plot Neural Network
-plot(nn.fit)
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 ## 4 Input nodes (first layer) because of 4 features
 ## 3 Output nodes (last layer) because of 3 response species (one node for each
 ## level in the response variable).
@@ -729,159 +782,177 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 )
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
+
+
+# Embeddings and fixed effects
+## Species enters as an embedding: each species gets two learned coordinates,
+## from which the network learns how the species differ in their response to
+## all predictors. Petal.Width enters as a fixed (linear) effect.
+nn.fit = dnn(Sepal.Length ~ Sepal.Width + Petal.Length + fe(Petal.Width) + e(Species, dim = 2),
+             data = datasets::iris, loss = "mse", epochs = 50L, verbose = FALSE)
+
+## the linear effect of Petal.Width
+coef(nn.fit)$fixed_effects
+
+## the embeddings, one row per species
+coef(nn.fit)$net_parameters$e_1.weight
+
+## architecture: Species feeds its two embedding dimensions, Petal.Width goes
+## straight to the output
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 }
-#> Loss at epoch 1: 1.047610, lr: 0.01000
+#> Loss at epoch 1: 0.987150, lr: 0.01000
 
-#> Loss at epoch 2: 0.892782, lr: 0.01000
-#> Loss at epoch 3: 0.788463, lr: 0.01000
-#> Loss at epoch 4: 0.692052, lr: 0.01000
-#> Loss at epoch 5: 0.644701, lr: 0.01000
-#> Loss at epoch 6: 0.589922, lr: 0.01000
-#> Loss at epoch 7: 0.557884, lr: 0.01000
-#> Loss at epoch 8: 0.515625, lr: 0.01000
-#> Loss at epoch 9: 0.479033, lr: 0.01000
-#> Loss at epoch 10: 0.458168, lr: 0.01000
-#> Loss at epoch 11: 0.441431, lr: 0.01000
-#> Loss at epoch 12: 0.408867, lr: 0.01000
-#> Loss at epoch 13: 0.399429, lr: 0.01000
-#> Loss at epoch 14: 0.387338, lr: 0.01000
-#> Loss at epoch 15: 0.377321, lr: 0.01000
-#> Loss at epoch 16: 0.359182, lr: 0.01000
-#> Loss at epoch 17: 0.336992, lr: 0.01000
-#> Loss at epoch 18: 0.314337, lr: 0.01000
-#> Loss at epoch 19: 0.312227, lr: 0.01000
-#> Loss at epoch 20: 0.293291, lr: 0.01000
-#> Loss at epoch 21: 0.283489, lr: 0.01000
-#> Loss at epoch 22: 0.272252, lr: 0.01000
-#> Loss at epoch 23: 0.271839, lr: 0.01000
-#> Loss at epoch 24: 0.250646, lr: 0.01000
-#> Loss at epoch 25: 0.246924, lr: 0.01000
-#> Loss at epoch 26: 0.235966, lr: 0.01000
-#> Loss at epoch 27: 0.241137, lr: 0.01000
-#> Loss at epoch 28: 0.219607, lr: 0.01000
-#> Loss at epoch 29: 0.212032, lr: 0.01000
-#> Loss at epoch 30: 0.218194, lr: 0.01000
-#> Loss at epoch 31: 0.212571, lr: 0.01000
-#> Loss at epoch 32: 0.200118, lr: 0.01000
-#> Loss at epoch 33: 0.187104, lr: 0.01000
-#> Loss at epoch 34: 0.182861, lr: 0.01000
-#> Loss at epoch 35: 0.175508, lr: 0.01000
-#> Loss at epoch 36: 0.174161, lr: 0.01000
-#> Loss at epoch 37: 0.166152, lr: 0.01000
-#> Loss at epoch 38: 0.170598, lr: 0.01000
-#> Loss at epoch 39: 0.182429, lr: 0.01000
-#> Loss at epoch 40: 0.152212, lr: 0.01000
-#> Loss at epoch 41: 0.180620, lr: 0.01000
-#> Loss at epoch 42: 0.148277, lr: 0.01000
-#> Loss at epoch 43: 0.143725, lr: 0.01000
-#> Loss at epoch 44: 0.142058, lr: 0.01000
-#> Loss at epoch 45: 0.145207, lr: 0.01000
-#> Loss at epoch 46: 0.132275, lr: 0.01000
-#> Loss at epoch 47: 0.124470, lr: 0.01000
-#> Loss at epoch 48: 0.126993, lr: 0.01000
-#> Loss at epoch 49: 0.125357, lr: 0.01000
-#> Loss at epoch 50: 0.126574, lr: 0.01000
-#> Loss at epoch 51: 0.120332, lr: 0.01000
-#> Loss at epoch 52: 0.123630, lr: 0.01000
-#> Loss at epoch 53: 0.129695, lr: 0.01000
-#> Loss at epoch 54: 0.120108, lr: 0.01000
-#> Loss at epoch 55: 0.130742, lr: 0.01000
-#> Loss at epoch 56: 0.113400, lr: 0.01000
-#> Loss at epoch 57: 0.109455, lr: 0.01000
-#> Loss at epoch 58: 0.113352, lr: 0.01000
-#> Loss at epoch 59: 0.107271, lr: 0.01000
-#> Loss at epoch 60: 0.103485, lr: 0.01000
-#> Loss at epoch 61: 0.108765, lr: 0.01000
-#> Loss at epoch 62: 0.110835, lr: 0.01000
-#> Loss at epoch 63: 0.107924, lr: 0.01000
-#> Loss at epoch 64: 0.117210, lr: 0.01000
-#> Loss at epoch 65: 0.104804, lr: 0.01000
-#> Loss at epoch 66: 0.106462, lr: 0.01000
-#> Loss at epoch 67: 0.126777, lr: 0.01000
-#> Loss at epoch 68: 0.097991, lr: 0.01000
-#> Loss at epoch 69: 0.105106, lr: 0.01000
-#> Loss at epoch 70: 0.107571, lr: 0.01000
-#> Loss at epoch 71: 0.084662, lr: 0.01000
-#> Loss at epoch 72: 0.101372, lr: 0.01000
-#> Loss at epoch 73: 0.099413, lr: 0.01000
-#> Loss at epoch 74: 0.088655, lr: 0.01000
-#> Loss at epoch 75: 0.090058, lr: 0.01000
-#> Loss at epoch 76: 0.105790, lr: 0.01000
-#> Loss at epoch 77: 0.098646, lr: 0.01000
-#> Loss at epoch 78: 0.100589, lr: 0.01000
-#> Loss at epoch 79: 0.094730, lr: 0.01000
-#> Loss at epoch 80: 0.097224, lr: 0.01000
-#> Loss at epoch 81: 0.088540, lr: 0.01000
-#> Loss at epoch 82: 0.088708, lr: 0.01000
-#> Loss at epoch 83: 0.101753, lr: 0.01000
-#> Loss at epoch 84: 0.085440, lr: 0.01000
-#> Loss at epoch 85: 0.089618, lr: 0.01000
-#> Loss at epoch 86: 0.081203, lr: 0.01000
-#> Loss at epoch 87: 0.083068, lr: 0.01000
-#> Loss at epoch 88: 0.091987, lr: 0.01000
-#> Loss at epoch 89: 0.087156, lr: 0.01000
-#> Loss at epoch 90: 0.118454, lr: 0.01000
-#> Loss at epoch 91: 0.104999, lr: 0.01000
-#> Loss at epoch 92: 0.087815, lr: 0.01000
-#> Loss at epoch 93: 0.083065, lr: 0.01000
-#> Loss at epoch 94: 0.084915, lr: 0.01000
-#> Loss at epoch 95: 0.100002, lr: 0.01000
-#> Loss at epoch 96: 0.078273, lr: 0.01000
-#> Loss at epoch 97: 0.098475, lr: 0.01000
-#> Loss at epoch 98: 0.083712, lr: 0.01000
-#> Loss at epoch 99: 0.083797, lr: 0.01000
-#> Loss at epoch 100: 0.081820, lr: 0.01000
-#> Loss at epoch 101: 0.082601, lr: 0.01000
+#> Loss at epoch 2: 0.842820, lr: 0.01000
+#> Loss at epoch 3: 0.751654, lr: 0.01000
+#> Loss at epoch 4: 0.674815, lr: 0.01000
+#> Loss at epoch 5: 0.617905, lr: 0.01000
+#> Loss at epoch 6: 0.552268, lr: 0.01000
+#> Loss at epoch 7: 0.510888, lr: 0.01000
+#> Loss at epoch 8: 0.476072, lr: 0.01000
+#> Loss at epoch 9: 0.458094, lr: 0.01000
+#> Loss at epoch 10: 0.436768, lr: 0.01000
+#> Loss at epoch 11: 0.410230, lr: 0.01000
+#> Loss at epoch 12: 0.384172, lr: 0.01000
+#> Loss at epoch 13: 0.365473, lr: 0.01000
+#> Loss at epoch 14: 0.352684, lr: 0.01000
+#> Loss at epoch 15: 0.341764, lr: 0.01000
+#> Loss at epoch 16: 0.319902, lr: 0.01000
+#> Loss at epoch 17: 0.303954, lr: 0.01000
+#> Loss at epoch 18: 0.293865, lr: 0.01000
+#> Loss at epoch 19: 0.283734, lr: 0.01000
+#> Loss at epoch 20: 0.279738, lr: 0.01000
+#> Loss at epoch 21: 0.253477, lr: 0.01000
+#> Loss at epoch 22: 0.253418, lr: 0.01000
+#> Loss at epoch 23: 0.238736, lr: 0.01000
+#> Loss at epoch 24: 0.234399, lr: 0.01000
+#> Loss at epoch 25: 0.218532, lr: 0.01000
+#> Loss at epoch 26: 0.214559, lr: 0.01000
+#> Loss at epoch 27: 0.212554, lr: 0.01000
+#> Loss at epoch 28: 0.202439, lr: 0.01000
+#> Loss at epoch 29: 0.198341, lr: 0.01000
+#> Loss at epoch 30: 0.194896, lr: 0.01000
+#> Loss at epoch 31: 0.201616, lr: 0.01000
+#> Loss at epoch 32: 0.179756, lr: 0.01000
+#> Loss at epoch 33: 0.167758, lr: 0.01000
+#> Loss at epoch 34: 0.161256, lr: 0.01000
+#> Loss at epoch 35: 0.161538, lr: 0.01000
+#> Loss at epoch 36: 0.153477, lr: 0.01000
+#> Loss at epoch 37: 0.148895, lr: 0.01000
+#> Loss at epoch 38: 0.153544, lr: 0.01000
+#> Loss at epoch 39: 0.145731, lr: 0.01000
+#> Loss at epoch 40: 0.141638, lr: 0.01000
+#> Loss at epoch 41: 0.142206, lr: 0.01000
+#> Loss at epoch 42: 0.143204, lr: 0.01000
+#> Loss at epoch 43: 0.150433, lr: 0.01000
+#> Loss at epoch 44: 0.133523, lr: 0.01000
+#> Loss at epoch 45: 0.144559, lr: 0.01000
+#> Loss at epoch 46: 0.124804, lr: 0.01000
+#> Loss at epoch 47: 0.115799, lr: 0.01000
+#> Loss at epoch 48: 0.117223, lr: 0.01000
+#> Loss at epoch 49: 0.116146, lr: 0.01000
+#> Loss at epoch 50: 0.111499, lr: 0.01000
+#> Loss at epoch 51: 0.114021, lr: 0.01000
+#> Loss at epoch 52: 0.108440, lr: 0.01000
+#> Loss at epoch 53: 0.107555, lr: 0.01000
+#> Loss at epoch 54: 0.102515, lr: 0.01000
+#> Loss at epoch 55: 0.112100, lr: 0.01000
+#> Loss at epoch 56: 0.105501, lr: 0.01000
+#> Loss at epoch 57: 0.116198, lr: 0.01000
+#> Loss at epoch 58: 0.102714, lr: 0.01000
+#> Loss at epoch 59: 0.105810, lr: 0.01000
+#> Loss at epoch 60: 0.110283, lr: 0.01000
+#> Loss at epoch 61: 0.093500, lr: 0.01000
+#> Loss at epoch 62: 0.105583, lr: 0.01000
+#> Loss at epoch 63: 0.098045, lr: 0.01000
+#> Loss at epoch 64: 0.105732, lr: 0.01000
+#> Loss at epoch 65: 0.092537, lr: 0.01000
+#> Loss at epoch 66: 0.104216, lr: 0.01000
+#> Loss at epoch 67: 0.095032, lr: 0.01000
+#> Loss at epoch 68: 0.092847, lr: 0.01000
+#> Loss at epoch 69: 0.087117, lr: 0.01000
+#> Loss at epoch 70: 0.089609, lr: 0.01000
+#> Loss at epoch 71: 0.094770, lr: 0.01000
+#> Loss at epoch 72: 0.091859, lr: 0.01000
+#> Loss at epoch 73: 0.104668, lr: 0.01000
+#> Loss at epoch 74: 0.083998, lr: 0.01000
+#> Loss at epoch 75: 0.076295, lr: 0.01000
+#> Loss at epoch 76: 0.081353, lr: 0.01000
+#> Loss at epoch 77: 0.081712, lr: 0.01000
+#> Loss at epoch 78: 0.092423, lr: 0.01000
+#> Loss at epoch 79: 0.085614, lr: 0.01000
+#> Loss at epoch 80: 0.085290, lr: 0.01000
+#> Loss at epoch 81: 0.083171, lr: 0.01000
+#> Loss at epoch 82: 0.086846, lr: 0.01000
+#> Loss at epoch 83: 0.087361, lr: 0.01000
+#> Loss at epoch 84: 0.077254, lr: 0.01000
+#> Loss at epoch 85: 0.092969, lr: 0.01000
+#> Loss at epoch 86: 0.086595, lr: 0.01000
+#> Loss at epoch 87: 0.079233, lr: 0.01000
+#> Loss at epoch 88: 0.084280, lr: 0.01000
+#> Loss at epoch 89: 0.079987, lr: 0.01000
+#> Loss at epoch 90: 0.078173, lr: 0.01000
+#> Loss at epoch 91: 0.074529, lr: 0.01000
+#> Loss at epoch 92: 0.077924, lr: 0.01000
+#> Loss at epoch 93: 0.073311, lr: 0.01000
+#> Loss at epoch 94: 0.079794, lr: 0.01000
+#> Loss at epoch 95: 0.073647, lr: 0.01000
+#> Loss at epoch 96: 0.081746, lr: 0.01000
+#> Loss at epoch 97: 0.076909, lr: 0.01000
+#> Loss at epoch 98: 0.082509, lr: 0.01000
+#> Loss at epoch 99: 0.075118, lr: 0.01000
+#> Loss at epoch 100: 0.068960, lr: 0.01000
+#> Loss at epoch 101: 0.091306, lr: 0.01000
 
-#> Loss at epoch 102: 0.076694, lr: 0.01000
-#> Loss at epoch 103: 0.091089, lr: 0.01000
-#> Loss at epoch 104: 0.077123, lr: 0.01000
-#> Loss at epoch 105: 0.091445, lr: 0.01000
-#> Loss at epoch 106: 0.091220, lr: 0.01000
-#> Loss at epoch 107: 0.118371, lr: 0.01000
-#> Loss at epoch 108: 0.106468, lr: 0.01000
-#> Loss at epoch 109: 0.069542, lr: 0.01000
-#> Loss at epoch 110: 0.096720, lr: 0.01000
-#> Loss at epoch 111: 0.074798, lr: 0.01000
-#> Loss at epoch 112: 0.075740, lr: 0.01000
-#> Loss at epoch 113: 0.068093, lr: 0.01000
-#> Loss at epoch 114: 0.078388, lr: 0.01000
-#> Loss at epoch 115: 0.065940, lr: 0.01000
-#> Loss at epoch 116: 0.066176, lr: 0.01000
-#> Loss at epoch 117: 0.079676, lr: 0.01000
-#> Loss at epoch 118: 0.080898, lr: 0.01000
-#> Loss at epoch 119: 0.088275, lr: 0.01000
-#> Loss at epoch 120: 0.068800, lr: 0.01000
-#> Loss at epoch 121: 0.085497, lr: 0.01000
-#> Loss at epoch 122: 0.071093, lr: 0.01000
-#> Loss at epoch 123: 0.079509, lr: 0.01000
-#> Loss at epoch 124: 0.079955, lr: 0.01000
-#> Loss at epoch 125: 0.087661, lr: 0.01000
-#> Loss at epoch 126: 0.080534, lr: 0.01000
-#> Loss at epoch 127: 0.082294, lr: 0.01000
-#> Loss at epoch 128: 0.067994, lr: 0.01000
-#> Loss at epoch 129: 0.096183, lr: 0.01000
-#> Loss at epoch 130: 0.074553, lr: 0.01000
-#> Loss at epoch 131: 0.076242, lr: 0.01000
-#> Loss at epoch 132: 0.066735, lr: 0.01000
-#> Loss at epoch 133: 0.065233, lr: 0.01000
-#> Loss at epoch 134: 0.073242, lr: 0.01000
-#> Loss at epoch 135: 0.067636, lr: 0.01000
-#> Loss at epoch 136: 0.076862, lr: 0.01000
-#> Loss at epoch 137: 0.083534, lr: 0.01000
-#> Loss at epoch 138: 0.075017, lr: 0.01000
-#> Loss at epoch 139: 0.064435, lr: 0.01000
-#> Loss at epoch 140: 0.081610, lr: 0.01000
-#> Loss at epoch 141: 0.064009, lr: 0.01000
-#> Loss at epoch 142: 0.066052, lr: 0.01000
-#> Loss at epoch 143: 0.062426, lr: 0.01000
-#> Loss at epoch 144: 0.063256, lr: 0.01000
-#> Loss at epoch 145: 0.067600, lr: 0.01000
-#> Loss at epoch 146: 0.073859, lr: 0.01000
-#> Loss at epoch 147: 0.073222, lr: 0.01000
-#> Loss at epoch 148: 0.084544, lr: 0.01000
-#> Loss at epoch 149: 0.089969, lr: 0.01000
-#> Loss at epoch 150: 0.074522, lr: 0.01000
+#> Loss at epoch 102: 0.086419, lr: 0.01000
+#> Loss at epoch 103: 0.072362, lr: 0.01000
+#> Loss at epoch 104: 0.078715, lr: 0.01000
+#> Loss at epoch 105: 0.079394, lr: 0.01000
+#> Loss at epoch 106: 0.067557, lr: 0.01000
+#> Loss at epoch 107: 0.074226, lr: 0.01000
+#> Loss at epoch 108: 0.079651, lr: 0.01000
+#> Loss at epoch 109: 0.080405, lr: 0.01000
+#> Loss at epoch 110: 0.073287, lr: 0.01000
+#> Loss at epoch 111: 0.060465, lr: 0.01000
+#> Loss at epoch 112: 0.068717, lr: 0.01000
+#> Loss at epoch 113: 0.084762, lr: 0.01000
+#> Loss at epoch 114: 0.069651, lr: 0.01000
+#> Loss at epoch 115: 0.079343, lr: 0.01000
+#> Loss at epoch 116: 0.062986, lr: 0.01000
+#> Loss at epoch 117: 0.061955, lr: 0.01000
+#> Loss at epoch 118: 0.063392, lr: 0.01000
+#> Loss at epoch 119: 0.062804, lr: 0.01000
+#> Loss at epoch 120: 0.058225, lr: 0.01000
+#> Loss at epoch 121: 0.073172, lr: 0.01000
+#> Loss at epoch 122: 0.074564, lr: 0.01000
+#> Loss at epoch 123: 0.068957, lr: 0.01000
+#> Loss at epoch 124: 0.067580, lr: 0.01000
+#> Loss at epoch 125: 0.070718, lr: 0.01000
+#> Loss at epoch 126: 0.072399, lr: 0.01000
+#> Loss at epoch 127: 0.074030, lr: 0.01000
+#> Loss at epoch 128: 0.086198, lr: 0.01000
+#> Loss at epoch 129: 0.090070, lr: 0.01000
+#> Loss at epoch 130: 0.064136, lr: 0.01000
+#> Loss at epoch 131: 0.066168, lr: 0.01000
+#> Loss at epoch 132: 0.072192, lr: 0.01000
+#> Loss at epoch 133: 0.063578, lr: 0.01000
+#> Loss at epoch 134: 0.083317, lr: 0.01000
+#> Loss at epoch 135: 0.060199, lr: 0.01000
+#> Loss at epoch 136: 0.054813, lr: 0.01000
+#> Loss at epoch 137: 0.077823, lr: 0.01000
+#> Loss at epoch 138: 0.075886, lr: 0.01000
+#> Loss at epoch 139: 0.067220, lr: 0.01000
+#> Loss at epoch 140: 0.065141, lr: 0.01000
+#> Loss at epoch 141: 0.061178, lr: 0.01000
+#> Loss at epoch 142: 0.065172, lr: 0.01000
+#> Loss at epoch 143: 0.067446, lr: 0.01000
+#> Loss at epoch 144: 0.066979, lr: 0.01000
+#> Loss at epoch 145: 0.062375, lr: 0.01000
+#> Loss at epoch 146: 0.065406, lr: 0.01000
+#> Loss at epoch 147: 0.071156, lr: 0.01000
+#> Loss at epoch 148: 0.084345, lr: 0.01000
+#> Loss at epoch 149: 0.071637, lr: 0.01000
+#> Loss at epoch 150: 0.061850, lr: 0.01000
 #> dnn(formula = Species ~ Sepal.Length + Sepal.Width + Petal.Length + 
 #>     Petal.Width, data = datasets::iris, loss = "cross-entropy")
 #> An `nn_module` containing 2,953 parameters.
@@ -895,309 +966,309 @@ as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
 
 
 
-#> Loss at epoch 1: 0.673099, lr: 0.01000
+#> Loss at epoch 1: 0.627903, lr: 0.01000
 
-#> Loss at epoch 2: 0.586612, lr: 0.01000
-#> Loss at epoch 3: 0.551332, lr: 0.01000
-#> Loss at epoch 4: 0.521364, lr: 0.01000
-#> Loss at epoch 5: 0.495815, lr: 0.01000
-#> Loss at epoch 6: 0.471680, lr: 0.01000
-#> Loss at epoch 7: 0.452111, lr: 0.01000
-#> Loss at epoch 8: 0.431466, lr: 0.01000
-#> Loss at epoch 9: 0.418337, lr: 0.01000
-#> Loss at epoch 10: 0.402363, lr: 0.01000
-#> Loss at epoch 11: 0.384449, lr: 0.01000
-#> Loss at epoch 12: 0.372305, lr: 0.01000
-#> Loss at epoch 13: 0.360876, lr: 0.01000
-#> Loss at epoch 14: 0.349842, lr: 0.01000
-#> Loss at epoch 15: 0.341812, lr: 0.01000
-#> Loss at epoch 16: 0.327649, lr: 0.01000
-#> Loss at epoch 17: 0.319970, lr: 0.01000
-#> Loss at epoch 18: 0.315298, lr: 0.01000
-#> Loss at epoch 19: 0.305130, lr: 0.01000
-#> Loss at epoch 20: 0.297186, lr: 0.01000
-#> Loss at epoch 21: 0.292309, lr: 0.01000
-#> Loss at epoch 22: 0.283399, lr: 0.01000
-#> Loss at epoch 23: 0.275238, lr: 0.01000
-#> Loss at epoch 24: 0.271337, lr: 0.01000
-#> Loss at epoch 25: 0.263307, lr: 0.01000
-#> Loss at epoch 26: 0.256266, lr: 0.01000
-#> Loss at epoch 27: 0.262010, lr: 0.01000
-#> Loss at epoch 28: 0.243615, lr: 0.01000
-#> Loss at epoch 29: 0.240985, lr: 0.01000
-#> Loss at epoch 30: 0.237142, lr: 0.01000
-#> Loss at epoch 31: 0.237555, lr: 0.01000
-#> Loss at epoch 32: 0.225110, lr: 0.01000
-#> Loss at epoch 33: 0.224458, lr: 0.01000
-#> Loss at epoch 34: 0.215281, lr: 0.01000
-#> Loss at epoch 35: 0.211877, lr: 0.01000
-#> Loss at epoch 36: 0.208955, lr: 0.01000
-#> Loss at epoch 37: 0.206568, lr: 0.01000
-#> Loss at epoch 38: 0.195595, lr: 0.01000
-#> Loss at epoch 39: 0.194365, lr: 0.01000
-#> Loss at epoch 40: 0.189517, lr: 0.01000
-#> Loss at epoch 41: 0.193385, lr: 0.01000
-#> Loss at epoch 42: 0.180241, lr: 0.01000
-#> Loss at epoch 43: 0.180931, lr: 0.01000
-#> Loss at epoch 44: 0.172148, lr: 0.01000
-#> Loss at epoch 45: 0.168916, lr: 0.01000
-#> Loss at epoch 46: 0.161902, lr: 0.01000
-#> Loss at epoch 47: 0.165100, lr: 0.01000
-#> Loss at epoch 48: 0.156666, lr: 0.01000
-#> Loss at epoch 49: 0.154791, lr: 0.01000
-#> Loss at epoch 50: 0.151878, lr: 0.01000
-#> Loss at epoch 51: 0.150796, lr: 0.01000
-#> Loss at epoch 52: 0.150205, lr: 0.01000
-#> Loss at epoch 53: 0.144378, lr: 0.01000
-#> Loss at epoch 54: 0.138802, lr: 0.01000
-#> Loss at epoch 55: 0.142683, lr: 0.01000
-#> Loss at epoch 56: 0.134676, lr: 0.01000
-#> Loss at epoch 57: 0.132630, lr: 0.01000
-#> Loss at epoch 58: 0.133897, lr: 0.01000
-#> Loss at epoch 59: 0.125627, lr: 0.01000
-#> Loss at epoch 60: 0.124523, lr: 0.01000
-#> Loss at epoch 61: 0.120150, lr: 0.01000
-#> Loss at epoch 62: 0.121673, lr: 0.01000
-#> Loss at epoch 63: 0.114689, lr: 0.01000
-#> Loss at epoch 64: 0.114484, lr: 0.01000
-#> Loss at epoch 65: 0.114619, lr: 0.01000
-#> Loss at epoch 66: 0.113901, lr: 0.01000
-#> Loss at epoch 67: 0.108983, lr: 0.01000
-#> Loss at epoch 68: 0.109720, lr: 0.01000
-#> Loss at epoch 69: 0.105502, lr: 0.01000
-#> Loss at epoch 70: 0.098955, lr: 0.01000
-#> Loss at epoch 71: 0.104303, lr: 0.01000
-#> Loss at epoch 72: 0.104899, lr: 0.01000
-#> Loss at epoch 73: 0.105508, lr: 0.01000
-#> Loss at epoch 74: 0.097000, lr: 0.01000
-#> Loss at epoch 75: 0.097277, lr: 0.01000
-#> Loss at epoch 76: 0.092530, lr: 0.01000
-#> Loss at epoch 77: 0.095517, lr: 0.01000
-#> Loss at epoch 78: 0.091596, lr: 0.01000
-#> Loss at epoch 79: 0.095261, lr: 0.01000
-#> Loss at epoch 80: 0.091921, lr: 0.01000
-#> Loss at epoch 81: 0.088120, lr: 0.01000
-#> Loss at epoch 82: 0.088884, lr: 0.01000
-#> Loss at epoch 83: 0.091654, lr: 0.01000
-#> Loss at epoch 84: 0.087390, lr: 0.01000
-#> Loss at epoch 85: 0.093177, lr: 0.01000
-#> Loss at epoch 86: 0.084196, lr: 0.01000
-#> Loss at epoch 87: 0.081539, lr: 0.01000
-#> Loss at epoch 88: 0.087324, lr: 0.01000
-#> Loss at epoch 89: 0.081075, lr: 0.01000
-#> Loss at epoch 90: 0.087649, lr: 0.01000
-#> Loss at epoch 91: 0.077732, lr: 0.01000
-#> Loss at epoch 92: 0.081827, lr: 0.01000
-#> Loss at epoch 93: 0.089344, lr: 0.01000
-#> Loss at epoch 94: 0.082772, lr: 0.01000
-#> Loss at epoch 95: 0.071802, lr: 0.01000
-#> Loss at epoch 96: 0.076497, lr: 0.01000
-#> Loss at epoch 97: 0.080083, lr: 0.01000
-#> Loss at epoch 98: 0.078343, lr: 0.01000
-#> Loss at epoch 99: 0.080494, lr: 0.01000
-#> Loss at epoch 100: 0.076998, lr: 0.01000
-#> Loss at epoch 1: 1.131531, lr: 0.01000
+#> Loss at epoch 2: 0.563220, lr: 0.01000
+#> Loss at epoch 3: 0.529604, lr: 0.01000
+#> Loss at epoch 4: 0.499828, lr: 0.01000
+#> Loss at epoch 5: 0.469589, lr: 0.01000
+#> Loss at epoch 6: 0.443053, lr: 0.01000
+#> Loss at epoch 7: 0.424366, lr: 0.01000
+#> Loss at epoch 8: 0.407155, lr: 0.01000
+#> Loss at epoch 9: 0.383659, lr: 0.01000
+#> Loss at epoch 10: 0.369536, lr: 0.01000
+#> Loss at epoch 11: 0.356310, lr: 0.01000
+#> Loss at epoch 12: 0.339039, lr: 0.01000
+#> Loss at epoch 13: 0.328839, lr: 0.01000
+#> Loss at epoch 14: 0.316375, lr: 0.01000
+#> Loss at epoch 15: 0.306730, lr: 0.01000
+#> Loss at epoch 16: 0.298274, lr: 0.01000
+#> Loss at epoch 17: 0.291638, lr: 0.01000
+#> Loss at epoch 18: 0.277155, lr: 0.01000
+#> Loss at epoch 19: 0.273510, lr: 0.01000
+#> Loss at epoch 20: 0.261802, lr: 0.01000
+#> Loss at epoch 21: 0.262841, lr: 0.01000
+#> Loss at epoch 22: 0.248888, lr: 0.01000
+#> Loss at epoch 23: 0.242071, lr: 0.01000
+#> Loss at epoch 24: 0.234494, lr: 0.01000
+#> Loss at epoch 25: 0.230417, lr: 0.01000
+#> Loss at epoch 26: 0.220580, lr: 0.01000
+#> Loss at epoch 27: 0.214033, lr: 0.01000
+#> Loss at epoch 28: 0.211584, lr: 0.01000
+#> Loss at epoch 29: 0.204828, lr: 0.01000
+#> Loss at epoch 30: 0.199602, lr: 0.01000
+#> Loss at epoch 31: 0.191320, lr: 0.01000
+#> Loss at epoch 32: 0.185323, lr: 0.01000
+#> Loss at epoch 33: 0.180423, lr: 0.01000
+#> Loss at epoch 34: 0.176441, lr: 0.01000
+#> Loss at epoch 35: 0.171856, lr: 0.01000
+#> Loss at epoch 36: 0.168292, lr: 0.01000
+#> Loss at epoch 37: 0.166626, lr: 0.01000
+#> Loss at epoch 38: 0.161276, lr: 0.01000
+#> Loss at epoch 39: 0.155609, lr: 0.01000
+#> Loss at epoch 40: 0.154080, lr: 0.01000
+#> Loss at epoch 41: 0.150515, lr: 0.01000
+#> Loss at epoch 42: 0.148912, lr: 0.01000
+#> Loss at epoch 43: 0.143415, lr: 0.01000
+#> Loss at epoch 44: 0.142139, lr: 0.01000
+#> Loss at epoch 45: 0.135609, lr: 0.01000
+#> Loss at epoch 46: 0.132653, lr: 0.01000
+#> Loss at epoch 47: 0.130325, lr: 0.01000
+#> Loss at epoch 48: 0.127847, lr: 0.01000
+#> Loss at epoch 49: 0.129097, lr: 0.01000
+#> Loss at epoch 50: 0.122410, lr: 0.01000
+#> Loss at epoch 51: 0.117000, lr: 0.01000
+#> Loss at epoch 52: 0.120099, lr: 0.01000
+#> Loss at epoch 53: 0.115144, lr: 0.01000
+#> Loss at epoch 54: 0.113443, lr: 0.01000
+#> Loss at epoch 55: 0.113005, lr: 0.01000
+#> Loss at epoch 56: 0.106863, lr: 0.01000
+#> Loss at epoch 57: 0.108200, lr: 0.01000
+#> Loss at epoch 58: 0.105746, lr: 0.01000
+#> Loss at epoch 59: 0.102966, lr: 0.01000
+#> Loss at epoch 60: 0.101586, lr: 0.01000
+#> Loss at epoch 61: 0.096719, lr: 0.01000
+#> Loss at epoch 62: 0.096707, lr: 0.01000
+#> Loss at epoch 63: 0.094743, lr: 0.01000
+#> Loss at epoch 64: 0.097930, lr: 0.01000
+#> Loss at epoch 65: 0.091621, lr: 0.01000
+#> Loss at epoch 66: 0.108871, lr: 0.01000
+#> Loss at epoch 67: 0.089625, lr: 0.01000
+#> Loss at epoch 68: 0.090608, lr: 0.01000
+#> Loss at epoch 69: 0.094159, lr: 0.01000
+#> Loss at epoch 70: 0.088461, lr: 0.01000
+#> Loss at epoch 71: 0.084290, lr: 0.01000
+#> Loss at epoch 72: 0.084493, lr: 0.01000
+#> Loss at epoch 73: 0.086195, lr: 0.01000
+#> Loss at epoch 74: 0.086004, lr: 0.01000
+#> Loss at epoch 75: 0.085776, lr: 0.01000
+#> Loss at epoch 76: 0.079217, lr: 0.01000
+#> Loss at epoch 77: 0.079709, lr: 0.01000
+#> Loss at epoch 78: 0.076692, lr: 0.01000
+#> Loss at epoch 79: 0.077557, lr: 0.01000
+#> Loss at epoch 80: 0.081834, lr: 0.01000
+#> Loss at epoch 81: 0.078607, lr: 0.01000
+#> Loss at epoch 82: 0.073948, lr: 0.01000
+#> Loss at epoch 83: 0.076130, lr: 0.01000
+#> Loss at epoch 84: 0.074980, lr: 0.01000
+#> Loss at epoch 85: 0.072895, lr: 0.01000
+#> Loss at epoch 86: 0.074493, lr: 0.01000
+#> Loss at epoch 87: 0.070801, lr: 0.01000
+#> Loss at epoch 88: 0.071758, lr: 0.01000
+#> Loss at epoch 89: 0.072367, lr: 0.01000
+#> Loss at epoch 90: 0.072618, lr: 0.01000
+#> Loss at epoch 91: 0.068832, lr: 0.01000
+#> Loss at epoch 92: 0.064390, lr: 0.01000
+#> Loss at epoch 93: 0.072590, lr: 0.01000
+#> Loss at epoch 94: 0.070191, lr: 0.01000
+#> Loss at epoch 95: 0.065511, lr: 0.01000
+#> Loss at epoch 96: 0.065667, lr: 0.01000
+#> Loss at epoch 97: 0.066885, lr: 0.01000
+#> Loss at epoch 98: 0.067823, lr: 0.01000
+#> Loss at epoch 99: 0.064212, lr: 0.01000
+#> Loss at epoch 100: 0.073353, lr: 0.01000
+#> Loss at epoch 1: 1.060611, lr: 0.01000
 
-#> Loss at epoch 2: 0.919546, lr: 0.01000
-#> Loss at epoch 3: 0.832303, lr: 0.01000
-#> Loss at epoch 4: 0.738153, lr: 0.01000
-#> Loss at epoch 5: 0.675164, lr: 0.01000
-#> Loss at epoch 6: 0.617698, lr: 0.01000
-#> Loss at epoch 7: 0.596311, lr: 0.01000
-#> Loss at epoch 8: 0.531553, lr: 0.01000
-#> Loss at epoch 9: 0.499873, lr: 0.01000
-#> Loss at epoch 10: 0.472194, lr: 0.01000
-#> Loss at epoch 11: 0.472169, lr: 0.01000
-#> Loss at epoch 12: 0.435488, lr: 0.01000
-#> Loss at epoch 13: 0.405205, lr: 0.01000
-#> Loss at epoch 14: 0.397699, lr: 0.01000
-#> Loss at epoch 15: 0.373819, lr: 0.01000
-#> Loss at epoch 16: 0.344326, lr: 0.01000
-#> Loss at epoch 17: 0.362608, lr: 0.01000
-#> Loss at epoch 18: 0.327755, lr: 0.01000
-#> Loss at epoch 19: 0.311631, lr: 0.01000
-#> Loss at epoch 20: 0.296480, lr: 0.01000
-#> Loss at epoch 21: 0.287739, lr: 0.01000
-#> Loss at epoch 22: 0.280704, lr: 0.01000
-#> Loss at epoch 23: 0.272791, lr: 0.01000
-#> Loss at epoch 24: 0.250329, lr: 0.01000
-#> Loss at epoch 25: 0.244502, lr: 0.01000
-#> Loss at epoch 26: 0.242433, lr: 0.01000
-#> Loss at epoch 27: 0.226342, lr: 0.01000
-#> Loss at epoch 28: 0.227408, lr: 0.01000
-#> Loss at epoch 29: 0.239694, lr: 0.01000
-#> Loss at epoch 30: 0.210975, lr: 0.01000
-#> Loss at epoch 31: 0.206775, lr: 0.01000
-#> Loss at epoch 32: 0.197558, lr: 0.01000
-#> Loss at epoch 33: 0.192611, lr: 0.01000
-#> Loss at epoch 34: 0.183896, lr: 0.01000
-#> Loss at epoch 35: 0.183691, lr: 0.01000
-#> Loss at epoch 36: 0.187726, lr: 0.01000
-#> Loss at epoch 37: 0.179555, lr: 0.01000
-#> Loss at epoch 38: 0.164799, lr: 0.01000
-#> Loss at epoch 39: 0.161865, lr: 0.01000
-#> Loss at epoch 40: 0.206064, lr: 0.01000
-#> Loss at epoch 41: 0.162717, lr: 0.01000
-#> Loss at epoch 42: 0.160399, lr: 0.01000
-#> Loss at epoch 43: 0.151961, lr: 0.01000
-#> Loss at epoch 44: 0.142115, lr: 0.01000
-#> Loss at epoch 45: 0.144716, lr: 0.01000
-#> Loss at epoch 46: 0.134994, lr: 0.01000
-#> Loss at epoch 47: 0.136796, lr: 0.01000
-#> Loss at epoch 48: 0.139099, lr: 0.01000
-#> Loss at epoch 49: 0.128870, lr: 0.01000
-#> Loss at epoch 50: 0.127726, lr: 0.01000
-#> Loss at epoch 51: 0.137342, lr: 0.01000
-#> Loss at epoch 52: 0.142199, lr: 0.01000
-#> Loss at epoch 53: 0.120015, lr: 0.01000
-#> Loss at epoch 54: 0.136557, lr: 0.01000
-#> Loss at epoch 55: 0.129173, lr: 0.01000
-#> Loss at epoch 56: 0.122449, lr: 0.01000
-#> Loss at epoch 57: 0.119311, lr: 0.01000
-#> Loss at epoch 58: 0.112996, lr: 0.01000
-#> Loss at epoch 59: 0.119444, lr: 0.01000
-#> Loss at epoch 60: 0.106306, lr: 0.01000
-#> Loss at epoch 61: 0.103052, lr: 0.01000
-#> Loss at epoch 62: 0.111367, lr: 0.01000
-#> Loss at epoch 63: 0.105712, lr: 0.01000
-#> Loss at epoch 64: 0.098682, lr: 0.01000
-#> Loss at epoch 65: 0.105603, lr: 0.01000
-#> Loss at epoch 66: 0.096138, lr: 0.01000
-#> Loss at epoch 67: 0.095587, lr: 0.01000
-#> Loss at epoch 68: 0.096322, lr: 0.01000
-#> Loss at epoch 69: 0.094421, lr: 0.01000
-#> Loss at epoch 70: 0.113112, lr: 0.01000
-#> Loss at epoch 71: 0.098762, lr: 0.01000
-#> Loss at epoch 72: 0.098612, lr: 0.01000
-#> Loss at epoch 73: 0.089817, lr: 0.01000
-#> Loss at epoch 74: 0.087835, lr: 0.01000
-#> Loss at epoch 75: 0.106064, lr: 0.01000
-#> Loss at epoch 76: 0.096136, lr: 0.01000
-#> Loss at epoch 77: 0.080880, lr: 0.01000
-#> Loss at epoch 78: 0.094191, lr: 0.01000
-#> Loss at epoch 79: 0.089933, lr: 0.01000
-#> Loss at epoch 80: 0.093061, lr: 0.01000
-#> Loss at epoch 81: 0.106057, lr: 0.01000
-#> Loss at epoch 82: 0.082139, lr: 0.01000
-#> Loss at epoch 83: 0.083490, lr: 0.01000
-#> Loss at epoch 84: 0.097702, lr: 0.01000
-#> Loss at epoch 85: 0.083351, lr: 0.01000
-#> Loss at epoch 86: 0.077428, lr: 0.01000
-#> Loss at epoch 87: 0.096786, lr: 0.01000
-#> Loss at epoch 88: 0.077784, lr: 0.01000
-#> Loss at epoch 89: 0.092930, lr: 0.01000
-#> Loss at epoch 90: 0.077674, lr: 0.01000
-#> Loss at epoch 91: 0.087673, lr: 0.01000
-#> Loss at epoch 92: 0.101678, lr: 0.01000
-#> Loss at epoch 93: 0.077219, lr: 0.01000
-#> Loss at epoch 94: 0.079223, lr: 0.01000
-#> Loss at epoch 95: 0.085558, lr: 0.01000
-#> Loss at epoch 96: 0.073956, lr: 0.01000
-#> Loss at epoch 97: 0.084609, lr: 0.01000
-#> Loss at epoch 98: 0.104687, lr: 0.01000
-#> Loss at epoch 99: 0.084520, lr: 0.01000
-#> Loss at epoch 100: 0.096416, lr: 0.01000
-#> Loss at epoch 1: 3.682381, lr: 0.01000
+#> Loss at epoch 2: 0.858066, lr: 0.01000
+#> Loss at epoch 3: 0.741805, lr: 0.01000
+#> Loss at epoch 4: 0.634751, lr: 0.01000
+#> Loss at epoch 5: 0.588482, lr: 0.01000
+#> Loss at epoch 6: 0.529135, lr: 0.01000
+#> Loss at epoch 7: 0.489831, lr: 0.01000
+#> Loss at epoch 8: 0.467590, lr: 0.01000
+#> Loss at epoch 9: 0.443149, lr: 0.01000
+#> Loss at epoch 10: 0.421041, lr: 0.01000
+#> Loss at epoch 11: 0.406401, lr: 0.01000
+#> Loss at epoch 12: 0.391032, lr: 0.01000
+#> Loss at epoch 13: 0.378555, lr: 0.01000
+#> Loss at epoch 14: 0.364250, lr: 0.01000
+#> Loss at epoch 15: 0.344938, lr: 0.01000
+#> Loss at epoch 16: 0.351226, lr: 0.01000
+#> Loss at epoch 17: 0.312231, lr: 0.01000
+#> Loss at epoch 18: 0.322277, lr: 0.01000
+#> Loss at epoch 19: 0.291612, lr: 0.01000
+#> Loss at epoch 20: 0.285709, lr: 0.01000
+#> Loss at epoch 21: 0.276335, lr: 0.01000
+#> Loss at epoch 22: 0.266168, lr: 0.01000
+#> Loss at epoch 23: 0.253019, lr: 0.01000
+#> Loss at epoch 24: 0.243623, lr: 0.01000
+#> Loss at epoch 25: 0.234558, lr: 0.01000
+#> Loss at epoch 26: 0.236868, lr: 0.01000
+#> Loss at epoch 27: 0.228698, lr: 0.01000
+#> Loss at epoch 28: 0.212396, lr: 0.01000
+#> Loss at epoch 29: 0.217248, lr: 0.01000
+#> Loss at epoch 30: 0.198630, lr: 0.01000
+#> Loss at epoch 31: 0.197225, lr: 0.01000
+#> Loss at epoch 32: 0.182029, lr: 0.01000
+#> Loss at epoch 33: 0.195360, lr: 0.01000
+#> Loss at epoch 34: 0.177878, lr: 0.01000
+#> Loss at epoch 35: 0.163576, lr: 0.01000
+#> Loss at epoch 36: 0.163924, lr: 0.01000
+#> Loss at epoch 37: 0.161609, lr: 0.01000
+#> Loss at epoch 38: 0.156618, lr: 0.01000
+#> Loss at epoch 39: 0.150831, lr: 0.01000
+#> Loss at epoch 40: 0.158971, lr: 0.01000
+#> Loss at epoch 41: 0.147007, lr: 0.01000
+#> Loss at epoch 42: 0.140663, lr: 0.01000
+#> Loss at epoch 43: 0.140642, lr: 0.01000
+#> Loss at epoch 44: 0.131533, lr: 0.01000
+#> Loss at epoch 45: 0.138818, lr: 0.01000
+#> Loss at epoch 46: 0.123472, lr: 0.01000
+#> Loss at epoch 47: 0.125426, lr: 0.01000
+#> Loss at epoch 48: 0.119768, lr: 0.01000
+#> Loss at epoch 49: 0.125709, lr: 0.01000
+#> Loss at epoch 50: 0.113170, lr: 0.01000
+#> Loss at epoch 51: 0.119636, lr: 0.01000
+#> Loss at epoch 52: 0.113325, lr: 0.01000
+#> Loss at epoch 53: 0.124131, lr: 0.01000
+#> Loss at epoch 54: 0.107447, lr: 0.01000
+#> Loss at epoch 55: 0.108544, lr: 0.01000
+#> Loss at epoch 56: 0.110932, lr: 0.01000
+#> Loss at epoch 57: 0.105981, lr: 0.01000
+#> Loss at epoch 58: 0.102749, lr: 0.01000
+#> Loss at epoch 59: 0.105475, lr: 0.01000
+#> Loss at epoch 60: 0.102670, lr: 0.01000
+#> Loss at epoch 61: 0.103977, lr: 0.01000
+#> Loss at epoch 62: 0.111162, lr: 0.01000
+#> Loss at epoch 63: 0.096830, lr: 0.01000
+#> Loss at epoch 64: 0.107875, lr: 0.01000
+#> Loss at epoch 65: 0.101549, lr: 0.01000
+#> Loss at epoch 66: 0.091076, lr: 0.01000
+#> Loss at epoch 67: 0.098956, lr: 0.01000
+#> Loss at epoch 68: 0.082645, lr: 0.01000
+#> Loss at epoch 69: 0.109663, lr: 0.01000
+#> Loss at epoch 70: 0.092874, lr: 0.01000
+#> Loss at epoch 71: 0.081197, lr: 0.01000
+#> Loss at epoch 72: 0.084927, lr: 0.01000
+#> Loss at epoch 73: 0.096912, lr: 0.01000
+#> Loss at epoch 74: 0.098312, lr: 0.01000
+#> Loss at epoch 75: 0.089659, lr: 0.01000
+#> Loss at epoch 76: 0.107775, lr: 0.01000
+#> Loss at epoch 77: 0.075696, lr: 0.01000
+#> Loss at epoch 78: 0.090635, lr: 0.01000
+#> Loss at epoch 79: 0.081403, lr: 0.01000
+#> Loss at epoch 80: 0.087435, lr: 0.01000
+#> Loss at epoch 81: 0.094576, lr: 0.01000
+#> Loss at epoch 82: 0.118138, lr: 0.01000
+#> Loss at epoch 83: 0.090550, lr: 0.01000
+#> Loss at epoch 84: 0.082658, lr: 0.01000
+#> Loss at epoch 85: 0.089877, lr: 0.01000
+#> Loss at epoch 86: 0.078049, lr: 0.01000
+#> Loss at epoch 87: 0.091605, lr: 0.01000
+#> Loss at epoch 88: 0.097178, lr: 0.01000
+#> Loss at epoch 89: 0.079041, lr: 0.01000
+#> Loss at epoch 90: 0.074291, lr: 0.01000
+#> Loss at epoch 91: 0.092033, lr: 0.01000
+#> Loss at epoch 92: 0.077324, lr: 0.01000
+#> Loss at epoch 93: 0.074971, lr: 0.01000
+#> Loss at epoch 94: 0.096856, lr: 0.01000
+#> Loss at epoch 95: 0.085096, lr: 0.01000
+#> Loss at epoch 96: 0.088541, lr: 0.01000
+#> Loss at epoch 97: 0.079133, lr: 0.01000
+#> Loss at epoch 98: 0.079444, lr: 0.01000
+#> Loss at epoch 99: 0.094299, lr: 0.01000
+#> Loss at epoch 100: 0.071188, lr: 0.01000
+#> Loss at epoch 1: 3.526318, lr: 0.01000
 
-#> Loss at epoch 2: 3.294621, lr: 0.01000
-#> Loss at epoch 3: 3.256830, lr: 0.01000
-#> Loss at epoch 4: 3.241283, lr: 0.01000
-#> Loss at epoch 5: 3.236913, lr: 0.01000
-#> Loss at epoch 6: 3.228450, lr: 0.01000
-#> Loss at epoch 7: 3.228770, lr: 0.01000
-#> Loss at epoch 8: 3.222266, lr: 0.01000
-#> Loss at epoch 9: 3.220139, lr: 0.01000
-#> Loss at epoch 10: 3.211467, lr: 0.01000
-#> Loss at epoch 11: 3.208660, lr: 0.01000
-#> Loss at epoch 12: 3.200411, lr: 0.01000
-#> Loss at epoch 13: 3.199195, lr: 0.01000
-#> Loss at epoch 14: 3.191670, lr: 0.01000
-#> Loss at epoch 15: 3.187047, lr: 0.01000
-#> Loss at epoch 16: 3.177722, lr: 0.01000
-#> Loss at epoch 17: 3.170024, lr: 0.01000
-#> Loss at epoch 18: 3.163408, lr: 0.01000
-#> Loss at epoch 19: 3.154720, lr: 0.01000
-#> Loss at epoch 20: 3.147918, lr: 0.01000
-#> Loss at epoch 21: 3.137136, lr: 0.01000
-#> Loss at epoch 22: 3.130076, lr: 0.01000
-#> Loss at epoch 23: 3.123847, lr: 0.01000
-#> Loss at epoch 24: 3.111760, lr: 0.01000
-#> Loss at epoch 25: 3.097186, lr: 0.01000
-#> Loss at epoch 26: 3.086954, lr: 0.01000
-#> Loss at epoch 27: 3.075425, lr: 0.01000
-#> Loss at epoch 28: 3.066186, lr: 0.01000
-#> Loss at epoch 29: 3.053875, lr: 0.01000
-#> Loss at epoch 30: 3.037676, lr: 0.01000
-#> Loss at epoch 31: 3.017720, lr: 0.01000
-#> Loss at epoch 32: 3.004156, lr: 0.01000
-#> Loss at epoch 33: 2.988850, lr: 0.01000
-#> Loss at epoch 34: 2.972227, lr: 0.01000
-#> Loss at epoch 35: 2.953804, lr: 0.01000
-#> Loss at epoch 36: 2.941721, lr: 0.01000
-#> Loss at epoch 37: 2.914810, lr: 0.01000
-#> Loss at epoch 38: 2.891287, lr: 0.01000
-#> Loss at epoch 39: 2.867359, lr: 0.01000
-#> Loss at epoch 40: 2.853650, lr: 0.01000
-#> Loss at epoch 41: 2.830839, lr: 0.01000
-#> Loss at epoch 42: 2.797697, lr: 0.01000
-#> Loss at epoch 43: 2.781916, lr: 0.01000
-#> Loss at epoch 44: 2.745592, lr: 0.01000
-#> Loss at epoch 45: 2.725676, lr: 0.01000
-#> Loss at epoch 46: 2.695169, lr: 0.01000
-#> Loss at epoch 47: 2.675290, lr: 0.01000
-#> Loss at epoch 48: 2.646004, lr: 0.01000
-#> Loss at epoch 49: 2.619965, lr: 0.01000
-#> Loss at epoch 50: 2.597354, lr: 0.01000
-#> Loss at epoch 51: 2.568193, lr: 0.01000
-#> Loss at epoch 52: 2.549519, lr: 0.01000
-#> Loss at epoch 53: 2.523628, lr: 0.01000
-#> Loss at epoch 54: 2.504871, lr: 0.01000
-#> Loss at epoch 55: 2.489016, lr: 0.01000
-#> Loss at epoch 56: 2.463736, lr: 0.01000
-#> Loss at epoch 57: 2.444420, lr: 0.01000
-#> Loss at epoch 58: 2.429753, lr: 0.01000
-#> Loss at epoch 59: 2.418805, lr: 0.01000
-#> Loss at epoch 60: 2.402865, lr: 0.01000
-#> Loss at epoch 61: 2.390542, lr: 0.01000
-#> Loss at epoch 62: 2.380021, lr: 0.01000
-#> Loss at epoch 63: 2.369290, lr: 0.01000
-#> Loss at epoch 64: 2.358917, lr: 0.01000
-#> Loss at epoch 65: 2.350258, lr: 0.01000
-#> Loss at epoch 66: 2.340402, lr: 0.01000
-#> Loss at epoch 67: 2.333662, lr: 0.01000
-#> Loss at epoch 68: 2.330305, lr: 0.01000
-#> Loss at epoch 69: 2.322404, lr: 0.01000
-#> Loss at epoch 70: 2.316494, lr: 0.01000
-#> Loss at epoch 71: 2.310920, lr: 0.01000
-#> Loss at epoch 72: 2.310121, lr: 0.01000
-#> Loss at epoch 73: 2.302551, lr: 0.01000
-#> Loss at epoch 74: 2.297861, lr: 0.01000
-#> Loss at epoch 75: 2.294823, lr: 0.01000
-#> Loss at epoch 76: 2.290777, lr: 0.01000
-#> Loss at epoch 77: 2.287246, lr: 0.01000
-#> Loss at epoch 78: 2.284240, lr: 0.01000
-#> Loss at epoch 79: 2.281092, lr: 0.01000
-#> Loss at epoch 80: 2.278792, lr: 0.01000
-#> Loss at epoch 81: 2.276934, lr: 0.01000
-#> Loss at epoch 82: 2.273517, lr: 0.01000
-#> Loss at epoch 83: 2.273334, lr: 0.01000
-#> Loss at epoch 84: 2.270286, lr: 0.01000
-#> Loss at epoch 85: 2.268805, lr: 0.01000
-#> Loss at epoch 86: 2.266817, lr: 0.01000
-#> Loss at epoch 87: 2.264881, lr: 0.01000
-#> Loss at epoch 88: 2.262718, lr: 0.01000
-#> Loss at epoch 89: 2.261000, lr: 0.01000
-#> Loss at epoch 90: 2.259238, lr: 0.01000
-#> Loss at epoch 91: 2.257553, lr: 0.01000
-#> Loss at epoch 92: 2.256529, lr: 0.01000
-#> Loss at epoch 93: 2.254707, lr: 0.01000
-#> Loss at epoch 94: 2.254000, lr: 0.01000
-#> Loss at epoch 95: 2.252978, lr: 0.01000
-#> Loss at epoch 96: 2.251548, lr: 0.01000
-#> Loss at epoch 97: 2.250273, lr: 0.01000
-#> Loss at epoch 98: 2.249917, lr: 0.01000
-#> Loss at epoch 99: 2.247842, lr: 0.01000
-#> Loss at epoch 100: 2.246752, lr: 0.01000
+#> Loss at epoch 2: 3.303351, lr: 0.01000
+#> Loss at epoch 3: 3.270069, lr: 0.01000
+#> Loss at epoch 4: 3.268703, lr: 0.01000
+#> Loss at epoch 5: 3.267249, lr: 0.01000
+#> Loss at epoch 6: 3.258598, lr: 0.01000
+#> Loss at epoch 7: 3.256310, lr: 0.01000
+#> Loss at epoch 8: 3.251705, lr: 0.01000
+#> Loss at epoch 9: 3.250777, lr: 0.01000
+#> Loss at epoch 10: 3.241284, lr: 0.01000
+#> Loss at epoch 11: 3.244530, lr: 0.01000
+#> Loss at epoch 12: 3.235119, lr: 0.01000
+#> Loss at epoch 13: 3.228488, lr: 0.01000
+#> Loss at epoch 14: 3.225858, lr: 0.01000
+#> Loss at epoch 15: 3.222644, lr: 0.01000
+#> Loss at epoch 16: 3.218995, lr: 0.01000
+#> Loss at epoch 17: 3.212973, lr: 0.01000
+#> Loss at epoch 18: 3.208607, lr: 0.01000
+#> Loss at epoch 19: 3.206723, lr: 0.01000
+#> Loss at epoch 20: 3.195761, lr: 0.01000
+#> Loss at epoch 21: 3.189681, lr: 0.01000
+#> Loss at epoch 22: 3.198500, lr: 0.01000
+#> Loss at epoch 23: 3.186163, lr: 0.01000
+#> Loss at epoch 24: 3.175235, lr: 0.01000
+#> Loss at epoch 25: 3.173913, lr: 0.01000
+#> Loss at epoch 26: 3.163416, lr: 0.01000
+#> Loss at epoch 27: 3.162304, lr: 0.01000
+#> Loss at epoch 28: 3.148433, lr: 0.01000
+#> Loss at epoch 29: 3.141352, lr: 0.01000
+#> Loss at epoch 30: 3.132208, lr: 0.01000
+#> Loss at epoch 31: 3.127236, lr: 0.01000
+#> Loss at epoch 32: 3.110363, lr: 0.01000
+#> Loss at epoch 33: 3.102042, lr: 0.01000
+#> Loss at epoch 34: 3.090989, lr: 0.01000
+#> Loss at epoch 35: 3.081434, lr: 0.01000
+#> Loss at epoch 36: 3.070710, lr: 0.01000
+#> Loss at epoch 37: 3.060450, lr: 0.01000
+#> Loss at epoch 38: 3.046616, lr: 0.01000
+#> Loss at epoch 39: 3.036925, lr: 0.01000
+#> Loss at epoch 40: 3.018058, lr: 0.01000
+#> Loss at epoch 41: 2.999212, lr: 0.01000
+#> Loss at epoch 42: 2.987178, lr: 0.01000
+#> Loss at epoch 43: 2.970666, lr: 0.01000
+#> Loss at epoch 44: 2.951136, lr: 0.01000
+#> Loss at epoch 45: 2.931399, lr: 0.01000
+#> Loss at epoch 46: 2.907469, lr: 0.01000
+#> Loss at epoch 47: 2.886230, lr: 0.01000
+#> Loss at epoch 48: 2.861682, lr: 0.01000
+#> Loss at epoch 49: 2.842458, lr: 0.01000
+#> Loss at epoch 50: 2.823092, lr: 0.01000
+#> Loss at epoch 51: 2.796790, lr: 0.01000
+#> Loss at epoch 52: 2.769797, lr: 0.01000
+#> Loss at epoch 53: 2.748799, lr: 0.01000
+#> Loss at epoch 54: 2.722182, lr: 0.01000
+#> Loss at epoch 55: 2.697139, lr: 0.01000
+#> Loss at epoch 56: 2.672047, lr: 0.01000
+#> Loss at epoch 57: 2.647039, lr: 0.01000
+#> Loss at epoch 58: 2.627221, lr: 0.01000
+#> Loss at epoch 59: 2.596418, lr: 0.01000
+#> Loss at epoch 60: 2.578987, lr: 0.01000
+#> Loss at epoch 61: 2.556948, lr: 0.01000
+#> Loss at epoch 62: 2.538684, lr: 0.01000
+#> Loss at epoch 63: 2.518221, lr: 0.01000
+#> Loss at epoch 64: 2.498832, lr: 0.01000
+#> Loss at epoch 65: 2.479757, lr: 0.01000
+#> Loss at epoch 66: 2.464912, lr: 0.01000
+#> Loss at epoch 67: 2.446946, lr: 0.01000
+#> Loss at epoch 68: 2.429812, lr: 0.01000
+#> Loss at epoch 69: 2.418168, lr: 0.01000
+#> Loss at epoch 70: 2.402212, lr: 0.01000
+#> Loss at epoch 71: 2.395042, lr: 0.01000
+#> Loss at epoch 72: 2.378431, lr: 0.01000
+#> Loss at epoch 73: 2.369493, lr: 0.01000
+#> Loss at epoch 74: 2.359295, lr: 0.01000
+#> Loss at epoch 75: 2.348984, lr: 0.01000
+#> Loss at epoch 76: 2.343838, lr: 0.01000
+#> Loss at epoch 77: 2.335099, lr: 0.01000
+#> Loss at epoch 78: 2.328461, lr: 0.01000
+#> Loss at epoch 79: 2.321577, lr: 0.01000
+#> Loss at epoch 80: 2.316629, lr: 0.01000
+#> Loss at epoch 81: 2.311588, lr: 0.01000
+#> Loss at epoch 82: 2.305485, lr: 0.01000
+#> Loss at epoch 83: 2.301568, lr: 0.01000
+#> Loss at epoch 84: 2.298547, lr: 0.01000
+#> Loss at epoch 85: 2.293895, lr: 0.01000
+#> Loss at epoch 86: 2.289355, lr: 0.01000
+#> Loss at epoch 87: 2.287325, lr: 0.01000
+#> Loss at epoch 88: 2.283874, lr: 0.01000
+#> Loss at epoch 89: 2.280997, lr: 0.01000
+#> Loss at epoch 90: 2.278256, lr: 0.01000
+#> Loss at epoch 91: 2.275686, lr: 0.01000
+#> Loss at epoch 92: 2.272756, lr: 0.01000
+#> Loss at epoch 93: 2.271305, lr: 0.01000
+#> Loss at epoch 94: 2.269124, lr: 0.01000
+#> Loss at epoch 95: 2.267164, lr: 0.01000
+#> Loss at epoch 96: 2.266380, lr: 0.01000
+#> Loss at epoch 97: 2.263124, lr: 0.01000
+#> Loss at epoch 98: 2.260909, lr: 0.01000
+#> Loss at epoch 99: 2.260355, lr: 0.01000
+#> Loss at epoch 100: 2.258677, lr: 0.01000
 #>      [,1] [,2]
 #> [1,]    5    2
 #> [2,]    4    2
@@ -1208,21 +1279,19 @@ as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
 #> # A tibble: 10 × 6
 #>    steps  test train models hidden          lr
 #>    <int> <dbl> <dbl> <lgl>  <list>       <dbl>
-#>  1     1  56.3     0 NA     <dbl [2]> 0.0769  
-#>  2     2  38.0     0 NA     <dbl [2]> 0.0647  
-#>  3     3  20.7     0 NA     <dbl [2]> 0.0409  
-#>  4     4 134.      0 NA     <dbl [2]> 0.000946
-#>  5     5  46.2     0 NA     <dbl [2]> 0.0194  
-#>  6     6  33.3     0 NA     <dbl [2]> 0.0959  
-#>  7     7  47.8     0 NA     <dbl [2]> 0.0706  
-#>  8     8  48.6     0 NA     <dbl [2]> 0.0444  
-#>  9     9  40.2     0 NA     <dbl [2]> 0.0201  
-#> 10    10  28.4     0 NA     <dbl [2]> 0.0794  
+#>  1     1  57.2     0 NA     <dbl [2]> 0.0769  
+#>  2     2  37.0     0 NA     <dbl [2]> 0.0647  
+#>  3     3  26.2     0 NA     <dbl [2]> 0.0409  
+#>  4     4 135.      0 NA     <dbl [2]> 0.000946
+#>  5     5  60.3     0 NA     <dbl [2]> 0.0194  
+#>  6     6  32.4     0 NA     <dbl [2]> 0.0959  
+#>  7     7  56.4     0 NA     <dbl [2]> 0.0706  
+#>  8     8  37.6     0 NA     <dbl [2]> 0.0444  
+#>  9     9  51.5     0 NA     <dbl [2]> 0.0201  
+#> 10    10  24.7     0 NA     <dbl [2]> 0.0794  
 
 
-#>            [,1]       [,2]       [,3]
-#> [1,] 0.33127803 0.04741610 0.07248808
-#> [2,] 0.04741610 0.17655137 0.03152749
-#> [3,] 0.07248808 0.03152749 0.21995127
+
+
 # }
 ```

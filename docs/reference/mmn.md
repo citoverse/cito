@@ -148,12 +148,12 @@ mmn(
 
 - epochs:
 
-  Number of epochs to train the model.
+  Number of epochs to train the model. Default is 100.
 
 - weights:
 
   weights or other values (can be also a matrix) that the likelihood has
-  access to Default is 100.
+  access to.
 
 - early_stopping:
 
@@ -339,9 +339,9 @@ mmn.fit <- mmn(Y ~
 ## If the loss is still decreasing you can continue training for additional epochs:
 mmn.fit <- continue_training(mmn.fit, epochs = 1)
 }
-#> Loss at epoch 1: training: 1.426, validation: 1.352, lr: 0.05000
+#> Loss at epoch 1: training: 1.618, validation: 1.594, lr: 0.05000
 
-#> Loss at epoch 2: training: 1.099, validation: 1.151, lr: 0.05000
+#> Loss at epoch 2: training: 1.132, validation: 1.280, lr: 0.05000
 
 # }
 ```

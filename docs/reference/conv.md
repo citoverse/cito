@@ -36,8 +36,10 @@ conv(
 - stride:
 
   (integer or tuple) The stride of the kernels in this layer. If `NULL`,
-  the stride is set to the kernel size. Use a tuple if the stride is
-  different in each dimension.
+  the `default_stride` of
+  [`create_architecture`](create_architecture.md) is used (1 for
+  convolutional layers). Use a tuple if the stride is different in each
+  dimension.
 
 - padding:
 
