@@ -51,9 +51,12 @@ cnn.aug <- cnn(X, Y, architecture, loss = "cross-entropy", epochs = 2,
 if(requireNamespace("tiff", quietly = TRUE)) {
   folder <- file.path(tempdir(), "shapes")
   dir.create(folder, showWarnings = FALSE)
-  for(i in 1:50) tiff::writeTIFF(aperm(X[i,,,], c(2, 3, 1)), file.path(folder, sprintf("%03d.tiff", i)))
+  for(i in 1:50) {
+    tiff::writeTIFF(aperm(X[i,,,], c(2, 3, 1)), file.path(folder, sprintf("%03d.tiff", i)))
+  }
   # files are matched to Y in the order of list.files(folder)
-  cnn.disk <- cnn(folder, Y[1:50], architecture, loss = "cross-entropy", epochs = 1, device = device)
+  cnn.disk <- cnn(folder, Y[1:50], architecture, loss = "cross-entropy",
+                  epochs = 1, device = device)
   predict(cnn.disk, newdata = folder, type = "class")[1:5]
   unlink(folder, recursive = TRUE)
 }

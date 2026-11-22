@@ -120,6 +120,32 @@ m = dnn(cbind(X1, X2, X3)~., data = data.frame(Y, A = as.factor(runif(100))),
 ## conditional logit for size > 1 is not supported yet
 
 
+## Binary response (0/1 or a two-level factor)
+iris2 = transform(iris, setosa = as.integer(Species == "setosa"))
+m = dnn(setosa ~ Sepal.Length + Sepal.Width, data = iris2,
+        loss = "bernoulli", optimizer = "ignite_adam", lr = 0.01, epochs = 20L, verbose = FALSE)
+
+## Output of the last hidden layer instead of the predictions
+dim(predict(m, return_embeddings = TRUE))
+
+## Blocked bootstrap: resample whole groups instead of rows
+m = dnn(Sepal.Length ~ Petal.Length + Petal.Width, data = iris, epochs = 20L,
+        bootstrap = 5L, bootstrap_blocking_variable = iris$Species, verbose = FALSE)
+
+## Hooks are evaluated after every epoch inside the training loop, where
+## 'model' and 'epoch' are visible; their results are collected in hooks_result
+m = dnn(Sepal.Length ~ ., data = iris, epochs = 5L, verbose = FALSE,
+        hooks = list(function() model$losses$train_l[epoch]))
+unlist(m$hooks_result)
+
+## Observation weights are passed to a custom likelihood with a weights argument
+weighted_mse = function(pred, true, weights = NULL) {
+  l = (pred - true)^2
+  if(is.null(weights)) l else l * weights
+}
+m = dnn(Sepal.Length ~ ., data = iris, loss = weighted_mse, epochs = 5L,
+        weights = runif(150), verbose = FALSE)
+
 # Hyperparameter tuning (experimental feature)
 hidden_values = matrix(c(5, 2,
                          4, 2,
