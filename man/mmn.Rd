@@ -163,6 +163,27 @@ mmn.fit <- mmn(Y ~
 
 ## If the loss is still decreasing you can continue training for additional epochs:
 mmn.fit <- continue_training(mmn.fit, epochs = 1)
+
+## Predictions for new data: a list with the same names as in the formula
+new_data <- list(X_cnn = X_cnn[1:5,,,,drop = FALSE], X_dnn = X_dnn[1:5,])
+predict(mmn.fit, newdata = new_data)
+
+## Output of the last hidden layer of the fusion network, e.g. for a downstream model
+dim(predict(mmn.fit, newdata = new_data, return_embeddings = TRUE))
+
+## Importance of the data streams: each stream is permuted across the samples
+## and the increase in loss is what it contributes
+summary(mmn.fit, n_permute = 3L)
+plot(mmn.fit, n_permute = 3L)
+
+## Architecture: one row per data stream, the concatenation, and the fusion network
+plot(mmn.fit, plot_type = "arch")
+
+## Weights and biases of all submodels
+names(coef(mmn.fit)$net_parameters)
+
+## Images can also stay on disk, see ?cnn (folder input) and ?raster_patches
+## (windows cut from a large GeoTIFF); both work as data streams of mmn()
 }
 }
 }
