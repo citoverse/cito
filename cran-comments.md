@@ -1,5 +1,5 @@
 # Version 1.2
-## cito submission 1 2026/11/17
+## cito submission 1 2026/11/22
 
 Dear CRAN Team,
 
@@ -21,25 +21,25 @@ Max Pichler
 
 ### Reverse dependencies
 
-No packages Depend on, Import from or LinkTo 'cito'. Two packages Suggest it, 'biomod2' and
+No packages depend on, import from or link to 'cito'. Two packages suggest it, 'biomod2' and
 'caretSDM'. biomod2 4.3-4-8 was run with this version through its cito code paths (binary,
-binary with tuning, count, multiclass and ordinal data, var.import, projection to new data and
-ensemble modelling) and they run as with cito 1.1. caretSDM 1.9.7 lists 'cito' in Suggests but
-does not call it.
+binary with tuning, count, multiclass and ordinal data, variable importance, projection to new
+data and ensemble modelling), and they run as with cito 1.1. caretSDM 1.9.7 suggests 'cito'
+but does not call it.
 
 ### Successful R CMD checks under
 
 Locally:
-* Ubuntu 26.04 LTS (R 4.5.2, x86_64-pc-linux-gnu) (CPU device)
-* Ubuntu 24.04 LTS (R 4.6.1), test suite on the CUDA device
+* Ubuntu 26.04 LTS (R 4.5.2, x86_64-pc-linux-gnu), CPU device
+* Ubuntu 24.04 LTS (R 4.6.1), test suite on the CPU and on the CUDA device
 
-Github actions:
-* macOS-latest (release)
-* Ubuntu R-release, and R-development
-* Windows-latest R-release
+GitHub Actions:
+* macOS-latest (R-release)
+* Ubuntu (R-release and R-devel)
+* Windows-latest (R-release)
 
-Win-builder
-* R-release, R-development, and R-oldrelease <TODO: confirm on final commit>
+Win-builder:
+* R-release and R-devel: no ERRORs, WARNINGs or NOTEs
 
 Spelling has been checked (potential errors are intended).
 
