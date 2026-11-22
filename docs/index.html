@@ -98,7 +98,7 @@
 <code class="sourceCode R"><span><span class="fu"><a href="reference/analyze_training.html">analyze_training</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span>
 <span><span class="co"># At 1st glance, the networks converged since the loss is lower than the baseline loss and the training loss is on a plateau at the end of the training.</span></span></code></pre></div>
 <ol start="3" style="list-style-type: decimal">
-<li>Plot model architecture</li>
+<li>Plot the effects (accumulated local effects with bootstrap confidence intervals; <code>plot(nn.fit, plot_type = "arch")</code> draws the architecture)</li>
 </ol>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span></span></code></pre></div>
@@ -111,27 +111,18 @@
 <span><span class="co">## Summary of Deep Neural Network Model</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## ── Feature Importance</span></span>
-<span><span class="co">##                 Importance Std.Err Z value Pr(&gt;|z|)  </span></span>
-<span><span class="co">## Sepal.Width →        0.897   0.443    2.02    0.043 *</span></span>
-<span><span class="co">## Petal.Length →      20.428   8.032    2.54    0.011 *</span></span>
-<span><span class="co">## Petal.Width →        0.695   0.690    1.01    0.314  </span></span>
-<span><span class="co">## Species →            0.647   0.634    1.02    0.307  </span></span>
+<span><span class="co">##                  Importance Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">## Sepal.Width -&gt;       0.0468  0.0137    3.40  0.00066 ***</span></span>
+<span><span class="co">## Petal.Length -&gt;      1.4363  0.3436    4.18  2.9e-05 ***</span></span>
+<span><span class="co">## Petal.Width -&gt;       0.0647  0.0521    1.24  0.21376    </span></span>
 <span><span class="co">## ---</span></span>
 <span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">## ── Average Conditional Effects</span></span>
-<span><span class="co">##                     ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">## Sepal.Width →    0.4838  0.0873    5.54    3e-08 ***</span></span>
-<span><span class="co">## Petal.Length →   0.6485  0.0745    8.71   &lt;2e-16 ***</span></span>
-<span><span class="co">## Petal.Width →   -0.2264  0.1335   -1.70     0.09 .  </span></span>
-<span><span class="co">## ---</span></span>
-<span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span>
-<span><span class="co">## </span></span>
-<span><span class="co">## ── Standard Deviation of Conditional Effects</span></span>
-<span><span class="co">##                    ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
-<span><span class="co">## Sepal.Width →   0.0657  0.0176    3.73  0.00019 ***</span></span>
-<span><span class="co">## Petal.Length →  0.0503  0.0178    2.83  0.00467 ** </span></span>
-<span><span class="co">## Petal.Width →   0.0382  0.0139    2.75  0.00596 ** </span></span>
+<span><span class="co">##                      ACE Std.Err Z value Pr(&gt;|z|)    </span></span>
+<span><span class="co">## Sepal.Width -&gt;    0.4828  0.0647    7.46  8.6e-14 ***</span></span>
+<span><span class="co">## Petal.Length -&gt;   0.6717  0.0751    8.95  &lt; 2e-16 ***</span></span>
+<span><span class="co">## Petal.Width -&gt;   -0.3021  0.1416   -2.13    0.033 *  </span></span>
 <span><span class="co">## ---</span></span>
 <span><span class="co">## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1</span></span></code></pre></div>
 <ol start="5" style="list-style-type: decimal">
@@ -150,19 +141,64 @@
 <span><span class="co">## Fitting final model...</span></span>
 <span><span class="va">nn.fit</span><span class="op">$</span><span class="va">tuning</span></span>
 <span><span class="co">## # A tibble: 10 × 5</span></span>
-<span><span class="co">##    steps    test train models      lr</span></span>
-<span><span class="co">##    &lt;int&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt;    &lt;dbl&gt;</span></span>
-<span><span class="co">##  1     1 Inf         0 NA     0.0155 </span></span>
-<span><span class="co">##  2     2 Inf         0 NA     0.0993 </span></span>
-<span><span class="co">##  3     3   0.553     0 NA     0.00393</span></span>
-<span><span class="co">##  4     4 Inf         0 NA     0.0817 </span></span>
-<span><span class="co">##  5     5 Inf         0 NA     0.0179 </span></span>
-<span><span class="co">##  6     6 Inf         0 NA     0.0947 </span></span>
-<span><span class="co">##  7     7 Inf         0 NA     0.0176 </span></span>
-<span><span class="co">##  8     8 Inf         0 NA     0.0241 </span></span>
-<span><span class="co">##  9     9 Inf         0 NA     0.0817 </span></span>
-<span><span class="co">## 10    10 Inf         0 NA     0.0337</span></span></code></pre></div>
+<span><span class="co">##    steps  test train models     lr</span></span>
+<span><span class="co">##    &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;lgl&gt;   &lt;dbl&gt;</span></span>
+<span><span class="co">##  1     1 Inf       0 NA     0.0333</span></span>
+<span><span class="co">##  2     2  28.9     0 NA     0.0136</span></span>
+<span><span class="co">##  3     3 Inf       0 NA     0.0867</span></span>
+<span><span class="co">##  4     4 Inf       0 NA     0.0690</span></span>
+<span><span class="co">##  5     5 Inf       0 NA     0.0173</span></span>
+<span><span class="co">##  6     6 Inf       0 NA     0.0487</span></span>
+<span><span class="co">##  7     7 Inf       0 NA     0.0229</span></span>
+<span><span class="co">##  8     8 Inf       0 NA     0.0938</span></span>
+<span><span class="co">##  9     9 Inf       0 NA     0.0924</span></span>
+<span><span class="co">## 10    10 Inf       0 NA     0.0748</span></span></code></pre></div>
 <p>The tuning can be configured with <code>tuning=config_tuning()</code>. After tuning, a final model trained with the best hyperparameters is returned. Hyperparameter combinations that do not achieve a loss below the baseline loss will be aborted early and not fully cross-validated. These runs are given a test loss of infinity.</p>
+</div>
+<div class="section level3">
+<h3 id="convolutional-neural-networks">Convolutional neural networks<a class="anchor" aria-label="anchor" href="#convolutional-neural-networks"></a>
+</h3>
+<p><code><a href="reference/cnn.html">cnn()</a></code> fits convolutional networks to images (or 1D/3D arrays). The input is an array <code>[samples, channels, ...]</code>, a folder of jpeg/png/tiff files, or windows cut from one large georeferenced raster with <code><a href="reference/raster_patches.html">raster_patches()</a></code>. The architecture is assembled from layers with <code><a href="reference/create_architecture.html">create_architecture()</a></code>:</p>
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">shapes</span> <span class="op">&lt;-</span> <span class="fu">cito</span><span class="fu">:::</span><span class="fu"><a href="reference/simulate_shapes.html">simulate_shapes</a></span><span class="op">(</span>n <span class="op">=</span> <span class="fl">320</span>, size <span class="op">=</span> <span class="fl">32</span>, channels <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">architecture</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/create_architecture.html">create_architecture</a></span><span class="op">(</span><span class="fu"><a href="reference/conv.html">conv</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="reference/maxPool.html">maxPool</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/conv.html">conv</a></span><span class="op">(</span><span class="fl">5</span><span class="op">)</span>, <span class="fu"><a href="reference/maxPool.html">maxPool</a></span><span class="op">(</span><span class="op">)</span>, <span class="fu"><a href="reference/linear.html">linear</a></span><span class="op">(</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">cnn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/cnn.html">cnn</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">shapes</span><span class="op">$</span><span class="va">data</span>, Y <span class="op">=</span> <span class="va">shapes</span><span class="op">$</span><span class="va">labels</span>, architecture <span class="op">=</span> <span class="va">architecture</span>,</span>
+<span>               loss <span class="op">=</span> <span class="st">"cross-entropy"</span>, optimizer <span class="op">=</span> <span class="st">"adam"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>               verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span>predicted <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cnn.fit</span>, type <span class="op">=</span> <span class="st">"class"</span><span class="op">)</span>, observed <span class="op">=</span> <span class="va">shapes</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
+<span><span class="co">##            observed</span></span>
+<span><span class="co">## predicted   ellipsoid rectangle</span></span>
+<span><span class="co">##   ellipsoid       172         0</span></span>
+<span><span class="co">##   rectangle         0       148</span></span></code></pre></div>
+<p>The architecture of the fitted network:</p>
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">cnn.fit</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-12-1.png"><!-- --></p>
+</div>
+<div class="section level3">
+<h3 id="multimodal-neural-networks">Multimodal neural networks<a class="anchor" aria-label="anchor" href="#multimodal-neural-networks"></a>
+</h3>
+<p><code><a href="reference/mmn.html">mmn()</a></code> combines several data streams, e.g. images and tabular predictors, in one network. Each stream gets its own <code><a href="reference/dnn.html">dnn()</a></code> or <code><a href="reference/cnn.html">cnn()</a></code> submodel, and a fusion network on top combines them. <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> reports how much each stream contributes:</p>
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">X_tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Uniform.html" class="external-link">runif</a></span><span class="op">(</span><span class="fl">320</span><span class="op">*</span><span class="fl">3</span><span class="op">)</span>, <span class="fl">320</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">Y</span> <span class="op">&lt;-</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/integer.html" class="external-link">as.integer</a></span><span class="op">(</span><span class="va">shapes</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span> <span class="op">-</span> <span class="fl">1</span><span class="op">)</span><span class="op">*</span><span class="fl">2</span> <span class="op">+</span> <span class="fl">0.5</span><span class="op">*</span><span class="va">X_tab</span><span class="op">[</span>,<span class="fl">1</span><span class="op">]</span> <span class="op">-</span> <span class="fl">0.8</span><span class="op">*</span><span class="va">X_tab</span><span class="op">[</span>,<span class="fl">3</span><span class="op">]</span></span>
+<span><span class="va">mmn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/mmn.html">mmn</a></span><span class="op">(</span><span class="va">Y</span> <span class="op">~</span> <span class="fu"><a href="reference/dnn.html">dnn</a></span><span class="op">(</span><span class="op">~</span><span class="va">.</span>, data <span class="op">=</span> <span class="va">X_tab</span>, hidden <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">50</span>, <span class="fl">50</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
+<span>                 <span class="fu"><a href="reference/cnn.html">cnn</a></span><span class="op">(</span>X <span class="op">=</span> <span class="va">X_img</span>, architecture <span class="op">=</span> <span class="va">architecture</span><span class="op">)</span>,</span>
+<span>               dataList <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>Y <span class="op">=</span> <span class="va">Y</span>, X_img <span class="op">=</span> <span class="va">shapes</span><span class="op">$</span><span class="va">data</span>, X_tab <span class="op">=</span> <span class="va">X_tab</span><span class="op">)</span>,</span>
+<span>               loss <span class="op">=</span> <span class="st">"mse"</span>, optimizer <span class="op">=</span> <span class="st">"adam"</span>, lr <span class="op">=</span> <span class="fl">0.005</span>, epochs <span class="op">=</span> <span class="fl">20</span>,</span>
+<span>               verbose <span class="op">=</span> <span class="cn">FALSE</span>, plot <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mmn.fit</span><span class="op">)</span></span>
+<span><span class="co">## Summary of Multi-Modal Neural Network</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## ── Permutation importance of the data streams</span></span>
+<span><span class="co">##                                             Loss increase     SD  Share</span></span>
+<span><span class="co">## dnn(~., data = X_tab, hidden = c(50, 50))          0.1358 0.0101 0.0651</span></span>
+<span><span class="co">## cnn(X = X_img, architecture = architecture)        1.9493 0.1205 0.9349</span></span>
+<span><span class="co">## </span></span>
+<span><span class="co">## Baseline loss 0.0067, 10 permutations per stream. A stream that contributes little</span></span>
+<span><span class="co">## can come out negative by chance; compare the estimate against its SD before reading it.</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mmn.fit</span>, plot_type <span class="op">=</span> <span class="st">"arch"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-unnamed-chunk-13-1.png"><!-- --></p>
 </div>
 </div>
 <div class="section level2">
@@ -174,7 +210,7 @@
 <li><p>We need one helper function, <code>create_cov()</code> that builds the covariance matrix based on a lower triangular matrix and the diagonals (low-rank approximation of the covariance matrix)</p></li>
 <li><p>We need our custom likelihood function which uses the <code>distr_multivariate_normal(…)</code> function from the torch package:</p></li>
 </ol>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">create_cov</span> <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">L</span>, <span class="va">Diag</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="kw"><a href="https://rdrr.io/r/base/function.html" class="external-link">return</a></span><span class="op">(</span><span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://torch.mlverse.org/docs/reference/torch_matmul.html" class="external-link">torch_matmul</a></span><span class="op">(</span><span class="va">L</span>, <span class="va">L</span><span class="op">$</span><span class="fu">t</span><span class="op">(</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span> <span class="fu">torch</span><span class="fu">::</span><span class="fu"><a href="https://torch.mlverse.org/docs/reference/torch_diag.html" class="external-link">torch_diag</a></span><span class="op">(</span><span class="va">Diag</span><span class="op">$</span><span class="fu">exp</span><span class="op">(</span><span class="op">)</span><span class="op">+</span><span class="fl">0.001</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
@@ -189,7 +225,7 @@
 <ol start="3" style="list-style-type: decimal">
 <li>We use “SigmaPar” and “SigmaDiag” as parameters that we want to optimize along the DNN. We will pass a named list with starting values to ‘cito’ and ‘cito’ will infer automatically (based on the R shape) the shape of the parameters:</li>
 </ol>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">nn.fit</span><span class="op">&lt;-</span> <span class="fu"><a href="reference/dnn.html">dnn</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">Sepal.Length</span>, <span class="va">Sepal.Width</span>, <span class="va">Petal.Length</span><span class="op">)</span><span class="op">~</span><span class="va">.</span>,</span>
 <span>             data <span class="op">=</span> <span class="fu">datasets</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/datasets/iris.html" class="external-link">iris</a></span>,</span>
 <span>             lr <span class="op">=</span> <span class="fl">0.01</span>,</span>
@@ -202,20 +238,20 @@
 <span>                    SigmaPar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">6</span>, sd <span class="op">=</span> <span class="fl">0.001</span><span class="op">)</span>, <span class="fl">3</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span> <span class="co"># Our parameters with starting values</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>Estimated covariance matrix:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu">create_cov</span><span class="op">(</span><span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameters</span><span class="op">$</span><span class="va">SigmaPar</span>,</span>
 <span>                     <span class="va">nn.fit</span><span class="op">$</span><span class="va">loss</span><span class="op">$</span><span class="va">parameters</span><span class="op">$</span><span class="va">SigmaDiag</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">##            [,1]       [,2]       [,3]</span></span>
-<span><span class="co">## [1,] 0.26974857 0.06961995 0.11768616</span></span>
-<span><span class="co">## [2,] 0.06961995 0.12192857 0.04327871</span></span>
-<span><span class="co">## [3,] 0.11768616 0.04327871 0.15618347</span></span></code></pre></div>
+<span><span class="co">## [1,] 0.25706124 0.05718974 0.11934890</span></span>
+<span><span class="co">## [2,] 0.05718974 0.11492345 0.03901247</span></span>
+<span><span class="co">## [3,] 0.11934890 0.03901247 0.16983800</span></span></code></pre></div>
 <p>Empirical covariance matrix:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cov</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">nn.fit</span><span class="op">)</span> <span class="op">-</span> <span class="va">nn.fit</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">Y</span><span class="op">)</span></span>
-<span><span class="co">##            [,1]       [,2]      [,3]</span></span>
-<span><span class="co">## [1,] 0.23646916 0.06383643 0.1227149</span></span>
-<span><span class="co">## [2,] 0.06383643 0.08887552 0.0185613</span></span>
-<span><span class="co">## [3,] 0.12271493 0.01856130 0.1308537</span></span></code></pre></div>
+<span><span class="co">##              Sepal.Length Sepal.Width Petal.Length</span></span>
+<span><span class="co">## Sepal.Length   0.21880961  0.05860395   0.11779459</span></span>
+<span><span class="co">## Sepal.Width    0.05860395  0.09050435   0.01886577</span></span>
+<span><span class="co">## Petal.Length   0.11779459  0.01886577   0.13105972</span></span></code></pre></div>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

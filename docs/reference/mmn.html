@@ -283,11 +283,43 @@ The specification works exactly as in <code><a href="dnn.html">dnn</a></code> an
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## If the loss is still decreasing you can continue training for additional epochs:</span></span></span>
 <span class="r-in"><span><span class="va">mmn.fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="continue_training.html">continue_training</a></span><span class="op">(</span><span class="va">mmn.fit</span>, epochs <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Predictions for new data: a list with the same names as in the formula</span></span></span>
+<span class="r-in"><span><span class="va">new_data</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>X_cnn <span class="op">=</span> <span class="va">X_cnn</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,,,,drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, X_dnn <span class="op">=</span> <span class="va">X_dnn</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,<span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">mmn.fit</span>, newdata <span class="op">=</span> <span class="va">new_data</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Output of the last hidden layer of the fusion network, e.g. for a downstream model</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">mmn.fit</span>, newdata <span class="op">=</span> <span class="va">new_data</span>, return_embeddings <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Importance of the data streams: each stream is permuted across the samples</span></span></span>
+<span class="r-in"><span><span class="co">## and the increase in loss is what it contributes</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">mmn.fit</span>, n_permute <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mmn.fit</span>, n_permute <span class="op">=</span> <span class="fl">3L</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Architecture: one row per data stream, the concatenation, and the fusion network</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">mmn.fit</span>, plot_type <span class="op">=</span> <span class="st">"arch"</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Weights and biases of all submodels</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">mmn.fit</span><span class="op">)</span><span class="op">$</span><span class="va">net_parameters</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Images can also stay on disk, see ?cnn (folder input) and ?raster_patches</span></span></span>
+<span class="r-in"><span><span class="co">## (windows cut from a large GeoTIFF); both work as data streams of mmn()</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.618, validation: 1.594, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.493, validation: 1.189, lr: 0.05000</span>
 <span class="r-plt img"><img src="mmn-1.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 1.132, validation: 1.280, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 1.030, validation: 1.100, lr: 0.05000</span>
 <span class="r-plt img"><img src="mmn-2.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="mmn-3.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="mmn-4.png" alt="" width="700" height="433"></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [1] "subModules.0.l_1.weight" "subModules.0.l_1.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [3] "subModules.0.l_3.weight" "subModules.0.l_3.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [5] "subModules.0.l_5.weight" "subModules.0.l_5.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [7] "subModules.1.l_1.weight" "subModules.1.l_1.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>  [9] "subModules.1.l_4.weight" "subModules.1.l_4.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [11] "subModules.1.l_8.weight" "subModules.1.l_8.bias"  </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [13] "fusion.l_1.weight"       "fusion.l_1.bias"        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [15] "fusion.l_3.weight"       "fusion.l_3.bias"        </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [17] "fusion.l_5.weight"       "fusion.l_5.bias"        </span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

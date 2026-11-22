@@ -314,6 +314,33 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-in"><span><span class="co">## Convergence can be tested via the analyze_training function</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="analyze_training.html">analyze_training</a></span><span class="op">(</span><span class="va">cnn.fit</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Predictions, and the output of the last hidden layer (embeddings)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cnn.fit</span>, newdata <span class="op">=</span> <span class="va">X</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,,,,drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, type <span class="op">=</span> <span class="st">"class"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cnn.fit</span>, newdata <span class="op">=</span> <span class="va">X</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>,,,,drop <span class="op">=</span> <span class="cn">FALSE</span><span class="op">]</span>, return_embeddings <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Data augmentation: random 90 degree rotations and flips of every image,</span></span></span>
+<span class="r-in"><span><span class="co">## drawn anew in each epoch</span></span></span>
+<span class="r-in"><span><span class="va">cnn.aug</span> <span class="op">&lt;-</span> <span class="fu">cnn</span><span class="op">(</span><span class="va">X</span>, <span class="va">Y</span>, <span class="va">architecture</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span>, epochs <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>               data_augmentation <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="st">"rotate90"</span>, <span class="st">"flip"</span><span class="op">)</span>, device <span class="op">=</span> <span class="va">device</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Images on disk: X is a folder (jpeg, png or tiff), read batch by batch</span></span></span>
+<span class="r-in"><span><span class="co">## during training, so the data do not have to fit into memory</span></span></span>
+<span class="r-in"><span><span class="kw">if</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"tiff"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>  <span class="va">folder</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempdir</a></span><span class="op">(</span><span class="op">)</span>, <span class="st">"shapes"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/files2.html" class="external-link">dir.create</a></span><span class="op">(</span><span class="va">folder</span>, showWarnings <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="kw">for</span><span class="op">(</span><span class="va">i</span> <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span><span class="fl">50</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span>    <span class="fu">tiff</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/tiff/man/writeTIFF.html" class="external-link">writeTIFF</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/aperm.html" class="external-link">aperm</a></span><span class="op">(</span><span class="va">X</span><span class="op">[</span><span class="va">i</span>,,,<span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">folder</span>, <span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%03d.tiff"</span>, <span class="va">i</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">}</span></span></span>
+<span class="r-in"><span>  <span class="co"># files are matched to Y in the order of list.files(folder)</span></span></span>
+<span class="r-in"><span>  <span class="va">cnn.disk</span> <span class="op">&lt;-</span> <span class="fu">cnn</span><span class="op">(</span><span class="va">folder</span>, <span class="va">Y</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">50</span><span class="op">]</span>, <span class="va">architecture</span>, loss <span class="op">=</span> <span class="st">"cross-entropy"</span>,</span></span>
+<span class="r-in"><span>                  epochs <span class="op">=</span> <span class="fl">1</span>, device <span class="op">=</span> <span class="va">device</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cnn.disk</span>, newdata <span class="op">=</span> <span class="va">folder</span>, type <span class="op">=</span> <span class="st">"class"</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/unlink.html" class="external-link">unlink</a></span><span class="op">(</span><span class="va">folder</span>, recursive <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co">## Windows cut from one large georeferenced raster around each observation</span></span></span>
+<span class="r-in"><span><span class="co">## are an input as well, see ?raster_patches</span></span></span>
+<span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## Transfer learning</span></span></span>
 <span class="r-in"><span><span class="co">### With the transfer() function we can use predefined architectures with pretrained weights</span></span></span>
 <span class="r-in"><span><span class="va">transfer_architecture</span> <span class="op">&lt;-</span> <span class="fu"><a href="create_architecture.html">create_architecture</a></span><span class="op">(</span><span class="fu"><a href="transfer.html">transfer</a></span><span class="op">(</span><span class="st">"resnet18"</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -322,15 +349,15 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">resnet</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">resnet</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 0.693, validation: 0.699, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 0.695, validation: 0.695, lr: 0.05000</span>
 <span class="r-plt img"><img src="cnn-1.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 0.690, validation: 0.704, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: training: 0.689, validation: 0.708, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: training: 0.693, validation: 0.694, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 3: training: 0.691, validation: 0.695, lr: 0.05000</span>
 <span class="r-plt img"><img src="cnn-2.png" alt="" width="700" height="433"></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: training: 0.688, validation: 0.711, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: training: 0.687, validation: 0.715, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: training: 0.686, validation: 0.717, lr: 0.05000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: training: 0.685, validation: 0.722, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 4: training: 0.688, validation: 0.695, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 5: training: 0.686, validation: 0.693, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 6: training: 0.681, validation: 0.693, lr: 0.05000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 7: training: 0.679, validation: 0.697, lr: 0.05000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cnn(X = X, Y = Y, architecture = architecture, loss = "cross-entropy", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     lr = 0.05, validation = 0.1, epochs = 2, device = device)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------------------------------------</span>
@@ -365,10 +392,15 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-out co"><span class="r-pr">#&gt;</span>            |Activation: Depends on loss</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------------------------------------</span>
 <span class="r-plt img"><img src="cnn-3.png" alt="" width="700" height="433"></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 0.707142, lr: 0.01000</span>
+<span class="r-plt img"><img src="cnn-4.png" alt="" width="700" height="433"></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 2: 0.705377, lr: 0.01000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: 0.715356, lr: 0.01000</span>
+<span class="r-plt img"><img src="cnn-5.png" alt="" width="700" height="433"></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Model weights for <span style="color: #0000BB;">&lt;resnet18&gt;</span> (<span style="font-style: italic;">~45 MB</span>) will be downloaded and processed if not</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> already available.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.810, validation: 0.078, lr: 0.05000</span>
-<span class="r-plt img"><img src="cnn-4.png" alt="" width="700" height="433"></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Loss at epoch 1: training: 1.107, validation: 0.009, lr: 0.05000</span>
+<span class="r-plt img"><img src="cnn-6.png" alt="" width="700" height="433"></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> cnn(X = X, Y = Y, architecture = transfer_architecture, loss = "cross-entropy", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     lr = 0.05, validation = 0.1, epochs = 1, device = device)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------------------------------------</span>
@@ -383,7 +415,7 @@ In addition to custom functions, the list can contain the names (as strings) of 
 <span class="r-out co"><span class="r-pr">#&gt;</span>            |Bias: TRUE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>            |Activation: Depends on loss</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> -------------------------------------------------------------------------------</span>
-<span class="r-plt img"><img src="cnn-5.png" alt="" width="700" height="433"></span>
+<span class="r-plt img"><img src="cnn-7.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
