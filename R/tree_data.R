@@ -1,7 +1,7 @@
 #' Tree Data
 #'
-#' A subset of data from the World Health Organization Global Tuberculosis
-#' Report ...
+#' A simulated data set of 500 sites for trying out multimodal networks (\code{\link{mmn}}):
+#' a binary image per site, three standardized environmental predictors, and three responses.
 #'
 #' @format ## `tree_data`
 #' List with the following objects (500 observations)

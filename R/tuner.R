@@ -8,7 +8,7 @@
 #' @param additional numeric, additional control parameter which sets the value of the fixed argument
 #' @param values custom values from which hyperparameters are sampled, must be a matrix for hidden layers (first column == nodes, second column == number of layers)
 #'
-#'
+#' @return An object of class \code{"tune"} that marks a hyperparameter of \code{\link{dnn}} for tuning.
 #'
 #' @export
 
@@ -36,6 +36,7 @@ tune = function(lower = NULL, upper = NULL, fixed = NULL, additional = NULL, val
 #' @param blocking blocking variable, must be a factor
 #' @param return_models return individual models
 #'
+#' @return A list with the tuning settings, passed to the \code{tuning} argument of \code{\link{dnn}}.
 #'
 #' @details
 #' Note that hyperparameter tuning can be expensive. We have implemented an option to parallelize hyperparameter tuning, including parallelization over one or more GPUs (the hyperparameter evaluation is parallelized, not the CV). This can be especially useful for small models. For example, if you have 4 GPUs, 20 CPU cores, and 20 steps (random samples from the random search), you could run `dnn(..., device="cuda",lr = tune(), batchsize=tune(), tuning=config_tuning(parallel=20, NGPU=4)', which will distribute 20 model fits across 4 GPUs, so that each GPU will process 5 models (in parallel).
@@ -55,6 +56,11 @@ config_tuning = function(CV = 5, steps = 10, parallel = FALSE, NGPU = 1, cancel 
   return(out)
 }
 
+
+# a NA loss is an expected outcome for some tuning steps, which are scored as failed instead
+muffle_na_loss = function(expr) {
+  withCallingHandlers(expr, warning = function(w) if(startsWith(conditionMessage(w), "Loss is NA")) invokeRestart("muffleWarning"))
+}
 
 #' @import tibble
 tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tuning, Y_torch, loss, device) {
@@ -122,7 +128,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tu
           #else parameters$Y = Y[-cv]
           parameters$data = data[-cv,,drop=FALSE]
           if(!is.null(weights)) parameters$weights = weights[-cv,,drop=FALSE]
-          m = do.call(dnn, parameters)
+          m = muffle_na_loss(do.call(dnn, parameters))
 
           loss.fkt <- m$loss
 
@@ -199,7 +205,7 @@ tuning_function = function(tuner, parameters, X, Y,Z, weights, data, formula, tu
         parameters$data = data[-cv,,drop=FALSE]
         if(!is.null(weights)) parameters$weights = weights[-cv,,drop=FALSE]
 
-        m = do.call(dnn, parameters)
+        m = muffle_na_loss(do.call(dnn, parameters))
 
         loss.fkt <- m$loss
 

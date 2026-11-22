@@ -11,7 +11,7 @@ knitr::opts_chunk$set(fig.path = "man/figures/README-", collapse=TRUE)
 
 # cito
 
-[![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![CRAN_Status_Badge](http://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito) [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
+[![Project Status: Active -- The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0) [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/cito)](https://cran.r-project.org/package=cito) [![R-CMD-check](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/citoverse/cito/actions/workflows/R-CMD-check.yaml)
 [![Publication](https://img.shields.io/badge/Publication-10.1111/ecog.07143-green.svg)](https://doi.org/10.1111/ecog.07143)
 
 <!-- badges: end -->
@@ -139,8 +139,8 @@ nn.fit<- dnn(cbind(Sepal.Length, Sepal.Width, Petal.Length)~.,
 Estimated covariance matrix:
 
 ```{r}
-as.matrix(create_cov(nn.fit$loss$parameter$SigmaPar,
-                     nn.fit$loss$parameter$SigmaDiag))
+as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
+                     nn.fit$loss$parameters$SigmaDiag))
 ```
 
 Empirical covariance matrix:

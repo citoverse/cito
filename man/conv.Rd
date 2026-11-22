@@ -21,7 +21,7 @@ conv(
 
 \item{kernel_size}{(integer or tuple) The size of the kernels in this layer. Use a tuple if the kernel size is different in each dimension.}
 
-\item{stride}{(integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride is different in each dimension.}
+\item{stride}{(integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the \code{default_stride} of \code{\link{create_architecture}} is used (1 for convolutional layers). Use a tuple if the stride is different in each dimension.}
 
 \item{padding}{(integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding is different in each dimension.}
 

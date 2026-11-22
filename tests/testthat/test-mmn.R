@@ -209,8 +209,11 @@ testthat::test_that("mmn() accepts weights and predict() checks the shape of new
 
   ok <- list(X_cnn = sh$data[1:5, , , , drop = FALSE], X_dnn = Xd[1:5, , drop = FALSE])
   testthat::expect_equal(nrow(predict(m, newdata = ok)), 5L)
-  # a weighted loss called without its weights aborted R from summary() and plot()
-  testthat::expect_error(summary(m), "weights")
+  # the weights are stored, so summary() and continue_training() pass them to the loss
+  testthat::expect_error(summary(m, n_permute = 2L), NA)
+  m2 <- continue_training(m, epochs = 1L, verbose = FALSE)
+  testthat::expect_true(m2$training_properties$has_weights)
+  testthat::expect_equal(nrow(m2$data$weights), n)
 })
 
 testthat::test_that("mmn() refuses streams of different length, e.g. after NA rows were dropped", {

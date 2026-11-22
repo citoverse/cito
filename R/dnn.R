@@ -14,13 +14,13 @@
 #' @param optimizer which optimizer used for training the network, for more adjustments to optimizer see \code{\link{config_optimizer}}
 #' @param lr learning rate given to optimizer
 #' @param lr_scheduler learning rate scheduler created with \code{\link{config_lr_scheduler}}
-#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1
+#' @param alpha add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||_2} will get added for each layer (the L2 part is the Euclidean norm, not its square). Must be between 0 and 1
 #' @param lambda strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)
 #' @param validation percentage of data set that should be taken as validation set (chosen randomly). Alternatively, a vector containing the indices of the validation samples can be provided.
 #' @param batchsize number of samples that are used to calculate one learning rate step, default is 10% of the training data
 #' @param shuffle if TRUE, data in each batch gets reshuffled every epoch
 #' @param epochs epochs the training goes on for
-#' @param weights weights or other values (can be also a matrix) that the likelihood has access to
+#' @param weights weights or other values (can be also a matrix) that the likelihood has access to. Only custom loss functions with a \code{weights} argument accept them.
 #' @param early_stopping if set to an integer, training stops when the loss has increased for the specified number of epochs in a row. The validation loss is used when a validation set is available, otherwise the training loss is used.
 #' @param burnin training is aborted if the training loss is not below the baseline loss after burnin epochs
 #' @param baseloss baseloss, if null baseloss corresponds to intercept only models
@@ -164,7 +164,7 @@
 #'   | hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` |Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper #' boundaries must be provided (first = number of nodes)|
 #'   | bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
 #'   | lambda | `dnn(…, lambda = tune(0.0001, 0.1))` |lambda will be tuned within the range (0.0001, 0.1)|
-#'   | alpha | `dnn(…, lambda = tune(0.2, 0.4))` |alpha will be tuned within the range (0.2, 0.4)|
+#'   | alpha | `dnn(…, alpha = tune(0.2, 0.4))` |alpha will be tuned within the range (0.2, 0.4)|
 #'   | activation | `dnn(…, activation = tune())`  |	activation functions of the hidden layers will be tuned|
 #'   | dropout | `dnn(…, dropout = tune())`  | Dropout rate will be tuned (globally for all layers)|
 #'   | lr | `dnn(…, lr = tune())`  |Learning rate will be tuned|
@@ -199,7 +199,7 @@
 #'
 #' # Training on graphic cards
 #'
-#' If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
+#' If you have an NVIDIA CUDA-enabled device and a CUDA build of 'torch', you can take advantage of GPU acceleration for training your neural networks (\code{device = "cuda"}). The supported CUDA versions depend on the installed 'torch' version.
 #' For detailed installation instructions and more information on utilizing GPUs for training, please refer to the [mlverse: 'torch' documentation](https://torch.mlverse.org/docs/articles/installation.html).
 #'
 #' Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
@@ -474,6 +474,8 @@ dnn <- function(formula = NULL,
     out$response_column <- response_column #redundant: inferable from old_formula
     out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #redundant to save X, Y and Z?
     out$data$weights <- weights # stored so continue_training() can reuse them
+    out$data$Zlevels <- tmp_data$Zlevels
+    out$data$ordered_lvls <- tmp_data$ordered_lvls
     # levels should be only saved for features in the model, otherwise we get warnings from the predict function
     data_tmp = data[, intersect(all.vars(stats::terms(formula, data = data)), colnames(data)), drop=FALSE]
     out$data$xlvls <- lapply(data_tmp[,sapply(data_tmp, is.factor), drop = F], function(j) levels(j) )
@@ -560,6 +562,7 @@ dnn <- function(formula = NULL,
         ))
         m$data$indices = indices
         m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
+        m$data$ordered_lvls = tmp_data$ordered_lvls
         pb$tick()
         models[[b]] = m
       }
@@ -598,6 +601,7 @@ dnn <- function(formula = NULL,
         ))
         m$data$indices = indices
         m$data$original = list(data = data, X = X, Y = Y_transformed, Z = Z) #X, Y, Z redundant
+        m$data$ordered_lvls = tmp_data$ordered_lvls
         m
       })
       if(!is.null(backend)) parabar::stop_backend(backend)
@@ -608,7 +612,7 @@ dnn <- function(formula = NULL,
     #out$call for print.citodnnBootstrap ?
     out$old_formula = old_formula #old_formula into out$call ?
     out$loss = loss_obj
-    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z) #X, Y, Z redundant
+    out$data <- list(X = X, Y = as.matrix(Y_torch), data = data, Z = Z, Zlevels = tmp_data$Zlevels, ordered_lvls = tmp_data$ordered_lvls) #X, Y, Z redundant
     out$device = device_old
     out$response_column = response_column #redundant: inferable from old_formula
 
@@ -678,11 +682,13 @@ residuals.citodnn <- function(object,...){
 #'
 #' The standard deviation of the ACE quantifies the non-linearity of a feature effect: higher values indicate stronger non-linearities.
 #'
-#' For the permutation importance, the predictive mean squared error is evaluated on the original and on the permuted feature (\eqn{e_{perm}} and \eqn{e_{orig}}), and the importance of feature j is reported as \eqn{FI_j = e_{perm}/e_{orig}}.
+#' For the permutation importance, the loss of the model is evaluated on the original and on the permuted feature (\eqn{e_{perm}} and \eqn{e_{orig}}), and the importance of feature j is reported as the relative increase \eqn{FI_j = e_{perm}/e_{orig} - 1}.
+#'
+#' The "ale" and "ce" importances are derived from the conditional effects and are therefore only defined for numerical features; categorical features are left out of the importance table (a message says which). Use \code{importance = "permutation"} to include them. For bootstrapped models, only "ce" and "permutation" are available.
 #'
 #' @param object a model of class citodnn created by \code{\link{dnn}}
 #' @param n_permute number of permutations used to compute the permutation feature importance. Default is 10.
-#' @param importance method used to compute feature importance: "ale" or "ce" (both derived from the conditional effects), or "permutation" (computationally expensive)
+#' @param importance method used to compute feature importance: "ale" (default) or "ce" (both derived from the conditional effects, numerical features only), or "permutation" (all features, computationally expensive). For bootstrapped models "ce" (default) or "permutation".
 #' @param device device used to calculate the feature importance and conditional effects
 #' @param adjust_se if TRUE, the standard errors of the importance are multiplied by 1/sqrt(3)
 #' @param type scale on which the average conditional effects are calculated ("response" or "link")
@@ -734,6 +740,8 @@ summary.citodnn <- function(object,
 
   out$importance <- get_importance(object, n_permute = n_permute, device = device, type = type, importance = importance, ...)
   if(!is.null(out$importance) && (importance == "permutation")) for(i in 2:ncol(out$importance)) out$importance[,i] = out$importance[,i] - 1
+  dropped = setdiff(names(object$data$xlvls), out$importance$variable)
+  if(importance != "permutation" && length(dropped)) message(paste0("Categorical features are not covered by importance = '", importance, "': ", paste(dropped, collapse = ", "), ". Use importance = 'permutation' to include them."))
   #out$conditionalEffects = conditionalEffects(object, device = device, type = type)
 
 
@@ -1028,7 +1036,7 @@ predict.citodnn <- function(object,
     }
   } else {
     had_rownames <- !is.null(rownames(newdata))
-    if(!is.data.frame(newdata)) newdata <- data.frame(newdata)
+    newdata <- prepare_newdata(object, newdata)
     mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), newdata, xlev = object$data$xlvls)[,-1,drop=FALSE]
     # model.matrix drops rows containing NAs, so the names and the embedding codes have to
     # follow the rows it kept, otherwise predictions are misaligned or the naming errors
@@ -1037,12 +1045,7 @@ predict.citodnn <- function(object,
 
     if(!is.null(object$model_properties$embeddings)) {
       keep <- if(is.null(rownames(mm))) seq_len(nrow(newdata)) else rownames(mm)
-      tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
-        if(!is.factor(newdata[[term]])) stop(paste0(term, " must be factor."))
-        #TODO: check if newdata[[term]] has the same factor levels as object$data[[term]]
-        newdata[keep, term] |> as.integer()
-      }) )
-      Z = torch::torch_tensor(tmp, dtype = torch::torch_long())
+      Z = torch::torch_tensor(embedding_codes(object, newdata[keep, , drop = FALSE]), dtype = torch::torch_long())
     }
   }
 
@@ -1115,14 +1118,16 @@ predict.citodnnBootstrap <- function(object,
 
 
 
-#' Creates graph plot which gives an overview of the network architecture.
+#' Plot the effects or the architecture of a DNN
+#'
+#' \code{plot_type = "ALE"} (default) plots the accumulated local effects of the features (see \code{\link{ALE}}); \code{plot_type = "arch"} draws the network architecture as a graph, including embeddings and fixed effects, and needs the packages 'ggraph' and 'igraph'.
 #'
 #' @param x a model created by \code{\link{dnn}}
-#' @param plot_type plot ALE or architecture
+#' @param plot_type "ALE" or "arch" (architecture)
 #' @param node_size size of node in plot
 #' @param scale_edges edge weight gets scaled according to other weights (layer specific)
 #' @param ... no further functionality implemented yet
-#' @return A plot made with 'ggraph' + 'igraph' that represents the neural network
+#' @return For "ALE", the plots of \code{\link{ALE}}; for "arch", a 'ggraph' plot of the network.
 #' @example /inst/examples/plot.citodnn-example.R
 #' @export
 plot.citodnn<- function(x, plot_type = c("ALE", "arch"), node_size = 1, scale_edges = FALSE,...){

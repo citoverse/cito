@@ -3,7 +3,7 @@
 \name{plot.citodnn}
 \alias{plot.citodnn}
 \alias{plot.citodnnBootstrap}
-\title{Creates graph plot which gives an overview of the network architecture.}
+\title{Plot the effects or the architecture of a DNN}
 \usage{
 \method{plot}{citodnn}(x, plot_type = c("ALE", "arch"), node_size = 1, scale_edges = FALSE, ...)
 
@@ -30,10 +30,10 @@
 \item{which_model}{which model from the ensemble should be plotted}
 }
 \value{
-A plot made with 'ggraph' + 'igraph' that represents the neural network
+For "ALE", the plots of \code{\link{ALE}}; for "arch", a 'ggraph' plot of the network.
 }
 \description{
-Creates graph plot which gives an overview of the network architecture.
+\code{plot_type = "ALE"} (default) plots the accumulated local effects of the features (see \code{\link{ALE}}); \code{plot_type = "arch"} draws the network architecture as a graph, including embeddings and fixed effects, and needs the packages 'ggraph' and 'igraph'.
 }
 \examples{
 \donttest{
@@ -46,7 +46,11 @@ validation_set<- sample(c(1:nrow(datasets::iris)),25)
 # Build and train  Network
 nn.fit<- dnn(Sepal.Length~., data = datasets::iris[-validation_set,])
 
+# accumulated local effects
 plot(nn.fit)
+
+# architecture
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 }
 }
 }

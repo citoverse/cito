@@ -14,6 +14,7 @@
 #'
 #' For more details, see the example below
 #'
+#' @return A list with the settings of the embedding; it is only meaningful inside the formula of \code{\link{dnn}}.
 #'
 #' @example /inst/examples/e-example.R
 #' @export
@@ -56,6 +57,8 @@ e = function(dim = 1L, weights = NULL, train = TRUE, lambda = 0.0, alpha = 1.0) 
 #' effect is the effect of its model-matrix column, e.g. separate rows for \code{Temp} and \code{I(Temp^2)}.
 #'
 #' \code{fe()} can be combined with \code{e()}, but is not supported in \code{mmn()} or with \code{custom}.
+#'
+#' @return A list with \code{lambda} and \code{alpha}; it is only meaningful inside the formula of \code{\link{dnn}}.
 #'
 #' @example /inst/examples/fe-example.R
 #' @export

@@ -55,6 +55,7 @@ continue_training(model, ...)
   device = NULL,
   changed_params = NULL,
   init_optimizer = TRUE,
+  weights = NULL,
   ...
 )
 }
@@ -77,7 +78,7 @@ continue_training(model, ...)
 
 \item{Y}{Target data. If not provided Y from original training will be used}
 
-\item{weights}{observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data (citodnn and citocnn only)}
+\item{weights}{observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data}
 
 \item{parallel}{train bootstrapped model in parallel}
 

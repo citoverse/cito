@@ -104,7 +104,7 @@ train_model <- function(model,  epochs, device, train_dl, valid_dl=NULL, plot_ne
     })
 
     if(is.na(loss$item())) {
-      if(model$training_properties$verbose) cat("Loss is NA. Bad training, please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.\n")
+      warning("Loss is NA, training stopped. Please adjust hyperparameters. See vignette('B-Training_neural_networks') for help.", call. = FALSE)
       model$successfull = 0
       break
     }

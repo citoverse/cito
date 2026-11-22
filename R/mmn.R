@@ -19,8 +19,8 @@
 #' @param batchsize Batch size for training. If NULL, batchsize is 10% of the training data. Default is NULL.
 #' @param shuffle Whether to shuffle the data before each epoch. Default is TRUE.
 #' @param data_augmentation A list of functions used for data augmentation. Elements must be either functions or strings corresponding to inbuilt data augmentation functions. See details for more information.
-#' @param epochs Number of epochs to train the model.
-#' @param weights weights or other values (can be also a matrix) that the likelihood has access to Default is 100.
+#' @param epochs Number of epochs to train the model. Default is 100.
+#' @param weights weights or other values (can be also a matrix) that the likelihood has access to.
 #' @param early_stopping Number of epochs with no improvement after which training will be stopped. Default is Inf.
 #' @param burnin Number of epochs after which the training stops if the loss is still above the baseloss. Default is Inf.
 #' @param baseloss Baseloss used for burnin and plot. If NULL, the baseloss corresponds to intercept only models. Default is NULL.
@@ -230,7 +230,7 @@ mmn <- function(formula,
   out$call <- match.call()
   out$call$formula <- formula
   out$loss <- loss_obj
-  out$data <- list(dataList=dataList)
+  out$data <- list(dataList=dataList, weights = weights) # weights stored for continue_training() and summary()
   if(length(validation) > 1 || validation != 0) out$data <- append(out$data, list(validation = valid))
   out$model_properties <- model_properties
   out$training_properties <- training_properties
@@ -405,9 +405,10 @@ print.summary.citommn <- function(x, ...){
 # modalities of different kinds.
 modality_importance <- function(object, n_permute = 10L, device = NULL, batchsize = NULL) {
   checkmate::qassert(n_permute, "X1[1,)")
-  # mmn() does not store the weights, and a weighted loss called without them aborts in torch
-  if(isTRUE(object$training_properties$has_weights))
-    stop("The permutation importance is not available for an mmn() fitted with weights, which the model does not store.", call. = FALSE)
+  weights <- if(isTRUE(object$training_properties$has_weights)) object$data$weights
+  # models fitted before the weights were stored
+  if(isTRUE(object$training_properties$has_weights) && is.null(weights))
+    stop("The permutation importance is not available for this mmn() fitted with weights; refit it with the current version of cito.", call. = FALSE)
   object <- check_model(object)
   if(is.null(device)) device <- object$training_properties$device
   device <- check_device(device)
@@ -422,15 +423,18 @@ modality_importance <- function(object, n_permute = 10L, device = NULL, batchsiz
   object$net$to(device = device)
   object$loss$to(device = device)
   run_loss <- function(ins) {
-    dl <- do.call(get_data_loader, append(lapply(ins, to_input_tensor),
+    dl <- do.call(get_data_loader, append(c(lapply(ins, to_input_tensor), if(!is.null(weights)) list(torch::torch_tensor(weights))),
                                           list(Y, batch_size = batchsize, shuffle = FALSE,
                                                from_folder = any(vapply(ins, lazy_input, logical(1))))))
     total <- 0
     count <- 0
     coro::loop(for(b in dl) {
       b <- lapply(b, function(z) z$to(device = device, non_blocking = TRUE))
-      out <- object$net(b[-length(b)])
-      l <- object$loss(out, b[[length(b)]])$mean()
+      if(is.null(weights)) {
+        l <- object$loss(object$net(b[-length(b)]), b[[length(b)]])$mean()
+      } else {
+        l <- object$loss(object$net(b[-c(length(b) - 1, length(b))]), b[[length(b)]], weights = b[[length(b) - 1]])$mean()
+      }
       total <- total + as.numeric(l)*dim(b[[length(b)]])[1]
       count <- count + dim(b[[length(b)]])[1]
     })

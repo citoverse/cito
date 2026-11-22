@@ -65,19 +65,19 @@ Ensuring convergence can be tricky when training neural networks. Their training
 Give the neural network enough time to learn. The epochs should be high enough so that the training loss "stabilizes":
 
 ```{r}
-m = dnn(Species~., data = iris, epochs = 10L, loss = "softmax", verbose=FALSE)
+m = dnn(Species~., data = iris, epochs = 10L, loss = "cross-entropy", verbose=FALSE)
 ```
 
 After 10 epochs the loss was still decreasing, we should train the model longer (increase epochs):
 
 ```{r}
-m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", verbose=FALSE)
+m = dnn(Species~., data = iris, epochs = 200L, loss = "cross-entropy", verbose=FALSE)
 ```
 
 Here, it takes around 190-200 epochs until the loss doesn't decrease anymore. The "speed" of the learning depends also on the learning rate. Higher rates means larger steps into direction of local minima in the loss function:
 
 ```{r}
-m = dnn(Species~., data = iris, epochs = 200L, loss = "softmax", lr = 0.05, verbose=FALSE)
+m = dnn(Species~., data = iris, epochs = 200L, loss = "cross-entropy", lr = 0.05, verbose=FALSE)
 ```
 
 Now it only takes about 100 epochs, but we also see that the training loss becomes wobbly. Larger learning rates increase the probability that local minima are skipped and the optimizer has problems to hit a minima.
@@ -89,9 +89,9 @@ Note: But if the learning rate is high, or too high, the loss will get "jumpy", 
 Typically, the learning rate should be decreased with the size of the neural networks (depth of the network and width of the hidden layers). We provide a baseline loss (intercept only model) that can give hints about an appropriate learning rate.
 
 ```{r}
-nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
-nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
-nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "softmax", verbose = FALSE, plot = FALSE)
+nn.fit_good<- dnn(Species~., data = datasets::iris, lr = 0.09, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
+nn.fit_high<- dnn(Species~., data = datasets::iris, lr = 2.09, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
+nn.fit_low<- dnn(Species~., data = datasets::iris, lr = 0.00000001, epochs = 20L, loss = "cross-entropy", verbose = FALSE, plot = FALSE)
 
 par(mfrow = c(1, 3), mar = c(4, 3, 2, 2))
 cito:::visualize.training(nn.fit_good$losses,main="Training loss", epoch = 20, new = TRUE, baseline = nn.fit_good$training_properties$baseloss)
@@ -113,7 +113,7 @@ I favor the "reduce learning rate on plateau" scheduler. If a loss plateau isn't
 nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr = 0.2,
                   epochs = 60L,
-                  loss = "softmax",
+                  loss = "cross-entropy",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)
@@ -127,7 +127,7 @@ Note: The learning rate scheduler is a powerful approach to improve the likeline
 nn.fit_high<- dnn(Species~., data = datasets::iris,
                   lr = 2,
                   epochs = 60L,
-                  loss = "softmax",
+                  loss = "cross-entropy",
                   lr_scheduler = config_lr_scheduler("reduce_on_plateau", patience = 5, factor = 0.5),
                   verbose = TRUE,
                   plot = TRUE)

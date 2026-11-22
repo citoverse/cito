@@ -80,22 +80,26 @@ Cito can handle many different response types. Common loss functions from ML but
 |:---|:---|:---|----|
 | Name | Explanation | Example / Task | Meta-Code |
 | `mse` | mean squared error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "mse")` |
-| `mae` | mean absolute error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "msa")` |
-| `softmax` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "softmax")` |
+| `mae` | mean absolute error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "mae")` |
 | `cross-entropy` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "cross-entropy")` |
+| `bernoulli` | Bernoulli likelihood | Binary classification, presence/absence (0/1 data) | `dnn(Presence~., ..., loss = "bernoulli")` |
 | `gaussian` | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")` |
-| `binomial` | Binomial likelihood | Classification/Logistic regression, mortality (0/1 data) | `dnn(Presence~., ..., loss = "Binomial")` |
-| `poisson` | Poisson likelihood | Regression, count data, e.g. species abundances | `dnn(Abundance~., ..., loss = "Poisson")` |
+| `binomial` | Binomial likelihood | Logistic regression, successes out of trials (or 0/1 data), e.g. mortality | `dnn(cbind(Dead, Alive)~., ..., loss = "binomial")` |
+| `poisson` | Poisson likelihood | Regression, count data, e.g. species abundances | `dnn(Abundance~., ..., loss = "poisson")` |
 | `nbinom` | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")` |
 | `mvp` | Multivariate probit model | Joint Species Distribution model | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
+| `multinomial` | Multinomial likelihood | Counts in several classes, e.g. step selection in animal movement models | `dnn(cbind(Species1, Species2, Species3)~., ..., loss = "multinomial")` |
+| `clogit` | Conditional binomial | Choice among several options, e.g. step selection in animal movement models | `dnn(Species~., ..., loss = "clogit")` |
 
-Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
+`softmax` is an older name of `cross-entropy` and is deprecated.
+
+Moreover, all losses except `cross-entropy`, `multinomial` and `clogit` can be modeled as multilabel using the cbind syntax
 
 `dnn(cbind(Sepal.Length, Sepal.Width)~., …, loss = "mse")`
 
 The likelihoods (Gaussian, Binomial, and Poisson) can be also passed as their stats equivalents:
 
-`dnn(Sepal.Length~., ..., loss = stats::gaussian)`
+`dnn(Sepal.Length~., ..., loss = stats::gaussian())`
 
 ### Data
 
@@ -317,12 +321,12 @@ Note: The default activation function should be adequate for most tasks. We don'
 If elastic net is used, 'cito' will produce a sparse, generalized neural network. The L1/L2 loss can be controlled with the arguments alpha and lambda.
 
 $$
- loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+ loss = \lambda * [ (1 - \alpha) * |weights| + \alpha ||weights||_2 ]
 $$
 
 ```{r alpha, results ="hide",fig.show='hide',eval=TRUE }
 #elastic net penalty in all layers:
-nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "softmax")
+nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "cross-entropy")
 ```
 
 #### Dropout Regularization
@@ -331,7 +335,7 @@ Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/p
 
 ```{r dropout, results ="hide",fig.show='hide' ,eval=TRUE}
 #dropout of 35% on all layers:
-nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = 0.35, verbose=FALSE)
+nn.fit <- dnn(Species~., data = data, loss = "cross-entropy", dropout = 0.35, verbose=FALSE)
 ```
 
 ### Learning rate
@@ -362,7 +366,7 @@ See `?config_optimizer()` for more information.
 opt <- config_optimizer(
   type = "sgd")
 
-nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "softmax")
+nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "cross-entropy")
 
 
 ```
@@ -388,7 +392,7 @@ We can mark hyperparameters that should be tuned by cito by setting their values
 | hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
 | lambda | `dnn(…, lambda = tune(0.0001, 0.1))` | lambda will be tuned within the range (0.0001, 0.1) |
-| alpha | `dnn(…, lambda = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
+| alpha | `dnn(…, alpha = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
 | activation | `dnn(…, activation = tune())` | activation functions of the hidden layers will be tuned |
 | dropout | `dnn(…, dropout = tune())` | Dropout rate will be tuned (globally for all layers) |
 | lr | `dnn(…, lr = tune())` | Learning rate will be tuned |
@@ -405,7 +409,7 @@ Tune learning rate as it is one of the most important hyperparameters:
 nn.fit_tuned = dnn(Species~.,
                    data = iris,
                    lr = tune(0.0001, 0.1),
-                   loss = "softmax",
+                   loss = "cross-entropy",
                    tuning = config_tuning(steps = 3L, CV = 3L))
 ```
 
@@ -460,7 +464,7 @@ sims = sapply(1:100, function(i) rpois(length(pred), pred))
 
 res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
 plot(res)
-testOverdispersion(res)
+testDispersion(res)
 ```
 
 Overdispersion (biased effect estimates and inflated error rates could be a consequence of overdispersion) ! One solution (the only one implemented in cito) is to switch to negative binomial distribution that fits a variable dispersion parameter:
@@ -479,7 +483,7 @@ sims = sapply(1:100, function(i) m2$loss$simulate(pred))
 
 res = createDHARMa(sims, Y, pred[,1], integerResponse = TRUE)
 plot(res, rank = FALSE)
-testOverdispersion(res)
+testDispersion(res)
 ```
 
 Better! But still not perfect, a challenge with maximum likelihood estimation and the negative binomial distribution is to get the theta estimate (dispersion parameter) unbiased. The remaining pattern can probably be explained by the fact that the overdispersion was not perfectly estimated.

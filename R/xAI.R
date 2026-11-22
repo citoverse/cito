@@ -60,9 +60,7 @@ PDP.citodnn <- function(model,
 
   model <- check_model(model)
 
-  if(is.null(data)){
-    data <- model$data$data
-  }
+  data <- if(is.null(data)) model$data$data else prepare_newdata(model, data)
 
   if(is.null(variable)) variable <- get_var_names(model$training_properties$formula, data[1,])
   if(!any(variable %in% get_var_names(model$training_properties$formula, data[1,]))){
@@ -146,9 +144,7 @@ PDP.citodnnBootstrap <- function(model,
   }
 
 
-  if(is.null(data)){
-    data <- model$data$data
-  }
+  data <- if(is.null(data)) model$data$data else prepare_newdata(model, data)
 
   if(is.null(variable)) variable <- get_var_names(model$models[[1]]$training_properties$formula, data[1,])
   if(!any(variable %in% get_var_names(model$models[[1]]$training_properties$formula, data[1,]))){
@@ -419,9 +415,7 @@ ALE.citodnn <- function(model,
   model <- check_model(model)
   ALE_type <- match.arg(ALE_type)
   new_data <- data
-  if(is.null(data)){
-    data <- model$data$data
-  }
+  data <- if(is.null(data)) model$data$data else prepare_newdata(model, data)
   if(is.null(variable)) variable <- get_var_names(model$training_properties$formula, data[1,])
   if(!any(variable %in% get_var_names(model$training_properties$formula, data[1,]))){
     warning("unknown variable")
@@ -511,9 +505,7 @@ ALE.citodnnBootstrap <- function(model,
     for(b in 1:length(model$models)) {
       model_indv = model$models[[b]]
       model_indv <- check_model(model_indv)
-      if(is.null(data)){
-        data <- model$data$data
-      }
+      data <- if(is.null(data)) model$data$data else prepare_newdata(model, data)
       if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
       if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
         warning("unknown variable")
@@ -554,9 +546,7 @@ ALE.citodnnBootstrap <- function(model,
     results_boot <- parabar::par_lapply(backend, 1:length(model$models), function(b) {
       model_indv = model$models[[b]]
       model_indv <- check_model(model_indv)
-      if(is.null(data)){
-        data <- model$data$data
-      }
+      data <- if(is.null(data)) model$data$data else prepare_newdata(model, data)
       if(is.null(variable)) variable <- get_var_names(model_indv$training_properties$formula, data[1,])
       if(!any(variable %in% get_var_names(model_indv$training_properties$formula, data[1,]))){
         warning("unknown variable")
@@ -1081,9 +1071,7 @@ ACE = function(object,
   device = match.arg(device)
   object = check_model(object)
 
-  if(is.null(data)) data = object$data$data
-
-  if(!is.data.frame(data)) data = data.frame(data)
+  data = if(is.null(data)) object$data$data else prepare_newdata(object, data)
 
   # the finite differences are taken on `data` itself but evaluated through predict(), which
   # drops rows with NAs in the model frame, so those rows have to go before the indices are drawn
@@ -1369,7 +1357,7 @@ ACEanalytical = function(object,
     }
   } else {
 
-    if(!is.data.frame(data)) data <- data.frame(data)
+    data <- prepare_newdata(object, data)
     mm <- stats::model.matrix(stats::as.formula(stats::delete.response(object$call$formula)), data, xlev = object$data$xlvls)[,-1,drop=FALSE]
     # model.matrix drops rows containing NAs, so the subsample and the returned row_indices
     # have to refer to the rows it kept, otherwise X is indexed out of bounds
@@ -1385,12 +1373,7 @@ ACEanalytical = function(object,
     X <- torch::torch_tensor(mm)[take]
 
     if(!is.null(object$model_properties$embeddings)) {
-      tmp = do.call(cbind, lapply(object$Z_formula, function(term) {
-        if(!is.factor(data[[term]])) stop(paste0(term, " must be factor."))
-        #TODO: check if newdata[[term]] has the same factor levels as object$data[[term]]
-        data[[term]] |> as.integer()
-      }) )
-      Z = torch::torch_tensor(tmp, dtype = torch::torch_long())[indices_row]
+      Z = torch::torch_tensor(embedding_codes(object, data), dtype = torch::torch_long())[indices_row]
     }
   }
 

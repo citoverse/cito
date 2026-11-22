@@ -35,6 +35,9 @@ config_tuning(
 
 \item{return_models}{return individual models}
 }
+\value{
+A list with the tuning settings, passed to the \code{tuning} argument of \code{\link{dnn}}.
+}
 \description{
 Config hyperparameter tuning
 }

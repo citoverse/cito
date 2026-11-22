@@ -19,12 +19,12 @@ Y <- shapes$labels
 architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
 
 ## Build and train network
-### softmax is used for classification
+### cross-entropy (softmax link) for classification
 cnn.fit <- cnn(X, Y, architecture, loss = "cross-entropy",
                epochs = 2, validation = 0.1, lr = 0.05, device=device)
 
 ## The training loss is below the baseline loss but at the end of the
-## training the loss was still decreasing, so continue training for another 50
+## training the loss was still decreasing, so continue training for another 5
 ## epochs
 cnn.fit <- continue_training(cnn.fit, epochs = 5)
 

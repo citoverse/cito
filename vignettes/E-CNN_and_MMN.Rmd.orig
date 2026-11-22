@@ -49,10 +49,10 @@ Note: Cito currently supports up to three-dimensional inputs (excluding the samp
 
 Whichever way the images reach cito (see the next section), the network receives them as one array per mini-batch, with the first dimension indexing samples. The subsequent dimensions then correspond to the data structure of each sample. Specifically:
 
-- Grayscale images: $[\text{n_samples}, height, width]$
+- Grayscale images: $[\text{n_samples}, 1, height, width]$
 - RGB images: $[\text{n_samples}, 3, height, width]$
 - LiDAR point clouds: $[\text{n_samples}, x, y, z]$
-- Time series data: $[\text{n_samples}, time_steps, n_covariates]$
+- Time series data: $[\text{n_samples}, n_covariates, time_steps]$
 
 It is crucial that the order of samples in X matches the order of observations in your response (target) vector (or matrix for multiple response) y.
 

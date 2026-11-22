@@ -17,6 +17,9 @@ e(dim = 1L, weights = NULL, train = TRUE, lambda = 0, alpha = 1)
 
 \item{alpha}{mix between L1 and L2 regularization}
 }
+\value{
+A list with the settings of the embedding; it is only meaningful inside the formula of \code{\link{dnn}}.
+}
 \description{
 Can be used to create an embedding structure for categorical variables in the function interface
 }

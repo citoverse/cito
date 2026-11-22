@@ -67,7 +67,7 @@ dnn(
 
 \item{lr_scheduler}{learning rate scheduler created with \code{\link{config_lr_scheduler}}}
 
-\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||^2} will get added for each layer. Must be between 0 and 1}
+\item{alpha}{add L1/L2 regularization to training  \eqn{(1 - \alpha) * |weights| + \alpha ||weights||_2} will get added for each layer (the L2 part is the Euclidean norm, not its square). Must be between 0 and 1}
 
 \item{lambda}{strength of regularization: lambda penalty, \eqn{\lambda * (L1 + L2)} (see alpha)}
 
@@ -79,7 +79,7 @@ dnn(
 
 \item{epochs}{epochs the training goes on for}
 
-\item{weights}{weights or other values (can be also a matrix) that the likelihood has access to}
+\item{weights}{weights or other values (can be also a matrix) that the likelihood has access to. Only custom loss functions with a \code{weights} argument accept them.}
 
 \item{early_stopping}{if set to an integer, training stops when the loss has increased for the specified number of epochs in a row. The validation loss is used when a validation set is available, otherwise the training loss is used.}
 
@@ -253,7 +253,7 @@ We have implemented experimental support for hyperparameter tuning. We can mark 
    hidden \tab \verb{dnn(…,hidden=tune(10, 20, fixed=’depth’))} \tab Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper #' boundaries must be provided (first = number of nodes) \cr
    bias \tab \verb{dnn(…, bias=tune())} \tab Should the bias be turned on or off for all hidden layers \cr
    lambda \tab \verb{dnn(…, lambda = tune(0.0001, 0.1))} \tab lambda will be tuned within the range (0.0001, 0.1) \cr
-   alpha \tab \verb{dnn(…, lambda = tune(0.2, 0.4))} \tab alpha will be tuned within the range (0.2, 0.4) \cr
+   alpha \tab \verb{dnn(…, alpha = tune(0.2, 0.4))} \tab alpha will be tuned within the range (0.2, 0.4) \cr
    activation \tab \verb{dnn(…, activation = tune())} \tab activation functions of the hidden layers will be tuned \cr
    dropout \tab \verb{dnn(…, dropout = tune())} \tab Dropout rate will be tuned (globally for all layers) \cr
    lr \tab \verb{dnn(…, lr = tune())} \tab Learning rate will be tuned \cr
@@ -289,7 +289,7 @@ Supported activation functions:  "relu", "leaky_relu", "tanh", "elu", "rrelu", "
 }
 
 \section{Training on graphic cards}{
-If you have an NVIDIA CUDA-enabled device and have installed the CUDA toolkit version 11.3 and cuDNN 8.4, you can take advantage of GPU acceleration for training your neural networks. It is crucial to have these specific versions installed, as other versions may not be compatible.
+If you have an NVIDIA CUDA-enabled device and a CUDA build of 'torch', you can take advantage of GPU acceleration for training your neural networks (\code{device = "cuda"}). The supported CUDA versions depend on the installed 'torch' version.
 For detailed installation instructions and more information on utilizing GPUs for training, please refer to the \href{https://torch.mlverse.org/docs/articles/installation.html}{mlverse: 'torch' documentation}.
 
 Note: GPU training is optional, and the package can still be used for training on CPU even without CUDA and cuDNN installations.
@@ -304,7 +304,7 @@ library(cito)
 # Example workflow in cito
 
 ## Build and train  Network
-### softmax is used for multi-class responses (e.g., Species)
+### cross-entropy (softmax link) for multi-class responses (e.g., Species)
 nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 
 ## The training loss is below the baseline loss but at the end of the
@@ -312,11 +312,11 @@ nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 ## epochs
 nn.fit <- continue_training(nn.fit, epochs = 50L)
 
-# Sturcture of Neural Network
+# Structure of Neural Network
 print(nn.fit)
 
 # Plot Neural Network
-plot(nn.fit)
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 ## 4 Input nodes (first layer) because of 4 features
 ## 3 Output nodes (last layer) because of 3 response species (one node for each
 ## level in the response variable).
@@ -456,7 +456,7 @@ coef(nn.fit)$net_parameters$e_1.weight
 
 ## architecture: Species feeds its two embedding dimensions, Petal.Width goes
 ## straight to the output
-plot(nn.fit, plot_type = "arch")
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 }
 }
 }

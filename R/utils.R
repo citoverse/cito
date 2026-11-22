@@ -348,7 +348,7 @@ ce_subsample = function(ce, n, p, n_out, budget = 512*1024^2, max_rows = 5000, m
 assert_weights_supported = function(loss, weights) {
   if(is.null(weights)) return(invisible(NULL))
   if(is.function(loss) && "weights" %in% names(formals(loss))) return(invisible(NULL))
-  stop("'weights' are only supported for custom loss functions with a 'weights' argument, see the 'weights' section in ?dnn.")
+  stop("'weights' are only supported for custom loss functions with a 'weights' argument, see the argument 'weights' in ?dnn.")
 }
 
 get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL) {
@@ -522,10 +522,12 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
           if(loss$link == "probit")  {
             self$link = function(x) {torch::torch_tensor(stats::binomial("probit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())}
             self$invlink = function(x) {torch::torch_sigmoid(x*1.7012)}
+            self$scale = 1.7012
           } else {
             if(loss$link != "logit") warning(paste0("Link '", loss$link, "' is not implemented for binomial loss, yet. Using 'logit' link instead."))
             self$link = function(x) {torch::torch_tensor(stats::binomial("logit")$linkfun(as.matrix(x$cpu())), dtype = torch::torch_float32())}
             self$invlink = function(x) {torch::torch_sigmoid(x)}
+            self$scale = 1
           }
 
           Y_base <- self$format_Y(Y)
@@ -538,8 +540,9 @@ get_loss <- function(loss, Y, custom_parameters, baseloss = NULL, weights = NULL
           n = torch::torch_sum(true, 2)
           s = true[, 1]
           f = true[, 2]
-          p = self$invlink(pred$squeeze())
-          nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(s + 1) + torch::torch_lgamma(f + 1) - s * torch::torch_log(p) - f * torch::torch_log(1 - p)
+          # log-likelihood on the logit scale: log(1 - sigmoid(eta)) underflows to -Inf at eta >= 17 in float32
+          eta = pred[, 1] * self$scale
+          nll = - torch::torch_lgamma(n + 1) + torch::torch_lgamma(s + 1) + torch::torch_lgamma(f + 1) - s * torch::nnf_logsigmoid(eta) - f * torch::nnf_logsigmoid(-eta)
           # nll = nll/n # normalize
           return(nll)
         },
@@ -1309,6 +1312,40 @@ check_device = function(device) {
   return(device)
 }
 
+# newdata gets the conversions get_X_Y() applied to the training data: ordered predictors become
+# their integer codes on the training levels, characters become factors
+prepare_newdata = function(object, data) {
+  if(!is.data.frame(data)) data = data.frame(data)
+  lvls = object$data$ordered_lvls
+  for(v in intersect(names(lvls), names(data))) {
+    if(is.factor(data[[v]]) || is.character(data[[v]])) data[[v]] = match(as.character(data[[v]]), lvls[[v]])
+  }
+  # models fitted before the levels were stored
+  if(is.null(lvls)) {
+    resp = if(length(object$old_formula) == 3) all.vars(object$old_formula[[2]])
+    ord = sapply(data, is.ordered) & !(names(data) %in% resp)
+    data[ord] = lapply(data[ord], as.integer)
+  }
+  char_cols = sapply(data, is.character)
+  data[char_cols] = lapply(data[char_cols], as.factor)
+  data
+}
+
+# codes of the e() variables on the levels seen at fit, not on the levels of newdata
+embedding_codes = function(object, data) {
+  do.call(cbind, lapply(object$Z_formula, function(term) {
+    lv = object$data$Zlevels[[term]]
+    if(is.null(lv)) {
+      if(!is.factor(data[[term]])) stop(paste0(term, " must be factor."))
+      return(as.integer(data[[term]]))
+    }
+    code = match(as.character(data[[term]]), lv)
+    unknown = unique(as.character(data[[term]])[is.na(code) & !is.na(data[[term]])])
+    if(length(unknown)) stop(paste0("Levels of ", term, " not seen during training: ", paste(unknown, collapse = ", ")))
+    code
+  }))
+}
+
 # taken and adopted from lme4:::RHSForm
 LHSForm = function (form, as.form = FALSE)
 {
@@ -1325,6 +1362,7 @@ cast_to_r_keep_dim = function(x) {
 }
 
 get_X_Y = function(formula, X, Y, data) {
+  ordered_lvls = NULL
   fe = NULL
 
   if(!is.null(X)) {
@@ -1383,6 +1421,7 @@ get_X_Y = function(formula, X, Y, data) {
     ordered_cols = sapply(data, is.ordered) & !(names(data) %in% if(length(formula) == 3) all.vars(formula[[2]]))
     if(any(ordered_cols)) {
       message("Ordered factors are transformed into integers.")
+      ordered_lvls = lapply(data[, ordered_cols, drop = FALSE], levels)
       data[, ordered_cols] = sapply(data[, ordered_cols, drop = FALSE], as.integer)
     }
 
@@ -1430,8 +1469,10 @@ get_X_Y = function(formula, X, Y, data) {
       })
     Z = do.call(cbind, Z)
     colnames(Z) = terms
-    out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args, Zlvls = Zlvls)
+    out = list(X = X, Y = Y, formula = formula, data = data, Z = Z, Z_terms = terms, Z_args = Specials$args, Zlvls = Zlvls,
+               Zlevels = lapply(stats::setNames(terms, terms), function(i) levels(data[,i])))
   }
+  out$ordered_lvls = ordered_lvls
   out$old_formula = old_formula
   out$fe = fixed_effects
   return(out)

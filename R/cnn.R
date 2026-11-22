@@ -468,7 +468,7 @@ coef.citocnn <- function(object, ...) {
 #' @param default_padding (integer or tuple) Default zero-padding added to both sides of the input. Can be a single integer or a tuple if padding differs across dimensions. Default is \code{list(conv = 0, maxPool = 0, avgPool = 0)}.
 #' @param default_dilation (integer or tuple) Default dilation of kernels in convolutional and max pooling layers. Can be a single integer or a tuple if dilation differs across dimensions. Default is \code{list(conv = 1, maxPool = 1)}.
 #' @param default_bias (boolean) Default value indicating if a learnable bias should be added to neurons of linear layers and kernels of convolutional layers. Default is \code{list(conv = TRUE, linear = TRUE)}.
-#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "selu", linear = "selu")}.
+#' @param default_activation (character) Default activation function used after linear and convolutional layers. Supported activation functions include "relu", "leaky_relu", "tanh", "elu", "rrelu", "prelu", "softplus", "celu", "selu", "gelu", "relu6", "sigmoid", "softsign", "hardtanh", "tanhshrink", "softshrink", "hardshrink", "log_sigmoid". Default is \code{list(conv = "relu", linear = "relu")}.
 #' @param default_normalization (boolean) Default value indicating if batch normalization should be applied after linear and convolutional layers. Default is \code{list(conv = FALSE, linear = FALSE)}.
 #' @param default_dropout (numeric) Default dropout rate for linear and convolutional layers. Set to 0 for no dropout. Default is \code{list(conv = 0.0, linear = 0.0)}.
 #'
@@ -610,7 +610,7 @@ linear <- function(n_neurons = NULL,
 #'
 #' @param n_kernels (integer) The number of kernels (or filters) in this layer.
 #' @param kernel_size (integer or tuple) The size of the kernels in this layer. Use a tuple if the kernel size is different in each dimension.
-#' @param stride (integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the stride is set to the kernel size. Use a tuple if the stride is different in each dimension.
+#' @param stride (integer or tuple) The stride of the kernels in this layer. If \code{NULL}, the \code{default_stride} of \code{\link{create_architecture}} is used (1 for convolutional layers). Use a tuple if the stride is different in each dimension.
 #' @param padding (integer or tuple) The amount of zero-padding added to the input on both sides. Use a tuple if the padding is different in each dimension.
 #' @param dilation (integer or tuple) The dilation of the kernels in this layer. Use a tuple if the dilation is different in each dimension.
 #' @param bias (boolean) If \code{TRUE}, a learnable bias is added to the kernels of this layer.
@@ -651,7 +651,7 @@ conv <- function(n_kernels = NULL,
   return(layer)
 }
 
-' Create an Average Pooling Layer for a CNN Architecture
+#' Create an Average Pooling Layer for a CNN Architecture
 #'
 #' This function creates an \code{avgPool} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.
 #'

@@ -2,7 +2,7 @@
 % Please edit documentation in R/cnn.R
 \name{avgPool}
 \alias{avgPool}
-\title{This function creates an \code{avgPool} layer object of class \code{citolayer} for use in constructing a Convolutional Neural Network (CNN) architecture. The resulting layer object can be passed to the \code{\link{create_architecture}} function to define the structure of the network.}
+\title{Create an Average Pooling Layer for a CNN Architecture}
 \usage{
 avgPool(kernel_size = NULL, stride = NULL, padding = NULL)
 }

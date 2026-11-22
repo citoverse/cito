@@ -23,6 +23,9 @@ tune(
 
 \item{values}{custom values from which hyperparameters are sampled, must be a matrix for hidden layers (first column == nodes, second column == number of layers)}
 }
+\value{
+An object of class \code{"tune"} that marks a hyperparameter of \code{\link{dnn}} for tuning.
+}
 \description{
 Control hyperparameter tuning
 }

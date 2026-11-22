@@ -6,7 +6,7 @@ library(cito)
 # Example workflow in cito
 
 ## Build and train  Network
-### softmax is used for multi-class responses (e.g., Species)
+### cross-entropy (softmax link) for multi-class responses (e.g., Species)
 nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 
 ## The training loss is below the baseline loss but at the end of the
@@ -14,11 +14,11 @@ nn.fit<- dnn(Species~., data = datasets::iris, loss = "cross-entropy")
 ## epochs
 nn.fit <- continue_training(nn.fit, epochs = 50L)
 
-# Sturcture of Neural Network
+# Structure of Neural Network
 print(nn.fit)
 
 # Plot Neural Network
-plot(nn.fit)
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 ## 4 Input nodes (first layer) because of 4 features
 ## 3 Output nodes (last layer) because of 3 response species (one node for each
 ## level in the response variable).
@@ -158,6 +158,6 @@ coef(nn.fit)$net_parameters$e_1.weight
 
 ## architecture: Species feeds its two embedding dimensions, Petal.Width goes
 ## straight to the output
-plot(nn.fit, plot_type = "arch")
+if(requireNamespace("ggraph", quietly = TRUE)) plot(nn.fit, plot_type = "arch")
 }
 }

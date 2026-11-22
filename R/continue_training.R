@@ -10,7 +10,7 @@
 #' @param data matrix or data.frame. If not provided data from original training will be used
 #' @param X Predictor data. If not provided X from original training will be used
 #' @param Y Target data. If not provided Y from original training will be used
-#' @param weights observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data (citodnn and citocnn only)
+#' @param weights observation weights (vector or matrix) passed to the likelihood. If not provided, the weights from the original training are reused when continuing on the original data
 #' @param dataList A list containing the data for training the model. The list should contain all variables used in the formula. If not provided dataList from original training will be used
 #' @param device can be used to overwrite device used in previous training
 #' @param changed_params list of arguments to change compared to original training setup, see \code{\link{dnn}} which parameter can be changed
@@ -65,10 +65,12 @@ continue_training.citodnn <- function(model,
   if(is.null(weights) && !new_validation_split) weights <- model$data$weights
   if(!is.null(weights) && is.vector(weights)) weights <- matrix(weights, ncol = 1L)
 
+  if(!is.null(data)) data = prepare_newdata(model, data)
   tmp_data = get_X_Y(model$old_formula, X, Y, data)
   X = tmp_data$X
   Y = tmp_data$Y
   Z = tmp_data$Z
+  if(!is.null(Z)) Z = embedding_codes(model, tmp_data$data)
   data = tmp_data$data
   X_r = X
   Z_r = Z
@@ -296,6 +298,7 @@ continue_training.citommn <- function(model,
                                       device = NULL,
                                       changed_params = NULL,
                                       init_optimizer = TRUE,
+                                      weights = NULL,
                                       ...) {
 
   checkmate::assert(checkmate::checkList(dataList), checkmate::checkNull(dataList))
@@ -335,6 +338,12 @@ continue_training.citommn <- function(model,
 
   Y <- model$loss$format_Y(Y)
 
+  if(is.null(weights) && !new_validation_split) weights <- model$data$weights
+  if(!is.null(weights)) {
+    weights <- matrix(weights, nrow = dim(Y)[1])
+  }
+  model$training_properties$has_weights <- !is.null(weights)
+
   if(length(model$training_properties$validation) == 1 && model$training_properties$validation == 0) {
     valid <- NULL
   } else {
@@ -354,7 +363,7 @@ continue_training.citommn <- function(model,
 
   nw <- if(is.null(model$training_properties$num_workers)) 0L else model$training_properties$num_workers
   nt <- if(is.null(model$training_properties$num_threads)) 4L else model$training_properties$num_threads
-  dls <- build_loaders(X, Y, valid = valid, batch_size = model$training_properties$batchsize,
+  dls <- build_loaders(X, Y, weights = if(is.null(weights)) NULL else torch::torch_tensor(weights), valid = valid, batch_size = model$training_properties$batchsize,
                        shuffle = model$training_properties$shuffle, from_folder = from_folder,
                        num_workers = nw, num_threads = nt)
   train_dl <- dls$train_dl
@@ -363,6 +372,7 @@ continue_training.citommn <- function(model,
   model <- train_model(model = model, epochs = epochs, device = device, train_dl = train_dl, valid_dl = valid_dl, plot_new = TRUE, init_optimizer = init_optimizer)
 
   model$data$dataList = dataList
+  model$data$weights = weights
   model$data$validation = valid
 
   return(model)

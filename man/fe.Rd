@@ -11,6 +11,9 @@ fe(lambda = 0, alpha = 1)
 
 \item{alpha}{mix between L1 (\code{alpha = 0}) and L2 (\code{alpha = 1}) regularization}
 }
+\value{
+A list with \code{lambda} and \code{alpha}; it is only meaningful inside the formula of \code{\link{dnn}}.
+}
 \description{
 Adds predictors with linear effects to the DNN in the formula interface: \code{dnn(Y ~ X1 + fe(Temp + I(Temp^2)))}.
 }
@@ -56,7 +59,8 @@ m = dnn(Y ~ X1 + fe(Temp + I(Temp^2)), data = dat, loss = "mse", epochs = 50L, v
 coef(m)$fixed_effects
 
 # "." uses every variable that is not in fe(); here X1 and Precp
-m2 = dnn(Y ~ . + fe(Temp + I(Temp^2), lambda = 0.001), data = dat, loss = "mse", epochs = 50L, verbose = FALSE)
+m2 = dnn(Y ~ . + fe(Temp + I(Temp^2), lambda = 0.001), data = dat, loss = "mse",
+         epochs = 50L, verbose = FALSE)
 }
 }
 }

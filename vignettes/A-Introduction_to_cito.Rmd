@@ -1,7 +1,7 @@
 ---
 title: "Introduction to cito"
 author: "Christian Amesoeder & Maximilian Pichler"
-date: "2026-11-18"
+date: "2026-11-22"
 abstract: "'cito' allows you to build and train neural networks using the R formula syntax. It relies on the 'torch' package for numerical computations and optional graphic card support."
 output:
  rmarkdown::html_vignette:
@@ -27,7 +27,7 @@ Before using 'cito' make sure that the current version of 'torch' is installed a
 
 ``` r
 if(!require(torch)) install.packages("torch")
-#> Lade nötiges Paket: torch
+#> Loading required package: torch
 library(torch)
 if(!torch_is_installed()) install_torch()
 
@@ -71,22 +71,26 @@ Cito can handle many different response types. Common loss functions from ML but
 |:---|:---|:---|----|
 | Name | Explanation | Example / Task | Meta-Code |
 | `mse` | mean squared error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "mse")` |
-| `mae` | mean absolute error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "msa")` |
-| `softmax` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "softmax")` |
+| `mae` | mean absolute error | Regression, predicting continuous values | `dnn(Sepal.Length~., ..., loss = "mae")` |
 | `cross-entropy` | categorical cross entropy | Multi-class, species classification | `dnn(Species~., ..., loss = "cross-entropy")` |
+| `bernoulli` | Bernoulli likelihood | Binary classification, presence/absence (0/1 data) | `dnn(Presence~., ..., loss = "bernoulli")` |
 | `gaussian` | Normal likelihood | Regression, residual error is also estimated (similar to `stats::lm()`) | `dnn(Sepal.Length~., ..., loss = "gaussian")` |
-| `binomial` | Binomial likelihood | Classification/Logistic regression, mortality (0/1 data) | `dnn(Presence~., ..., loss = "Binomial")` |
-| `poisson` | Poisson likelihood | Regression, count data, e.g. species abundances | `dnn(Abundance~., ..., loss = "Poisson")` |
+| `binomial` | Binomial likelihood | Logistic regression, successes out of trials (or 0/1 data), e.g. mortality | `dnn(cbind(Dead, Alive)~., ..., loss = "binomial")` |
+| `poisson` | Poisson likelihood | Regression, count data, e.g. species abundances | `dnn(Abundance~., ..., loss = "poisson")` |
 | `nbinom` | Negative Binomial Likelihood | Regression, count data, e.g. species abundances with variable dispersion | `dnn(Abundance~., ..., loss = "nbinom")` |
 | `mvp` | Multivariate probit model | Joint Species Distribution model | `dnn(cbind(Species1, Species2, Species3)~,..., loss="mvp")` |
+| `multinomial` | Multinomial likelihood | Counts in several classes, e.g. step selection in animal movement models | `dnn(cbind(Species1, Species2, Species3)~., ..., loss = "multinomial")` |
+| `clogit` | Conditional binomial | Choice among several options, e.g. step selection in animal movement models | `dnn(Species~., ..., loss = "clogit")` |
 
-Moreover, all non multilabel losses (all except for softmax or cross-entropy) can be modeled as multilabel using the cbind syntax
+`softmax` is an older name of `cross-entropy` and is deprecated.
+
+Moreover, all losses except `cross-entropy`, `multinomial` and `clogit` can be modeled as multilabel using the cbind syntax
 
 `dnn(cbind(Sepal.Length, Sepal.Width)~., …, loss = "mse")`
 
 The likelihoods (Gaussian, Binomial, and Poisson) can be also passed as their stats equivalents:
 
-`dnn(Sepal.Length~., ..., loss = stats::gaussian)`
+`dnn(Sepal.Length~., ..., loss = stats::gaussian())`
 
 ### Data
 
@@ -139,6 +143,8 @@ At the start of the training we calculate a baseline loss for an an intercept on
 
 ``` r
 nn.fit <- dnn(Sepal.Length~. , data = data, epochs = 50, lr = 0.6, loss = "mse", verbose = FALSE) # lr too high
+#> Warning: Loss is NA, training stopped. Please adjust hyperparameters. See
+#> vignette('B-Training_neural_networks') for help.
 ```
 
 vs
@@ -216,8 +222,8 @@ fit_fe = dnn(Y ~ X1 + Precp + fe(Temp + I(Temp^2)) + e(Site, dim = 2),
 # the linear effects, simulated as 1.0 and -0.5
 coef(fit_fe)$fixed_effects
 #>                 [,1]
-#> Temp       0.9970902
-#> I(Temp^2) -0.5176629
+#> Temp       1.0243872
+#> I(Temp^2) -0.5239018
 ```
 
 Here `Precp` enters the network although its true effect is linear; a variable can enter either the network or `fe()`, not both. In `mmn()` and with `custom` networks `fe()` is not available yet.
@@ -240,19 +246,20 @@ The `summary()` returns feature importance, ACE and SDCE:
 ``` r
 # Calculate and return feature importance
 summary(nn.fit)
+#> Categorical features are not covered by importance = 'ale': Species. Use importance = 'permutation' to include them.
 #> Summary of Deep Neural Network Model
 #> 
 #> Feature Importance:
 #>       variable importance_1
-#> 1  Sepal.Width  0.117958915
-#> 2 Petal.Length  1.055670200
-#> 3  Petal.Width  0.003582032
+#> 1  Sepal.Width   0.11112189
+#> 2 Petal.Length   1.26439386
+#> 3  Petal.Width   0.01322485
 #> 
 #> Average Conditional Effects:
 #>                    [,1]
-#> Sepal.Width  0.33593520
-#> Petal.Length 0.99904002
-#> Petal.Width  0.02797409
+#> Sepal.Width   0.3321385
+#> Petal.Length  1.1088957
+#> Petal.Width  -0.1206920
 ```
 
 
@@ -284,17 +291,17 @@ summary(nn.fit)
 #> 
 #> ── Feature Importance
 #>                  Importance Std.Err Z value Pr(>|z|)    
-#> Sepal.Width ->       0.1085  0.0224    4.84  1.3e-06 ***
-#> Petal.Length ->      2.4559  0.3793    6.47  9.5e-11 ***
-#> Petal.Width ->       0.1643  0.1002    1.64      0.1    
+#> Sepal.Width ->       0.1076  0.0240    4.48  7.3e-06 ***
+#> Petal.Length ->      2.4498  0.3899    6.28  3.3e-10 ***
+#> Petal.Width ->       0.1675  0.0914    1.83    0.067 .  
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 #> 
 #> ── Average Conditional Effects
 #>                      ACE Std.Err Z value Pr(>|z|)    
-#> Sepal.Width ->    0.3123  0.0362    8.63   <2e-16 ***
-#> Petal.Length ->   1.5445  0.1149   13.44   <2e-16 ***
-#> Petal.Width ->   -0.3724  0.1341   -2.78   0.0055 ** 
+#> Sepal.Width ->    0.3105  0.0412    7.53  5.1e-14 ***
+#> Petal.Length ->   1.5437  0.1212   12.73  < 2e-16 ***
+#> Petal.Width ->   -0.3799  0.1194   -3.18   0.0015 ** 
 #> ---
 #> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -333,7 +340,7 @@ PDP(nn.fit)
 
 ``` r
 library(effects)
-#> Lade nötiges Paket: carData
+#> Loading required package: carData
 #> lattice theme set by effectsTheme()
 #> See ?effectsTheme for details.
 plot(allEffects(lm(Sepal.Length~., data = df)))
@@ -397,16 +404,13 @@ Note: The default activation function should be adequate for most tasks. We don'
 If elastic net is used, 'cito' will produce a sparse, generalized neural network. The L1/L2 loss can be controlled with the arguments alpha and lambda.
 
 $$
- loss = \lambda * [ (1 - \alpha) * |weights| + \alpha |weights|^2 ]
+ loss = \lambda * [ (1 - \alpha) * |weights| + \alpha ||weights||_2 ]
 $$
 
 
 ``` r
 #elastic net penalty in all layers:
-nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "softmax")
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+nn.fit <- dnn(Species~., data = data, alpha = 0.5, lambda = 0.01, verbose=FALSE, loss = "cross-entropy")
 ```
 
 #### Dropout Regularization
@@ -416,10 +420,7 @@ Dropout regularization as proposed in [Srivastava et al.](https://www.jmlr.org/p
 
 ``` r
 #dropout of 35% on all layers:
-nn.fit <- dnn(Species~., data = data, loss = "softmax", dropout = 0.35, verbose=FALSE)
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+nn.fit <- dnn(Species~., data = data, loss = "cross-entropy", dropout = 0.35, verbose=FALSE)
 ```
 
 ### Learning rate
@@ -454,10 +455,7 @@ See `?config_optimizer()` for more information.
 opt <- config_optimizer(
   type = "sgd")
 
-nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "softmax")
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
+nn.fit <- dnn(Species~., data = data,  optimizer = opt, lr=0.002, verbose=FALSE, loss = "cross-entropy")
 ```
 
 <img src="A/A-optim-1.png" alt="" style="display: block; margin: auto;" />
@@ -486,7 +484,7 @@ We can mark hyperparameters that should be tuned by cito by setting their values
 | hidden | `dnn(…,hidden=tune(10, 20, fixed=’depth’))` | Depth and width can be both tuned or only one of them, if both of them should be tuned, vectors for lower and upper \#' boundaries must be provided (first = number of nodes) |
 | bias | `dnn(…, bias=tune())` | Should the bias be turned on or off for all hidden layers |
 | lambda | `dnn(…, lambda = tune(0.0001, 0.1))` | lambda will be tuned within the range (0.0001, 0.1) |
-| alpha | `dnn(…, lambda = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
+| alpha | `dnn(…, alpha = tune(0.2, 0.4))` | alpha will be tuned within the range (0.2, 0.4) |
 | activation | `dnn(…, activation = tune())` | activation functions of the hidden layers will be tuned |
 | dropout | `dnn(…, dropout = tune())` | Dropout rate will be tuned (globally for all layers) |
 | lr | `dnn(…, lr = tune())` | Learning rate will be tuned |
@@ -504,43 +502,10 @@ Tune learning rate as it is one of the most important hyperparameters:
 nn.fit_tuned = dnn(Species~.,
                    data = iris,
                    lr = tune(0.0001, 0.1),
-                   loss = "softmax",
+                   loss = "cross-entropy",
                    tuning = config_tuning(steps = 3L, CV = 3L))
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
 #> Starting hyperparameter tuning...
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
 #> Fitting final model...
-#> Warning in get_loss(loss, Y, custom_parameters, baseloss, weights): loss =
-#> 'softmax' is deprecated and will be removed in a future version of 'cito'.
-#> Please use loss = 'cross-entropy' instead.
 ```
 
 After tuning, the final model is trained with the best set of hyperparameters and returned.
@@ -555,12 +520,12 @@ You can continue the training process of an existing model with continue_trainin
 nn.fit <- continue_training(nn.fit, epochs = 12, verbose=FALSE)
 head(predict(nn.fit))
 #>         [,1]
-#> 1 -0.9818215
-#> 2 -1.3898047
-#> 3 -1.3340323
-#> 4 -1.2629429
-#> 5 -0.9124794
-#> 6 -0.5285937
+#> 1 -1.0022138
+#> 2 -1.3900149
+#> 3 -1.3049076
+#> 4 -1.2474602
+#> 5 -0.9278000
+#> 6 -0.5760441
 ```
 
 It also allows you to change any training parameters, for example the learning rate. You can analyze the training process with analyze_training().
@@ -616,8 +581,7 @@ plot(res)
 <img src="A/A-unnamed-chunk-15-1.png" alt="" style="display: block; margin: auto;" />
 
 ``` r
-testOverdispersion(res)
-#> testOverdispersion is deprecated, switch your code to using the testDispersion function
+testDispersion(res)
 ```
 
 <img src="A/A-unnamed-chunk-15-2.png" alt="" style="display: block; margin: auto;" />
@@ -628,7 +592,7 @@ testOverdispersion(res)
 #> 	simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 23.228, p-value < 2.2e-16
+#> dispersion = 25.662, p-value < 2.2e-16
 #> alternative hypothesis: two.sided
 ```
 
@@ -644,7 +608,7 @@ m2 = dnn(Y~., data = df, loss = "nbinom", lr = 0.005, epochs = 300L, verbose = F
 ``` r
 # Dispersion parameter:
 m2$loss$parameter_link()
-#> [1] 0.54437
+#> [1] 0.5420804
 ```
 
 We have a custom implementation of the negative binomial distribution (which is similar to the "nbinom1" of glmmTMB (the nbinom converges to a poisson as the dispersion parameters approaches infinity)) which is why we provide a simulate function:
@@ -661,8 +625,7 @@ plot(res, rank = FALSE)
 <img src="A/A-unnamed-chunk-17-1.png" alt="" style="display: block; margin: auto;" />
 
 ``` r
-testOverdispersion(res)
-#> testOverdispersion is deprecated, switch your code to using the testDispersion function
+testDispersion(res)
 ```
 
 <img src="A/A-unnamed-chunk-17-2.png" alt="" style="display: block; margin: auto;" />
@@ -673,7 +636,7 @@ testOverdispersion(res)
 #> 	simulated
 #> 
 #> data:  simulationOutput
-#> dispersion = 2.531, p-value < 2.2e-16
+#> dispersion = 2.411, p-value < 2.2e-16
 #> alternative hypothesis: two.sided
 ```
 

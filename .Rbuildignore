@@ -30,3 +30,4 @@ tests/testthat/Rplots.pdf
 ^src/Makevars$
 ^BirdSongRecognition$
 ^\.git$
+^Rplots\.pdf$

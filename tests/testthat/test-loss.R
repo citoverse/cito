@@ -226,6 +226,23 @@ testthat::test_that("loss = 'binomial' accepts a 0/1 vector and matches bernoull
 })
 
 
+testthat::test_that("binomial stays finite on separable 0/1 data", {
+  skip_if_no_torch()
+
+  set.seed(1)
+  df <- data.frame(x1 = rnorm(300), x2 = rnorm(300))
+  df$Y <- as.integer(df$x1 + df$x2 > 0)
+  torch::torch_manual_seed(1)
+  # log(1 - sigmoid(eta)) underflowed to -Inf at eta >= 17 and the loss became NaN within the first epoch
+  m <- dnn(Y ~ ., data = df, loss = "binomial", optimizer = "adam", lr = 0.05, epochs = 50L, verbose = FALSE, plot = FALSE)
+  testthat::expect_false(anyNA(m$losses$train_l))
+  testthat::expect_false(anyNA(predict(m)))
+  eta <- torch::torch_tensor(matrix(c(-40, 0, 17, 40), ncol = 1))
+  nll <- m$loss$forward(eta, torch::torch_tensor(cbind(c(1, 1, 1, 0), c(0, 0, 0, 1))))
+  testthat::expect_true(all(is.finite(as.numeric(nll))))
+})
+
+
 testthat::test_that("an ordered response stays a factor, ordered predictors become integers", {
   skip_if_no_torch()
 
@@ -234,6 +251,45 @@ testthat::test_that("an ordered response stays a factor, ordered predictors beco
   m <- dnn(Y ~ X + Z, data = df, loss = "cross-entropy", epochs = 1L, verbose = FALSE, plot = FALSE)
   testthat::expect_equal(ncol(predict(m, type = "response")), 3L)
   testthat::expect_true(all(predict(m, type = "class") %in% levels(df$Y)))
+})
+
+
+testthat::test_that("ordered predictors in newdata get the integer codes of the training levels", {
+  skip_if_no_torch()
+
+  set.seed(2)
+  for(k in 2:3) {
+    lv <- letters[1:k]
+    df <- data.frame(X = rnorm(80), O = factor(sample(lv, 80, TRUE), levels = lv, ordered = TRUE))
+    df$Y <- as.integer(df$O) + df$X
+    m <- dnn(Y ~ X + O, data = df, loss = "mse", epochs = 5L, verbose = FALSE, plot = FALSE)
+    testthat::expect_equal(as.vector(predict(m, newdata = df)), as.vector(predict(m)), tolerance = 1e-5)
+    # a subset whose levels were dropped must keep the training codes
+    sub <- droplevels(df[df$O == lv[k], ])
+    testthat::expect_equal(as.vector(predict(m, newdata = sub)), as.vector(predict(m))[df$O == lv[k]], tolerance = 1e-5)
+    testthat::expect_error(conditionalEffects(m, data = df), NA)
+    testthat::expect_error(ALE(m, variable = "X", data = df, plot = FALSE), NA)
+  }
+})
+
+
+testthat::test_that("e() levels of newdata are coded on the training levels", {
+  skip_if_no_torch()
+
+  set.seed(3)
+  df <- data.frame(x = rnorm(100), g = sample(c("a", "b", "c", "d", "e"), 100, TRUE))
+  df$y <- df$x + as.integer(factor(df$g))
+  m <- dnn(y ~ x + e(g, dim = 2), data = df, loss = "mse", epochs = 5L, verbose = FALSE, plot = FALSE)
+  # characters were accepted at fit but rejected by predict()
+  testthat::expect_equal(as.vector(predict(m, newdata = df)), as.vector(predict(m)), tolerance = 1e-5)
+  i <- which(df$g == "d")
+  sub <- df[i, ]
+  sub$g <- droplevels(factor(sub$g))
+  testthat::expect_equal(as.vector(predict(m, newdata = sub)), as.vector(predict(m))[i], tolerance = 1e-5)
+  testthat::expect_equal(as.vector(conditionalEffects(m, data = sub)[[1]]$mean), as.vector(conditionalEffects(m, data = df[i, ])[[1]]$mean), tolerance = 1e-5)
+  testthat::expect_error(predict(m, newdata = transform(df[1:3, ], g = "z")), "not seen during training")
+  m2 <- continue_training(m, epochs = 1L, data = df[i, ], verbose = FALSE)
+  testthat::expect_equal(as.vector(m2$data$Z), as.vector(m$data$Z)[i])
 })
 
 
