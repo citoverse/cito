@@ -15,9 +15,6 @@
 // each decoder is optional: configure defines the macro only when the library was found,
 // so a machine without the -dev packages still builds and falls back to the R readers
 extern "C" {
-#ifdef HAVE_JPEG
-#include <jpeglib.h>
-#endif
 #ifdef HAVE_PNG
 #include <png.h>
 #endif
@@ -58,73 +55,25 @@ static Fmt sniff(const char* path, bool* openable) {
 }
 
 #ifdef HAVE_JPEG
-/* ---- libjpeg: default error_exit calls exit(), so every call gets its own setjmp ---- */
-struct jerr_mgr { struct jpeg_error_mgr pub; jmp_buf jb; char msg[JMSG_LENGTH_MAX]; };
-static void jerr_exit(j_common_ptr ci) {
-  jerr_mgr* e = reinterpret_cast<jerr_mgr*>(ci->err);
-  (*ci->err->format_message)(ci, e->msg);
-  std::longjmp(e->jb, 1);
-}
-static void jerr_silent(j_common_ptr, int) {}
+// defined in jpeg.cpp, which is kept free of R headers (see there)
+int cito_jpeg_decode(const char* path, int* h, int* w, unsigned char* dst, char* msg, int msglen);
 
-// no non-trivial C++ object may be live across the setjmp, hence the raw FILE* and manual cleanup
 static int jpeg_probe_decode(const char* path, Meta& m, unsigned char* dst) {
-  struct jpeg_decompress_struct ci;
-  jerr_mgr jerr;
-  FILE* f = std::fopen(path, "rb");
-  if(!f) { set_err(m, "cannot open file"); return 1; }
-  ci.err = jpeg_std_error(&jerr.pub);
-  jerr.pub.error_exit = jerr_exit;
-  jerr.pub.emit_message = jerr_silent;
-  if(setjmp(jerr.jb)) {
-    jpeg_destroy_decompress(&ci);
-    std::fclose(f);
-    set_err(m, jerr.msg);
-    return 1;
-  }
-  jpeg_create_decompress(&ci);
-  jpeg_stdio_src(&ci, f);
-  jpeg_read_header(&ci, TRUE);
-  // libjpeg cannot convert CMYK or YCCK to RGB, and asking it to fails only at
-  // jpeg_start_decompress, by which point the batch buffer is already sized from the probe
-  if(ci.num_components != 1 && ci.num_components != 3) {
-    const int nc = ci.num_components;
-    jpeg_destroy_decompress(&ci);
-    std::fclose(f);
-    (void)nc;
+  const int rc = cito_jpeg_decode(path, &m.h, &m.w, dst, m.msg, (int)sizeof(m.msg));
+  if(rc == 2) {
     m.fallback = 1;   // CMYK/YCCK: jpeg::readJPEG reads it, so hand the batch over
     return 1;
   }
-  // base_loader() expands greyscale to three channels, so the compiled path must too:
-  // otherwise the first conv layer depends on which libraries were present at install time
-  ci.out_color_space = JCS_RGB;
-  if(dst == NULL) {
-    m.h = ci.image_height;
-    m.w = ci.image_width;
-    m.c = 3;
-    m.bits = 8;
-    jpeg_destroy_decompress(&ci);
-    std::fclose(f);
-    return 0;
-  }
-  if((int)ci.image_height != m.h || (int)ci.image_width != m.w) {
-    jpeg_destroy_decompress(&ci);
-    std::fclose(f);
-    set_err(m, "file changed between probe and decode");
+  if(rc == 1) {
+    m.status = 1;
     return 1;
   }
-  jpeg_start_decompress(&ci);
-  const int stride = ci.output_width * ci.output_components;
-  while(ci.output_scanline < ci.output_height) {
-    unsigned char* row = dst + (size_t)ci.output_scanline * stride;
-    jpeg_read_scanlines(&ci, &row, 1);
+  if(dst == NULL) {
+    m.c = 3;
+    m.bits = 8;
   }
-  jpeg_finish_decompress(&ci);
-  jpeg_destroy_decompress(&ci);
-  std::fclose(f);
   return 0;
 }
-
 #endif /* HAVE_JPEG */
 
 #ifdef HAVE_PNG

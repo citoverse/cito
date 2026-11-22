@@ -1,3 +1,9 @@
+# cito 1.2.1
+
+## Bug fixes
+
+* The package failed to compile on macOS: the IJG libjpeg 9 headers used by CRAN define the enumerators FALSE and TRUE, which clash with R's Rboolean. The JPEG decoder now lives in its own source file that includes no R headers.
+
 # cito 1.2
 
 ## New features

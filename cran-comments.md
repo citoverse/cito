@@ -1,3 +1,16 @@
+# Version 1.2.1
+## cito submission 1 2026/11/23
+
+Dear CRAN Team,
+
+this patch fixes the installation ERROR of 1.2 on all macOS flavors. The IJG libjpeg 9 headers
+in the macOS toolchain define `FALSE` and `TRUE` as enumerators of their own `boolean` type,
+which clashes with R's `Rboolean` in a C++ file that also includes the R headers. The JPEG
+decoder was moved into a separate source file that includes no R headers. Nothing else changed.
+
+Best,
+Max Pichler
+
 # Version 1.2
 ## cito submission 1 2026/11/22
 
