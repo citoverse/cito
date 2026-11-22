@@ -66,7 +66,7 @@ analyze_training(nn.fit)
 # At 1st glance, the networks converged since the loss is lower than the baseline loss and the training loss is on a plateau at the end of the training.
 ```
 
-3.  Plot model architecture
+3.  Plot the effects (accumulated local effects with bootstrap confidence intervals; `plot(nn.fit, plot_type = "arch")` draws the architecture)
 
 ```{r}
 plot(nn.fit)
@@ -94,6 +94,41 @@ nn.fit$tuning
 ```
 
 The tuning can be configured with `tuning=config_tuning()`. After tuning, a final model trained with the best hyperparameters is returned. Hyperparameter combinations that do not achieve a loss below the baseline loss will be aborted early and not fully cross-validated. These runs are given a test loss of infinity.
+
+### Convolutional neural networks
+
+`cnn()` fits convolutional networks to images (or 1D/3D arrays). The input is an array `[samples, channels, ...]`, a folder of jpeg/png/tiff files, or windows cut from one large georeferenced raster with `raster_patches()`. The architecture is assembled from layers with `create_architecture()`:
+
+```{r}
+shapes <- cito:::simulate_shapes(n = 320, size = 32, channels = 3)
+architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
+cnn.fit <- cnn(X = shapes$data, Y = shapes$labels, architecture = architecture,
+               loss = "cross-entropy", optimizer = "adam", lr = 0.005, epochs = 20,
+               verbose = FALSE, plot = FALSE)
+table(predicted = predict(cnn.fit, type = "class"), observed = shapes$labels)
+```
+
+The architecture of the fitted network:
+
+```{r, fig.width = 11, fig.height = 6}
+plot(cnn.fit)
+```
+
+### Multimodal neural networks
+
+`mmn()` combines several data streams, e.g. images and tabular predictors, in one network. Each stream gets its own `dnn()` or `cnn()` submodel, and a fusion network on top combines them. `summary()` reports how much each stream contributes:
+
+```{r}
+X_tab <- matrix(runif(320*3), 320, 3)
+Y <- (as.integer(shapes$labels) - 1)*2 + 0.5*X_tab[,1] - 0.8*X_tab[,3]
+mmn.fit <- mmn(Y ~ dnn(~., data = X_tab, hidden = c(50, 50)) +
+                 cnn(X = X_img, architecture = architecture),
+               dataList = list(Y = Y, X_img = shapes$data, X_tab = X_tab),
+               loss = "mse", optimizer = "adam", lr = 0.005, epochs = 20,
+               verbose = FALSE, plot = FALSE)
+summary(mmn.fit)
+plot(mmn.fit, plot_type = "arch")
+```
 
 ## Advanced
 

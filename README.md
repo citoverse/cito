@@ -85,7 +85,9 @@ analyze_training(nn.fit)
 # At 1st glance, the networks converged since the loss is lower than the baseline loss and the training loss is on a plateau at the end of the training.
 ```
 
-3.  Plot model architecture
+3.  Plot the effects (accumulated local effects with bootstrap
+    confidence intervals; `plot(nn.fit, plot_type = "arch")` draws the
+    architecture)
 
 ``` r
 plot(nn.fit)
@@ -104,27 +106,18 @@ summary(nn.fit)
 ## Summary of Deep Neural Network Model
 ## 
 ## ── Feature Importance
-##                 Importance Std.Err Z value Pr(>|z|)  
-## Sepal.Width →        0.897   0.443    2.02    0.043 *
-## Petal.Length →      20.428   8.032    2.54    0.011 *
-## Petal.Width →        0.695   0.690    1.01    0.314  
-## Species →            0.647   0.634    1.02    0.307  
+##                  Importance Std.Err Z value Pr(>|z|)    
+## Sepal.Width ->       0.0468  0.0137    3.40  0.00066 ***
+## Petal.Length ->      1.4363  0.3436    4.18  2.9e-05 ***
+## Petal.Width ->       0.0647  0.0521    1.24  0.21376    
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
 ## ── Average Conditional Effects
-##                     ACE Std.Err Z value Pr(>|z|)    
-## Sepal.Width →    0.4838  0.0873    5.54    3e-08 ***
-## Petal.Length →   0.6485  0.0745    8.71   <2e-16 ***
-## Petal.Width →   -0.2264  0.1335   -1.70     0.09 .  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## ── Standard Deviation of Conditional Effects
-##                    ACE Std.Err Z value Pr(>|z|)    
-## Sepal.Width →   0.0657  0.0176    3.73  0.00019 ***
-## Petal.Length →  0.0503  0.0178    2.83  0.00467 ** 
-## Petal.Width →   0.0382  0.0139    2.75  0.00596 ** 
+##                      ACE Std.Err Z value Pr(>|z|)    
+## Sepal.Width ->    0.4828  0.0647    7.46  8.6e-14 ***
+## Petal.Length ->   0.6717  0.0751    8.95  < 2e-16 ***
+## Petal.Width ->   -0.3021  0.1416   -2.13    0.033 *  
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ```
@@ -150,18 +143,18 @@ nn.fit <- dnn(Sepal.Length~., data = datasets::iris, lr = tune(0.0001, 0.1))
 ## Fitting final model...
 nn.fit$tuning
 ## # A tibble: 10 × 5
-##    steps    test train models      lr
-##    <int>   <dbl> <dbl> <lgl>    <dbl>
-##  1     1 Inf         0 NA     0.0155 
-##  2     2 Inf         0 NA     0.0993 
-##  3     3   0.553     0 NA     0.00393
-##  4     4 Inf         0 NA     0.0817 
-##  5     5 Inf         0 NA     0.0179 
-##  6     6 Inf         0 NA     0.0947 
-##  7     7 Inf         0 NA     0.0176 
-##  8     8 Inf         0 NA     0.0241 
-##  9     9 Inf         0 NA     0.0817 
-## 10    10 Inf         0 NA     0.0337
+##    steps  test train models     lr
+##    <int> <dbl> <dbl> <lgl>   <dbl>
+##  1     1 Inf       0 NA     0.0333
+##  2     2  28.9     0 NA     0.0136
+##  3     3 Inf       0 NA     0.0867
+##  4     4 Inf       0 NA     0.0690
+##  5     5 Inf       0 NA     0.0173
+##  6     6 Inf       0 NA     0.0487
+##  7     7 Inf       0 NA     0.0229
+##  8     8 Inf       0 NA     0.0938
+##  9     9 Inf       0 NA     0.0924
+## 10    10 Inf       0 NA     0.0748
 ```
 
 The tuning can be configured with `tuning=config_tuning()`. After
@@ -169,6 +162,65 @@ tuning, a final model trained with the best hyperparameters is returned.
 Hyperparameter combinations that do not achieve a loss below the
 baseline loss will be aborted early and not fully cross-validated. These
 runs are given a test loss of infinity.
+
+### Convolutional neural networks
+
+`cnn()` fits convolutional networks to images (or 1D/3D arrays). The
+input is an array `[samples, channels, ...]`, a folder of jpeg/png/tiff
+files, or windows cut from one large georeferenced raster with
+`raster_patches()`. The architecture is assembled from layers with
+`create_architecture()`:
+
+``` r
+shapes <- cito:::simulate_shapes(n = 320, size = 32, channels = 3)
+architecture <- create_architecture(conv(5), maxPool(), conv(5), maxPool(), linear(10))
+cnn.fit <- cnn(X = shapes$data, Y = shapes$labels, architecture = architecture,
+               loss = "cross-entropy", optimizer = "adam", lr = 0.005, epochs = 20,
+               verbose = FALSE, plot = FALSE)
+table(predicted = predict(cnn.fit, type = "class"), observed = shapes$labels)
+##            observed
+## predicted   ellipsoid rectangle
+##   ellipsoid       172         0
+##   rectangle         0       148
+```
+
+The architecture of the fitted network:
+
+``` r
+plot(cnn.fit)
+```
+
+![](man/figures/README-unnamed-chunk-12-1.png)<!-- -->
+
+### Multimodal neural networks
+
+`mmn()` combines several data streams, e.g. images and tabular
+predictors, in one network. Each stream gets its own `dnn()` or `cnn()`
+submodel, and a fusion network on top combines them. `summary()` reports
+how much each stream contributes:
+
+``` r
+X_tab <- matrix(runif(320*3), 320, 3)
+Y <- (as.integer(shapes$labels) - 1)*2 + 0.5*X_tab[,1] - 0.8*X_tab[,3]
+mmn.fit <- mmn(Y ~ dnn(~., data = X_tab, hidden = c(50, 50)) +
+                 cnn(X = X_img, architecture = architecture),
+               dataList = list(Y = Y, X_img = shapes$data, X_tab = X_tab),
+               loss = "mse", optimizer = "adam", lr = 0.005, epochs = 20,
+               verbose = FALSE, plot = FALSE)
+summary(mmn.fit)
+## Summary of Multi-Modal Neural Network
+## 
+## ── Permutation importance of the data streams
+##                                             Loss increase     SD  Share
+## dnn(~., data = X_tab, hidden = c(50, 50))          0.1358 0.0101 0.0651
+## cnn(X = X_img, architecture = architecture)        1.9493 0.1205 0.9349
+## 
+## Baseline loss 0.0067, 10 permutations per stream. A stream that contributes little
+## can come out negative by chance; compare the estimate against its SD before reading it.
+plot(mmn.fit, plot_type = "arch")
+```
+
+![](man/figures/README-unnamed-chunk-13-1.png)<!-- -->
 
 ## Advanced
 
@@ -228,17 +280,17 @@ Estimated covariance matrix:
 as.matrix(create_cov(nn.fit$loss$parameters$SigmaPar,
                      nn.fit$loss$parameters$SigmaDiag))
 ##            [,1]       [,2]       [,3]
-## [1,] 0.26974857 0.06961995 0.11768616
-## [2,] 0.06961995 0.12192857 0.04327871
-## [3,] 0.11768616 0.04327871 0.15618347
+## [1,] 0.25706124 0.05718974 0.11934890
+## [2,] 0.05718974 0.11492345 0.03901247
+## [3,] 0.11934890 0.03901247 0.16983800
 ```
 
 Empirical covariance matrix:
 
 ``` r
 cov(predict(nn.fit) - nn.fit$data$Y)
-##            [,1]       [,2]      [,3]
-## [1,] 0.23646916 0.06383643 0.1227149
-## [2,] 0.06383643 0.08887552 0.0185613
-## [3,] 0.12271493 0.01856130 0.1308537
+##              Sepal.Length Sepal.Width Petal.Length
+## Sepal.Length   0.21880961  0.05860395   0.11779459
+## Sepal.Width    0.05860395  0.09050435   0.01886577
+## Petal.Length   0.11779459  0.01886577   0.13105972
 ```
