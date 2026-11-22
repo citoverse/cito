@@ -22,9 +22,9 @@ Max Pichler
 ### Reverse dependencies
 
 No packages depend on, import from or link to 'cito'. Two packages suggest it, 'biomod2' and
-'caretSDM'. biomod2 4.3-4-8 was run with this version through its cito code paths (binary,
+'caretSDM'. biomod2 4.3-4-8 is compatible with this version: its cito code paths (binary,
 binary with tuning, count, multiclass and ordinal data, variable importance, projection to new
-data and ensemble modelling), and they run as with cito 1.1. caretSDM 1.9.7 suggests 'cito'
+data and ensemble modelling) run as with cito 1.1. caretSDM 1.9.7 suggests 'cito'
 but does not call it.
 
 ### Successful R CMD checks under
@@ -39,7 +39,7 @@ GitHub Actions:
 * Windows-latest (R-release)
 
 Win-builder:
-* R-release and R-devel: no ERRORs, WARNINGs or NOTEs
+* R-release, R-devel and R-oldrelease: no ERRORs, WARNINGs or NOTEs
 
 Spelling has been checked (potential errors are intended).
 
