@@ -8,6 +8,11 @@ in the macOS toolchain define `FALSE` and `TRUE` as enumerators of their own `bo
 which clashes with R's `Rboolean` in a C++ file that also includes the R headers. The JPEG
 decoder was moved into a separate source file that includes no R headers. Nothing else changed.
 
+The error was reproduced on a GitHub Actions macOS runner (arm64, R release and R oldrel) set up
+with the static libraries from mac.R-project.org, i.e. the same libjpeg 9f headers; with the fix
+the package installs there and its image and raster reader tests pass. That runner is now part of
+the package's CI.
+
 Best,
 Max Pichler
 

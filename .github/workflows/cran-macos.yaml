@@ -41,7 +41,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::testthat
+          extra-packages: any::testthat, any::rcmdcheck
           needs: check
 
       - name: Install cito
@@ -58,3 +58,10 @@ jobs:
           Rscript -e 'print(cito:::cito_decoder_available())' -e 'stopifnot(all(cito:::cito_decoder_available()))'
           Rscript -e 'res = testthat::test_dir("tests/testthat", filter = "raster|decode", package = "cito", load_package = "installed", stop_on_failure = TRUE)' -e 'print(as.data.frame(res)[, c("file", "test", "failed", "skipped", "passed")])'
         shell: bash
+
+      - name: R CMD check --as-cran
+        env:
+          _R_CHECK_CRAN_INCOMING_REMOTE_: false
+          _R_CHECK_FORCE_SUGGESTS_: false
+        run: rcmdcheck::rcmdcheck(args = c("--no-manual", "--as-cran"), error_on = "warning", check_dir = "check")
+        shell: Rscript {0}
