@@ -23,8 +23,8 @@ the package's CI.
   * macOS (arm64) with Homebrew libraries, R 4.6.2
   * Windows, R 4.6.2
   * Ubuntu, R 4.6.2 and R-devel (2026-11-21 r90959)
-* Local Ubuntu, R 4.5.2: no ERRORs, WARNINGs or NOTEs apart from missing local tools
-  (checkbashisms, qpdf) and the days-since-last-update NOTE
+* Local Ubuntu, R 4.5.2: no ERRORs; WARNINGs and NOTEs only from the local setup (checkbashisms
+  and qpdf not installed, a compiler flag set by the system R) and the days-since-last-update NOTE
 
 Best,
 Max Pichler
