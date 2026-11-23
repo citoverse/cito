@@ -11,7 +11,7 @@ decoder was moved into a separate source file that includes no R headers. Nothin
 
 The error was reproduced on a GitHub Actions macOS runner (arm64, R release and R oldrel) set up
 with the static libraries from mac.R-project.org, i.e. the same libjpeg 9f headers. With the fix,
-R CMD check --as-cran passes there without ERRORs, WARNINGs or NOTEs. That runner is now part of
+R CMD check --as-cran passes there without ERRORs or WARNINGs. That runner is now part of
 the package's CI.
 
 ### Test environments
