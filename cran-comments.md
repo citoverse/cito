@@ -3,15 +3,21 @@
 
 Dear CRAN Team,
 
-this patch fixes the installation ERROR of 1.2 on all macOS flavors. The IJG libjpeg 9 headers
-in the macOS toolchain define `FALSE` and `TRUE` as enumerators of their own `boolean` type,
-which clashes with R's `Rboolean` in a C++ file that also includes the R headers. The JPEG
+this is a bug-fix release, submitted one day after 1.2, hence the NOTE about the days since the
+last update. It fixes the installation ERROR of 1.2 on all macOS flavors: the IJG libjpeg 9
+headers in the macOS toolchain define `FALSE` and `TRUE` as enumerators of their own `boolean`
+type, which clashes with R's `Rboolean` in a C++ file that also includes the R headers. The JPEG
 decoder was moved into a separate source file that includes no R headers. Nothing else changed.
 
 The error was reproduced on a GitHub Actions macOS runner (arm64, R release and R oldrel) set up
-with the static libraries from mac.R-project.org, i.e. the same libjpeg 9f headers; with the fix
-the package installs there and its image and raster reader tests pass. That runner is now part of
+with the static libraries from mac.R-project.org, i.e. the same libjpeg 9f headers. With the fix,
+R CMD check --as-cran passes there without ERRORs, WARNINGs or NOTEs. That runner is now part of
 the package's CI.
+
+### Test environments
+
+* Win-builder R-release, R-devel and R-oldrelease: no ERRORs or WARNINGs; one NOTE (days since
+  last update, see above)
 
 Best,
 Max Pichler
