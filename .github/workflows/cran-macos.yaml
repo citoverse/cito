@@ -47,9 +47,9 @@ jobs:
       - name: Install cito
         run: |
           which pkg-config
-          R CMD INSTALL . 2>&1 | tee install.log
+          R CMD INSTALL . 2>&1 | tee "$RUNNER_TEMP/install.log"
           test "${PIPESTATUS[0]}" -eq 0
-          grep -q "/opt/R/$(uname -m)/include -DHAVE_JPEG" install.log
+          grep -q "/opt/R/$(uname -m)/include -DHAVE_JPEG" "$RUNNER_TEMP/install.log"
         shell: bash
 
       - name: Run the reader tests
