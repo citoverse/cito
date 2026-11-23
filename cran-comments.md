@@ -11,13 +11,20 @@ decoder was moved into a separate source file that includes no R headers. Nothin
 
 The error was reproduced on a GitHub Actions macOS runner (arm64, R release and R oldrel) set up
 with the static libraries from mac.R-project.org, i.e. the same libjpeg 9f headers. With the fix,
-R CMD check --as-cran passes there without ERRORs or WARNINGs. That runner is now part of
+R CMD check --as-cran passes there with Status: OK. That runner is now part of
 the package's CI.
 
 ### Test environments
 
 * Win-builder R-release, R-devel and R-oldrelease: no ERRORs or WARNINGs; one NOTE (days since
   last update, see above)
+* GitHub Actions, R CMD check --as-cran, no ERRORs, WARNINGs or NOTEs:
+  * macOS (arm64) with the static libraries from mac.R-project.org, R 4.6.2 and R 4.5.3
+  * macOS (arm64) with Homebrew libraries, R 4.6.2
+  * Windows, R 4.6.2
+  * Ubuntu, R 4.6.2 and R-devel (2026-11-21 r90959)
+* Local Ubuntu, R 4.5.2: no ERRORs, WARNINGs or NOTEs apart from missing local tools
+  (checkbashisms, qpdf) and the days-since-last-update NOTE
 
 Best,
 Max Pichler
