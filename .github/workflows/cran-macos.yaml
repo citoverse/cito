@@ -1,0 +1,60 @@
+# CRAN's macOS machines build against the static libraries from mac.R-project.org (IJG libjpeg 9,
+# not Homebrew's libjpeg-turbo), so the Homebrew jobs in R-CMD-check.yaml cannot see what breaks
+# there. This job installs those libraries and builds and tests the compiled readers against them.
+on:
+  push:
+    branches:
+      - main
+      - 'ci-*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+name: CRAN-macOS-libraries
+
+jobs:
+  cran-macos:
+    runs-on: macos-latest
+    name: CRAN macOS libraries (${{ matrix.r }})
+    strategy:
+      fail-fast: false
+      matrix:
+        r: ['release', 'oldrel-1']
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      KMP_DUPLICATE_LIB_OK: TRUE
+      TORCH_INSTALL: 1
+      NOT_CRAN: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r }}
+          use-public-rspm: true
+
+      - name: Install CRAN's macOS libraries
+        run: |
+          sudo Rscript -e 'source("https://mac.R-project.org/bin/install.R")' -e 'install.libs(c("tiff", "libpng", "pkgconfig"))'
+          echo "/opt/R/$(uname -m)/bin" >> "$GITHUB_PATH"
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat
+          needs: check
+
+      - name: Install cito
+        run: |
+          which pkg-config
+          R CMD INSTALL . 2>&1 | tee install.log
+          test "${PIPESTATUS[0]}" -eq 0
+          grep -q "/opt/R/$(uname -m)/include -DHAVE_JPEG" install.log
+        shell: bash
+
+      - name: Run the reader tests
+        run: |
+          Rscript -e 'torch::install_torch()'
+          Rscript -e 'print(cito:::cito_decoder_available())' -e 'stopifnot(all(cito:::cito_decoder_available()))'
+          Rscript -e 'res = testthat::test_dir("tests/testthat", filter = "raster|decode", package = "cito", load_package = "installed", stop_on_failure = TRUE)' -e 'print(as.data.frame(res)[, c("file", "test", "failed", "skipped", "passed")])'
+        shell: bash
